@@ -8,11 +8,13 @@ from jax import random
 
 from jdgsim.utils import radius
 
+NFW_POTENTIAL = 0
+
 @partial(jax.jit, static_argnames=['config'])
 def combined_external_acceleration(state, config, params):
 
     total_external_acceleration = jnp.zeros_like(state[:, 0])
-    if 'NFW' in config.external_accelerations:
+    if NFW_POTENTIAL in config.external_accelerations:
         total_external_acceleration = total_external_acceleration + NFW(state, config, params)
         
     #TO BE IMPLEMENTED, VECTORIZE THE SUM OVER ALL THE EXTERNAL ACCELERATIONS FUNCTIONS

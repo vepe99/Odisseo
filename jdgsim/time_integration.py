@@ -8,6 +8,7 @@ from jaxtyping import Array, Float, jaxtyped
 
 from jdgsim.integrators import leapfrog
 from jdgsim.option_classes import SimulationConfig, SimulationParams
+from jdgsim.integrators import LEAPFROG, leapfrog
 
 
 @partial(jax.jit, static_argnames=['config',])
@@ -59,7 +60,7 @@ def _time_integration_fixed_steps(primitive_state, mass, config: SimulationConfi
     dt = params.t_end / config.num_timesteps
     
     def update_step(_, state):
-        if config.integrator == 'leapfrog':
+        if config.integrator == LEAPFROG:
             return leapfrog(state, mass, dt, config, params)
 
     # use lax fori_loop to unroll the loop

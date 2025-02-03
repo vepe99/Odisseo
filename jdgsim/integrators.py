@@ -6,7 +6,9 @@ import jax.numpy as jnp
 from jax import vmap, jit
 from jax import random
 from jdgsim.potentials import combined_external_acceleration
-from jdgsim.dynamics import direct_acc
+from jdgsim.dynamics import DIRECT_ACC, direct_acc
+
+LEAPFROG = 0
 
 @partial(jax.jit, static_argnames=['dt', 'config'])
 def leapfrog(state, mass, dt, config, params):
@@ -26,10 +28,10 @@ def leapfrog(state, mass, dt, config, params):
         - dt, the effective timestep evolved in the simulation (for some integrator this can be
             different wrt the input dt)
     """
-    if config.acceleration_scheme == 'direct_acc':
-        aff_func = direct_acc
+    if config.acceleration_scheme == DIRECT_ACC:
+        acc_func = direct_acc
     
-    acc = aff_func(state, mass, config, params)
+    acc = acc_func(state, mass, config, params)
 
     # Check additional accelerations
     if len(config.external_accelerations) > 0:
@@ -38,7 +40,7 @@ def leapfrog(state, mass, dt, config, params):
     # removing half-step velocity
     state = state.at[:, 0].set(state[:, 0] + state[:, 1]*dt + 0.5*acc*(dt**2))
 
-    acc2 = aff_func(state, mass, config, params)
+    acc2 = acc_func(state, mass, config, params)
 
     if len(config.external_accelerations) > 0:
         acc2 = acc2 + combined_external_acceleration(state, config, params)

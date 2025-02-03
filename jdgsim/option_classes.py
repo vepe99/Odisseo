@@ -1,7 +1,8 @@
 from typing import NamedTuple
-from jdgsim.integrators import leapfrog
-from jdgsim.dynamics import direct_acc
-from jdgsim.potentials import NFW
+from jdgsim.integrators import LEAPFROG
+from jdgsim.dynamics import DIRECT_ACC
+from jdgsim.potentials import NFW_POTENTIAL
+
 
 
 class SimulationParams(NamedTuple):
@@ -14,6 +15,8 @@ class SimulationParams(NamedTuple):
     t_end: float = 1.0 #Gyr
     
     NFW_params = {'Mvir': 1.62*1e11, 'r_s': 15.3, 'd_c': 7.18, 'c':None} #M☉, kpc
+    
+    Plummer_a = 7 #kpc
     
 
 class SimulationConfig(NamedTuple):
@@ -35,9 +38,9 @@ class SimulationConfig(NamedTuple):
     
     softening = 1e-10
     
-    integrator = 'leapfrog'
+    integrator: int = LEAPFROG
     
-    acceleration_scheme = 'direct_acc'
+    acceleration_scheme = DIRECT_ACC
     
-    external_accelerations = ['NFW']
+    external_accelerations = (NFW_POTENTIAL, )
     

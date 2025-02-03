@@ -1,6 +1,10 @@
+from functools import partial
 import jax
+from jax import jit
 import jax.numpy as jnp
+from jdgsim.dynamics import DIRECT_ACC, direct_acc
 
+@jit
 def radius(state):
     """
     Return the radial position of the particle in the state.
@@ -8,7 +12,7 @@ def radius(state):
     
     return jnp.linalg.norm(state[:, 0], axis=1)
     
-
+@jit
 def center_of_mass(state, mass):
     """
     Return the center of mass of the system.
@@ -16,3 +20,29 @@ def center_of_mass(state, mass):
     
     return jnp.sum(state[:, 0] * mass[:, jnp.newaxis], axis=0) / jnp.sum(mass)
 
+@jit
+def E_kin(state, mass):
+    """
+    Return the kinetic energy of the system.
+    """
+    
+    return 0.5 * jnp.sum(jnp.sum(state[:, 1]**2, axis=1) * mass)
+
+@partial(jax.jit, static_argnames=['config'])
+def E_pot(state, mass, config, params):
+    """
+    Return the potential energy of the system.
+    """
+    
+    # return - jnp.sum(jnp.sum(config.acceleration_scheme(state, mass, config, params) * state[:, 0], axis=1) * mass)
+    if config.acceleration_scheme == DIRECT_ACC:
+        _, pot = direct_acc(state, mass, config, params, return_potential=True)
+        return jnp.sum(pot*mass)
+
+@partial(jax.jit, static_argnames=['config'])
+def E_tot(state, mass, config, params):
+    """
+    Return the total energy of the system.
+    """
+    
+    return E_kin(state, mass) + E_pot(state, mass, config, params)
