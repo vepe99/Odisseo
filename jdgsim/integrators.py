@@ -48,3 +48,22 @@ def leapfrog(state, mass, dt, config, params):
     state = state.at[:, 1].set(state[:, 1] + 0.5*(acc + acc2)*dt)
     
     return state
+
+    # acc = acc_func(state, mass, config, params)
+
+    # # Check additional accelerations
+    # if len(config.external_accelerations) > 0:
+    #     acc = acc + combined_external_acceleration(state, config, params)
+           
+    # state = state.at[:, 1].set(state[:, 1] + acc*dt/2)
+    
+    # state = state.at[:, 0].set(state[:, 0] + state[:, 1]*dt)
+    
+    # acc2 = acc_func(state, mass, config, params)
+    # if len(config.external_accelerations) > 0:
+    #     acc2 = acc2 + combined_external_acceleration(state, config, params)
+    
+    # state = state.at[:, 1].set(state[:, 1] + acc2*dt/2)
+    
+    # return state
+

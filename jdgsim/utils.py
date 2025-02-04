@@ -3,14 +3,8 @@ import jax
 from jax import jit
 import jax.numpy as jnp
 from jdgsim.dynamics import DIRECT_ACC, direct_acc
+from jdgsim.potentials import combined_external_acceleration
 
-@jit
-def radius(state):
-    """
-    Return the radial position of the particle in the state.
-    """
-    
-    return jnp.linalg.norm(state[:, 0], axis=1)
     
 @jit
 def center_of_mass(state, mass):
@@ -37,7 +31,14 @@ def E_pot(state, mass, config, params):
     # return - jnp.sum(jnp.sum(config.acceleration_scheme(state, mass, config, params) * state[:, 0], axis=1) * mass)
     if config.acceleration_scheme == DIRECT_ACC:
         _, pot = direct_acc(state, mass, config, params, return_potential=True)
-        return jnp.sum(pot*mass)
+        self_Epot = jnp.sum(pot*mass)
+    
+    external_Epot = 0.
+    if len(config.external_accelerations) > 0:
+        _, pot = combined_external_acceleration(state, config, params, return_potential=True)
+        external_Epot = jnp.sum(pot*mass)
+        
+    return self_Epot + external_Epot
 
 @partial(jax.jit, static_argnames=['config'])
 def E_tot(state, mass, config, params):

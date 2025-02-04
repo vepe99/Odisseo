@@ -15,13 +15,13 @@ from jdgsim import construct_initial_state
 # @partial(jax.jit, static_argnames=['config', 'rejection_samples'])
 # def Plummer_sphere_jax(key, mass, params, config, rejection_samples= 10_000):
 
-    # Plummer_Mtot = jnp.sum(mass)
-    # r = jnp.sqrt( params.Plummer_a / (random.uniform(key, shape=config.N_particles)**(-3/2) -1))
-    # phi = random.uniform(key, shape=config.N_particles, minval=0, maxval=jnp.pi) 
-    # sin_i = random.uniform(key, shape=config.N_particles, minval=-1, maxval=1)
+#     Plummer_Mtot = jnp.sum(mass)
+#     r = jnp.sqrt( params.Plummer_a / (random.uniform(key, shape=config.N_particles)**(-3/2) -1))
+#     phi = random.uniform(key, shape=config.N_particles, minval=0, maxval=jnp.pi) 
+#     sin_i = random.uniform(key, shape=config.N_particles, minval=-1, maxval=1)
     
-    # positions = jnp.array([r*jnp.cos(jnp.arcsin(sin_i))*jnp.cos(phi), r*jnp.cos(jnp.arcsin(sin_i))*jnp.sin(phi), r*sin_i]).T
-    # potential = - params.G * Plummer_Mtot / jnp.sqrt( jnp.linalg.norm(positions, axis=1)**2 + params.Plummer_a**2)
+#     positions = jnp.array([r*jnp.cos(jnp.arcsin(sin_i))*jnp.cos(phi), r*jnp.cos(jnp.arcsin(sin_i))*jnp.sin(phi), r*sin_i]).T
+#     potential = - params.G * Plummer_Mtot / jnp.sqrt( jnp.linalg.norm(positions, axis=1)**2 + params.Plummer_a**2)
     
     # def generate_velocity(key, potential_i):
     #     velocity_i = random.uniform(key, shape=(rejection_samples, 3), minval=-jnp.sqrt(2*potential_i), maxval=jnp.sqrt(2*potential_i))
@@ -50,11 +50,11 @@ from jdgsim import construct_initial_state
     #     #             return velocity_i
                 
     #     def cond_func(velocity_i):
-    #         return (jnp.sum(velocity_i**2) > 2*potential_i)|(random.uniform(key) > ((0.5 * jnp.sum(velocity_i**2) + potential_i ) / potential_i)**(7/2) )
+    #         return (jnp.sum(velocity_i**2) > -2*potential_i)|(random.uniform(key) > ((0.5 * jnp.sum(velocity_i**2) + potential_i ) / potential_i)**(7/2) )
     #     def body_func(velocity_i):
-    #         velocity_i = random.uniform(key, shape=3, minval=-jnp.sqrt(2*potential_i), maxval=jnp.sqrt(2*potential_i))
+    #         velocity_i = random.uniform(key, shape=3, minval=-jnp.sqrt(-2*potential_i), maxval=jnp.sqrt(-2*potential_i))
     #         return velocity_i
-    #     initial_val = jnp.zeros(3)
+    #     initial_val = random.uniform(key, shape=3, minval=-jnp.sqrt(-2*potential_i), maxval=jnp.sqrt(-2*potential_i))
     #     while_loop(cond_fun=cond_func, body_fun=body_func, init_val=initial_val)
     
     # velocities = vmap(generate_velocity)(random.split(key, potential.shape), potential)
@@ -67,7 +67,7 @@ def generate_velocity_Plummer(potential_i, rejection_samples=1000):
         isotropic_velocity_mask = np.random.uniform(size=rejection_samples) <= ((0.5 * np.sum(velocity_i**2, axis=1) + potential_i ) / potential_i)**(7/2)
         return velocity_i[(escape_velocity_mask)&(isotropic_velocity_mask)][0]
     
-def Plummer_sphere(mass, params, config,):
+def Plummer_sphere(mass, config, params):
     Plummer_Mtot = np.sum(mass)
     r = np.sqrt( params.Plummer_a / (np.random.uniform(size=config.N_particles)**(-3/2) -1))
     phi = np.random.uniform(size=config.N_particles, low=0, high=np.pi) 
@@ -79,49 +79,39 @@ def Plummer_sphere(mass, params, config,):
         velocities = pool.map(generate_velocity_Plummer, potential)
     return jnp.array(positions), jnp.array(velocities)
 
+def ic_two_body(mass1: float, mass2: float, rp: float, e: float, config, params):
+    """
+    Create initial conditions for a two-body system.
+    By default the two bodies will placed along the x-axis at the
+    closest distance rp.
+    Depending on the input eccentricity the two bodies can be in a
+    circular (e<1), parabolic (e=1) or hyperbolic orbit (e>1).
 
-# def Plummer_sphere(key, params, config, mass=1.0, ):
-#     """
-#     Generate particle samples from a Plummer sphere distribution using JAX.
+    :param mass1:  mass of the first body [nbody units]
+    :param mass2:  mass of the second body [nbody units]
+    :param rp: closest orbital distance [nbody units]
+    :param e: eccentricity
+    :return: An instance of the class :class:`~fireworks.particles.Particles` containing the generated particles
+    """
+
+    Mtot=mass1+mass2
+
+    if e==1.:
+        vrel=jnp.sqrt(params.G * 2*Mtot/rp)
+    else:
+        a=rp/(1-e)
+        vrel=jnp.sqrt(params.G * Mtot*(2./rp-1./a))
+
+    # To take the component velocities
+    # V1 = Vcom - m2/M Vrel
+    # V2 = Vcom + m1/M Vrel
+    # we assume Vcom=0.
+    v1 = -params.G*mass2/Mtot * vrel
+    v2 = params.G*mass1/Mtot * vrel
+
+    pos  = jnp.array([[0.,0.,0.],[rp,0.,0.]])
+    vel  = jnp.array([[0.,v1,0.],[0.,v2,0.]])
+    mass = jnp.array([mass1, mass2])
+
+    return pos, vel, mass
     
-#     :param key: JAX random key.
-#     """
-        
-    
-#     # Generate positions
-#     def generate_position(key):
-#         while True:
-#             key, subkey = random.split(key)
-#             x1, x2, x3 = random.uniform(subkey, (3,), minval=-1, maxval=1)
-#             r2 = x1**2 + x2**2 + x3**2
-#             if r2 < 1:
-#                 break
-#         r = (r2**(-2/3) - 1)**(-0.5)
-#         return r * jnp.array([x1, x2, x3]), key
-
-#     positions = []
-#     for _ in range(config.N_particles):
-        
-#         pos, key = generate_position(key)
-#         positions.append(pos)
-#     positions = jnp.array(positions)
-
-#     # Generate velocities
-#     def generate_velocity(key, position):
-#         while True:
-#             key, subkey = random.split(key)
-#             x1, x2, x3 = random.uniform(subkey, (3,), minval=-1, maxval=1)
-#             v2 = x1**2 + x2**2 + x3**2
-#             if v2 < 1:
-#                 break
-#         v = jnp.sqrt(2 * params.G * mass / (1 + jnp.sum(position**2))**0.5)
-#         return v * jnp.array([x1, x2, x3]), key
-
-#     velocities = []
-#     for pos in positions:
-#         vel, key = generate_velocity(key, pos)
-#         velocities.append(vel)
-#     velocities = jnp.array(velocities)
-    
-#     mass = jnp.ones(config.N_particles)
-#     return positions, velocities, mass
