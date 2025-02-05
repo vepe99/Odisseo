@@ -68,7 +68,7 @@ def generate_velocity_Plummer(potential_i, rejection_samples=1000):
         return velocity_i[(escape_velocity_mask)&(isotropic_velocity_mask)][0]
     
 def Plummer_sphere(mass, config, params):
-    Plummer_Mtot = np.sum(mass)
+    Plummer_Mtot = 1
     r = np.sqrt( params.Plummer_a / (np.random.uniform(size=config.N_particles)**(-3/2) -1))
     phi = np.random.uniform(size=config.N_particles, low=0, high=np.pi) 
     sin_i = np.random.uniform(size=config.N_particles, low=-1, high=1)
@@ -77,7 +77,7 @@ def Plummer_sphere(mass, config, params):
     potential = - params.G * Plummer_Mtot / np.sqrt( np.linalg.norm(positions, axis=1)**2 + params.Plummer_a**2)
     with Pool(processes=1) as pool:
         velocities = pool.map(generate_velocity_Plummer, potential)
-    return jnp.array(positions), jnp.array(velocities)
+    return jnp.array(positions), jnp.array(velocities), 1/config.N_particles*jnp.ones(config.N_particles)
 
 def ic_two_body(mass1: float, mass2: float, rp: float, e: float, config, params):
     """

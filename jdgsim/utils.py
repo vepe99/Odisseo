@@ -47,3 +47,11 @@ def E_tot(state, mass, config, params):
     """
     
     return E_kin(state, mass) + E_pot(state, mass, config, params)
+
+def Angular_momentum(state, mass):
+    """
+    Return the angular momentum of the system.
+    """
+    
+    return jnp.sum(jnp.cross(state[:, 0], state[:, 1]) * mass[:, jnp.newaxis], axis=0)
+

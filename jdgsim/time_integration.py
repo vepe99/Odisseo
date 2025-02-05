@@ -10,7 +10,7 @@ from jaxtyping import Array, Float, jaxtyped
 from jdgsim.integrators import leapfrog
 from jdgsim.option_classes import SimulationConfig, SimulationParams
 from jdgsim.integrators import LEAPFROG, leapfrog
-from jdgsim.utils import E_tot
+from jdgsim.utils import E_tot, Angular_momentum
 
 class SnapshotData(NamedTuple):
     """Return format for the time integration, when snapshots are requested."""
@@ -23,6 +23,9 @@ class SnapshotData(NamedTuple):
 
     #: The total energy at the times the snapshots were taken.
     total_energy: jnp.ndarray = None
+    
+    #: The angular momentum at the times the snapshots were taken.
+    angular_momentum: jnp.ndarray = None
 
     # The runtime of the simulation-loop.
     runtime: float = 0.0
@@ -103,8 +106,13 @@ def _time_integration_fixed_steps_snapshot(primitive_state, mass, config: Simula
         times = jnp.zeros(config.num_snapshots)
         states = jnp.zeros((config.num_snapshots, primitive_state.shape[0], primitive_state.shape[1], primitive_state.shape[2]))
         total_energy = jnp.zeros(config.num_snapshots)
+        angular_momentum = jnp.zeros((config.num_snapshots, 3))
         current_checkpoint = 0
-        snapshot_data = SnapshotData(times = times, states = states, total_energy = total_energy, current_checkpoint = current_checkpoint)
+        snapshot_data = SnapshotData(times = times, 
+                                     states = states, 
+                                     total_energy = total_energy, 
+                                     angular_momentum = angular_momentum,
+                                     current_checkpoint = current_checkpoint)
 
     def update_step(carry):
 
@@ -115,8 +123,13 @@ def _time_integration_fixed_steps_snapshot(primitive_state, mass, config: Simula
                 times = snapshot_data.times.at[snapshot_data.current_checkpoint].set(time)
                 states = snapshot_data.states.at[snapshot_data.current_checkpoint].set(state)
                 total_energy = snapshot_data.total_energy.at[snapshot_data.current_checkpoint].set(E_tot(state, mass, config, params))
+                angular_momentum = snapshot_data.angular_momentum.at[snapshot_data.current_checkpoint].set(Angular_momentum(state, mass))
                 current_checkpoint = snapshot_data.current_checkpoint + 1
-                snapshot_data = snapshot_data._replace(times = times, states = states, total_energy = total_energy, current_checkpoint = current_checkpoint)
+                snapshot_data = snapshot_data._replace(times = times, 
+                                                       states = states, 
+                                                       total_energy = total_energy, 
+                                                       angular_momentum = angular_momentum,
+                                                       current_checkpoint = current_checkpoint)
                 return snapshot_data
             
             def dont_update_snapshot_data(snapshot_data):
