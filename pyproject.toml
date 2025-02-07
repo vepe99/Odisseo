@@ -9,6 +9,7 @@ packages = [{include = "jdgsim"}]
 [tool.poetry.dependencies]
 python = ">=3.9"
 optax = ">=0.2.0"
+optimistix = ">=0.0.1"
 jax = ">=0.4.0"
 scipy = ">=1.0.0"
 astropy = ">=6.0.0"
