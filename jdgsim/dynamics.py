@@ -14,8 +14,10 @@ def single_body_acc(particle_i, particle_j, mass_i, mass_j, config, params) -> j
     
     r_ij = particle_i[0, :] - particle_j[0, :]
     r_mag = jnp.linalg.norm(r_ij)   # Avoid division by zero and close encounter with config.softening
-    acc_mag = params.G  * mass_j / (r_mag + config.softening)**2
-    return - (acc_mag / (r_mag+config.softening)) * r_ij, - acc_mag*r_mag
+    # acc_mag = params.G  * mass_j / (r_mag + config.softening)**2
+    # return - (acc_mag / (r_mag+config.softening)) * r_ij, - acc_mag*r_mag
+
+    return - params.G * (mass_j) * (r_ij/(r_mag**2 + config.softening**2)**(3/2)), - params.G * mass_j / (r_mag + config.softening)
     
 
 @partial(jax.jit, static_argnames=['config', 'return_potential'])
@@ -32,25 +34,25 @@ def direct_acc(state, mass, config, params, return_potential=False):
 
     return vmap(net_force_on_body)(state, mass)
 
-# def direct_acc_new(state, mass, config, params, return_potential=False):
+def direct_acc_new(state, mass, config, params, return_potential=False):
     
-#     x = state[:, 0, 0]
-#     y = state[:, 0, 1]
-#     z = state[:, 0, 2]
+    x = state[:, 0, 0]
+    y = state[:, 0, 1]
+    z = state[:, 0, 2]
 
-#     delta_x = x.reshape(config.N_particles, 1) - x
-#     delta_y = y.reshape(config.N_particles, 1) - y
-#     delta_z = z.reshape(config.N_particles, 1) - z
+    delta_x = x.reshape(config.N_particles, 1) - x
+    delta_y = y.reshape(config.N_particles, 1) - y
+    delta_z = z.reshape(config.N_particles, 1) - z
 
-#     r_ij = jnp.stack([delta_x, delta_y, delta_z], axis=0)
-#     r_mag = jnp.sqrt(delta_x**2 + delta_y**2 + delta_z**2)
+    r_ij = jnp.stack([delta_x, delta_y, delta_z], axis=0)
+    r_mag = jnp.sqrt(delta_x**2 + delta_y**2 + delta_z**2)
     
-#     # return r_ij, r_mag
-#     acc_mag = params.G * mass / (r_mag + config.softening)**2
-#     if return_potential:
-#         return  jnp.sum(r_ij*(acc_mag/(r_mag+config.softening)), axis=1).T, jnp.sum(- acc_mag*r_mag, axis=1)
-#     else:   
-#         return  jnp.sum((acc_mag/(r_mag+config.softening)) * r_ij, axis=1).T
+    # return r_ij, r_mag
+    acc_mag = params.G * mass / (r_mag + config.softening)**2
+    if return_potential:
+        return  jnp.sum(r_ij*(acc_mag/(r_mag+config.softening)), axis=1).T, jnp.sum(- acc_mag*r_mag, axis=1)
+    else:   
+        return  jnp.sum((acc_mag/(r_mag+config.softening)) * r_ij, axis=1).T
 
 
 # def acceleration_direct(particles: Particles, config.softening: float = 0):
