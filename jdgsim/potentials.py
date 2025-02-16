@@ -30,6 +30,29 @@ def combined_external_acceleration(state, config, params, return_potential=False
 
 @partial(jax.jit, static_argnames=['config', 'return_potential'])
 def NFW(state, config, params, return_potential=False):
+    """
+    Compute acceleration of all particles due to a NFW profile.
+
+    Parameters
+    ----------
+    state : jnp.ndarray
+        Array of shape (N_particles, 6) representing the positions and velocities of the particles. 
+    config: NamedTuple
+        Configuration parameters.
+    params: NamedTuple
+        Simulation parameters.
+    return_potential: bool
+        If True, also returns the potential energy of the NFW profile.
+    
+    Returns
+    -------
+    Tuple
+        - Acceleration: jnp.ndarray 
+            Acecleration of all particles due to NFW external potential
+        - Potential: jnp.ndarray
+            Potential energy of all particles due to NFW external potential
+            Returned only if return_potential is True.   
+    """
     
     params_NFW = params.NFW_params
     

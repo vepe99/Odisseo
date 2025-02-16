@@ -12,62 +12,102 @@ from jdgsim.utils import E_pot
 from jdgsim.dynamics import direct_acc
 from jdgsim import construct_initial_state
 
-# @partial(jax.jit, static_argnames=['config', 'rejection_samples'])
-# def Plummer_sphere_jax(key, mass, params, config, rejection_samples= 10_000):
+def Plummer_sphere(key, config, params):
+    """
+    Create initial conditions for a Plummer sphere. The sampling of velocities is done by inverse fitting 
+    the cumulative distribution function of the Plummer sphere.
 
-#     Plummer_Mtot = jnp.sum(mass)
-#     r = jnp.sqrt( params.Plummer_a / (random.uniform(key, shape=config.N_particles)**(-3/2) -1))
-#     phi = random.uniform(key, shape=config.N_particles, minval=0, maxval=jnp.pi) 
-#     sin_i = random.uniform(key, shape=config.N_particles, minval=-1, maxval=1)
+    Parameters
+    ----------
+    key : jax.random.PRNGKey
+        Random key.
+    config : NamedTuple
+        Configuration NamedTuple containing the number of particles (N_particles).
+    params : NamedTuple
+        Parameters NamedTuple containing:
+        - Plummer_a : float
+            Scale length of the Plummer sphere.
+        - G : float
+            Gravitational constant.
+    Returns
+    -------
+    tuple
+        A tuple containing:
+        - positions : jnp.array
+            Array of shape (N_particles, 3) representing the positions of the particles.
+        - velocities : jnp.array
+            Array of shape (N_particles, 3) representing the velocities of the particles.
+        - masses : jnp.array
+            Array of shape (N_particles,) representing the masses of the particles.
+    """
     
-#     positions = jnp.array([r*jnp.cos(jnp.arcsin(sin_i))*jnp.cos(phi), r*jnp.cos(jnp.arcsin(sin_i))*jnp.sin(phi), r*sin_i]).T
-#     potential = - params.G * Plummer_Mtot / jnp.sqrt( jnp.linalg.norm(positions, axis=1)**2 + params.Plummer_a**2)
+    Plummer_Mtot = 1.
+    key_r, key_phi, key_sin_i, key_u, key_phi_v, key_sin_i_v= random.split(key, 6)
+    r = jnp.sqrt( params.Plummer_a / (random.uniform(key=key_r, shape=(config.N_particles,))**(-3/2) -1))
+    phi = random.uniform(key=key_phi, shape=(config.N_particles,), minval=0, maxval=jnp.pi) 
+    sin_i = random.uniform(key=key_sin_i, shape=(config.N_particles,), minval=-1, maxval=1)
     
-    # def generate_velocity(key, potential_i):
-    #     velocity_i = random.uniform(key, shape=(rejection_samples, 3), minval=-jnp.sqrt(2*potential_i), maxval=jnp.sqrt(2*potential_i))
-    #     escape_velocity_mask = jnp.sum(velocity_i**2, axis=1) <= 2*potential_i
-    #     isotropic_velocity_mask = random.uniform(key, shape=rejection_samples) <= ((0.5 * jnp.sum(velocity_i**2, axis=1) + potential_i ) / potential_i)**(7/2)
-    #     valid_mask = jnp.logical_and(escape_velocity_mask, isotropic_velocity_mask)
-    #     return jnp.where(valid_mask, velocity_i[valid_mask], jnp.zeros(3))
-        
-    # velocities = vmap(generate_velocity)(random.split(key, potential.shape[0]), potential)   
-        
-    # Plummer_Mtot = jnp.sum(mass)
-    # r = jnp.sqrt( params.Plummer_a / (random.uniform(key, shape=config.N_particles)**(-3/2) -1))
-    # phi = random.uniform(key, shape=config.N_particles, minval=0, maxval=jnp.pi) 
-    # sin_i = random.uniform(key, shape=config.N_particles, minval=-1, maxval=1)
+    positions = jnp.array([r*jnp.cos(jnp.arcsin(sin_i))*jnp.cos(phi), r*jnp.cos(jnp.arcsin(sin_i))*jnp.sin(phi), r*sin_i]).T
+    potential = - params.G * Plummer_Mtot / jnp.sqrt( jnp.linalg.norm(positions, axis=1)**2 + params.Plummer_a**2)
+    velocities_escape = jnp.sqrt(-2*potential)
+
+
+    def G(q):
+        """
+        Normalize Cumulative distribution function of q=v/v_escape for a Plummer sphere.
+        The assosiate unormalized probability distribution function assosiated with it is
+        g(q) = (1-q)**(7/2) * q**2
+
+        Parameters
+        ----------
+        q : float
+            Velocity ratio v/v_escape.
+        """
+        return 1287/16 * ((-2*(1-q)**(9/2))*(99*q**2+36*q+8)/1287 +16/1287)
     
-    # positions = jnp.array([r*jnp.cos(jnp.arcsin(sin_i))*jnp.cos(phi), r*jnp.cos(jnp.arcsin(sin_i))*jnp.sin(phi), r*sin_i]).T
-    # potential = - params.G * Plummer_Mtot / jnp.sqrt( jnp.linalg.norm(positions, axis=1)**2 + params.Plummer_a**2)
-    
-    # def generate_velocity(key, potential_i):        
-    #     # while True:
-    #     #     velocity_i = random.uniform(key, shape=3, minval=-jnp.sqrt(2*potential_i), maxval=jnp.sqrt(2*potential_i))
-    #     #     if jnp.sum(velocity_i**2) <= 2*potential_i:
-    #     #         u = random.uniform(key)
-    #     #         f = ((0.5 * jnp.sum(velocity_i**2) + potential_i ) / potential_i)**(7/2)
-    #     #         if u <= f:
-    #     #             return velocity_i
-                
-    #     def cond_func(velocity_i):
-    #         return (jnp.sum(velocity_i**2) > -2*potential_i)|(random.uniform(key) > ((0.5 * jnp.sum(velocity_i**2) + potential_i ) / potential_i)**(7/2) )
-    #     def body_func(velocity_i):
-    #         velocity_i = random.uniform(key, shape=3, minval=-jnp.sqrt(-2*potential_i), maxval=jnp.sqrt(-2*potential_i))
-    #         return velocity_i
-    #     initial_val = random.uniform(key, shape=3, minval=-jnp.sqrt(-2*potential_i), maxval=jnp.sqrt(-2*potential_i))
-    #     while_loop(cond_fun=cond_func, body_fun=body_func, init_val=initial_val)
-    
-    # velocities = vmap(generate_velocity)(random.split(key, potential.shape), potential)
-    
-    # return positions, velocities
+    # Invere fitting
+    q = jnp.linspace(0, 1, 100_000)
+    y = G(q)
+
+    u = random.uniform(key=key_u, shape=(config.N_particles,))
+    samples = jnp.interp(u, y, q)
+    velocities_modulus = samples * velocities_escape
+
+    # Generate random angles for the velocity
+    phi_v = random.uniform(key=key_phi_v, shape=(config.N_particles,), minval=0, maxval=jnp.pi) 
+    sin_i_v = random.uniform(key=key_sin_i_v, shape=(config.N_particles,), minval=-1, maxval=1)
+    velocities = jnp.array([velocities_modulus*jnp.cos(jnp.arcsin(sin_i_v))*jnp.cos(phi_v), velocities_modulus*jnp.cos(jnp.arcsin(sin_i_v))*jnp.sin(phi_v), velocities_modulus*sin_i_v]).T
+
+
+    return jnp.array(positions), jnp.array(velocities), 1/config.N_particles*jnp.ones(config.N_particles)
+     
  
-def generate_velocity_Plummer(potential_i, rejection_samples=1000):
-        velocity_i = np.random.uniform(size=(rejection_samples, 3), low=-np.sqrt(-2*potential_i), high=np.sqrt(-2*potential_i))
-        escape_velocity_mask = np.sum(velocity_i**2, axis=1) <= - 2*potential_i
-        isotropic_velocity_mask = np.random.uniform(size=rejection_samples) <= ((0.5 * np.sum(velocity_i**2, axis=1) + potential_i ) / potential_i)**(7/2)
-        return velocity_i[(escape_velocity_mask)&(isotropic_velocity_mask)][0]
-    
-def Plummer_sphere(mass, config, params):
+  
+def Plummer_sphere_multiprocess(mass, config, params):
+    """
+    Parameters
+    ----------
+    mass : float
+        The total mass of the Plummer sphere.
+    config : NamedTuple
+        Configuration NamedTuple containing the number of particles (N_particles).
+    params : NamedTuple
+        Parameters NamedTuple containing:
+        - Plummer_a : float
+            Scale length of the Plummer sphere.
+        - G : float
+            Gravitational constant.
+    Returns
+    -------
+    tuple
+        A tuple containing:
+        - positions : jnp.array
+            Array of shape (N_particles, 3) representing the positions of the particles.
+        - velocities : jnp.array
+            Array of shape (N_particles, 3) representing the velocities of the particles.
+        - masses : jnp.array
+            Array of shape (N_particles,) representing the masses of the particles.
+    """
     Plummer_Mtot = 1
     r = np.sqrt( params.Plummer_a / (np.random.uniform(size=config.N_particles)**(-3/2) -1))
     phi = np.random.uniform(size=config.N_particles, low=0, high=np.pi) 
@@ -75,6 +115,13 @@ def Plummer_sphere(mass, config, params):
     
     positions = np.array([r*np.cos(np.arcsin(sin_i))*np.cos(phi), r*np.cos(np.arcsin(sin_i))*np.sin(phi), r*sin_i]).T
     potential = - params.G * Plummer_Mtot / np.sqrt( np.linalg.norm(positions, axis=1)**2 + params.Plummer_a**2)
+
+    def generate_velocity_Plummer(potential_i, rejection_samples=1000):
+            velocity_i = np.random.uniform(size=(rejection_samples, 3), low=-np.sqrt(-2*potential_i), high=np.sqrt(-2*potential_i))
+            escape_velocity_mask = np.sum(velocity_i**2, axis=1) <= - 2*potential_i
+            isotropic_velocity_mask = np.random.uniform(size=rejection_samples) <= ((0.5 * np.sum(velocity_i**2, axis=1) + potential_i ) / potential_i)**(7/2)
+            return velocity_i[(escape_velocity_mask)&(isotropic_velocity_mask)][0]
+    
     with Pool(processes=1) as pool:
         velocities = pool.map(generate_velocity_Plummer, potential)
     return jnp.array(positions), jnp.array(velocities), 1/config.N_particles*jnp.ones(config.N_particles)
@@ -82,16 +129,35 @@ def Plummer_sphere(mass, config, params):
 def ic_two_body(mass1: float, mass2: float, rp: float, e: float, config, params):
     """
     Create initial conditions for a two-body system.
-    By default the two bodies will placed along the x-axis at the
-    closest distance rp.
-    Depending on the input eccentricity the two bodies can be in a
-    circular (e<1), parabolic (e=1) or hyperbolic orbit (e>1).
+    
+    By default, the two bodies will be placed along the x-axis at the
+    closest distance rp. Depending on the input eccentricity, the two 
+    bodies can be in a circular (e < 1), parabolic (e = 1), or hyperbolic 
+    orbit (e > 1).
 
-    :param mass1:  mass of the first body [nbody units]
-    :param mass2:  mass of the second body [nbody units]
-    :param rp: closest orbital distance [nbody units]
-    :param e: eccentricity
-    :return: An instance of the class :class:`~fireworks.particles.Particles` containing the generated particles
+    Parameters
+    ----------
+    mass1 : float
+        Mass of the first body [nbody units].
+    mass2 : float
+        Mass of the second body [nbody units].
+    rp : float
+        Closest orbital distance [nbody units].
+    e : float
+        Eccentricity.
+    config : NamedTuple
+        Configuration NamedTuple.
+    params : NamedTuple
+        Parameters NamedTuple.
+
+    Returns
+    -------
+    pos : jnp.ndarray
+        Positions of the particles.
+    vel : jnp.ndarray
+        Velocities of the particles.
+    mass : jnp.ndarray
+        Masses of the particles.
     """
 
     Mtot=mass1+mass2
@@ -102,10 +168,6 @@ def ic_two_body(mass1: float, mass2: float, rp: float, e: float, config, params)
         a=rp/(1-e)
         vrel=jnp.sqrt(params.G * Mtot*(2./rp-1./a))
 
-    # To take the component velocities
-    # V1 = Vcom - m2/M Vrel
-    # V2 = Vcom + m1/M Vrel
-    # we assume Vcom=0.
     v1 = -params.G*mass2/Mtot * vrel
     v2 = params.G*mass1/Mtot * vrel
 

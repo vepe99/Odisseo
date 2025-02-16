@@ -40,20 +40,27 @@ class SnapshotData(NamedTuple):
 
 @partial(jax.jit, static_argnames=['config',])
 def time_integration(primitive_state, mass, config: SimulationConfig, params: SimulationParams, ):
-    """Integrate the fluid equations in time. For the options of
+    """
+    Integrate the Nbody simulation in time. For the options of
     the time integration see the simulation configuration and
     the simulation parameters.
 
-    Args:
-        primitive_state: The primitive state array.
-        config: The simulation configuration.
-        params: The simulation parameters.
-        helper_data: The helper data.
+    Parameters
+    ----------
+    primitive_state : jnp.ndarray
+        The primitive state array.
+    mass : jnp.ndarray
+        The mass array.
+    config : SimulationConfig
+        The simulation configuration.
+    params : SimulationParams
+        The simulation parameters.
 
-    Returns:
+    Returns
+    -------
+    jnp.ndarray or SnapshotData
         Depending on the configuration (return_snapshots, num_snapshots) either the final state of the fluid
-        after the time integration of snapshots of the time evolution.
-
+        after the time integration or snapshots of the time evolution.
     """
 
     if config.fixed_timestep:
@@ -64,11 +71,6 @@ def time_integration(primitive_state, mass, config: SimulationConfig, params: Si
     
     else:
         raise NotImplementedError("Adaptive time stepping not implemented yet")
-        # if config.differentiation_mode == BACKWARDS:
-        #     return _time_integration_adaptive_backwards(primitive_state, config, params, helper_data, registered_variables)
-        # else:
-        #     return _time_integration_adaptive_steps(primitive_state, config, params, helper_data, registered_variables)
-        
 
 @partial(jax.jit, static_argnames=['config'])
 def _time_integration_fixed_steps(primitive_state, mass, config: SimulationConfig, params: SimulationParams, ):

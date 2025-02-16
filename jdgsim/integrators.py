@@ -14,19 +14,24 @@ LEAPFROG = 0
 def leapfrog(state, mass, dt, config, params):
     """
     Simple implementation of a symplectic Leapfrog (Verlet) integrator for N-body simulations.
-    :param particles: Instance of the class :class:`~fireworks.particles.Particles`
-    :param dt: Times-step for current integration (notice some methods can use smaller sub-time step to
-    achieve the final result
-    :param config.acceleration_scheme: It needs to be a function from the module (:mod:`fireworks.nbodylib.dynamics`)
-    following the input/output style of the template function  (:func:`fireworks.nbodylib.dynamics.acceleration_estimate_template`).
-    :param config.softening: config.softening parameter for the acceleration estimate, can use 0 as default value
-    :param external_accelerations: a list of additional force estimators (e.g. an external potential field) to
-    consider to estimate the final acceleration (and if available jerk) on the particles
-    :return: A tuple with 5 elements:
 
-        - The updated particles instance
-        - dt, the effective timestep evolved in the simulation (for some integrator this can be
-            different wrt the input dt)
+    Parameters
+    ----------
+    state : jax.numpy.ndarray
+        The state of the particles, where the first column represents positions and the second column represents velocities.
+    mass : jax.numpy.ndarray
+        The mass of the particles.
+    dt : float
+        Time-step for current integration.
+    config : object
+        Configuration object containing the acceleration scheme and external accelerations.
+    params : dict
+        Additional parameters for the acceleration functions.
+
+    Returns
+    -------
+    jax.numpy.ndarray
+        The updated state of the particles.
     """
     if config.acceleration_scheme == DIRECT_ACC:
         acc_func = direct_acc
@@ -49,21 +54,4 @@ def leapfrog(state, mass, dt, config, params):
     
     return state
 
-    # acc = acc_func(state, mass, config, params)
-
-    # # Check additional accelerations
-    # if len(config.external_accelerations) > 0:
-    #     acc = acc + combined_external_acceleration(state, config, params)
-           
-    # state = state.at[:, 1].set(state[:, 1] + acc*dt/2)
-    
-    # state = state.at[:, 0].set(state[:, 0] + state[:, 1]*dt)
-    
-    # acc2 = acc_func(state, mass, config, params)
-    # if len(config.external_accelerations) > 0:
-    #     acc2 = acc2 + combined_external_acceleration(state, config, params)
-    
-    # state = state.at[:, 1].set(state[:, 1] + acc2*dt/2)
-    
-    # return state
 

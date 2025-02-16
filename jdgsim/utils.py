@@ -10,6 +10,17 @@ from jdgsim.potentials import combined_external_acceleration
 def center_of_mass(state, mass):
     """
     Return the center of mass of the system.
+
+    Parameters
+    ----------
+    state : jnp.ndarray
+        Array of shape (N_particles, 6) representing the positions and velocities of the particles.
+    mass : jnp.ndarray
+
+    Returns
+    -------
+    jnp.ndarray
+        The center of mass of the system.
     """
     
     return jnp.sum(state[:, 0] * mass[:, jnp.newaxis], axis=0) / jnp.sum(mass)
@@ -18,6 +29,19 @@ def center_of_mass(state, mass):
 def E_kin(state, mass):
     """
     Return the kinetic energy of the system.
+
+    Parameters
+    ----------
+    state : jnp.ndarray
+        Array of shape (N_particles, 6) representing the positions and velocities of the particles.
+    mass : jnp.ndarray
+        Array of shape (N_particles,) representing the masses of the particles.
+
+    Returns
+    -------
+    float
+        The kinetic energy of the system.
+
     """
     
     return 0.5 * jnp.sum(jnp.sum(state[:, 1]**2, axis=1) * mass)
@@ -26,6 +50,18 @@ def E_kin(state, mass):
 def E_pot(state, mass, config, params):
     """
     Return the potential energy of the system.
+
+    Parameters
+    ----------
+    state : jnp.ndarray
+        Array of shape (N_particles, 6) representing the positions and velocities of the particles.
+    mass : jnp.ndarray
+        Array of shape (N_particles,) representing the masses of the particles.
+
+    Returns
+    -------
+    float
+        The potential energy of the system.
     """
     
     # return - jnp.sum(jnp.sum(config.acceleration_scheme(state, mass, config, params) * state[:, 0], axis=1) * mass)
@@ -44,6 +80,18 @@ def E_pot(state, mass, config, params):
 def E_tot(state, mass, config, params):
     """
     Return the total energy of the system.
+
+    Parameters
+    ----------
+    state : jnp.ndarray
+        Array of shape (N_particles, 6) representing the positions and velocities of the particles.
+    mass : jnp.ndarray
+        Array of shape (N_particles,) representing the masses of the particles.
+
+    Returns
+    -------
+    float
+        The total energy of the system.
     """
     
     return E_kin(state, mass) + E_pot(state, mass, config, params)
@@ -51,6 +99,18 @@ def E_tot(state, mass, config, params):
 def Angular_momentum(state, mass):
     """
     Return the angular momentum of the system.
+
+    Parameters
+    ----------
+    state : jnp.ndarray
+        Array of shape (N_particles, 6) representing the positions and velocities of the particles.
+    mass : jnp.ndarray
+        Array of shape (N_particles,) representing the masses of the particles.
+
+    Returns
+    -------
+    jnp.ndarray
+        The angular momentum of the system.
     """
     
     return jnp.sum(jnp.cross(state[:, 0], state[:, 1]) * mass[:, jnp.newaxis], axis=0)
