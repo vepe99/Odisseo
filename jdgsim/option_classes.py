@@ -3,7 +3,18 @@ from jdgsim.integrators import LEAPFROG
 from jdgsim.dynamics import DIRECT_ACC
 from jdgsim.potentials import NFW_POTENTIAL
 
-
+class NFWParams(NamedTuple):
+    """
+    NamedTuple containing the parameters for the NFW profile
+    """
+    
+    Mvir: float = 1.62*1e11 #M☉
+    
+    r_s: float = 15.3 #kpc
+    
+    d_c: float = 7.18
+    
+    c: float = None
 
 class SimulationParams(NamedTuple):
     """
@@ -14,7 +25,7 @@ class SimulationParams(NamedTuple):
     
     t_end: float = 1.0 #Gyr
     
-    NFW_params = {'Mvir': 1.62*1e11, 'r_s': 15.3, 'd_c': 7.18, 'c':None} #M☉, kpc
+    NFW_params: NFWParams = NFWParams()
     
     Plummer_a:float = 7 #kpc
     

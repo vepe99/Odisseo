@@ -56,16 +56,16 @@ def NFW(state, config, params, return_potential=False):
     
     params_NFW = params.NFW_params
     
-    if params_NFW['c'] is not None:
-        params_NFW['d_c'] = jnp.log(1+params_NFW['c']) - params_NFW['c']/(1+params_NFW['c']) #critical density
+    if params_NFW.c is not None:
+        params_NFW.d_c = jnp.log(1+params_NFW.c) - params_NFW.c/(1+params_NFW.c) #critical density
         
     r  = jnp.linalg.norm(state[:, 0], axis=1)
 
-    NUM = (params_NFW['r_s']+r)*jnp.log(1+r/params_NFW['r_s']) - r
-    DEN = r*r*r*(params_NFW['r_s']+r)*params_NFW['d_c']
+    NUM = (params_NFW.r_s+r)*jnp.log(1+r/params_NFW.r_s) - r
+    DEN = r*r*r*(params_NFW.r_s+r)*params_NFW.d_c
 
-    acc = - params.G * params_NFW['Mvir']*NUM[:, jnp.newaxis]/DEN[:, jnp.newaxis] * state[:, 0]
-    pot = -params.G * params_NFW['Mvir']*jnp.log(1+r/params_NFW['r_s'])/(r*params_NFW['d_c'])
+    acc =  - params.G * params_NFW.Mvir*NUM[:, jnp.newaxis]/DEN[:, jnp.newaxis] * state[:, 0]
+    pot = - params.G * params_NFW.Mvir*jnp.log(1+r/params_NFW.r_s)/(r*params_NFW.d_c)
 
     if return_potential:
         return acc, pot
