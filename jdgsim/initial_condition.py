@@ -41,14 +41,14 @@ def Plummer_sphere(key, config, params):
             Array of shape (N_particles,) representing the masses of the particles.
     """
     
-    Plummer_Mtot = 1.
+    Plummer_Mtot = params.Plummer_params.Mtot
     key_r, key_phi, key_sin_i, key_u, key_phi_v, key_sin_i_v= random.split(key, 6)
-    r = jnp.sqrt( params.Plummer_a / (random.uniform(key=key_r, shape=(config.N_particles,))**(-3/2) -1))
+    r = jnp.sqrt( params.Plummer_params.a / (random.uniform(key=key_r, shape=(config.N_particles,))**(-3/2) -1))
     phi = random.uniform(key=key_phi, shape=(config.N_particles,), minval=0, maxval=jnp.pi) 
     sin_i = random.uniform(key=key_sin_i, shape=(config.N_particles,), minval=-1, maxval=1)
     
     positions = jnp.array([r*jnp.cos(jnp.arcsin(sin_i))*jnp.cos(phi), r*jnp.cos(jnp.arcsin(sin_i))*jnp.sin(phi), r*sin_i]).T
-    potential = - params.G * Plummer_Mtot / jnp.sqrt( jnp.linalg.norm(positions, axis=1)**2 + params.Plummer_a**2)
+    potential = - params.G * Plummer_Mtot / jnp.sqrt( jnp.linalg.norm(positions, axis=1)**2 + params.Plummer_params.a**2)
     velocities_escape = jnp.sqrt(-2*potential)
 
 
@@ -108,13 +108,13 @@ def Plummer_sphere_multiprocess(mass, config, params):
         - masses : jnp.array
             Array of shape (N_particles,) representing the masses of the particles.
     """
-    Plummer_Mtot = 1
-    r = np.sqrt( params.Plummer_a / (np.random.uniform(size=config.N_particles)**(-3/2) -1))
+    Plummer_Mtot = params.Plummer_params.Mtot
+    r = np.sqrt( params.Plummer_params.a / (np.random.uniform(size=config.N_particles)**(-3/2) -1))
     phi = np.random.uniform(size=config.N_particles, low=0, high=np.pi) 
     sin_i = np.random.uniform(size=config.N_particles, low=-1, high=1)
     
     positions = np.array([r*np.cos(np.arcsin(sin_i))*np.cos(phi), r*np.cos(np.arcsin(sin_i))*np.sin(phi), r*sin_i]).T
-    potential = - params.G * Plummer_Mtot / np.sqrt( np.linalg.norm(positions, axis=1)**2 + params.Plummer_a**2)
+    potential = - params.G * Plummer_Mtot / np.sqrt( np.linalg.norm(positions, axis=1)**2 + params.Plummer_params.a**2)
 
     def generate_velocity_Plummer(potential_i, rejection_samples=1000):
             velocity_i = np.random.uniform(size=(rejection_samples, 3), low=-np.sqrt(-2*potential_i), high=np.sqrt(-2*potential_i))

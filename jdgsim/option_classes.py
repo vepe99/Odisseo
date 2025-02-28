@@ -2,32 +2,46 @@ from typing import NamedTuple
 from jdgsim.integrators import LEAPFROG
 from jdgsim.dynamics import DIRECT_ACC
 from jdgsim.potentials import NFW_POTENTIAL
+from astropy import units as u
+from astropy import constants as c
+from math import log
+
 
 class NFWParams(NamedTuple):
     """
     NamedTuple containing the parameters for the NFW profile
     """
     
-    Mvir: float = 1.62*1e11 #M☉
+    Mvir: float = 1.62*1e11 * u.Msun #M☉
     
-    r_s: float = 15.3 #kpc
+    r_s: float = 15.3 * u.kpc #kpc
     
-    d_c: float = 7.18
+    c: float = 10
+
+    d_c: float = log(1+c) - c/(1+c)
+class PlummerParams(NamedTuple):
+    """
+    NamedTuple containing the parameters for the Plummer profile
+    """
     
-    c: float = None
+    a: float = 7 * u.kpc #kpc
+    
+    Mtot: float = 1.0 * u.Msun #M☉
+    
+
 
 class SimulationParams(NamedTuple):
     """
     NamedTuple containing the parameters for the simulation. This parameter do not require recompilation
     """
     
-    G: float = 4.498*10**(-6) #kpc³ / (M☉ Gyr²)
+    G: float = c.G.to(u.kpc**3 / u.Msun / u.Gyr**2)
     
-    t_end: float = 1.0 #Gyr
+    t_end: float = 1.0 * u.Gyr #Gyr
     
     NFW_params: NFWParams = NFWParams()
     
-    Plummer_a:float = 7 #kpc
+    Plummer_params: PlummerParams = PlummerParams()
     
 
 class SimulationConfig(NamedTuple):
