@@ -3,10 +3,12 @@ from functools import partial
 
 import jax
 import jax.numpy as jnp
-from jax import vmap, jit
+from jax import vmap, jit, lax
 from jax import random
 
 NFW_POTENTIAL = 0
+POINT_MASS = 1
+
 
 @partial(jax.jit, static_argnames=['config', 'return_potential'])
 def combined_external_acceleration(state, config, params, return_potential=False):
@@ -20,12 +22,38 @@ def combined_external_acceleration(state, config, params, return_potential=False
             total_external_acceleration = total_external_acceleration + acc_NFW
             total_external_potential = total_external_potential +   pot_NFW
         return total_external_acceleration, total_external_potential
+
+        if POINT_MASS in config.external_accelerations:
+            acc_point_mass, pot_point_mass = point_mass(state, config, params, return_potential=True)
+            total_external_acceleration = total_external_acceleration + acc_point_mass
+            total_external_potential = total_external_potential +   pot_point_mass
+        return total_external_acceleration, total_external_potential
     else:
         if NFW_POTENTIAL in config.external_accelerations:
             total_external_acceleration = total_external_acceleration + NFW(state, config, params)
         return total_external_acceleration
     
-    
+@partial(jax.jit, static_argnames=['config', 'return_potential'])    
+def combined_external_acceleration_vmpa_switch(state, config, params, return_potential=False):
+    total_external_acceleration = jnp.zeros_like(state[:, 0])
+    total_external_potential = jnp.zeros_like(config.N_particles)
+    state_tobe_vmap  = jnp.repeat(state, len(config.external_accelerations), axis=0)
+    if return_potential:
+        # The POTENTIAL_LIST NEEDS TO BE IN THE SAME ORDER AS THE INTEGER VALUES 
+        POTENTIAL_LIST = [lambda state: NFW(state, config=config, params=params, return_potential=True), 
+                        lambda state: point_mass(state, config=config, params=params, return_potential=True)]
+        vmap_function = vmap(lambda i, state: lax.switch(i, POTENTIAL_LIST, state))
+        external_acc, external_pot = vmap_function(jnp.array(config.external_accelerations), state_tobe_vmap)
+        total_external_acceleration = jnp.sum(external_acc, axis=0)
+        total_external_potential = jnp.sum(external_pot, axis=0)
+        return total_external_acceleration, total_external_potential
+    else:
+        POTENTIAL_LIST = [lambda state: NFW(state, config=config, params=params, return_potential=False),
+                          lambda state: point_mass(state, config=config, params=params, return_potential=False)]
+        vmap_function = vmap(lambda i, state: lax.switch(i, POTENTIAL_LIST, state))
+        external_acc = vmap_function(jnp.array(config.external_accelerations), state_tobe_vmap)
+        total_external_acceleration = jnp.sum(external_acc, axis=0)
+        return total_external_acceleration
 
 
 @partial(jax.jit, static_argnames=['config', 'return_potential'])
@@ -69,6 +97,44 @@ def NFW(state, config, params, return_potential=False):
     # acc = (params.G * (params_NFW.Mvir)/(jnp.log(1+params_NFW.c)-params_NFW.c/(1+params_NFW.c)) * (r/(r+params_NFW.r_s) - jnp.log(1+ r/params_NFW.r_s))/(r**3)) @ state[:, 0]
 
 
+    if return_potential:
+        return acc, pot
+    else:
+        return acc
+    
+
+@partial(jax.jit, static_argnames=['config', 'return_potential'])
+def point_mass(state, config, params, return_potential=False):
+    """
+    Compute acceleration of all particles due to a point mass.
+
+    Parameters
+    ----------
+    state : jnp.ndarray
+        Array of shape (N_particles, 6) representing the positions and velocities of the particles. 
+    config: NamedTuple
+        Configuration parameters.
+    params: NamedTuple
+        Simulation parameters.
+    return_potential: bool
+        If True, also returns the potential energy of the point mass.
+    
+    Returns
+    -------
+    Tuple
+        - Acceleration: jnp.ndarray 
+            Acecleration of all particles due to point mass external potential
+        - Potential: jnp.ndarray
+            Potential energy of all particles due to point mass external potential
+            Returned only if return_potential is True.   
+    """
+    params_point_mass = params.PointMassParams
+    
+    r  = jnp.linalg.norm(state[:, 0], axis=1)
+    
+    acc = - params.G * params_point_mass.Mtot * state[:, 0] / (r**3)
+    pot = - params.G * params_point_mass.Mtot / r
+    
     if return_potential:
         return acc, pot
     else:

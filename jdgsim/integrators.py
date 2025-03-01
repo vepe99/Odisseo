@@ -5,7 +5,7 @@ import jax
 import jax.numpy as jnp
 from jax import vmap, jit
 from jax import random
-from jdgsim.potentials import combined_external_acceleration
+from jdgsim.potentials import combined_external_acceleration, combined_external_acceleration_vmpa_switch
 from jdgsim.dynamics import DIRECT_ACC, direct_acc
 
 LEAPFROG = 0
