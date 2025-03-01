@@ -3,7 +3,7 @@ import jax
 from jax import jit
 import jax.numpy as jnp
 from jdgsim.dynamics import DIRECT_ACC, direct_acc
-from jdgsim.potentials import combined_external_acceleration
+from jdgsim.potentials import combined_external_acceleration, combined_external_acceleration_vmpa_switch
 
     
 @jit
@@ -71,7 +71,7 @@ def E_pot(state, mass, config, params):
     
     external_Epot = 0.
     if len(config.external_accelerations) > 0:
-        _, pot = combined_external_acceleration(state, config, params, return_potential=True)
+        _, pot = combined_external_acceleration_vmpa_switch(state, config, params, return_potential=True)
         external_Epot = jnp.sum(pot*mass)
         
     return self_Epot + external_Epot
