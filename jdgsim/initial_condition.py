@@ -44,7 +44,7 @@ def Plummer_sphere(key, config, params):
     Plummer_Mtot = params.Plummer_params.Mtot
     key_r, key_phi, key_sin_i, key_u, key_phi_v, key_sin_i_v= random.split(key, 6)
     r = jnp.sqrt( params.Plummer_params.a / (random.uniform(key=key_r, shape=(config.N_particles,))**(-3/2) -1))
-    phi = random.uniform(key=key_phi, shape=(config.N_particles,), minval=0, maxval=jnp.pi) 
+    phi = random.uniform(key=key_phi, shape=(config.N_particles,), minval=0, maxval=2*jnp.pi) 
     sin_i = random.uniform(key=key_sin_i, shape=(config.N_particles,), minval=-1, maxval=1)
     
     positions = jnp.array([r*jnp.cos(jnp.arcsin(sin_i))*jnp.cos(phi), r*jnp.cos(jnp.arcsin(sin_i))*jnp.sin(phi), r*sin_i]).T
@@ -74,7 +74,7 @@ def Plummer_sphere(key, config, params):
     velocities_modulus = samples * velocities_escape
 
     # Generate random angles for the velocity
-    phi_v = random.uniform(key=key_phi_v, shape=(config.N_particles,), minval=0, maxval=jnp.pi) 
+    phi_v = random.uniform(key=key_phi_v, shape=(config.N_particles,), minval=0, maxval=2*jnp.pi) 
     sin_i_v = random.uniform(key=key_sin_i_v, shape=(config.N_particles,), minval=-1, maxval=1)
     velocities = jnp.array([velocities_modulus*jnp.cos(jnp.arcsin(sin_i_v))*jnp.cos(phi_v), velocities_modulus*jnp.cos(jnp.arcsin(sin_i_v))*jnp.sin(phi_v), velocities_modulus*sin_i_v]).T
 
@@ -110,7 +110,7 @@ def Plummer_sphere_multiprocess(mass, config, params):
     """
     Plummer_Mtot = params.Plummer_params.Mtot
     r = np.sqrt( params.Plummer_params.a / (np.random.uniform(size=config.N_particles)**(-3/2) -1))
-    phi = np.random.uniform(size=config.N_particles, low=0, high=np.pi) 
+    phi = np.random.uniform(size=config.N_particles, low=0, high=2*np.pi) 
     sin_i = np.random.uniform(size=config.N_particles, low=-1, high=1)
     
     positions = np.array([r*np.cos(np.arcsin(sin_i))*np.cos(phi), r*np.cos(np.arcsin(sin_i))*np.sin(phi), r*sin_i]).T
