@@ -22,12 +22,6 @@ def combined_external_acceleration(state, config, params, return_potential=False
             total_external_acceleration = total_external_acceleration + acc_NFW
             total_external_potential = total_external_potential +   pot_NFW
         return total_external_acceleration, total_external_potential
-
-        if POINT_MASS in config.external_accelerations:
-            acc_point_mass, pot_point_mass = point_mass(state, config, params, return_potential=True)
-            total_external_acceleration = total_external_acceleration + acc_point_mass
-            total_external_potential = total_external_potential +   pot_point_mass
-        return total_external_acceleration, total_external_potential
     else:
         if NFW_POTENTIAL in config.external_accelerations:
             total_external_acceleration = total_external_acceleration + NFW(state, config, params)
@@ -37,7 +31,7 @@ def combined_external_acceleration(state, config, params, return_potential=False
 def combined_external_acceleration_vmpa_switch(state, config, params, return_potential=False):
     total_external_acceleration = jnp.zeros_like(state[:, 0])
     total_external_potential = jnp.zeros_like(config.N_particles)
-    state_tobe_vmap  = jnp.repeat(state, len(config.external_accelerations), axis=0)
+    state_tobe_vmap  = jnp.repeat(state[jnp.newaxis, ...], repeats=len(config.external_accelerations), axis=0)
     if return_potential:
         # The POTENTIAL_LIST NEEDS TO BE IN THE SAME ORDER AS THE INTEGER VALUES 
         POTENTIAL_LIST = [lambda state: NFW(state, config=config, params=params, return_potential=True), 
@@ -128,12 +122,12 @@ def point_mass(state, config, params, return_potential=False):
             Potential energy of all particles due to point mass external potential
             Returned only if return_potential is True.   
     """
-    params_point_mass = params.PointMassParams
+    params_point_mass = params.PointMass_params
     
     r  = jnp.linalg.norm(state[:, 0], axis=1)
     
-    acc = - params.G * params_point_mass.Mtot * state[:, 0] / (r**3)
-    pot = - params.G * params_point_mass.Mtot / r
+    acc = - params.G * params_point_mass.M * state[:, 0] / (r**3)[:, None]
+    pot = - params.G * params_point_mass.M / r
     
     if return_potential:
         return acc, pot
