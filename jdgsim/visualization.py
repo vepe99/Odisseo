@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.animation import FuncAnimation, PillowWriter
-
+import jax.numpy as jnp
 
 ####PLOT MAKER####
 
@@ -35,6 +35,45 @@ def create_3d_gif(snapshots, ax_lim, code_units, plotting_units_length, plot_uni
         scatter1 = ax.scatter((snapshots.states[frame, :, 0, 0]* code_units.code_length).to(plotting_units_length).value, 
                               (snapshots.states[frame, :, 0, 1]* code_units.code_length).to(plotting_units_length).value, 
                               (snapshots.states[frame, :, 0, 2]* code_units.code_length).to(plotting_units_length).value, c='b', s=1)
+        scatter2 = ax.scatter(0, 0, 0, c='r', s=100, marker='*')
+        return scatter1, scatter2
+
+    # Create the animation
+    anim = FuncAnimation(fig, update, frames=range(0, len(snapshots.states), 1), init_func=init, blit=False)
+
+    if filename is not None:
+        # Save the animation as a GIF
+        anim.save(filename, writer=PillowWriter(fps=10))
+
+def create_3d_gif_velocitycoding(snapshots, ax_lim, code_units, plotting_units_length, plot_units_time, filename=None):
+    # Create a figure for plotting
+    fig = plt.figure(figsize=(10, 10))
+    ax = fig.add_subplot(111, projection='3d')
+
+    # Initialize the scatter plot
+    scatter1 = ax.scatter([], [], [], )
+    scatter2 = ax.scatter([], [], [], c='r', marker='*')
+
+    def init():
+        ax.set_xlabel(f'X {plotting_units_length}')
+        ax.set_ylabel(f'Y {plotting_units_length}')
+        ax.set_zlabel(f'Z {plotting_units_length}')
+        return scatter1, scatter2
+
+    def update(frame):
+        ax.clear()
+        ax.set_xlabel(f'X {plotting_units_length}')
+        ax.set_ylabel(f'Y {plotting_units_length}')
+        ax.set_zlabel(f'Z {plotting_units_length}')
+        ax.set_xlim(-(ax_lim* code_units.code_length).to(plotting_units_length).value, (ax_lim* code_units.code_length).to(plotting_units_length).value)
+        ax.set_ylim(-(ax_lim* code_units.code_length).to(plotting_units_length).value, (ax_lim* code_units.code_length).to(plotting_units_length).value)
+        ax.set_zlim(-(ax_lim* code_units.code_length).to(plotting_units_length).value, (ax_lim* code_units.code_length).to(plotting_units_length).value)
+        ax.set_title(f'Time: {(snapshots.times[frame] * code_units.code_time).to(plot_units_time):.2f} ')
+        scatter1 = ax.scatter((snapshots.states[frame, :, 0, 0]* code_units.code_length).to(plotting_units_length).value, 
+                              (snapshots.states[frame, :, 0, 1]* code_units.code_length).to(plotting_units_length).value, 
+                              (snapshots.states[frame, :, 0, 2]* code_units.code_length).to(plotting_units_length).value, 
+                              c=jnp.linalg.norm(snapshots.states[frame, :, 1], axis=1),
+                              s=1)
         scatter2 = ax.scatter(0, 0, 0, c='r', s=100, marker='*')
         return scatter1, scatter2
 
