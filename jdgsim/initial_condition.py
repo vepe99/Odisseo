@@ -3,14 +3,9 @@ from functools import partial
 import jax
 import jax.numpy as jnp
 from jax import vmap, random
-from jax.lax import while_loop
 import numpy as np
 from multiprocessing import Pool
 
-
-from jdgsim.utils import E_pot
-from jdgsim.dynamics import direct_acc
-from jdgsim import construct_initial_state
 
 def Plummer_sphere(key, config, params):
     """
