@@ -50,6 +50,16 @@ def create_3d_gif_velocitycoding(snapshots, ax_lim, code_units, plotting_units_l
     fig = plt.figure(figsize=(10, 10))
     ax = fig.add_subplot(111, projection='3d')
 
+    # Calculate velocity norms across all frames if vmin/vmax not provided
+    if vmin is None or vmax is None:
+        all_velocity_norms = jnp.linalg.norm(snapshots.states[:, :, 1], axis=2)
+        vmin = vmin if vmin is not None else jnp.min(all_velocity_norms)
+        vmax = vmax if vmax is not None else jnp.max(all_velocity_norms)
+    
+    # Store colorbar reference
+    cbar = None
+    
+
     # Initialize the scatter plot
     scatter1 = ax.scatter([], [], [], )
     scatter2 = ax.scatter([], [], [], c='r', marker='*')
@@ -61,7 +71,9 @@ def create_3d_gif_velocitycoding(snapshots, ax_lim, code_units, plotting_units_l
         return scatter1, scatter2
 
     def update(frame):
+        nonlocal cbar
         ax.clear()
+
         ax.set_xlabel(f'X {plotting_units_length}')
         ax.set_ylabel(f'Y {plotting_units_length}')
         ax.set_zlabel(f'Z {plotting_units_length}')
@@ -69,12 +81,22 @@ def create_3d_gif_velocitycoding(snapshots, ax_lim, code_units, plotting_units_l
         ax.set_ylim(-(ax_lim* code_units.code_length).to(plotting_units_length).value, (ax_lim* code_units.code_length).to(plotting_units_length).value)
         ax.set_zlim(-(ax_lim* code_units.code_length).to(plotting_units_length).value, (ax_lim* code_units.code_length).to(plotting_units_length).value)
         ax.set_title(f'Time: {(snapshots.times[frame] * code_units.code_time).to(plot_units_time):.2f} ')
+        
+        velocity_norms = jnp.linalg.norm(snapshots.states[frame, :, 1], axis=1)
+
         scatter1 = ax.scatter((snapshots.states[frame, :, 0, 0]* code_units.code_length).to(plotting_units_length).value, 
                               (snapshots.states[frame, :, 0, 1]* code_units.code_length).to(plotting_units_length).value, 
                               (snapshots.states[frame, :, 0, 2]* code_units.code_length).to(plotting_units_length).value, 
-                              c=jnp.linalg.norm(snapshots.states[frame, :, 1], axis=1),
+                              c=velocity_norms,
                               s=1)
         scatter2 = ax.scatter(0, 0, 0, c='r', s=100, marker='*')
+
+        if cbar is not None:
+            cbar.remove()
+        cbar = fig.colorbar(scatter1, ax=ax, shrink=0.8, pad=0.1)
+        # vel_label = f"Velocity" if code_units.velocity_units is None else f"Velocity [{code_units.velocity_units}]"
+        # cbar.set_label(vel_label)
+        
         return scatter1, scatter2
 
     # Create the animation
