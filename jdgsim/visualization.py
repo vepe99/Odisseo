@@ -45,7 +45,7 @@ def create_3d_gif(snapshots, ax_lim, code_units, plotting_units_length, plot_uni
         # Save the animation as a GIF
         anim.save(filename, writer=PillowWriter(fps=10))
 
-def create_3d_gif_velocitycoding(snapshots, ax_lim, code_units, plotting_units_length, plot_units_time, filename=None):
+def create_3d_gif_velocitycoding(snapshots, ax_lim, code_units, plotting_units_length, plot_units_time, vmin=None, vmax=None, filename=None):
     # Create a figure for plotting
     fig = plt.figure(figsize=(10, 10))
     ax = fig.add_subplot(111, projection='3d')
