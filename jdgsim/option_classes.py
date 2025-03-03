@@ -1,11 +1,20 @@
 from typing import NamedTuple
 from jdgsim.integrators import LEAPFROG
 from jdgsim.dynamics import DIRECT_ACC, DIRECT_ACC_LAXMAP
-from jdgsim.potentials import NFW_POTENTIAL, POINT_MASS
+from jdgsim.potentials import NFW_POTENTIAL, POINT_MASS, MN_POTENTIAL
 from astropy import units as u
 from astropy import constants as c
 from math import log
 
+
+class PlummerParams(NamedTuple):
+    """
+    NamedTuple containing the parameters for the Plummer profile
+    """
+    
+    a: float = 7 * u.kpc #kpc
+    
+    Mtot: float = 1.0 * u.Msun #M☉
 
 class NFWParams(NamedTuple):
     """
@@ -20,15 +29,6 @@ class NFWParams(NamedTuple):
 
     d_c: float = log(1+c) - c/(1+c)
 
-class PlummerParams(NamedTuple):
-    """
-    NamedTuple containing the parameters for the Plummer profile
-    """
-    
-    a: float = 7 * u.kpc #kpc
-    
-    Mtot: float = 1.0 * u.Msun #M☉
-
 class PointMassParams(NamedTuple):
     """
     NamedTuple containing the parameters for the point mass
@@ -36,6 +36,18 @@ class PointMassParams(NamedTuple):
 
     M: float = 1.0 * u.Msun #M☉
     
+class MNParams(NamedTuple):
+    """
+    NamedTuple containing the parameters for the Myamoto Nagai profile
+    
+    """
+
+    M: float = 6.5e10 * u.Msun #M☉
+
+    a: float = 3.0 * u.kpc #kpc
+
+    b: float = 0.28 * u.kpc #kpc
+
 
 class SimulationParams(NamedTuple):
     """
@@ -45,14 +57,15 @@ class SimulationParams(NamedTuple):
     G: float = c.G.to(u.kpc**3 / u.Msun / u.Gyr**2)
     
     t_end: float = 1.0 * u.Gyr #Gyr
-    
-    NFW_params: NFWParams = NFWParams()
-    
+
     Plummer_params: PlummerParams = PlummerParams()
 
-    PointMass_params: PointMassParams = PointMassParams()
-    
+    NFW_params: NFWParams = NFWParams()
 
+    PointMass_params: PointMassParams = PointMassParams()
+
+    MN_params: MNParams = MNParams()
+    
 class SimulationConfig(NamedTuple):
     """
     NamedTuple containing the configuration for the simulation. This parameter require recompilation
