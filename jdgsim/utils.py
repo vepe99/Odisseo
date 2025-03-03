@@ -2,7 +2,7 @@ from functools import partial
 import jax
 from jax import jit
 import jax.numpy as jnp
-from jdgsim.dynamics import DIRECT_ACC, direct_acc
+from jdgsim.dynamics import DIRECT_ACC, direct_acc, DIRECT_ACC_LAXMAP, direct_acc_laxmap
 from jdgsim.potentials import combined_external_acceleration, combined_external_acceleration_vmpa_switch
 
     
@@ -67,6 +67,9 @@ def E_pot(state, mass, config, params):
     # return - jnp.sum(jnp.sum(config.acceleration_scheme(state, mass, config, params) * state[:, 0], axis=1) * mass)
     if config.acceleration_scheme == DIRECT_ACC:
         _, pot = direct_acc(state, mass, config, params, return_potential=True)
+        self_Epot = jnp.sum(pot*mass)
+    elif config.acceleration_scheme == DIRECT_ACC_LAXMAP:
+        _, pot = direct_acc_laxmap(state, mass, config, params, return_potential=True)
         self_Epot = jnp.sum(pot*mass)
     
     external_Epot = 0.

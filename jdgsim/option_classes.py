@@ -1,6 +1,6 @@
 from typing import NamedTuple
 from jdgsim.integrators import LEAPFROG
-from jdgsim.dynamics import DIRECT_ACC
+from jdgsim.dynamics import DIRECT_ACC, DIRECT_ACC_LAXMAP
 from jdgsim.potentials import NFW_POTENTIAL, POINT_MASS
 from astropy import units as u
 from astropy import constants as c
@@ -75,6 +75,11 @@ class SimulationConfig(NamedTuple):
     integrator: int = LEAPFROG
     
     acceleration_scheme: int = DIRECT_ACC
-    
+
+    batch_size: int = 10_000
+
+    double_map: bool = False
+
     external_accelerations: tuple = ()
+
     
