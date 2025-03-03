@@ -172,3 +172,65 @@ def ic_two_body(mass1: float, mass2: float, rp: float, e: float, config, params)
 
     return pos, vel, mass
     
+
+
+def sample_position_on_sphere(key, r_p, num_samples=1):
+    """
+    Sample uniform positions on a sphere of radius r_p.
+
+    Parameters
+    ----------
+    key : jax.random.PRNGKey
+        JAX random key for sampling.
+    r_p : float
+        Radius of the sphere.
+    num_samples : int
+        Number of samples to generate.
+
+    Returns
+    -------
+    positions : jnp.ndarray
+        Sampled positions (num_samples, 3).
+    """
+    subkey1, subkey2 = random.split(key)
+    
+    # Sample phi uniformly in [0, 2π]
+    phi = random.uniform(subkey1, shape=(num_samples,), minval=0, maxval=2*jnp.pi)
+    
+    # Sample cos(theta) uniformly in [-1, 1] to ensure uniform distribution on the sphere
+    costheta = random.uniform(subkey2, shape=(num_samples,), minval=-1, maxval=1)
+    theta = jnp.arccos(costheta)  # Convert to theta
+    
+    # Convert to Cartesian coordinates
+    x = r_p * jnp.sin(theta) * jnp.cos(phi)
+    y = r_p * jnp.sin(theta) * jnp.sin(phi)
+    z = r_p * jnp.cos(theta)
+
+    return jnp.stack([x, y, z], axis=-1)
+
+def inclined_circular_velocity(position, v_c, inclination):
+    """
+    Convert circular velocity from an inclined orbit into Cartesian components.
+    
+    Parameters
+    ----------
+    position : jnp.ndarray
+        (x, y, z) position of the Plummer sphere.
+    v_c : float
+        Circular velocity (km/s).
+    inclination : float
+        Inclination angle in radians.
+    
+    Returns
+    -------
+    velocity : jnp.ndarray
+        (v_x, v_y, v_z) velocity components.
+    """
+    x, y, z = position.T
+    phi = jnp.arctan2(y, x)  # Azimuthal angle
+    
+    # Compute velocity components with inclination
+    v_x = -v_c * jnp.cos(inclination) * jnp.sin(phi)
+    v_y = v_c * jnp.cos(inclination) * jnp.cos(phi)
+    v_z = v_c * jnp.sin(inclination)
+    return jnp.stack([v_x, v_y, v_z], axis=-1)
