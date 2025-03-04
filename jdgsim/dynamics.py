@@ -9,6 +9,43 @@ from jax import random
 DIRECT_ACC = 0
 DIRECT_ACC_LAXMAP = 1
 
+# @partial(jax.jit, static_argnames=['config'])
+# def single_body_acc(particle_i, particle_j, mass_i, mass_j, config, params) -> jnp.ndarray:
+#     """
+#     Compute acceleration of particle_i due to particle_j.
+    
+#     Parameters
+#     ----------
+#     particle_i : jnp.ndarray
+#         Position and velocity of particle_i.
+#     particle_j : jnp.ndarray
+#         Position and velocity of particle_j.
+#     mass_i : float
+#         Mass of particle_i.
+#     mass_j : float
+#         Mass of particle_j.
+#     config: NamedTuple
+#         Configuration parameters.
+#     params: NamedTuple
+#         Simulation parameters.
+    
+#     Returns
+#     -------
+#     Tuple
+#         - Acceleration: jnp.ndarray 
+#             Acecleration of particle_i due to particle_j.
+#         - Potential: jnp.ndarray
+#             Potential energy of particle_i due to particle_j
+#     """
+
+#     r_ij = particle_i[0, :] - particle_j[0, :]
+#     # r_mag = jnp.linalg.norm(r_ij)   # Avoid division by zero and close encounter with config.softening
+
+#     r_mag = jnp.sqrt(jnp.sum(r_ij**2 + config.softening**2))
+        
+#     return - params.G * (mass_j) * (r_ij/(r_mag**2 + config.softening**2)**(3/2)), - params.G * mass_j / (r_mag + config.softening)
+
+
 @partial(jax.jit, static_argnames=['config'])
 def single_body_acc(particle_i, particle_j, mass_i, mass_j, config, params) -> jnp.ndarray:
     """
@@ -37,11 +74,18 @@ def single_body_acc(particle_i, particle_j, mass_i, mass_j, config, params) -> j
         - Potential: jnp.ndarray
             Potential energy of particle_i due to particle_j
     """
-    
     r_ij = particle_i[0, :] - particle_j[0, :]
-    r_mag = jnp.linalg.norm(r_ij)   # Avoid division by zero and close encounter with config.softening
+    condtion = jnp.all(r_ij == 0.0)
 
-    return - params.G * (mass_j) * (r_ij/(r_mag**2 + config.softening**2)**(3/2)), - params.G * mass_j / (r_mag + config.softening)
+    def same_position():
+        return jnp.zeros(3), 0.0
+    def different_position():
+        r_mag = jnp.linalg.norm(r_ij)
+        acc = - params.G * mass_j * (r_ij/(r_mag**2 + config.softening**2)**(3/2))
+        pot = - params.G * mass_j / (r_mag**2 + config.softening**2)**(1/2)
+        return acc, pot
+    return jax.lax.cond(condtion, same_position, different_position)
+    
     
 
 @partial(jax.jit, static_argnames=['config', 'return_potential'])
