@@ -38,8 +38,6 @@ def leapfrog(state, mass, dt, config, params):
     elif config.acceleration_scheme == DIRECT_ACC_LAXMAP:
         acc_func = direct_acc_laxmap
     
-    
-    
     acc = acc_func(state, mass, config, params)
 
     # Check additional accelerations
@@ -57,5 +55,8 @@ def leapfrog(state, mass, dt, config, params):
     state = state.at[:, 1].set(state[:, 1] + 0.5*(acc + acc2)*dt)
     
     return state
+
+
+
 
 
