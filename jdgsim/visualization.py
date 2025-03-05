@@ -2,8 +2,54 @@ import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.animation import FuncAnimation, PillowWriter
 import jax.numpy as jnp
-
+from astropy import units as u
 ####PLOT MAKER####
+
+def energy_angular_momentum_plot(snapshots, code_units, filename=None):
+    """
+    Plots the relative change in total energy and angular momentum of the system over time.
+    
+    Parameters
+    ----------
+    snapshots : jdgsim.Snapshots
+        Snapshots object containing the simulation data.
+    code_units : jdgsim.CodeUnits
+        CodeUnits object containing the units of the simulation.
+    filename : str, optional
+        The filename to save the plot to. If None, the plot
+        will be displayed but not saved.
+    
+    Returns
+    -------
+    None
+
+    """
+    fig = plt.figure(figsize=(17, 5))
+    ax = fig.add_subplot(121)
+    Delta_E = ((snapshots.total_energy - snapshots.total_energy[0])/snapshots.total_energy[0])
+    ax.plot((snapshots.times * code_units.code_time).to(u.Gyr), 100*Delta_E,)
+    ax.set_xlabel('Time [Gyr]')
+    ax.set_ylabel(r'$(E - E_0)/E_0 \% $')
+    ax.set_ylim(-100, 100)
+    ax.axhline(5, color='r', linestyle='--', label='5%')
+    ax.axhline(-5, color='r', linestyle='--', )
+    ax.grid(linestyle='dotted')
+    ax.legend()
+
+    ax = fig.add_subplot(122)
+    Delta_AngMom = ((snapshots.angular_momentum - snapshots.angular_momentum[0])/snapshots.angular_momentum[0])
+    ax.plot((snapshots.times * code_units.code_time).to(u.Gyr), 100*Delta_AngMom[:, 2], )
+    ax.set_xlabel('Time [Gyr]')
+    ax.set_ylabel(r'$(L - L_0)/L_0 \% $')
+    ax.set_ylim(-100, 100)
+    ax.axhline(5, color='r', linestyle='--', label='5%')
+    ax.axhline(-5, color='r', linestyle='--', )
+    ax.grid(linestyle='dotted')
+    ax.legend()
+
+    if filename is not None:
+        fig.savefig(filename, laypout='tight')
+    plt.show()
 
 
 
