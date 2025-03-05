@@ -24,7 +24,7 @@ def energy_angular_momentum_plot(snapshots, code_units, filename=None):
     None
 
     """
-    fig = plt.figure(figsize=(17, 5))
+    fig = plt.figure(figsize=(17, 5), tight_layout=True)
     ax = fig.add_subplot(121)
     Delta_E = ((snapshots.total_energy - snapshots.total_energy[0])/snapshots.total_energy[0])
     ax.plot((snapshots.times * code_units.code_time).to(u.Gyr), 100*Delta_E,)
@@ -48,7 +48,7 @@ def energy_angular_momentum_plot(snapshots, code_units, filename=None):
     ax.legend()
 
     if filename is not None:
-        fig.savefig(filename, laypout='tight')
+        fig.savefig(filename)
     plt.show()
 
 
