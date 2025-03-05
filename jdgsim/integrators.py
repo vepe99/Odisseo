@@ -9,7 +9,7 @@ from jdgsim.potentials import combined_external_acceleration, combined_external_
 from jdgsim.dynamics import DIRECT_ACC, direct_acc, DIRECT_ACC_LAXMAP, direct_acc_laxmap
 LEAPFROG = 0
 
-@partial(jax.jit, static_argnames=['dt', 'config'])
+@partial(jax.jit, static_argnames=['config'])
 def leapfrog(state, mass, dt, config, params):
     """
     Simple implementation of a symplectic Leapfrog (Verlet) integrator for N-body simulations.
