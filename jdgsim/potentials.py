@@ -89,11 +89,6 @@ def NFW(state, config, params, return_potential=False):
     acc =  - params.G * params_NFW.Mvir*NUM[:, jnp.newaxis]/DEN[:, jnp.newaxis] * state[:, 0]
     pot = - params.G * params_NFW.Mvir*jnp.log(1+r/params_NFW.r_s)/(r*params_NFW.d_c)
 
-    
-    # pot = - 4*jnp.pi*params.G * params_NFW.d_c * params_NFW.r_s**3 * jnp.log(1 + r/params_NFW.r_s) / r
-    # acc = (params.G * (params_NFW.Mvir)/(jnp.log(1+params_NFW.c)-params_NFW.c/(1+params_NFW.c)) * (r/(r+params_NFW.r_s) - jnp.log(1+ r/params_NFW.r_s))/(r**3)) @ state[:, 0]
-
-
     if return_potential:
         return acc, pot
     else:

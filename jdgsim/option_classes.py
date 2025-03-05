@@ -12,18 +12,18 @@ class PlummerParams(NamedTuple):
     NamedTuple containing the parameters for the Plummer profile
     """
     
-    a: float = 7 * u.kpc #kpc
+    a: float = 7 #kpc
     
-    Mtot: float = 1.0 * u.Msun #M☉
+    Mtot: float = 1.0 #M☉
 
 class NFWParams(NamedTuple):
     """
     NamedTuple containing the parameters for the NFW profile
     """
     
-    Mvir: float = 1.62*1e11 * u.Msun #M☉
+    Mvir: float = 1.62*1e11 #M☉
     
-    r_s: float = 15.3 * u.kpc #kpc
+    r_s: float = 15.3 #kpc
     
     c: float = 10
 
@@ -34,7 +34,7 @@ class PointMassParams(NamedTuple):
     NamedTuple containing the parameters for the point mass
     """
 
-    M: float = 1.0 * u.Msun #M☉
+    M: float = 1.0 #M☉
     
 class MNParams(NamedTuple):
     """
@@ -42,11 +42,11 @@ class MNParams(NamedTuple):
     
     """
 
-    M: float = 6.5e10 * u.Msun #M☉
+    M: float = 6.5e10 #M☉
 
-    a: float = 3.0 * u.kpc #kpc
+    a: float = 3.0 #kpc
 
-    b: float = 0.28 * u.kpc #kpc
+    b: float = 0.28 #kpc
 
 
 class SimulationParams(NamedTuple):
@@ -54,9 +54,9 @@ class SimulationParams(NamedTuple):
     NamedTuple containing the parameters for the simulation. This parameter do not require recompilation
     """
     
-    G: float = c.G.to(u.kpc**3 / u.Msun / u.Gyr**2)
+    G: float = 1.0
     
-    t_end: float = 1.0 * u.Gyr #Gyr
+    t_end: float = 1.0  #In code_units by setting G=1
 
     Plummer_params: PlummerParams = PlummerParams()
 
@@ -83,7 +83,7 @@ class SimulationConfig(NamedTuple):
     
     num_timesteps: int = 1000
     
-    softening:float = 1e-10
+    softening: float = 1e-10
     
     integrator: int = LEAPFROG
     
