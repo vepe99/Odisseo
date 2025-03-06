@@ -146,21 +146,23 @@ def direct_acc_matrix(state, mass, config, params, return_potential=False):
     # Compute pairwise differences
     dpos = pos[:, None, :] - pos[None, :, :]  # Shape: (N, N, 3)
 
+    eye = jnp.eye(config.N_particles)
+
     # Compute squared distances with softening
-    r2 = jnp.sum(dpos**2, axis=-1) + config.softening**2  # Shape: (N, N)
+    r2_safe = jnp.sum(dpos**2, axis=-1) + config.softening**2 + eye # Shape: (N, N)
 
     # Avoid self-interaction by setting the diagonal to a safe value (1.0)
-    r2_safe = r2 + jnp.eye(r2.shape[0])
+    # r2_safe = r2 + jnp.eye(r2.shape[0])
 
     # Compute 1/r^3 safely
-    inv_r3 = r2_safe**-1.5 * (1.0 - jnp.eye(r2.shape[0]))  # Diagonal is zero
+    inv_r3 = r2_safe**-1.5 * (1.0 - eye)  # Diagonal is zero
 
     # Compute acceleration
     acc = - params.G * jnp.sum((mass[:, None] * dpos) * inv_r3[:, :, None], axis=1)
 
     if return_potential:
         # Compute potential energy (only sum interactions once)
-        inv_r = r2_safe**-0.5 * (1.0 - jnp.eye(r2.shape[0]))  # Diagonal is zero
+        inv_r = r2_safe**-0.5 * (1.0 - eye)  # Diagonal is zero
         pot = -params.G * jnp.sum(mass[:, None] * inv_r, axis=1)
         return acc, pot
     else:

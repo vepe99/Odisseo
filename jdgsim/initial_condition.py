@@ -44,7 +44,7 @@ def Plummer_sphere(key, config, params):
     
     positions = jnp.array([r*jnp.cos(jnp.arcsin(sin_i))*jnp.cos(phi), r*jnp.cos(jnp.arcsin(sin_i))*jnp.sin(phi), r*sin_i]).T
     potential = - params.G * Plummer_Mtot / jnp.sqrt( jnp.linalg.norm(positions, axis=1)**2 + params.Plummer_params.a**2)
-    velocities_escape = jnp.sqrt(-2*potential)
+    velocities_escape = jnp.sqrt(-2*potential )
 
 
     def G(q):
