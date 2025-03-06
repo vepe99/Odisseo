@@ -8,42 +8,7 @@ from jax import random
 
 DIRECT_ACC = 0
 DIRECT_ACC_LAXMAP = 1
-
-# @partial(jax.jit, static_argnames=['config'])
-# def single_body_acc(particle_i, particle_j, mass_i, mass_j, config, params) -> jnp.ndarray:
-#     """
-#     Compute acceleration of particle_i due to particle_j.
-    
-#     Parameters
-#     ----------
-#     particle_i : jnp.ndarray
-#         Position and velocity of particle_i.
-#     particle_j : jnp.ndarray
-#         Position and velocity of particle_j.
-#     mass_i : float
-#         Mass of particle_i.
-#     mass_j : float
-#         Mass of particle_j.
-#     config: NamedTuple
-#         Configuration parameters.
-#     params: NamedTuple
-#         Simulation parameters.
-    
-#     Returns
-#     -------
-#     Tuple
-#         - Acceleration: jnp.ndarray 
-#             Acecleration of particle_i due to particle_j.
-#         - Potential: jnp.ndarray
-#             Potential energy of particle_i due to particle_j
-#     """
-
-#     r_ij = particle_i[0, :] - particle_j[0, :]
-#     # r_mag = jnp.linalg.norm(r_ij)   # Avoid division by zero and close encounter with config.softening
-
-#     r_mag = jnp.sqrt(jnp.sum(r_ij**2 + config.softening**2))
-        
-#     return - params.G * (mass_j) * (r_ij/(r_mag**2 + config.softening**2)**(3/2)), - params.G * mass_j / (r_mag + config.softening)
+DIRECT_ACC_MATRIX = 2
 
 
 @partial(jax.jit, static_argnames=['config'])
@@ -174,4 +139,29 @@ def direct_acc_laxmap(state, mass, config, params, return_potential=False, ):
     return jax.lax.map(net_force_on_body, (state, mass), batch_size=config.batch_size)
 
 
+@partial(jax.jit, static_argnames=['config', 'return_potential'])
+def direct_acc_matrix(state, mass, config, params, return_potential=False):
+    pos = state[:, 0, :]  # Extract positions (N, 3)
 
+    # Compute pairwise differences
+    dpos = pos[:, None, :] - pos[None, :, :]  # Shape: (N, N, 3)
+
+    # Compute squared distances with softening
+    r2 = jnp.sum(dpos**2, axis=-1) + config.softening**2  # Shape: (N, N)
+
+    # Avoid self-interaction by setting the diagonal to a safe value (1.0)
+    r2_safe = r2 + jnp.eye(r2.shape[0])
+
+    # Compute 1/r^3 safely
+    inv_r3 = r2_safe**-1.5 * (1.0 - jnp.eye(r2.shape[0]))  # Diagonal is zero
+
+    # Compute acceleration
+    acc = - params.G * jnp.sum((mass[:, None] * dpos) * inv_r3[:, :, None], axis=1)
+
+    if return_potential:
+        # Compute potential energy (only sum interactions once)
+        inv_r = r2_safe**-0.5 * (1.0 - jnp.eye(r2.shape[0]))  # Diagonal is zero
+        pot = -params.G * jnp.sum(mass[:, None] * inv_r, axis=1)
+        return acc, pot
+    else:
+        return acc

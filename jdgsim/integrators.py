@@ -6,7 +6,7 @@ import jax.numpy as jnp
 from jax import vmap, jit
 from jax import random
 from jdgsim.potentials import combined_external_acceleration, combined_external_acceleration_vmpa_switch
-from jdgsim.dynamics import DIRECT_ACC, direct_acc, DIRECT_ACC_LAXMAP, direct_acc_laxmap
+from jdgsim.dynamics import DIRECT_ACC, direct_acc, DIRECT_ACC_LAXMAP, direct_acc_laxmap, DIRECT_ACC_MATRIX, direct_acc_matrix
 LEAPFROG = 0
 
 @partial(jax.jit, static_argnames=['config'])
@@ -37,6 +37,9 @@ def leapfrog(state, mass, dt, config, params):
     
     elif config.acceleration_scheme == DIRECT_ACC_LAXMAP:
         acc_func = direct_acc_laxmap
+
+    elif config.acceleration_scheme == DIRECT_ACC_MATRIX:
+        acc_func = direct_acc_matrix
     
     acc = acc_func(state, mass, config, params)
 
