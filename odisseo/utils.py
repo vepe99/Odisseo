@@ -36,12 +36,11 @@ def E_kin(state, mass):
         Array of shape (N_particles, 6) representing the positions and velocities of the particles.
     mass : jnp.ndarray
         Array of shape (N_particles,) representing the masses of the particles.
-
+  
     Returns
     -------
     float
         The kinetic energy of the system.
-
     """
     
     return 0.5 * jnp.sum(jnp.sum(state[:, 1]**2, axis=1) * mass)
@@ -57,7 +56,11 @@ def E_pot(state, mass, config, params):
         Array of shape (N_particles, 6) representing the positions and velocities of the particles.
     mass : jnp.ndarray
         Array of shape (N_particles,) representing the masses of the particles.
-
+    config : SimulationConfig
+        Configuration object containing simulation parameters.
+    params : SimulationParams
+        Parameters object containing physical parameters for the simulation.
+    
     Returns
     -------
     float
@@ -92,6 +95,10 @@ def E_tot(state, mass, config, params):
         Array of shape (N_particles, 6) representing the positions and velocities of the particles.
     mass : jnp.ndarray
         Array of shape (N_particles,) representing the masses of the particles.
+    config : SimulationConfig
+        Configuration object containing simulation parameters.
+    params : SimulationParams
+        Parameters object containing physical parameters for the simulation.    
 
     Returns
     -------

@@ -3,7 +3,6 @@ import numpy as np
 from matplotlib.animation import FuncAnimation, PillowWriter
 import jax.numpy as jnp
 from astropy import units as u
-####PLOT MAKER####
 
 def energy_angular_momentum_plot(snapshots, code_units, filename=None):
     """
@@ -22,7 +21,6 @@ def energy_angular_momentum_plot(snapshots, code_units, filename=None):
     Returns
     -------
     None
-
     """
     fig = plt.figure(figsize=(17, 5), tight_layout=True)
     ax = fig.add_subplot(121)
@@ -53,7 +51,6 @@ def energy_angular_momentum_plot(snapshots, code_units, filename=None):
 
 
 
-######GIF MAKER####
 def create_3d_gif(snapshots, ax_lim, code_units, plotting_units_length, plot_units_time, filename=None):
     # Create a figure for plotting
     fig = plt.figure(figsize=(10, 10))

@@ -1,0 +1,612 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>odisseo.initial_condition &#8212; Odisseo</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../_static/styles/theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../../_static/styles/bootstrap.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../../_static/styles/pydata-sphinx-theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+
+  
+  <link href="../../_static/vendor/fontawesome/6.5.2/css/all.min.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
+
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../../_static/styles/sphinx-book-theme.css?v=eba8b062" />
+    <link rel="stylesheet" type="text/css" href="../../_static/mystnb.4510f1fc1dee50b3e5859aac5469c37c29e427902b24a333a5f9fcb2f0b3ac41.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=95c83b7e" />
+  
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b" />
+<link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
+  <script src="../../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+    <script src="../../_static/documentation_options.js?v=a1637f0b"></script>
+    <script src="../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../../_static/copybutton.js?v=f281be69"></script>
+    <script src="../../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
+    <script src="../../_static/design-tabs.js?v=f930bc37"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = '_modules/odisseo/initial_condition';</script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-primary-sidebar-checkbox"/>
+  <label class="overlay overlay-primary" for="pst-primary-sidebar-checkbox"></label>
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-secondary-sidebar-checkbox"/>
+  <label class="overlay overlay-secondary" for="pst-secondary-sidebar-checkbox"></label>
+  
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
+<form class="bd-search d-flex align-items-center"
+      action="../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         id="search-input"
+         placeholder="Search..."
+         aria-label="Search..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form></div>
+  </div>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+        
+      
+      <div class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../../index.html">
+  
+  
+  
+  
+  
+  
+    <p class="title logo__title">Odisseo</p>
+  
+</a></div>
+        <div class="sidebar-primary-item">
+
+ <script>
+ document.write(`
+   <button class="btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script></div>
+        <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        <p aria-level="2" class="caption" role="heading"><span class="caption-text">Introduction</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../index.html">Odisseo documentation</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Self gravitating system</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../notebooks/2body.html">2 body problem</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../notebooks/Plummer.html">Self gravitating Plummer Sphere</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">External Potentials</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../notebooks/Plummer_in_NFWpotential.html">Navarro-Frank-White halo potential</a></li>
+
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">gradient</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../notebooks/gradient_test/grad_NFW_Potential.html">Gradient example: <span class="math notranslate nohighlight">\(\nabla_{M_{vir}^{NFW}}\)</span> (time_integration)</a></li>
+</ul>
+
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+  
+  <div id="rtd-footer-container"></div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><button class="sidebar-toggle primary-toggle btn btn-sm" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</button></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+<a href="https://github.com/vepe99/Odisseo" target="_blank"
+   class="btn btn-sm btn-source-repository-button"
+   title="Source repository"
+   data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fab fa-github"></i>
+  </span>
+
+</a>
+
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button"
+  title="Fullscreen mode"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+  </button>
+`);
+</script>
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm pst-navbar-icon search-button search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+  </button>
+`);
+</script>
+
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1></h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <h1>Source code for odisseo.initial_condition</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span><span class="w"> </span><span class="nn">functools</span><span class="w"> </span><span class="kn">import</span> <span class="n">partial</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">jax</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">jax.numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">jnp</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">jax</span><span class="w"> </span><span class="kn">import</span> <span class="n">vmap</span><span class="p">,</span> <span class="n">random</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">multiprocessing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Pool</span>
+
+
+<div class="viewcode-block" id="Plummer_sphere">
+<a class="viewcode-back" href="../../source/odisseo.initial_condition.html#odisseo.initial_condition.Plummer_sphere">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">Plummer_sphere</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">config</span><span class="p">,</span> <span class="n">params</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Create initial conditions for a Plummer sphere. The sampling of velocities is done by inverse fitting </span>
+<span class="sd">    the cumulative distribution function of the Plummer sphere.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    key : jax.random.PRNGKey</span>
+<span class="sd">        Random key.</span>
+<span class="sd">    config : NamedTuple</span>
+<span class="sd">        Configuration NamedTuple containing the number of particles (N_particles).</span>
+<span class="sd">    params : NamedTuple</span>
+<span class="sd">        Parameters NamedTuple containing:</span>
+<span class="sd">        Plummer_a : float</span>
+<span class="sd">            Scale length of the Plummer sphere.</span>
+<span class="sd">        G : float</span>
+<span class="sd">            Gravitational constant.</span>
+<span class="sd">            </span>
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    tuple</span>
+<span class="sd">        A tuple containing:</span>
+<span class="sd">        - positions : jnp.array</span>
+<span class="sd">            Array of shape (N_particles, 3) representing the positions of the particles.</span>
+<span class="sd">        - velocities : jnp.array</span>
+<span class="sd">            Array of shape (N_particles, 3) representing the velocities of the particles.</span>
+<span class="sd">        - masses : jnp.array</span>
+<span class="sd">            Array of shape (N_particles,) representing the masses of the particles.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+    <span class="n">Plummer_Mtot</span> <span class="o">=</span> <span class="n">params</span><span class="o">.</span><span class="n">Plummer_params</span><span class="o">.</span><span class="n">Mtot</span>
+    <span class="n">key_r</span><span class="p">,</span> <span class="n">key_phi</span><span class="p">,</span> <span class="n">key_sin_i</span><span class="p">,</span> <span class="n">key_u</span><span class="p">,</span> <span class="n">key_phi_v</span><span class="p">,</span> <span class="n">key_sin_i_v</span><span class="o">=</span> <span class="n">random</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="mi">6</span><span class="p">)</span>
+    <span class="n">r</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span> <span class="n">params</span><span class="o">.</span><span class="n">Plummer_params</span><span class="o">.</span><span class="n">a</span> <span class="o">/</span> <span class="p">(</span><span class="n">random</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="n">key</span><span class="o">=</span><span class="n">key_r</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">N_particles</span><span class="p">,))</span><span class="o">**</span><span class="p">(</span><span class="o">-</span><span class="mi">3</span><span class="o">/</span><span class="mi">2</span><span class="p">)</span> <span class="o">-</span><span class="mi">1</span><span class="p">))</span>
+    <span class="n">phi</span> <span class="o">=</span> <span class="n">random</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="n">key</span><span class="o">=</span><span class="n">key_phi</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">N_particles</span><span class="p">,),</span> <span class="n">minval</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">maxval</span><span class="o">=</span><span class="mi">2</span><span class="o">*</span><span class="n">jnp</span><span class="o">.</span><span class="n">pi</span><span class="p">)</span> 
+    <span class="n">sin_i</span> <span class="o">=</span> <span class="n">random</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="n">key</span><span class="o">=</span><span class="n">key_sin_i</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">N_particles</span><span class="p">,),</span> <span class="n">minval</span><span class="o">=-</span><span class="mi">1</span><span class="p">,</span> <span class="n">maxval</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+    
+    <span class="n">positions</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">r</span><span class="o">*</span><span class="n">jnp</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">jnp</span><span class="o">.</span><span class="n">arcsin</span><span class="p">(</span><span class="n">sin_i</span><span class="p">))</span><span class="o">*</span><span class="n">jnp</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">phi</span><span class="p">),</span> <span class="n">r</span><span class="o">*</span><span class="n">jnp</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">jnp</span><span class="o">.</span><span class="n">arcsin</span><span class="p">(</span><span class="n">sin_i</span><span class="p">))</span><span class="o">*</span><span class="n">jnp</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">phi</span><span class="p">),</span> <span class="n">r</span><span class="o">*</span><span class="n">sin_i</span><span class="p">])</span><span class="o">.</span><span class="n">T</span>
+    <span class="n">potential</span> <span class="o">=</span> <span class="o">-</span> <span class="n">params</span><span class="o">.</span><span class="n">G</span> <span class="o">*</span> <span class="n">Plummer_Mtot</span> <span class="o">/</span> <span class="n">jnp</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span> <span class="n">jnp</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">positions</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="n">params</span><span class="o">.</span><span class="n">Plummer_params</span><span class="o">.</span><span class="n">a</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
+    <span class="n">velocities_escape</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="o">-</span><span class="mi">2</span><span class="o">*</span><span class="n">potential</span> <span class="p">)</span>
+
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">G</span><span class="p">(</span><span class="n">q</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Normalize Cumulative distribution function of q=v/v_escape for a Plummer sphere.</span>
+<span class="sd">        The assosiate unormalized probability distribution function assosiated with it is</span>
+<span class="sd">        g(q) = (1-q)**(7/2) * q**2</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        q : float</span>
+<span class="sd">            Velocity ratio v/v_escape.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="mi">1287</span><span class="o">/</span><span class="mi">16</span> <span class="o">*</span> <span class="p">((</span><span class="o">-</span><span class="mi">2</span><span class="o">*</span><span class="p">(</span><span class="mi">1</span><span class="o">-</span><span class="n">q</span><span class="p">)</span><span class="o">**</span><span class="p">(</span><span class="mi">9</span><span class="o">/</span><span class="mi">2</span><span class="p">))</span><span class="o">*</span><span class="p">(</span><span class="mi">99</span><span class="o">*</span><span class="n">q</span><span class="o">**</span><span class="mi">2</span><span class="o">+</span><span class="mi">36</span><span class="o">*</span><span class="n">q</span><span class="o">+</span><span class="mi">8</span><span class="p">)</span><span class="o">/</span><span class="mi">1287</span> <span class="o">+</span><span class="mi">16</span><span class="o">/</span><span class="mi">1287</span><span class="p">)</span>
+    
+    <span class="c1"># Invere fitting</span>
+    <span class="n">q</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">100_000</span><span class="p">)</span>
+    <span class="n">y</span> <span class="o">=</span> <span class="n">G</span><span class="p">(</span><span class="n">q</span><span class="p">)</span>
+
+    <span class="n">u</span> <span class="o">=</span> <span class="n">random</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="n">key</span><span class="o">=</span><span class="n">key_u</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">N_particles</span><span class="p">,))</span>
+    <span class="n">samples</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">interp</span><span class="p">(</span><span class="n">u</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">q</span><span class="p">)</span>
+    <span class="n">velocities_modulus</span> <span class="o">=</span> <span class="n">samples</span> <span class="o">*</span> <span class="n">velocities_escape</span>
+
+    <span class="c1"># Generate random angles for the velocity</span>
+    <span class="n">phi_v</span> <span class="o">=</span> <span class="n">random</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="n">key</span><span class="o">=</span><span class="n">key_phi_v</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">N_particles</span><span class="p">,),</span> <span class="n">minval</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">maxval</span><span class="o">=</span><span class="mi">2</span><span class="o">*</span><span class="n">jnp</span><span class="o">.</span><span class="n">pi</span><span class="p">)</span> 
+    <span class="n">sin_i_v</span> <span class="o">=</span> <span class="n">random</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="n">key</span><span class="o">=</span><span class="n">key_sin_i_v</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">N_particles</span><span class="p">,),</span> <span class="n">minval</span><span class="o">=-</span><span class="mi">1</span><span class="p">,</span> <span class="n">maxval</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">velocities</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">velocities_modulus</span><span class="o">*</span><span class="n">jnp</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">jnp</span><span class="o">.</span><span class="n">arcsin</span><span class="p">(</span><span class="n">sin_i_v</span><span class="p">))</span><span class="o">*</span><span class="n">jnp</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">phi_v</span><span class="p">),</span> <span class="n">velocities_modulus</span><span class="o">*</span><span class="n">jnp</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">jnp</span><span class="o">.</span><span class="n">arcsin</span><span class="p">(</span><span class="n">sin_i_v</span><span class="p">))</span><span class="o">*</span><span class="n">jnp</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">phi_v</span><span class="p">),</span> <span class="n">velocities_modulus</span><span class="o">*</span><span class="n">sin_i_v</span><span class="p">])</span><span class="o">.</span><span class="n">T</span>
+
+
+    <span class="k">return</span> <span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">positions</span><span class="p">),</span> <span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">velocities</span><span class="p">),</span> <span class="mi">1</span><span class="o">/</span><span class="n">config</span><span class="o">.</span><span class="n">N_particles</span><span class="o">*</span><span class="n">jnp</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">N_particles</span><span class="p">)</span></div>
+
+     
+ 
+  
+<div class="viewcode-block" id="Plummer_sphere_multiprocess">
+<a class="viewcode-back" href="../../source/odisseo.initial_condition.html#odisseo.initial_condition.Plummer_sphere_multiprocess">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">Plummer_sphere_multiprocess</span><span class="p">(</span><span class="n">mass</span><span class="p">,</span> <span class="n">config</span><span class="p">,</span> <span class="n">params</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    mass : float</span>
+<span class="sd">        The total mass of the Plummer sphere.</span>
+<span class="sd">    config : NamedTuple</span>
+<span class="sd">        Configuration NamedTuple containing the number of particles (N_particles).</span>
+<span class="sd">    params : NamedTuple</span>
+<span class="sd">        Parameters NamedTuple containing:</span>
+<span class="sd">        Plummer_a : float</span>
+<span class="sd">            Scale length of the Plummer sphere.</span>
+<span class="sd">        G : float</span>
+<span class="sd">            Gravitational constant.</span>
+<span class="sd">    </span>
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    tuple</span>
+<span class="sd">        A tuple containing:</span>
+<span class="sd">        - positions : jnp.array</span>
+<span class="sd">            Array of shape (N_particles, 3) representing the positions of the particles.</span>
+<span class="sd">        - velocities : jnp.array</span>
+<span class="sd">            Array of shape (N_particles, 3) representing the velocities of the particles.</span>
+<span class="sd">        - masses : jnp.array</span>
+<span class="sd">            Array of shape (N_particles,) representing the masses of the particles.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">Plummer_Mtot</span> <span class="o">=</span> <span class="n">params</span><span class="o">.</span><span class="n">Plummer_params</span><span class="o">.</span><span class="n">Mtot</span>
+    <span class="n">r</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span> <span class="n">params</span><span class="o">.</span><span class="n">Plummer_params</span><span class="o">.</span><span class="n">a</span> <span class="o">/</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="n">size</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">N_particles</span><span class="p">)</span><span class="o">**</span><span class="p">(</span><span class="o">-</span><span class="mi">3</span><span class="o">/</span><span class="mi">2</span><span class="p">)</span> <span class="o">-</span><span class="mi">1</span><span class="p">))</span>
+    <span class="n">phi</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="n">size</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">N_particles</span><span class="p">,</span> <span class="n">low</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">high</span><span class="o">=</span><span class="mi">2</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">)</span> 
+    <span class="n">sin_i</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="n">size</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">N_particles</span><span class="p">,</span> <span class="n">low</span><span class="o">=-</span><span class="mi">1</span><span class="p">,</span> <span class="n">high</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+    
+    <span class="n">positions</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">r</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">arcsin</span><span class="p">(</span><span class="n">sin_i</span><span class="p">))</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">phi</span><span class="p">),</span> <span class="n">r</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">arcsin</span><span class="p">(</span><span class="n">sin_i</span><span class="p">))</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">phi</span><span class="p">),</span> <span class="n">r</span><span class="o">*</span><span class="n">sin_i</span><span class="p">])</span><span class="o">.</span><span class="n">T</span>
+    <span class="n">potential</span> <span class="o">=</span> <span class="o">-</span> <span class="n">params</span><span class="o">.</span><span class="n">G</span> <span class="o">*</span> <span class="n">Plummer_Mtot</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">positions</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="n">params</span><span class="o">.</span><span class="n">Plummer_params</span><span class="o">.</span><span class="n">a</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">generate_velocity_Plummer</span><span class="p">(</span><span class="n">potential_i</span><span class="p">,</span> <span class="n">rejection_samples</span><span class="o">=</span><span class="mi">1000</span><span class="p">):</span>
+            <span class="n">velocity_i</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="n">rejection_samples</span><span class="p">,</span> <span class="mi">3</span><span class="p">),</span> <span class="n">low</span><span class="o">=-</span><span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="o">-</span><span class="mi">2</span><span class="o">*</span><span class="n">potential_i</span><span class="p">),</span> <span class="n">high</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="o">-</span><span class="mi">2</span><span class="o">*</span><span class="n">potential_i</span><span class="p">))</span>
+            <span class="n">escape_velocity_mask</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">velocity_i</span><span class="o">**</span><span class="mi">2</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="o">-</span> <span class="mi">2</span><span class="o">*</span><span class="n">potential_i</span>
+            <span class="n">isotropic_velocity_mask</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="n">size</span><span class="o">=</span><span class="n">rejection_samples</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="p">((</span><span class="mf">0.5</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">velocity_i</span><span class="o">**</span><span class="mi">2</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span> <span class="o">+</span> <span class="n">potential_i</span> <span class="p">)</span> <span class="o">/</span> <span class="n">potential_i</span><span class="p">)</span><span class="o">**</span><span class="p">(</span><span class="mi">7</span><span class="o">/</span><span class="mi">2</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">velocity_i</span><span class="p">[(</span><span class="n">escape_velocity_mask</span><span class="p">)</span><span class="o">&amp;</span><span class="p">(</span><span class="n">isotropic_velocity_mask</span><span class="p">)][</span><span class="mi">0</span><span class="p">]</span>
+    
+    <span class="k">with</span> <span class="n">Pool</span><span class="p">(</span><span class="n">processes</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span> <span class="k">as</span> <span class="n">pool</span><span class="p">:</span>
+        <span class="n">velocities</span> <span class="o">=</span> <span class="n">pool</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">generate_velocity_Plummer</span><span class="p">,</span> <span class="n">potential</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">positions</span><span class="p">),</span> <span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">velocities</span><span class="p">),</span> <span class="mi">1</span><span class="o">/</span><span class="n">config</span><span class="o">.</span><span class="n">N_particles</span><span class="o">*</span><span class="n">jnp</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">N_particles</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="ic_two_body">
+<a class="viewcode-back" href="../../source/odisseo.initial_condition.html#odisseo.initial_condition.ic_two_body">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">ic_two_body</span><span class="p">(</span><span class="n">mass1</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">mass2</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">rp</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">config</span><span class="p">,</span> <span class="n">params</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Create initial conditions for a two-body system.</span>
+<span class="sd">    </span>
+<span class="sd">    By default, the two bodies will be placed along the x-axis at the</span>
+<span class="sd">    closest distance rp. Depending on the input eccentricity, the two </span>
+<span class="sd">    bodies can be in a circular (e &lt; 1), parabolic (e = 1), or hyperbolic </span>
+<span class="sd">    orbit (e &gt; 1).</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    mass1 : float</span>
+<span class="sd">        Mass of the first body [nbody units].</span>
+<span class="sd">    mass2 : float</span>
+<span class="sd">        Mass of the second body [nbody units].</span>
+<span class="sd">    rp : float</span>
+<span class="sd">        Closest orbital distance [nbody units].</span>
+<span class="sd">    e : float</span>
+<span class="sd">        Eccentricity.</span>
+<span class="sd">    config : NamedTuple</span>
+<span class="sd">        Configuration NamedTuple.</span>
+<span class="sd">    params : NamedTuple</span>
+<span class="sd">        Parameters NamedTuple.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    pos : jnp.ndarray</span>
+<span class="sd">        Positions of the particles.</span>
+<span class="sd">    vel : jnp.ndarray</span>
+<span class="sd">        Velocities of the particles.</span>
+<span class="sd">    mass : jnp.ndarray</span>
+<span class="sd">        Masses of the particles.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">Mtot</span><span class="o">=</span><span class="n">mass1</span><span class="o">+</span><span class="n">mass2</span>
+
+    <span class="k">if</span> <span class="n">e</span><span class="o">==</span><span class="mf">1.</span><span class="p">:</span>
+        <span class="n">vrel</span><span class="o">=</span><span class="n">jnp</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">params</span><span class="o">.</span><span class="n">G</span> <span class="o">*</span> <span class="mi">2</span><span class="o">*</span><span class="n">Mtot</span><span class="o">/</span><span class="n">rp</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">a</span><span class="o">=</span><span class="n">rp</span><span class="o">/</span><span class="p">(</span><span class="mi">1</span><span class="o">-</span><span class="n">e</span><span class="p">)</span>
+        <span class="n">vrel</span><span class="o">=</span><span class="n">jnp</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">params</span><span class="o">.</span><span class="n">G</span> <span class="o">*</span> <span class="n">Mtot</span><span class="o">*</span><span class="p">(</span><span class="mf">2.</span><span class="o">/</span><span class="n">rp</span><span class="o">-</span><span class="mf">1.</span><span class="o">/</span><span class="n">a</span><span class="p">))</span>
+
+    <span class="n">v1</span> <span class="o">=</span> <span class="o">-</span><span class="n">params</span><span class="o">.</span><span class="n">G</span><span class="o">*</span><span class="n">mass2</span><span class="o">/</span><span class="n">Mtot</span> <span class="o">*</span> <span class="n">vrel</span>
+    <span class="n">v2</span> <span class="o">=</span> <span class="n">params</span><span class="o">.</span><span class="n">G</span><span class="o">*</span><span class="n">mass1</span><span class="o">/</span><span class="n">Mtot</span> <span class="o">*</span> <span class="n">vrel</span>
+
+    <span class="n">pos</span>  <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="mf">0.</span><span class="p">,</span><span class="mf">0.</span><span class="p">,</span><span class="mf">0.</span><span class="p">],[</span><span class="n">rp</span><span class="p">,</span><span class="mf">0.</span><span class="p">,</span><span class="mf">0.</span><span class="p">]])</span>
+    <span class="n">vel</span>  <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="mf">0.</span><span class="p">,</span><span class="n">v1</span><span class="p">,</span><span class="mf">0.</span><span class="p">],[</span><span class="mf">0.</span><span class="p">,</span><span class="n">v2</span><span class="p">,</span><span class="mf">0.</span><span class="p">]])</span>
+    <span class="n">mass</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">mass1</span><span class="p">,</span> <span class="n">mass2</span><span class="p">])</span>
+
+    <span class="k">return</span> <span class="n">pos</span><span class="p">,</span> <span class="n">vel</span><span class="p">,</span> <span class="n">mass</span></div>
+
+    
+
+
+<div class="viewcode-block" id="sample_position_on_sphere">
+<a class="viewcode-back" href="../../source/odisseo.initial_condition.html#odisseo.initial_condition.sample_position_on_sphere">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">sample_position_on_sphere</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">r_p</span><span class="p">,</span> <span class="n">num_samples</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Sample uniform positions on a sphere of radius r_p.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    key : jax.random.PRNGKey</span>
+<span class="sd">        JAX random key for sampling.</span>
+<span class="sd">    r_p : float</span>
+<span class="sd">        Radius of the sphere.</span>
+<span class="sd">    num_samples : int</span>
+<span class="sd">        Number of samples to generate.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    positions : jnp.ndarray</span>
+<span class="sd">        Sampled positions (num_samples, 3).</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">subkey1</span><span class="p">,</span> <span class="n">subkey2</span> <span class="o">=</span> <span class="n">random</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+    
+    <span class="c1"># Sample phi uniformly in [0, 2π]</span>
+    <span class="n">phi</span> <span class="o">=</span> <span class="n">random</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="n">subkey1</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">num_samples</span><span class="p">,),</span> <span class="n">minval</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">maxval</span><span class="o">=</span><span class="mi">2</span><span class="o">*</span><span class="n">jnp</span><span class="o">.</span><span class="n">pi</span><span class="p">)</span>
+    
+    <span class="c1"># Sample cos(theta) uniformly in [-1, 1] to ensure uniform distribution on the sphere</span>
+    <span class="n">costheta</span> <span class="o">=</span> <span class="n">random</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="n">subkey2</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">num_samples</span><span class="p">,),</span> <span class="n">minval</span><span class="o">=-</span><span class="mi">1</span><span class="p">,</span> <span class="n">maxval</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">theta</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">arccos</span><span class="p">(</span><span class="n">costheta</span><span class="p">)</span>  <span class="c1"># Convert to theta</span>
+    
+    <span class="c1"># Convert to Cartesian coordinates</span>
+    <span class="n">x</span> <span class="o">=</span> <span class="n">r_p</span> <span class="o">*</span> <span class="n">jnp</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">theta</span><span class="p">)</span> <span class="o">*</span> <span class="n">jnp</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">phi</span><span class="p">)</span>
+    <span class="n">y</span> <span class="o">=</span> <span class="n">r_p</span> <span class="o">*</span> <span class="n">jnp</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">theta</span><span class="p">)</span> <span class="o">*</span> <span class="n">jnp</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">phi</span><span class="p">)</span>
+    <span class="n">z</span> <span class="o">=</span> <span class="n">r_p</span> <span class="o">*</span> <span class="n">jnp</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">theta</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">jnp</span><span class="o">.</span><span class="n">stack</span><span class="p">([</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">z</span><span class="p">],</span> <span class="n">axis</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="inclined_circular_velocity">
+<a class="viewcode-back" href="../../source/odisseo.initial_condition.html#odisseo.initial_condition.inclined_circular_velocity">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">inclined_circular_velocity</span><span class="p">(</span><span class="n">position</span><span class="p">,</span> <span class="n">v_c</span><span class="p">,</span> <span class="n">inclination</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Convert circular velocity from an inclined orbit into Cartesian components.</span>
+<span class="sd">    </span>
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    position : jnp.ndarray</span>
+<span class="sd">        (x, y, z) position of the Plummer sphere.</span>
+<span class="sd">    v_c : float</span>
+<span class="sd">        Circular velocity (km/s).</span>
+<span class="sd">    inclination : float</span>
+<span class="sd">        Inclination angle in radians.</span>
+<span class="sd">    </span>
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    velocity : jnp.ndarray</span>
+<span class="sd">        (v_x, v_y, v_z) velocity components.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">z</span> <span class="o">=</span> <span class="n">position</span><span class="o">.</span><span class="n">T</span>
+    <span class="n">phi</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">arctan2</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="n">x</span><span class="p">)</span>  <span class="c1"># Azimuthal angle</span>
+    
+    <span class="c1"># Compute velocity components with inclination</span>
+    <span class="n">v_x</span> <span class="o">=</span> <span class="o">-</span><span class="n">v_c</span> <span class="o">*</span> <span class="n">jnp</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">inclination</span><span class="p">)</span> <span class="o">*</span> <span class="n">jnp</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">phi</span><span class="p">)</span>
+    <span class="n">v_y</span> <span class="o">=</span> <span class="n">v_c</span> <span class="o">*</span> <span class="n">jnp</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">inclination</span><span class="p">)</span> <span class="o">*</span> <span class="n">jnp</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">phi</span><span class="p">)</span>
+    <span class="n">v_z</span> <span class="o">=</span> <span class="n">v_c</span> <span class="o">*</span> <span class="n">jnp</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">inclination</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">jnp</span><span class="o">.</span><span class="n">stack</span><span class="p">([</span><span class="n">v_x</span><span class="p">,</span> <span class="n">v_y</span><span class="p">,</span> <span class="n">v_z</span><span class="p">],</span> <span class="n">axis</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span></div>
+
+</pre></div>
+
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+<p class="component-author">
+By Giuseppe Viterbo (@vepe99)
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+
+  <p class="copyright">
+    
+      © Copyright 2025, Giuseppe Viterbo (@vepe99).
+      <br/>
+    
+  </p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+</div>
+          </footer>
+        
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="../../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b"></script>
+<script src="../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+  <footer class="bd-footer">
+  </footer>
+  </body>
+</html>

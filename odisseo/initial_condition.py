@@ -20,10 +20,11 @@ def Plummer_sphere(key, config, params):
         Configuration NamedTuple containing the number of particles (N_particles).
     params : NamedTuple
         Parameters NamedTuple containing:
-        - Plummer_a : float
+        Plummer_a : float
             Scale length of the Plummer sphere.
-        - G : float
+        G : float
             Gravitational constant.
+            
     Returns
     -------
     tuple
@@ -88,10 +89,11 @@ def Plummer_sphere_multiprocess(mass, config, params):
         Configuration NamedTuple containing the number of particles (N_particles).
     params : NamedTuple
         Parameters NamedTuple containing:
-        - Plummer_a : float
+        Plummer_a : float
             Scale length of the Plummer sphere.
-        - G : float
+        G : float
             Gravitational constant.
+    
     Returns
     -------
     tuple
