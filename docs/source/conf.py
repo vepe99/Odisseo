@@ -24,7 +24,7 @@ release = '0.1.0'
 extensions = [
 
     # automatic API documentation
-    'autodoc2',
+    'sphinx-autodoc2',
     'sphinx.ext.autosummary',
     'sphinx.ext.autodoc',
     'sphinxcontrib.apidoc',
@@ -105,10 +105,3 @@ html_theme_options = {
     "use_repository_button": True,
 }
 
-from sphinx.builders.html import StandaloneHTMLBuilder
-StandaloneHTMLBuilder.supported_image_types = [
-    'image/svg+xml',
-    'image/gif',
-    'image/png',
-    'image/jpeg'
-]
