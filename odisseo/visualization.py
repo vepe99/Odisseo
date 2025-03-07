@@ -11,9 +11,9 @@ def energy_angular_momentum_plot(snapshots, code_units, filename=None):
     
     Parameters
     ----------
-    snapshots : jdgsim.Snapshots
+    snapshots : odisseo.Snapshots
         Snapshots object containing the simulation data.
-    code_units : jdgsim.CodeUnits
+    code_units : odisseo.CodeUnits
         CodeUnits object containing the units of the simulation.
     filename : str, optional
         The filename to save the plot to. If None, the plot

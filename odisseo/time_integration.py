@@ -7,10 +7,10 @@ from jax import jit
 import jax.numpy as jnp
 from jaxtyping import Array, Float, jaxtyped
 
-from jdgsim.integrators import leapfrog
-from jdgsim.option_classes import SimulationConfig, SimulationParams
-from jdgsim.integrators import LEAPFROG, leapfrog
-from jdgsim.utils import E_tot, Angular_momentum
+from odisseo.integrators import leapfrog
+from odisseo.option_classes import SimulationConfig, SimulationParams
+from odisseo.integrators import LEAPFROG, leapfrog
+from odisseo.utils import E_tot, Angular_momentum
 
 class SnapshotData(NamedTuple):
     """Return format for the time integration, when snapshots are requested."""

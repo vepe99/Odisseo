@@ -1,7 +1,7 @@
 from typing import NamedTuple
-from jdgsim.integrators import LEAPFROG
-from jdgsim.dynamics import DIRECT_ACC
-from jdgsim.potentials import NFW_POTENTIAL, POINT_MASS, MN_POTENTIAL
+from odisseo.integrators import LEAPFROG
+from odisseo.dynamics import DIRECT_ACC
+from odisseo.potentials import NFW_POTENTIAL, POINT_MASS, MN_POTENTIAL
 from astropy import units as u
 from astropy import constants as c
 from math import log

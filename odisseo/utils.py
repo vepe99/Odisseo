@@ -2,8 +2,8 @@ from functools import partial
 import jax
 from jax import jit
 import jax.numpy as jnp
-from jdgsim.dynamics import DIRECT_ACC, direct_acc, DIRECT_ACC_LAXMAP, direct_acc_laxmap, DIRECT_ACC_MATRIX, direct_acc_matrix
-from jdgsim.potentials import combined_external_acceleration, combined_external_acceleration_vmpa_switch
+from odisseo.dynamics import DIRECT_ACC, direct_acc, DIRECT_ACC_LAXMAP, direct_acc_laxmap, DIRECT_ACC_MATRIX, direct_acc_matrix
+from odisseo.potentials import combined_external_acceleration, combined_external_acceleration_vmpa_switch
 
     
 @jit

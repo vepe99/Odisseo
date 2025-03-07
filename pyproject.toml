@@ -1,10 +1,10 @@
 [tool.poetry]
-name = "jdgsim"
+name = "odisseo"
 version = "0.1.0"
-description = "dwarf galaxy N-body simulator"
+description = "differentiable N-body simulator"
 authors = ["Giuseppe Viterbo"]
 readme = "README.md"
-packages = [{include = "jdgsim"}]
+packages = [{include = "odisseo"}]
 
 [tool.poetry.dependencies]
 python = ">=3.9"
