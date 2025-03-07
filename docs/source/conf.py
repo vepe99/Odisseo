@@ -24,7 +24,7 @@ release = '0.1.0'
 extensions = [
 
     # automatic API documentation
-    # 'sphinx-autodoc2',
+    'sphinx-autodoc2',
     'sphinx.ext.autosummary',
     'sphinx.ext.autodoc',
     'sphinxcontrib.apidoc',
