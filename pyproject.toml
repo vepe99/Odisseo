@@ -17,7 +17,8 @@ numpy = ">=1.0.0"
 matplotlib = ">=3.9.0"
 equinox = ">=0.11.0"
 beartype = ">=0.19.0"
-autodoc2 
+sphinx-autodoc2
+ 
 
 [build-system]
 requires = ["poetry-core"]
