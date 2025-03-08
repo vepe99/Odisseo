@@ -12,7 +12,7 @@ build-backend = "setuptools.build_meta"
 name = "odisseo"
 version = "0.1.0"
 description = "differentiable N-body simulator"
-authors = { name = "Giuseppe Viterbo" }
+authors = [{ name = "Giuseppe Viterbo" }]
 readme = "README.md"
 packages = [{include = "odisseo"}]
 requires-python = ">=3.12"
