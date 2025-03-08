@@ -14,7 +14,6 @@ version = "0.1.0"
 description = "differentiable N-body simulator"
 authors = [{ name = "Giuseppe Viterbo" }]
 readme = "README.md"
-packages = [{include = "odisseo"}]
 requires-python = ">=3.12"
 license = { text = "MIT" }
 classifiers = [
@@ -53,3 +52,7 @@ docs = [
     "furo",
 ]
 
+[tool.setuptools]
+packages = [
+    "odisseo",
+]
