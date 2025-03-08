@@ -23,6 +23,8 @@ sphinx:
 
 python:
   install:
-    - method: pip
-      path: .[docs]
+    - method: poetry
+      path: .
+    
+
         
