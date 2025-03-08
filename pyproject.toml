@@ -1,29 +1,56 @@
-[tool.poetry]
+# This section describes the requirements of the build/installation
+# process itself. Being able to do this was the original reason to
+# introduce pyproject.toml
+[build-system]
+requires = [
+    "setuptools >=61",
+]
+build-backend = "setuptools.build_meta"
+
+
+[project]
 name = "odisseo"
 version = "0.1.0"
 description = "differentiable N-body simulator"
 authors = ["Giuseppe Viterbo"]
 readme = "README.md"
 packages = [{include = "odisseo"}]
+version = "0.0.1"
+requires-python = ">=3.12"
+license = { text = "MIT" }
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+    "License :: OSI Approved :: MIT License",
+]
 
-[tool.poetry.dependencies]
-python = ">=3.9"
-optax = ">=0.2.0"
-optimistix = ">=0.0.1"
-jax = ">=0.4.35"
-scipy = ">=1.0.0"
-astropy = ">=6.0.0"
-numpy = ">=1.0.0"
-matplotlib = ">=3.9.0"
-equinox = ">=0.11.0"
-beartype = ">=0.19.0"
+dependencies = [
+    "optax >=0.2.0",
+    "optimistix >=0.0.1",
+    "jax >=0.4.35",
+    "scipy >= 1.0.0",
+    "astropy >= 6.0.0",
+    "numpy >= 1.0.0",
+    "matplotlib >= 3.9.0",
+    "equinox >= 0.11.0",
+    "beartype >= 0.19.0",
+]
 
-[tool.poetry.group.docs.dependencies]
-sphinx = "8.2.3"
-sphinx-autodoc2 = "0.5.0"
-sphinxcontrib-apidoc = "0.5.0"
- 
+[project.optional-dependencies]
+tests = [
+    "pytest",
+    "pytest-cov",
+    "nbval",
+]
 
-[build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+docs = [
+    "sphinx",
+    "sphinx_copybutton", 
+    "sphinx_design",
+    "sphinx_book_theme",
+    "ipykernel",
+    "sphinx_mdinclude",
+    "sphinx_rtd_theme",
+    "furo",
+]
+
