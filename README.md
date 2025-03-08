@@ -1,4 +1,4 @@
-# Welcome to Odisseo (Optimized Differentiable Integrator for Stellar System Evolution of Orbit)
+# Welcome to Odisseo (Optimized Differentiable Integrator for Stellar Systems Evolution of Orbit)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Documentation Status](https://readthedocs.org/projects/odisseo/badge/?version=latest)](https://odisseo.readthedocs.io/en/latest/?badge=latest)
