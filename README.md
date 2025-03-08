@@ -21,24 +21,12 @@ pip install .
 
 ## Notebooks for Getting Started
 
-```{toctree}
-:caption: Self gravitating system
-:maxdepth: 1
+- Self gravitating system
+    - [2 body problem](notebooks/2body.ipynb)
+    - [Self gravitating Plummer sphere](notebooks/Plummer.ipynb)
 
-notebooks/2body.ipynb
-notebooks/Plummer.ipynb
-```
+- External Potentials
+    - [Plummer sphere in NFW potential](notebooks/Plummer_in_NFWpotential.ipynb)
 
-```{toctree}
-:caption: External Potentials
-:maxdepth: 1
-
-notebooks/Plummer_in_NFWpotential.ipynb
-```
-
-```{toctree}
-:caption: Gradient
-:maxdepth: 1
-
-notebooks/gradient_test/grad_NFW_Potential.ipynb
-```
+- Gradient
+    - [Plummer sphere in NFW with gradient](notebooks/gradient_test/grad_NFW_Potential.ipynb)
