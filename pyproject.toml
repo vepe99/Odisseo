@@ -45,6 +45,7 @@ tests = [
 docs = [
     "sphinx",
     "sphinxcontrib-apidoc",
+    "myst_nb",
     "sphinx_copybutton", 
     "sphinx_design",
     "sphinx_book_theme",
