@@ -4,6 +4,7 @@ from matplotlib.animation import FuncAnimation, PillowWriter
 import jax.numpy as jnp
 from astropy import units as u
 
+
 def energy_angular_momentum_plot(snapshots, code_units, filename=None):
     """
     Plots the relative change in total energy and angular momentum of the system over time.
@@ -48,6 +49,34 @@ def energy_angular_momentum_plot(snapshots, code_units, filename=None):
     if filename is not None:
         fig.savefig(filename)
     plt.show()
+
+def plot_orbit(snapshots, ax_lim, code_units, plotting_units_length, config, filename=None):
+    
+    assert config.N_particles < 10, "Too many particles! "
+
+    fig = plt.figure(figsize=(10, 10))
+    ax = fig.add_subplot(111, projection='3d')
+    ax.set_xlabel(f'X {plotting_units_length}')
+    ax.set_ylabel(f'Y {plotting_units_length}')
+    ax.set_zlabel(f'Z {plotting_units_length}')
+    ax.set_xlim(-(ax_lim* code_units.code_length).to(plotting_units_length).value, (ax_lim* code_units.code_length).to(plotting_units_length).value)
+    ax.set_ylim(-(ax_lim* code_units.code_length).to(plotting_units_length).value, (ax_lim* code_units.code_length).to(plotting_units_length).value)
+    ax.set_zlim(-(ax_lim* code_units.code_length).to(plotting_units_length).value, (ax_lim* code_units.code_length).to(plotting_units_length).value)
+
+    colors = plt.get_cmap("tab10").colors
+    for i in range(config.N_particles):
+        ax.plot((snapshots.states[:, i, 0, 0]* code_units.code_length).to(plotting_units_length).value,
+                (snapshots.states[:, i, 0, 1]* code_units.code_length).to(plotting_units_length).value,
+                (snapshots.states[:, i, 0, 2]* code_units.code_length).to(plotting_units_length).value, label=f'Particle {i}', color=colors[i])
+        ax.scatter((snapshots.states[-1, i, 0, 0]* code_units.code_length).to(plotting_units_length).value,
+                     (snapshots.states[-1, i, 0, 1]* code_units.code_length).to(plotting_units_length).value,
+                     (snapshots.states[-1, i, 0, 2]* code_units.code_length).to(plotting_units_length).value, s=25, marker='o', color=colors[i],)
+    ax.legend()
+    if filename is not None:
+        fig.savefig(filename)
+    plt.show()
+
+
 
 
 
