@@ -9,7 +9,7 @@ from jaxtyping import Array, Float, jaxtyped
 
 from odisseo.integrators import leapfrog
 from odisseo.option_classes import SimulationConfig, SimulationParams
-from odisseo.integrators import LEAPFROG, leapfrog
+from odisseo.integrators import LEAPFROG, leapfrog, RK4, RungeKutta4
 from odisseo.utils import E_tot, Angular_momentum
 
 class SnapshotData(NamedTuple):
@@ -93,6 +93,8 @@ def _time_integration_fixed_steps(primitive_state, mass, config: SimulationConfi
         
         if config.integrator == LEAPFROG:
             return leapfrog(state, mass, dt, config, params)
+        elif config.integrator == RK4:
+            return RungeKutta4(state, mass, dt, config, params)
             
 
     # use lax fori_loop to unroll the loop
@@ -149,6 +151,8 @@ def _time_integration_fixed_steps_snapshot(primitive_state, mass, config: Simula
         
         if config.integrator == LEAPFROG:
             state = leapfrog(state, mass, dt, config, params)
+        elif config.integrator == RK4:
+            state = RungeKutta4(state, mass, dt, config, params)
 
         time += dt
 
