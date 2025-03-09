@@ -210,6 +210,70 @@ def sample_position_on_sphere(key, r_p, num_samples=1):
 
     return jnp.stack([x, y, z], axis=-1)
 
+def sample_position_on_circle(key, r_p, num_samples=1):
+    """
+    Sample uniform positions on a sphere of radius r_p.
+
+    Parameters
+    ----------
+    key : jax.random.PRNGKey
+        JAX random key for sampling.
+    r_p : float
+        Radius of the sphere.
+    num_samples : int
+        Number of samples to generate.
+
+    Returns
+    -------
+    positions : jnp.ndarray
+        Sampled positions (num_samples, 3).
+    """
+    subkey1, subkey2 = random.split(key)
+    
+    # Sample phi uniformly in [0, 2π]
+    phi = random.uniform(subkey1, shape=(num_samples,), minval=0, maxval=2*jnp.pi)
+    
+    # Sample cos(theta) uniformly in [-1, 1] to ensure uniform distribution on the sphere
+    theta = jnp.radians(90) # Convert to theta
+    
+    # Convert to Cartesian coordinates
+    x = r_p * jnp.sin(theta) * jnp.cos(phi)
+    y = r_p * jnp.sin(theta) * jnp.sin(phi)
+    z = jnp.zeros_like(x)
+
+    return jnp.stack([x, y, z], axis=-1)
+
+def inclined_position(position, inclination):
+    """
+    Convert position on the xy-plane to an inclined orbit.
+
+    Parameters
+    ----------
+    position : jnp.ndarray
+        (x, y, z) position of the Plummer sphere.
+    inclination : float
+        Inclination angle in radians.
+
+    Returns
+    -------
+    position : jnp.ndarray
+        (x, y, z) position of the Plummer sphere.
+    """
+    x, y, z = position.T
+    phi = jnp.arctan2(y, x).tolist()[0]  # Azimuthal angle
+
+    # Rotation matrix around x-axis by inclination
+    R_x = jnp.array([
+        [1, 0, 0],
+        [0, jnp.cos(inclination), -jnp.sin(inclination)],
+        [0, jnp.sin(inclination), jnp.cos(inclination)]
+    ])
+
+    # Rotate position around x-axis
+    rotated_position = R_x @ position.T
+
+    return rotated_position.T
+
 def inclined_circular_velocity(position, v_c, inclination):
     """
     Convert circular velocity from an inclined orbit into Cartesian components.
@@ -229,10 +293,28 @@ def inclined_circular_velocity(position, v_c, inclination):
         (v_x, v_y, v_z) velocity components.
     """
     x, y, z = position.T
-    phi = jnp.arctan2(y, x)  # Azimuthal angle
+    phi = jnp.arctan2(y, x).tolist()[0]  # Azimuthal angle
     
-    # Compute velocity components with inclination
-    v_x = -v_c * jnp.cos(inclination) * jnp.sin(phi)
-    v_y = v_c * jnp.cos(inclination) * jnp.cos(phi)
-    v_z = v_c * jnp.sin(inclination)
-    return jnp.stack([v_x, v_y, v_z], axis=-1)
+    # Initial velocity vector
+    velocity = jnp.array([0, v_c.tolist()[0], 0])
+    # Rotation matrix around z-axis by phi
+    R_z = jnp.array([
+        [jnp.cos(phi), -jnp.sin(phi), 0],
+        [jnp.sin(phi), jnp.cos(phi), 0],
+        [0, 0, 1]
+    ])
+
+    # Rotate velocity around z-axis
+    velocity = R_z @ velocity
+
+    # Rotation matrix around x-axis by inclination
+    R_x = jnp.array([
+        [1, 0, 0],
+        [0, jnp.cos(inclination), -jnp.sin(inclination)],
+        [0, jnp.sin(inclination), jnp.cos(inclination)]
+    ])
+
+    # Rotate velocity around x-axis
+    rotated_velocity = R_x @ velocity
+
+    return rotated_velocity
