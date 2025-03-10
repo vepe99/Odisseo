@@ -3,6 +3,8 @@ import numpy as np
 from matplotlib.animation import FuncAnimation, PillowWriter
 import jax.numpy as jnp
 from astropy import units as u
+from astropy.coordinates import SkyCoord
+
 
 
 def energy_angular_momentum_plot(snapshots, code_units, filename=None):
@@ -75,6 +77,77 @@ def plot_orbit(snapshots, ax_lim, code_units, plotting_units_length, config, fil
     if filename is not None:
         fig.savefig(filename)
     plt.show()
+
+def plot_sky_projection(snapshots, code_units, plotting_units_length, filename=None):
+    """
+    Plots the sky projection of the particles in the simulation.
+
+    Parameters
+    ----------
+    snapshots : odisseo.Snapshots
+        Snapshots object containing the simulation data.
+    code_units : odisseo.CodeUnits
+        CodeUnits object containing the units of the simulation.
+    filename : str, optional
+        The filename to save the plot to. If None, the plot
+        will be displayed but not saved.
+
+    Returns
+    -------
+    None
+    """
+
+    # Example: 3D Cartesian coordinates in kpc
+    x = (snapshots.states[-1, :, 0, 0]*code_units.code_length).to(plotting_units_length)
+    y = (snapshots.states[-1, :, 0, 1]*code_units.code_length).to(plotting_units_length)
+    z = (snapshots.states[-1, :, 0, 2]*code_units.code_length).to(plotting_units_length)
+
+    # Observer's position at (-8, 0, 0) kpc
+    x_obs, y_obs, z_obs = -8 * u.kpc, 0 * u.kpc, 0 * u.kpc
+
+    # Shift to observer's frame
+    x_rel = x - x_obs
+    y_rel = y - y_obs
+    z_rel = z - z_obs
+
+    # Convert to Galactic longitude l and latitude b
+    distance = np.sqrt(x_rel**2 + y_rel**2 + z_rel**2)
+    l = np.arctan2(y_rel, x_rel).to(u.deg)
+    b = np.arcsin(z_rel / distance).to(u.deg)
+
+    # Convert to Astropy SkyCoord object (if needed)
+    galactic_coords = SkyCoord(l=l, b=b, distance=distance, frame="galactic")
+
+    # Convert to Equatorial (RA, Dec) if needed
+    equatorial_coords = galactic_coords.transform_to("icrs")
+
+    # Get sky-plane projection
+    ra = equatorial_coords.ra
+    dec = equatorial_coords.dec
+
+
+    # Convert longitude to range [-180, 180] for better visualization
+    l_wrap = (l + 180 * u.deg) % (360 * u.deg) - 180 * u.deg
+
+    plt.figure(figsize=(20, 10))
+    ax = plt.subplot(121, projection= 'aitoff')
+    ax.scatter(l_wrap, b, s=1, color='blue', alpha=0.5)
+    ax.set_xlabel("Galactic Longitude l (deg)")
+    ax.set_ylabel("Galactic Latitude b (deg)")
+    ax.set_title("Sky Projection in Galactic Coordinates")
+    ax.grid(True, linestyle="--", alpha=0.5)
+
+    ax = plt.subplot(122, )
+    ax.scatter(ra.deg, dec.deg, s=1, color='red', alpha=0.5)
+    ax.set_xlabel("Right Ascension (deg)")
+    ax.set_ylabel("Declination (deg)")
+    ax.set_title("Sky Projection in Equatorial Coordinates")
+    ax.grid(True, linestyle="--", alpha=0.5)
+    if filename is not None:
+        plt.savefig(filename)
+
+    plt.show()
+
 
 
 
