@@ -1,7 +1,7 @@
 import os
 from math import pi
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "0"  # Use only the first GPU
+os.environ["CUDA_VISIBLE_DEVICES"] = "1"  # Use only the first GPU
 from typing import Optional, Tuple, Callable, Union, List
 from functools import partial
 
@@ -43,8 +43,8 @@ code_mass = 1e8 * u.Msun
 G = 1 
 code_units = CodeUnits(code_length, code_mass, G=G)
 
-runtime_list_direct_acc = []
-N_particles_list = [1_000_000]
+runtime_list_direct_acc_laxmap = []
+N_particles_list = [10, 100, 500, 1_000, 10_000, 100_000]
 for N_particles in N_particles_list:
 
     config = SimulationConfig(N_particles=N_particles, 
@@ -54,7 +54,7 @@ for N_particles in N_particles_list:
                           external_accelerations=(NFW_POTENTIAL,  ), 
                           acceleration_scheme=DIRECT_ACC_LAXMAP,
                           double_map=True,
-                          batch_size=100,
+                          batch_size=1_000,
                           softening=(0.1 * u.kpc).to(code_units.code_length).value) #default values
 
     params = SimulationParams(t_end = (10 * u.Gyr).to(code_units.code_time).value,  
@@ -90,6 +90,6 @@ for N_particles in N_particles_list:
 
     mean_runtime = np.mean(times)
     std_runtime = np.std(times)
-    runtime_list_direct_acc.append((mean_runtime, std_runtime))
+    runtime_list_direct_acc_laxmap.append((mean_runtime, std_runtime))
 
-    np.save(f"runtime_list_direct_acc_N_{N_particles}.npy", runtime_list_direct_acc)
+np.save(f"runtime_list_direct_acc_N_{N_particles}.npy", runtime_list_direct_acc_laxmap)
