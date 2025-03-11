@@ -293,10 +293,11 @@ def inclined_circular_velocity(position, v_c, inclination):
         (v_x, v_y, v_z) velocity components.
     """
     x, y, z = position.T
-    phi = jnp.arctan2(y, x).tolist()[0]  # Azimuthal angle
-    
+    phi = jnp.arctan2(y, x)[0] # Azimuthal angle
+    v_c = v_c[0]
     # Initial velocity vector
-    velocity = jnp.array([0, v_c.tolist()[0], 0])
+    velocity = jnp.zeros(3)
+    velocity = velocity.at[1].set(v_c)
     # Rotation matrix around z-axis by phi
     R_z = jnp.array([
         [jnp.cos(phi), -jnp.sin(phi), 0],
