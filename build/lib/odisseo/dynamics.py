@@ -3,7 +3,7 @@ from functools import partial
 
 import jax
 import jax.numpy as jnp
-from jax import vmap, jit, pmap
+from jax import vmap, jit
 from jax import random
 
 DIRECT_ACC = 0

@@ -6,8 +6,6 @@ import jax
 from jax import jit
 import jax.numpy as jnp
 from jaxtyping import Array, Float, jaxtyped
-from equinox.internal._loop.checkpointed import checkpointed_while_loop
-
 
 from odisseo.integrators import leapfrog
 from odisseo.option_classes import SimulationConfig, SimulationParams
@@ -179,8 +177,6 @@ def _time_integration_fixed_steps_snapshot(primitive_state, mass, config: Simula
     
     start = timer()
     carry = jax.lax.while_loop(condition, update_step, carry)
-    # carry = checkpointed_while_loop(condition, update_step, carry)
-    # carry = jax.lax.fori_loop(0, config.num_timesteps, update_step, carry)
     end = timer()
     duration = end - start
 
@@ -191,83 +187,3 @@ def _time_integration_fixed_steps_snapshot(primitive_state, mass, config: Simula
     else:
         _, state = carry
         return state
-    
-
-
-# @partial(jax.jit, static_argnames=['config'])
-# def _time_integration_fixed_steps_snapshot(primitive_state, mass, config: SimulationConfig, params: SimulationParams, ):
-    
-#     if config.return_snapshots:
-#         times = jnp.zeros(config.num_snapshots)
-#         states = jnp.zeros((config.num_snapshots, primitive_state.shape[0], primitive_state.shape[1], primitive_state.shape[2]))
-#         total_energy = jnp.zeros(config.num_snapshots)
-#         angular_momentum = jnp.zeros((config.num_snapshots, 3))
-#         current_checkpoint = 0
-#         snapshot_data = SnapshotData(times = times, 
-#                                      states = states, 
-#                                      total_energy = total_energy, 
-#                                      angular_momentum = angular_momentum,
-#                                      current_checkpoint = current_checkpoint)
-
-#     def update_step(carry, time):
-
-#         if config.return_snapshots:
-#             state, snapshot_data = carry
-
-#             def update_snapshot_data(snapshot_data):
-#                 times = snapshot_data.times.at[snapshot_data.current_checkpoint].set(time)
-#                 states = snapshot_data.states.at[snapshot_data.current_checkpoint].set(state)
-#                 total_energy = snapshot_data.total_energy.at[snapshot_data.current_checkpoint].set(E_tot(state, mass, config, params))
-#                 angular_momentum = snapshot_data.angular_momentum.at[snapshot_data.current_checkpoint].set(Angular_momentum(state, mass))
-#                 current_checkpoint = snapshot_data.current_checkpoint + 1
-#                 snapshot_data = snapshot_data._replace(times = times, 
-#                                                        states = states, 
-#                                                        total_energy = total_energy, 
-#                                                        angular_momentum = angular_momentum,
-#                                                        current_checkpoint = current_checkpoint)
-#                 return snapshot_data
-            
-#             def dont_update_snapshot_data(snapshot_data):
-#                 return snapshot_data
-
-#             snapshot_data = jax.lax.cond(time >= snapshot_data.current_checkpoint * params.t_end / config.num_snapshots, update_snapshot_data, dont_update_snapshot_data, snapshot_data)
-
-#             num_iterations = snapshot_data.num_iterations + 1
-#             snapshot_data = snapshot_data._replace(num_iterations = num_iterations)
-
-#         else:
-#             state = carry
-
-#         dt = params.t_end / config.num_timesteps
-        
-#         if config.integrator == LEAPFROG:
-#             state = leapfrog(state, mass, dt, config, params)
-#         elif config.integrator == RK4:
-#             state = RungeKutta4(state, mass, dt, config, params)
-
-#         if config.return_snapshots:
-#             carry = (state, snapshot_data)
-#         else:
-#             carry = state
-
-#         return carry, _
-    
-
-#     if config.return_snapshots:
-#         carry = (primitive_state, snapshot_data)
-#     else:
-#         carry = primitive_state
-    
-#     start = timer()
-#     times = jnp.linspace(0, params.t_end, config.num_timesteps)
-#     carry = jax.lax.scan(update_step, carry, times)
-#     end = timer()
-#     duration = end - start
-
-#     if config.return_snapshots:
-#         _, state, snapshot_data = carry
-#         snapshot_data = snapshot_data._replace(runtime = duration)
-#         return snapshot_data
-#     else:
-#         _, state = carry
-#         return state
