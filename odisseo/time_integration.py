@@ -7,6 +7,8 @@ from jax import jit
 import jax.numpy as jnp
 from jaxtyping import Array, Float, jaxtyped
 from equinox.internal._loop.checkpointed import checkpointed_while_loop
+import equinox as eqx
+
 
 
 from odisseo.integrators import leapfrog

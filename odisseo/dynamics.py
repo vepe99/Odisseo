@@ -6,6 +6,9 @@ import jax.numpy as jnp
 from jax import vmap, jit, pmap
 from jax import random
 
+import equinox as eqx
+
+
 DIRECT_ACC = 0
 DIRECT_ACC_LAXMAP = 1
 DIRECT_ACC_MATRIX = 2
@@ -39,7 +42,7 @@ def single_body_acc(particle_i, particle_j, mass_i, mass_j, config, params) -> j
         - Potential: jnp.ndarray
             Potential energy of particle_i due to particle_j
     """
-    r_ij = particle_i[0, :] - particle_j[0, :]
+    r_ij = jax.lax.stop_gradient(particle_i[0, :] - particle_j[0, :])
     condtion = jnp.all(r_ij == 0.0)
 
     def same_position():
@@ -139,20 +142,19 @@ def direct_acc_laxmap(state, mass, config, params, return_potential=False, ):
     return jax.lax.map(net_force_on_body, (state, mass), batch_size=config.batch_size)
 
 
-@partial(jax.jit, static_argnames=['config', 'return_potential'])
+# @partial(jax.jit, static_argnames=['config', 'return_potential'])
+
+@eqx.filter_jit(donate='all')
 def direct_acc_matrix(state, mass, config, params, return_potential=False):
     pos = state[:, 0, :]  # Extract positions (N, 3)
 
     # Compute pairwise differences
-    dpos = pos[:, None, :] - pos[None, :, :]  # Shape: (N, N, 3)
+    dpos = jax.lax.stop_gradient(pos[:, None, :] - pos[None, :, :])  # Shape: (N, N, 3)
 
-    eye = jnp.eye(config.N_particles)
+    eye = jax.lax.stop_gradient(jnp.eye(config.N_particles))
 
-    # Compute squared distances with softening
+    # Compute squared distances with softening plus avoid self interaction
     r2_safe = jnp.sum(dpos**2, axis=-1) + config.softening**2 + eye # Shape: (N, N)
-
-    # Avoid self-interaction by setting the diagonal to a safe value (1.0)
-    # r2_safe = r2 + jnp.eye(r2.shape[0])
 
     # Compute 1/r^3 safely
     inv_r3 = r2_safe**-1.5 * (1.0 - eye)  # Diagonal is zero
@@ -167,5 +169,8 @@ def direct_acc_matrix(state, mass, config, params, return_potential=False):
         return acc, pot
     else:
         return acc
+    
+
+
 
 
