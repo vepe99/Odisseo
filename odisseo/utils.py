@@ -2,7 +2,7 @@ from functools import partial
 import jax
 from jax import jit
 import jax.numpy as jnp
-from odisseo.dynamics import DIRECT_ACC, direct_acc, DIRECT_ACC_LAXMAP, direct_acc_laxmap, DIRECT_ACC_MATRIX, direct_acc_matrix
+from odisseo.dynamics import DIRECT_ACC, direct_acc, DIRECT_ACC_LAXMAP, direct_acc_laxmap, DIRECT_ACC_MATRIX, direct_acc_matrix, DIRECT_ACC_FOR_LOOP, direct_acc_for_loop
 from odisseo.potentials import combined_external_acceleration, combined_external_acceleration_vmpa_switch
 
     
@@ -75,6 +75,9 @@ def E_pot(state, mass, config, params):
         self_Epot = jnp.sum(pot*mass)
     elif config.acceleration_scheme == DIRECT_ACC_MATRIX:
         _, pot = direct_acc_matrix(state, mass, config, params, return_potential=True)
+        self_Epot = jnp.sum(pot*mass)
+    elif config.acceleration_scheme == DIRECT_ACC_FOR_LOOP:
+        pot = direct_acc_for_loop(state, mass, config, params, return_potential=True)
         self_Epot = jnp.sum(pot*mass)
 
     external_Epot = 0.
