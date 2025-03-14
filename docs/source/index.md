@@ -66,3 +66,4 @@ notebooks/gradient_test/grad_NFW_Potential.ipynb
 - [ ] Implement higher order integrators (IAS15, WHFast512)
 - [ ] Implement sphere sky projection
 - [x] Implement key `external_potential` for distrupted dwarf galaxies scenarios (Navarro-Frank-White halo, Myamoto-Nagai disk)
+- [ ] Multi gpu parallalization

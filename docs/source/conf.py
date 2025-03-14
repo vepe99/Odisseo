@@ -79,7 +79,7 @@ myst_enable_extensions = [
 autodoc_default_flags = ['members']
 autosummary_generate = True
 
-napolean_use_rtype = False
+napolean_use_rtype = True
 
 # templates_path = ['_templates']
 exclude_patterns = []
