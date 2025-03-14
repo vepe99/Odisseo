@@ -130,19 +130,13 @@ def plot_sky_projection(snapshots, code_units, plotting_units_length, filename=N
     l_wrap = (l + 180 * u.deg) % (360 * u.deg) - 180 * u.deg
 
     plt.figure(figsize=(20, 10))
-    ax = plt.subplot(121, projection= 'aitoff')
+    ax = plt.subplot(111, projection= 'aitoff')
     ax.scatter(l_wrap, b, s=1, color='blue', alpha=0.5)
     ax.set_xlabel("Galactic Longitude l (deg)")
     ax.set_ylabel("Galactic Latitude b (deg)")
     ax.set_title("Sky Projection in Galactic Coordinates")
     ax.grid(True, linestyle="--", alpha=0.5)
 
-    ax = plt.subplot(122, )
-    ax.scatter(ra.deg, dec.deg, s=1, color='red', alpha=0.5)
-    ax.set_xlabel("Right Ascension (deg)")
-    ax.set_ylabel("Declination (deg)")
-    ax.set_title("Sky Projection in Equatorial Coordinates")
-    ax.grid(True, linestyle="--", alpha=0.5)
     if filename is not None:
         plt.savefig(filename)
 
