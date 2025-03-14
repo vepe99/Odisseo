@@ -6,7 +6,7 @@ import jax.numpy as jnp
 from jax import vmap, jit
 from jax import random
 from odisseo.potentials import combined_external_acceleration, combined_external_acceleration_vmpa_switch
-from odisseo.dynamics import DIRECT_ACC, direct_acc, DIRECT_ACC_LAXMAP, direct_acc_laxmap, DIRECT_ACC_MATRIX, direct_acc_matrix, DIRECT_ACC_FOR_LOOP, direct_acc_for_loop
+from odisseo.dynamics import DIRECT_ACC, direct_acc, DIRECT_ACC_LAXMAP, direct_acc_laxmap, DIRECT_ACC_MATRIX, direct_acc_matrix, DIRECT_ACC_FOR_LOOP, direct_acc_for_loop, DIRECT_ACC_SHARDING, direct_acc_sharding
 LEAPFROG = 0
 RK4 = 1
 
@@ -44,7 +44,10 @@ def leapfrog(state, mass, dt, config, params):
     
     elif config.acceleration_scheme == DIRECT_ACC_FOR_LOOP:
         acc_func = direct_acc_for_loop
-        
+    
+    elif config.acceleration_scheme == DIRECT_ACC_SHARDING:
+        acc_func = direct_acc_sharding
+
     add_external_acceleration = len(config.external_accelerations) > 0
     
     acc = acc_func(state, mass, config, params)

@@ -5,6 +5,12 @@ import jax
 import jax.numpy as jnp
 from jax import vmap, jit, pmap
 from jax import random
+import jax
+import jax.numpy as jnp
+from jax.sharding import Mesh, NamedSharding
+from jax.sharding import PartitionSpec as P
+
+from jax.experimental.shard_map import shard_map
 
 import equinox as eqx
 
@@ -13,7 +19,7 @@ DIRECT_ACC = 0
 DIRECT_ACC_LAXMAP = 1
 DIRECT_ACC_MATRIX = 2
 DIRECT_ACC_FOR_LOOP = 3
-
+DIRECT_ACC_SHARDING = 4
 
 @partial(jax.jit, static_argnames=['config'])
 def single_body_acc(particle_i, particle_j, mass_i, mass_j, config, params) -> jnp.ndarray:
@@ -171,50 +177,6 @@ def direct_acc_matrix(state, mass, config, params, return_potential=False):
     else:
         return acc
     
-
-# @partial(jax.jit, static_argnames=['config', 'return_potential'])
-# def direct_acc_for_loop(state, mass, config, params, return_potential=False):
-
-#     def compute_acc(i, carry):
-#         if return_potential:
-#             acc, pot = carry
-#         else:
-#             acc =  carry
-
-#         def acc_on_i(j, carry_j):
-#             if return_potential:
-#                 acc, pot = carry_j
-#             else:
-#                 acc = carry_j
-
-#             r = jax.lax.stop_gradient(state[i, 0] - state[j, 0])
-#             r2 = jnp.sum(r**2) + config.softening**2
-#             r3 = r2**(3/2)
-#             acc = acc.at[i].set(acc.at[i] - params.G * mass[j] * r / r3 )
-#             acc = acc.at[j].set(acc.at[j] + params.G * mass[i] * r / r3)
-
-#             if return_potential:
-#                 pot = pot.at[i].set(pot.at[i] -params.G * mass[j] / r2**(1/2))
-#                 pot = pot.at[j].set(pot.at[j] -params.G * mass[i] / r2**(1/2))
-#                 return acc, pot
-#             else:
-#                 return acc
-
-#         if return_potential:    
-#             return jax.lax.fori_loop(i+1, config.N_particles, acc_on_i, (acc, pot))
-#         else:
-#             return jax.lax.fori_loop(i+1, config.N_particles, acc_on_i, (acc))
-
-#     acc = jnp.zeros_like(state[:, 0, :])
-#     if return_potential:
-#         pot = jnp.zeros_like(mass)
-#         acc, pot = jax.lax.fori_loop(0, config.N_particles-1, lambda i, carry: compute_acc(i, carry), (acc, pot) )
-#         return acc, pot
-#     else:
-#         acc = jax.lax.fori_loop(0, config.N_particles-1, lambda i, carry: compute_acc(i, carry), (acc) )
-#         return acc
-
-
 @partial(jax.jit, static_argnames=['config', 'return_potential'])
 def direct_acc_for_loop(state, mass, config, params, return_potential=False):
 
@@ -243,7 +205,44 @@ def direct_acc_for_loop(state, mass, config, params, return_potential=False):
         initial_acc = jnp.zeros_like(positions[0], dtype=jnp.float64)
         _, acc = jax.lax.scan(compute_acc, initial_acc, positions)
         return acc
-    
+
+@eqx.filter_jit(donate='all')
+def direct_acc_sharding(state, mass, config, params, return_potential=False):
+    pos = state[:, 0]
+    # Create a mesh from all devices
+    devices = jax.devices()
+    mesh = Mesh(devices, axis_names=('N_particles',))
+    # Define sharding strategy - shard along axis 0
+    sharding = NamedSharding(mesh, P('N_particles', None))
+    in_specs = P('N_particles', None)
+    out_specs = P('N_particles', None)
+    @jit
+    def put_on_device(positions):
+        positions_sharded = jax.device_put(positions, sharding)
+        return positions_sharded
+    pos_sharded = put_on_device(pos.copy())
+    @jit 
+    def pairwise_diff(pos):
+        return pos[0, None] - pos_sharded
+    @jit
+    def lax_map_pairwise_diff(pos):
+        return jax.lax.map(pairwise_diff, pos, batch_size=config.batch_size)
+    dpos = jax.lax.stop_gradient(shard_map(lax_map_pairwise_diff, 
+                                           mesh=mesh, 
+                                           in_specs=in_specs, 
+                                           out_specs=out_specs)(pos))
+    eye = jax.lax.stop_gradient(jnp.eye(config.N_particles))
+    r2_safe = jnp.sum(dpos**2, axis=-1) + config.softening**2 + eye # Shape: (N, N)
+    if return_potential:
+        inv_r = r2_safe**-0.5 * (1.0 - eye)
+        return jax.device_put(jnp.sum(-params.G * jnp.sum(mass[:, None] * inv_r, axis=1), axis=0), devices[0])
+    else:
+        inv_r3 = r2_safe**-1.5 * (1.0 - eye)
+        return jax.device_put(jnp.sum(-params.G * jnp.sum((mass[:, None] * dpos) * inv_r3[:, :, None], axis=1), axis=0), devices[0])
+
+
+
+
 
                 
         
