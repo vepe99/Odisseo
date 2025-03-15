@@ -1,5 +1,7 @@
-from typing import Optional, Tuple, Callable, Union, List
+from typing import Optional, Tuple, Callable, Union, List, NamedTuple
 from functools import partial
+from jaxtyping import Array, Float, jaxtyped
+from beartype import beartype as typechecker
 
 import jax
 import jax.numpy as jnp
@@ -10,11 +12,25 @@ NFW_POTENTIAL = 0
 POINT_MASS = 1
 MN_POTENTIAL = 2
 
-
+@jaxtyped(typechecker=typechecker)
 @partial(jax.jit, static_argnames=['config', 'return_potential'])
-def combined_external_acceleration(state, config, params, return_potential=False):
-    #TO BE IMPLEMENTED, VECTORIZE THE SUM OVER ALL THE EXTERNAL ACCELERATIONS FUNCTIONS
-
+def combined_external_acceleration(state: jnp.ndarray, 
+                                   config: NamedTuple,
+                                   params: NamedTuple,
+                                   return_potential=False):
+    """
+    Compute the total acceleration of all particles due to all external potentials. Sequential way 
+    
+    Args:
+        state (jnp.ndarray): Array of shape (N_particles,2,3) representing the positions and velocities of the particles. 
+        config (NamedTuple): Configuration parameters.
+        params (NamedTuple): Simulation parameters.
+        return_potential (bool): If True, also returns the total potential energy of all external potentials.
+    
+    Returns:
+        jnp.ndarray: Total acceleration of all particles due to all external potentials if return_potential is False.
+        Tuple: Total acceleration and total potential energy of all particles due to all external potentials if return_potential is True.
+    """
     total_external_acceleration = jnp.zeros_like(state[:, 0])
     total_external_potential = jnp.zeros_like(config.N_particles)
     if return_potential:
@@ -22,14 +38,46 @@ def combined_external_acceleration(state, config, params, return_potential=False
             acc_NFW, pot_NFW = NFW(state, config, params, return_potential=True)
             total_external_acceleration = total_external_acceleration + acc_NFW
             total_external_potential = total_external_potential +   pot_NFW
+            if POINT_MASS in config.external_accelerations:
+                acc_PM, pot_PM = point_mass(state, config, params, return_potential=True)
+                total_external_acceleration = total_external_acceleration + acc_PM
+                total_external_potential = total_external_potential + pot_PM
+                if MN_POTENTIAL in config.external_accelerations:
+                    acc_MN, pot_MN = MyamotoNagai(state, config, params, return_potential=True)
+                    total_external_acceleration = total_external_acceleration + acc_MN
+                    total_external_potential = total_external_potential + pot_MN
+                    return total_external_acceleration, total_external_potential
+                else:
+                    return total_external_acceleration, total_external_potential
         return total_external_acceleration, total_external_potential
     else:
         if NFW_POTENTIAL in config.external_accelerations:
             total_external_acceleration = total_external_acceleration + NFW(state, config, params)
         return total_external_acceleration
-    
+
+@jaxtyped(typechecker=typechecker)
 @partial(jax.jit, static_argnames=['config', 'return_potential'])    
-def combined_external_acceleration_vmpa_switch(state, config, params, return_potential=False):
+def combined_external_acceleration_vmpa_switch(state: jnp.ndarray, 
+                                                config: NamedTuple,
+                                                params: NamedTuple,
+                                                return_potential=False):
+
+    """
+    Compute the total acceleration of all particles due to all external potentials.
+    Vectorized way
+
+    Args:
+        state (jnp.ndarray): Array of shape (N_particles,2,3) representing the positions and velocities of the particles. 
+        config (NamedTuple): Configuration parameters.
+        params (NamedTuple): Simulation parameters.
+        return_potential (bool): If True, also returns the total potential energy of all external potentials.
+    
+    Returns:
+        jnp.ndarray: Total acceleration of all particles due to all external potentials if return_potential is False.
+        Tuple: Total acceleration and total potential energy of all particles due to all external potentials if return_potential is True.
+
+    """
+
     total_external_acceleration = jnp.zeros_like(state[:, 0])
     total_external_potential = jnp.zeros_like(config.N_particles)
     state_tobe_vmap  = jnp.repeat(state[jnp.newaxis, ...], repeats=len(config.external_accelerations), axis=0)
@@ -52,31 +100,24 @@ def combined_external_acceleration_vmpa_switch(state, config, params, return_pot
         total_external_acceleration = jnp.sum(external_acc, axis=0)
         return total_external_acceleration
 
-
+@jaxtyped(typechecker=typechecker)
 @partial(jax.jit, static_argnames=['config', 'return_potential'])
-def NFW(state, config, params, return_potential=False):
+def NFW(state: jnp.ndarray, 
+        config: NamedTuple,
+        params: NamedTuple,
+        return_potential=False):
     """
     Compute acceleration of all particles due to a NFW profile.
 
-    Parameters
-    ----------
-    state : jnp.ndarray
-        Array of shape (N_particles, 6) representing the positions and velocities of the particles. 
-    config: NamedTuple
-        Configuration parameters.
-    params: NamedTuple
-        Simulation parameters.
-    return_potential: bool
-        If True, also returns the potential energy of the NFW profile.
-    
-    Returns
-    -------
-    Tuple
-        - Acceleration: jnp.ndarray 
-            Acecleration of all particles due to NFW external potential
-        - Potential: jnp.ndarray
-            Potential energy of all particles due to NFW external potential
-            Returned only if return_potential is True.   
+    Args:
+        state (jnp.ndarray): Array of shape (N_particles, 2, 3) representing the positions and velocities of the particles.
+        config (NamedTuple): Configuration parameters.
+        params (NamedTuple): Simulation parameters.
+        return_potential (bool, optional): If True, also returns the potential energy of the NFW profile. Defaults to False.
+    Returns:
+        Tuple[jnp.ndarray, jnp.ndarray]: 
+            - Acceleration (jnp.ndarray): Acceleration of all particles due to NFW external potential.
+            - Potential (jnp.ndarray): Potential energy of all particles due to NFW external potential. Returned only if return_potential is True.
     """
     
     params_NFW = params.NFW_params
@@ -94,31 +135,24 @@ def NFW(state, config, params, return_potential=False):
     else:
         return acc
     
-
+@jaxtyped(typechecker=typechecker)
 @partial(jax.jit, static_argnames=['config', 'return_potential'])
-def point_mass(state, config, params, return_potential=False):
+def point_mass(state: jnp.ndarray, 
+        config: NamedTuple,
+        params: NamedTuple,
+        return_potential=False):
     """
-    Compute acceleration of all particles due to a point mass.
+    Compute acceleration of all particles due to a point mass potential.
 
-    Parameters
-    ----------
-    state : jnp.ndarray
-        Array of shape (N_particles, 6) representing the positions and velocities of the particles. 
-    config: NamedTuple
-        Configuration parameters.
-    params: NamedTuple
-        Simulation parameters.
-    return_potential: bool
-        If True, also returns the potential energy of the point mass.
-    
-    Returns
-    -------
-    Tuple
-        - Acceleration: jnp.ndarray 
-            Acecleration of all particles due to point mass external potential
-        - Potential: jnp.ndarray
-            Potential energy of all particles due to point mass external potential
-            Returned only if return_potential is True.   
+    Args:
+        state (jnp.ndarray): Array of shape (N_particles, 2, 3) representing the positions and velocities of the particles.
+        config (NamedTuple): Configuration parameters.
+        params (NamedTuple): Simulation parameters.
+        return_potential (bool, optional): If True, also returns the potential energy of the point mass potential. Defaults to False.
+    Returns:
+        Tuple[jnp.ndarray, jnp.ndarray]: 
+            - Acceleration (jnp.ndarray): Acceleration of all particles due to point mass external potential.
+            - Potential (jnp.ndarray): Potential energy of all particles due to point mass external potential. Returned only if return_potential is True.
     """
     params_point_mass = params.PointMass_params
     
@@ -132,31 +166,24 @@ def point_mass(state, config, params, return_potential=False):
     else:
         return acc
     
-
+@jaxtyped(typechecker=typechecker)
 @partial(jax.jit, static_argnames=['config', 'return_potential'])
-def MyamotoNagai(state, config, params, return_potential=False):
+def MyamotoNagai(state: jnp.ndarray, 
+        config: NamedTuple,
+        params: NamedTuple,
+        return_potential=False):
     """
-    Compute acceleration of all particles due to a Miyamoto-Nagai profile.
+    Compute acceleration of all particles due to a MyamotoNagai disk profile.
 
-    Parameters
-    ----------
-    state : jnp.ndarray
-        Array of shape (N_particles, 6) representing the positions and velocities of the particles. 
-    config: NamedTuple
-        Configuration parameters.
-    params: NamedTuple
-        Simulation parameters.
-    return_potential: bool
-        If True, also returns the potential energy of the Miyamoto-Nagai profile.
-    
-    Returns
-    -------
-    Tuple
-        - Acceleration: jnp.ndarray 
-            Acecleration of all particles due to Miyamoto-Nagai external potential
-        - Potential: jnp.ndarray
-            Potential energy of all particles due to Miyamoto-Nagai external potential
-            Returned only if return_potential is True.   
+    Args:
+        state (jnp.ndarray): Array of shape (N_particles, 2, 3) representing the positions and velocities of the particles.
+        config (NamedTuple): Configuration parameters.
+        params (NamedTuple): Simulation parameters.
+        return_potential (bool, optional): If True, also returns the potential energy of the MyamotoNagai profile. Defaults to False.
+    Returns:
+        Tuple[jnp.ndarray, jnp.ndarray]: 
+            - Acceleration (jnp.ndarray): Acceleration of all particles due to MyamotoNagai external potential.
+            - Potential (jnp.ndarray): Potential energy of all particles due to MyamotoNagai external potential. Returned only if return_potential is True.
     """
     params_MN = params.MN_params
     

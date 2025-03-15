@@ -1,5 +1,7 @@
-from typing import Optional, Tuple, Callable, Union, List
+from typing import Optional, Tuple, Callable, Union, List, NamedTuple
 from functools import partial
+from jaxtyping import Array, Float, jaxtyped
+from beartype import beartype as typechecker
 
 import jax
 import jax.numpy as jnp
@@ -10,28 +12,24 @@ from odisseo.dynamics import DIRECT_ACC, direct_acc, DIRECT_ACC_LAXMAP, direct_a
 LEAPFROG = 0
 RK4 = 1
 
+@jaxtyped(typechecker=typechecker)
 @partial(jax.jit, static_argnames=['config'])
-def leapfrog(state, mass, dt, config, params):
+def leapfrog(state: jnp.ndarray,
+             mass: jnp.ndarray,
+             dt: Float,
+             config: NamedTuple,
+             params: NamedTuple):
     """
     Simple implementation of a symplectic Leapfrog (Verlet) integrator for N-body simulations.
 
-    Parameters
-    ----------
-    state : jax.numpy.ndarray
-        The state of the particles, where the first column represents positions and the second column represents velocities.
-    mass : jax.numpy.ndarray
-        The mass of the particles.
-    dt : float
-        Time-step for current integration.
-    config : object
-        Configuration object containing the acceleration scheme and external accelerations.
-    params : dict
-        Additional parameters for the acceleration functions.
-
-    Returns
-    -------
-    jax.numpy.ndarray
-        The updated state of the particles.
+    Args:
+        state (jax.numpy.ndarray): The state of the particles, where the first column represents positions and the second column represents velocities.
+        mass (jax.numpy.ndarray): The mass of the particles.
+        dt (float): Time-step for current integration.
+        config (object): Configuration object containing the acceleration scheme and external accelerations.
+        params (dict): Additional parameters for the acceleration functions.
+    Returns:
+        jax.numpy.ndarray: The updated state of the particles.
     """
     if config.acceleration_scheme == DIRECT_ACC:
         acc_func = direct_acc
@@ -68,29 +66,24 @@ def leapfrog(state, mass, dt, config, params):
     
     return state
 
-
+@jaxtyped(typechecker=typechecker)
 @partial(jax.jit, static_argnames=['config'])
-def RungeKutta4(state, mass, dt, config, params):
+def RungeKutta4(state: jnp.ndarray,
+             mass: jnp.ndarray,
+             dt: Float,
+             config: NamedTuple,
+             params: NamedTuple):
     """
     Simple implementation of a 4th order Runge-Kutta integrator for N-body simulations.
 
-    Parameters
-    ----------
-    state : jax.numpy.ndarray
-        The state of the particles, where the first column represents positions and the second column represents velocities.
-    mass : jax.numpy
-        The mass of the particles.
-    dt : float
-        Time-step for current integration.
-    config : object
-        Configuration object containing the acceleration scheme and external accelerations.
-    params : dict
-        Additional parameters for the acceleration functions.
-    
-    Returns
-    -------
-    jax.numpy.ndarray
-        The updated state of the particles.
+    Args:
+        state (jax.numpy.ndarray): The state of the particles, where the first column represents positions and the second column represents velocities.
+        mass (jax.numpy.ndarray): The mass of the particles.
+        dt (float): Time-step for current integration.
+        config (object): Configuration object containing the acceleration scheme and external accelerations.
+        params (dict): Additional parameters for the acceleration functions.
+    Returns:
+        jax.numpy.ndarray: The updated state of the particles.
     """
     if config.acceleration_scheme == DIRECT_ACC:
         acc_func = direct_acc

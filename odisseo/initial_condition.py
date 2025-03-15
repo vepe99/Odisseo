@@ -1,4 +1,7 @@
+from typing import Optional, Tuple, Callable, Union, List, NamedTuple
 from functools import partial
+from jaxtyping import Array, Float, jaxtyped
+from beartype import beartype as typechecker
 
 import jax
 import jax.numpy as jnp
@@ -6,35 +9,25 @@ from jax import vmap, random
 import numpy as np
 from multiprocessing import Pool
 
-
-def Plummer_sphere(key, config, params):
+@jaxtyped(typechecker=typechecker)
+@partial(jax.jit, static_argnames=['config'])
+def Plummer_sphere(key: jax.random.PRNGKey,
+                    config: NamedTuple,
+                    params: NamedTuple) -> Tuple:
     """
     Create initial conditions for a Plummer sphere. The sampling of velocities is done by inverse fitting 
     the cumulative distribution function of the Plummer sphere.
 
-    Parameters
-    ----------
-    key : jax.random.PRNGKey
-        Random key.
-    config : NamedTuple
-        Configuration NamedTuple containing the number of particles (N_particles).
-    params : NamedTuple
-        Parameters NamedTuple containing:
-        Plummer_a : float
-            Scale length of the Plummer sphere.
-        G : float
-            Gravitational constant.
-            
-    Returns
-    -------
-    tuple
-        A tuple containing:
-        - positions : jnp.array
-            Array of shape (N_particles, 3) representing the positions of the particles.
-        - velocities : jnp.array
-            Array of shape (N_particles, 3) representing the velocities of the particles.
-        - masses : jnp.array
-            Array of shape (N_particles,) representing the masses of the particles.
+    Args:
+        key (jax.random.PRNGKey): Random key.
+        config (NamedTuple): Configuration NamedTuple containing the number of particles (N_particles).
+        params (NamedTuple): Parameters NamedTuple containing:
+        
+    Returns:
+        tuple: A tuple containing:
+            positions (jnp.array): Array of shape (N_particles, 3) representing the positions of the particles.
+            velocities (jnp.array): Array of shape (N_particles, 3) representing the velocities of the particles.
+            masses (jnp.array): Array of shape (N_particles,) representing the masses of the particles.
     """
     
     Plummer_Mtot = params.Plummer_params.Mtot
@@ -54,10 +47,11 @@ def Plummer_sphere(key, config, params):
         The assosiate unormalized probability distribution function assosiated with it is
         g(q) = (1-q)**(7/2) * q**2
 
-        Parameters
-        ----------
-        q : float
-            Velocity ratio v/v_escape.
+        Args:
+            q: (float) Velocity ratio v/v_escape.
+
+        Returns:
+            float: Normalized cumulative distribution function.
         """
         return 1287/16 * ((-2*(1-q)**(9/2))*(99*q**2+36*q+8)/1287 +16/1287)
     
@@ -81,29 +75,19 @@ def Plummer_sphere(key, config, params):
   
 def Plummer_sphere_multiprocess(mass, config, params):
     """
-    Parameters
-    ----------
-    mass : float
-        The total mass of the Plummer sphere.
-    config : NamedTuple
-        Configuration NamedTuple containing the number of particles (N_particles).
-    params : NamedTuple
-        Parameters NamedTuple containing:
-        Plummer_a : float
-            Scale length of the Plummer sphere.
-        G : float
-            Gravitational constant.
+    Generate initial conditions for a Plummer sphere using rejection sampling.
+    The calculation is done using numpy.
+
+    Args:
+        mass (float): The total mass of the Plummer sphere.
+        config (NamedTuple): Configuration NamedTuple containing the number of particles (N_particles).
+        params (NamedTuple): Parameters NamedTuple containing:
     
-    Returns
-    -------
-    tuple
-        A tuple containing:
-        - positions : jnp.array
-            Array of shape (N_particles, 3) representing the positions of the particles.
-        - velocities : jnp.array
-            Array of shape (N_particles, 3) representing the velocities of the particles.
-        - masses : jnp.array
-            Array of shape (N_particles,) representing the masses of the particles.
+    Returns:
+        tuple: A tuple containing:
+            positions (jnp.array): Array of shape (N_particles, 3) representing the positions of the particles.
+            velocities (jnp.array): Array of shape (N_particles, 3) representing the velocities of the particles.
+            masses (jnp.array): Array of shape (N_particles,) representing the masses of the particles.
     """
     Plummer_Mtot = params.Plummer_params.Mtot
     r = np.sqrt( params.Plummer_params.a / (np.random.uniform(size=config.N_particles)**(-3/2) -1))
@@ -123,7 +107,13 @@ def Plummer_sphere_multiprocess(mass, config, params):
         velocities = pool.map(generate_velocity_Plummer, potential)
     return jnp.array(positions), jnp.array(velocities), 1/config.N_particles*jnp.ones(config.N_particles)
 
-def ic_two_body(mass1: float, mass2: float, rp: float, e: float, config, params):
+@jaxtyped(typechecker=typechecker)
+@partial(jax.jit,)
+def ic_two_body(mass1: float,
+                mass2: float,
+                rp: float,
+                e: float,
+                params: NamedTuple) -> Tuple:
     """
     Create initial conditions for a two-body system.
     
@@ -132,29 +122,18 @@ def ic_two_body(mass1: float, mass2: float, rp: float, e: float, config, params)
     bodies can be in a circular (e < 1), parabolic (e = 1), or hyperbolic 
     orbit (e > 1).
 
-    Parameters
-    ----------
-    mass1 : float
-        Mass of the first body [nbody units].
-    mass2 : float
-        Mass of the second body [nbody units].
-    rp : float
-        Closest orbital distance [nbody units].
-    e : float
-        Eccentricity.
-    config : NamedTuple
-        Configuration NamedTuple.
-    params : NamedTuple
-        Parameters NamedTuple.
-
-    Returns
-    -------
-    pos : jnp.ndarray
-        Positions of the particles.
-    vel : jnp.ndarray
-        Velocities of the particles.
-    mass : jnp.ndarray
-        Masses of the particles.
+    Args:
+        mass1 (float): Mass of the first body [nbody units].
+        mass2 (float): Mass of the second body [nbody units].
+        rp (float): Closest orbital distance [nbody units].
+        e (float): Eccentricity.
+        config (NamedTuple): Configuration NamedTuple.
+        params (NamedTuple): Parameters NamedTuple.
+    Returns:
+        tuple: A tuple containing:
+            - pos (jnp.ndarray): Positions of the particles.
+            - vel (jnp.ndarray): Velocities of the particles.
+            - mass (jnp.ndarray): Masses of the particles.
     """
 
     Mtot=mass1+mass2
@@ -175,24 +154,21 @@ def ic_two_body(mass1: float, mass2: float, rp: float, e: float, config, params)
     return pos, vel, mass
     
 
-
-def sample_position_on_sphere(key, r_p, num_samples=1):
+@jaxtyped(typechecker=typechecker)
+@partial(jax.jit)
+def sample_position_on_sphere(key: jax.random.PRNGKey,
+                              r_p: float,
+                              num_samples: int = 1):
     """
     Sample uniform positions on a sphere of radius r_p.
 
-    Parameters
-    ----------
-    key : jax.random.PRNGKey
-        JAX random key for sampling.
-    r_p : float
-        Radius of the sphere.
-    num_samples : int
-        Number of samples to generate.
+    Args:
+        key (jax.random.PRNGKey): JAX random key for sampling.
+        r_p (float): Radius of the sphere.
+        num_samples (int): Number of samples to generate. Deafult is 1.
 
-    Returns
-    -------
-    positions : jnp.ndarray
-        Sampled positions (num_samples, 3).
+    Returns:
+        jnp.ndarray: Sampled positions (num_samples, 3).
     """
     subkey1, subkey2 = random.split(key)
     
@@ -210,23 +186,21 @@ def sample_position_on_sphere(key, r_p, num_samples=1):
 
     return jnp.stack([x, y, z], axis=-1)
 
-def sample_position_on_circle(key, r_p, num_samples=1):
+@jaxtyped(typechecker=typechecker)
+@partial(jax.jit, )
+def sample_position_on_circle(key: jax.random.PRNGKey,
+                             r_p: float,
+                             num_samples: int =1):
     """
     Sample uniform positions on a sphere of radius r_p.
 
-    Parameters
-    ----------
-    key : jax.random.PRNGKey
-        JAX random key for sampling.
-    r_p : float
-        Radius of the sphere.
-    num_samples : int
-        Number of samples to generate.
+    Args:
+        key (jax.random.PRNGKey): JAX random key for sampling.
+        r_p (float): Radius of the sphere.
+        num_samples (int): Number of samples to generate.
 
-    Returns
-    -------
-    positions : jnp.ndarray
-        Sampled positions (num_samples, 3).
+    Returns:
+        jnp.ndarray: Sampled positions (num_samples, 3).
     """
     subkey1, subkey2 = random.split(key)
     
@@ -243,21 +217,19 @@ def sample_position_on_circle(key, r_p, num_samples=1):
 
     return jnp.stack([x, y, z], axis=-1)
 
-def inclined_position(position, inclination):
+@jaxtyped(typechecker=typechecker)
+@partial(jax.jit,)
+def inclined_position(position: jnp.ndarray,
+                     inclination: float):
     """
     Convert position on the xy-plane to an inclined orbit.
 
-    Parameters
-    ----------
-    position : jnp.ndarray
-        (x, y, z) position of the Plummer sphere.
-    inclination : float
-        Inclination angle in radians.
+   Args:
+        position (jnp.ndarray): (x, y, z) position of the Plummer sphere.
+        inclination (float): Inclination angle in radians.
 
-    Returns
-    -------
-    position : jnp.ndarray
-        (x, y, z) position of the Plummer sphere.
+    Returns:
+        jnp.ndarray: (x, y, z) position of the Plummer sphere after inclination.
     """
     x, y, z = position.T
     phi = jnp.arctan2(y, x).tolist()[0]  # Azimuthal angle
@@ -274,23 +246,20 @@ def inclined_position(position, inclination):
 
     return rotated_position.T
 
-def inclined_circular_velocity(position, v_c, inclination):
+@jaxtyped(typechecker=typechecker)
+@partial(jax.jit,)
+def inclined_circular_velocity(position: jnp.ndarray, 
+                               v_c: float, 
+                               inclination: float):
     """
-    Convert circular velocity from an inclined orbit into Cartesian components.
+    Convert circular velocity module on the xy plane to an inclined orbit Cartesian components.
     
-    Parameters
-    ----------
-    position : jnp.ndarray
-        (x, y, z) position of the Plummer sphere.
-    v_c : float
-        Circular velocity (km/s).
-    inclination : float
-        Inclination angle in radians.
-    
-    Returns
-    -------
-    velocity : jnp.ndarray
-        (v_x, v_y, v_z) velocity components.
+    Args:
+        position (jnp.ndarray): (x, y, z) position of the Plummer sphere.
+        v_c (float): Circular velocity (km/s).
+        inclination (float): Inclination angle in radians.
+    Returns:
+        jnp.ndarray: (v_x, v_y, v_z) velocity components.
     """
     x, y, z = position.T
     phi = jnp.arctan2(y, x)[0] # Azimuthal angle

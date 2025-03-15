@@ -30,7 +30,8 @@ extensions = [
     'sphinxcontrib.apidoc',
 
     # enable google style docstrings
-    'sphinx.ext.napoleon',
+    # 'sphinx.ext.napoleon', 
+    'numpydoc',
 
     # myst parser with notebook support
     'myst_nb',
@@ -79,7 +80,7 @@ myst_enable_extensions = [
 autodoc_default_flags = ['members']
 autosummary_generate = True
 
-napolean_use_rtype = True
+napolean_use_rtype = False
 
 # templates_path = ['_templates']
 exclude_patterns = []

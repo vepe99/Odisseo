@@ -70,27 +70,27 @@ API
 
    .. autodoc2-docstring:: odisseo.potentials.MN_POTENTIAL
 
-.. py:function:: combined_external_acceleration(state, config, params, return_potential=False)
+.. py:function:: combined_external_acceleration(state: jax.numpy.ndarray, config: typing.NamedTuple, params: typing.NamedTuple, return_potential=False)
    :canonical: odisseo.potentials.combined_external_acceleration
 
    .. autodoc2-docstring:: odisseo.potentials.combined_external_acceleration
 
-.. py:function:: combined_external_acceleration_vmpa_switch(state, config, params, return_potential=False)
+.. py:function:: combined_external_acceleration_vmpa_switch(state: jax.numpy.ndarray, config: typing.NamedTuple, params: typing.NamedTuple, return_potential=False)
    :canonical: odisseo.potentials.combined_external_acceleration_vmpa_switch
 
    .. autodoc2-docstring:: odisseo.potentials.combined_external_acceleration_vmpa_switch
 
-.. py:function:: NFW(state, config, params, return_potential=False)
+.. py:function:: NFW(state: jax.numpy.ndarray, config: typing.NamedTuple, params: typing.NamedTuple, return_potential=False)
    :canonical: odisseo.potentials.NFW
 
    .. autodoc2-docstring:: odisseo.potentials.NFW
 
-.. py:function:: point_mass(state, config, params, return_potential=False)
+.. py:function:: point_mass(state: jax.numpy.ndarray, config: typing.NamedTuple, params: typing.NamedTuple, return_potential=False)
    :canonical: odisseo.potentials.point_mass
 
    .. autodoc2-docstring:: odisseo.potentials.point_mass
 
-.. py:function:: MyamotoNagai(state, config, params, return_potential=False)
+.. py:function:: MyamotoNagai(state: jax.numpy.ndarray, config: typing.NamedTuple, params: typing.NamedTuple, return_potential=False)
    :canonical: odisseo.potentials.MyamotoNagai
 
    .. autodoc2-docstring:: odisseo.potentials.MyamotoNagai

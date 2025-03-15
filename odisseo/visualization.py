@@ -10,20 +10,14 @@ from astropy.coordinates import SkyCoord
 def energy_angular_momentum_plot(snapshots, code_units, filename=None):
     """
     Plots the relative change in total energy and angular momentum of the system over time.
-    
-    Parameters
-    ----------
-    snapshots : odisseo.Snapshots
-        Snapshots object containing the simulation data.
-    code_units : odisseo.CodeUnits
-        CodeUnits object containing the units of the simulation.
-    filename : str, optional
-        The filename to save the plot to. If None, the plot
-        will be displayed but not saved.
-    
-    Returns
-    -------
-    None
+
+    Args:
+        snapshots (odisseo.Snapshots): Snapshots object containing the simulation data.
+        code_units (odisseo.CodeUnits): CodeUnits object containing the units of the simulation.
+        filename (str, optional): The filename to save the plot to. If None, the plot will be displayed but not saved.
+
+    Returns:
+        None
     """
     fig = plt.figure(figsize=(17, 5), tight_layout=True)
     ax = fig.add_subplot(121)
@@ -53,6 +47,21 @@ def energy_angular_momentum_plot(snapshots, code_units, filename=None):
     plt.show()
 
 def plot_orbit(snapshots, ax_lim, code_units, plotting_units_length, config, filename=None):
+    """
+    Plots the orbit of particles in 3D space.
+
+    Args:
+        snapshots (object): An object containing the states of the particles at different time steps.
+        ax_lim (float): The limit for the axes in code units.
+        code_units (object): An object containing the code units for length conversion.
+        plotting_units_length (object): The units to which the lengths should be converted for plotting.
+        config (object): Configuration object containing the number of particles (N_particles).
+        filename (str, optional): The filename to save the plot. If None, the plot is not saved (default is None).
+    Raises:
+        AssertionError: If the number of particles in config.N_particles is 10 or more.
+    Returns:
+        None
+    """
     
     assert config.N_particles < 10, "Too many particles! "
 
@@ -82,19 +91,15 @@ def plot_sky_projection(snapshots, code_units, plotting_units_length, filename=N
     """
     Plots the sky projection of the particles in the simulation.
 
-    Parameters
-    ----------
-    snapshots : odisseo.Snapshots
-        Snapshots object containing the simulation data.
-    code_units : odisseo.CodeUnits
-        CodeUnits object containing the units of the simulation.
-    filename : str, optional
-        The filename to save the plot to. If None, the plot
-        will be displayed but not saved.
+    Args:
+        snapshots (odisseo.Snapshots): Snapshots object containing the simulation data.
+        code_units (odisseo.CodeUnits): CodeUnits object containing the units of the simulation.
+        plotting_units_length (astropy.units.Quantity): The unit to which the lengths should be converted for plotting.
+        filename (str, optional): The filename to save the plot to. If None, the plot will be displayed but not saved.
 
-    Returns
-    -------
-    None
+    Returns:
+        None
+
     """
 
     # Example: 3D Cartesian coordinates in kpc
@@ -144,10 +149,23 @@ def plot_sky_projection(snapshots, code_units, plotting_units_length, filename=N
 
 
 
-
-
-
 def create_3d_gif(snapshots, ax_lim, code_units, plotting_units_length, plot_units_time, filename=None):
+    """
+    Create a 3D GIF animation from a series of snapshots.
+
+    Args:
+        snapshots (object): An object containing the states and times of the snapshots to be animated.
+        ax_lim (float): The axis limit for the 3D plot.
+        code_units (object): An object containing the code units for length and time.
+        plotting_units_length (astropy.units.Unit): The units for plotting the length.
+        plot_units_time (astropy.units.Unit): The units for plotting the time.
+        filename (str, optional): The filename to save the GIF. If None, the GIF will not be saved.
+
+    Returns:
+        None
+
+    """
+
     # Create a figure for plotting
     fig = plt.figure(figsize=(10, 10))
     ax = fig.add_subplot(111, projection='3d')
@@ -185,6 +203,7 @@ def create_3d_gif(snapshots, ax_lim, code_units, plotting_units_length, plot_uni
         anim.save(filename, writer=PillowWriter(fps=10))
 
 def create_3d_gif_velocitycoding(snapshots, ax_lim, code_units, plotting_units_length, plot_units_time, vmin=None, vmax=None, filename=None):
+    
     # Create a figure for plotting
     fig = plt.figure(figsize=(10, 10))
     ax = fig.add_subplot(111, projection='3d')
@@ -246,6 +265,28 @@ def create_3d_gif_velocitycoding(snapshots, ax_lim, code_units, plotting_units_l
         anim.save(filename, writer=PillowWriter(fps=10))
 
 def create_projection_gif(snapshots, ax_lim, code_units, plotting_units_length, plot_units_time, filename=None):
+    """
+    Create a GIF animation of 3D projections from simulation snapshots.
+    This function generates a GIF animation showing the evolution of 3D projections
+    of simulation data over time. The projections are displayed in three subplots:
+    X-Y, X-Z, and Y-Z planes.
+
+    Args:
+        snapshots (object): An object containing the simulation snapshots. It should have attributes
+            `states` and `times`, where `states` is a 4D array with shape 
+            (num_frames, num_particles, 1, 3) representing the positions of particles
+            in each frame, and `times` is a 1D array representing the time of each frame.
+        ax_lim (float): The axis limit for the plots, in code units.
+        code_units (object): An object containing the code units for length and time. It should have
+        attributes `code_length` and `code_time`.
+        plotting_units_length (astropy.units.Unit): The units for plotting the lengths.
+        plot_units_time (astropy.units.Unit): The units for plotting the time.
+        filename (str, optional): The filename to save the GIF animation. If None, the animation is not saved.
+
+    Returns:
+        None
+
+    """
 
     # Create a figure for plotting
     fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(20, 5))

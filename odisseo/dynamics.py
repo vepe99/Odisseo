@@ -1,5 +1,7 @@
-from typing import Optional, Tuple, Callable, Union, List
+from typing import Optional, Tuple, Callable, Union, List, NamedTuple
 from functools import partial
+from jaxtyping import Array, Float, jaxtyped
+from beartype import beartype as typechecker
 
 import jax
 import jax.numpy as jnp
@@ -21,34 +23,29 @@ DIRECT_ACC_MATRIX = 2
 DIRECT_ACC_FOR_LOOP = 3
 DIRECT_ACC_SHARDING = 4
 
+@jaxtyped(typechecker=typechecker)
 @partial(jax.jit, static_argnames=['config'])
-def single_body_acc(particle_i, particle_j, mass_i, mass_j, config, params) -> jnp.ndarray:
+def single_body_acc(particle_i: jnp.ndarray, 
+                    particle_j: jnp.ndarray, 
+                    mass_i: float, 
+                    mass_j: float, 
+                    config: NamedTuple, 
+                    params: NamedTuple) -> jnp.ndarray:
     """
     Compute acceleration of particle_i due to particle_j.
     
-    Parameters
-    ----------
-    particle_i : jnp.ndarray
-        Position and velocity of particle_i.
-    particle_j : jnp.ndarray
-        Position and velocity of particle_j.
-    mass_i : float
-        Mass of particle_i.
-    mass_j : float
-        Mass of particle_j.
-    config: NamedTuple
-        Configuration parameters.
-    params: NamedTuple
-        Simulation parameters.
+    Args:
+        particle_i: Position and velocity of particle_i.
+        particle_j: Position and velocity of particle_j.
+        mass_i: Mass of particle_i.
+        mass_j: Mass of particle_j.
+        config: Configuration parameters.
+        params: Simulation parameters.
     
-    Returns
-    -------
-    Tuple
-        - Acceleration: jnp.ndarray 
-            Acecleration of particle_i due to particle_j.
-        - Potential: jnp.ndarray
-            Potential energy of particle_i due to particle_j
+    Returns:
+        The acceleration of particle_i due to particle_j, and the potential felt particle_i due to particle_j.
     """
+
     r_ij = jax.lax.stop_gradient(particle_i[0, :] - particle_j[0, :])
     condtion = jnp.all(r_ij == 0.0)
 
@@ -62,31 +59,26 @@ def single_body_acc(particle_i, particle_j, mass_i, mass_j, config, params) -> j
     return jax.lax.cond(condtion, same_position, different_position)
     
     
-
+@jaxtyped(typechecker=typechecker)
 @partial(jax.jit, static_argnames=['config', 'return_potential'])
-def direct_acc(state, mass, config, params, return_potential=False):
+def direct_acc(state: jnp.ndarray, 
+               mass: jnp.ndarray, 
+               config: NamedTuple, 
+               params: NamedTuple, 
+               return_potential=False):
     """
     Compute acceleration of all particles due to all other particles by vmap of the single_body_acc function.
 
-    Parameters
-    ----------
-    state : jnp.ndarray
-        Array of shape (N_particles, 6) representing the positions and velocities of the particles.
-    mass : jnp.ndarray
-        Array of shape (N_particles,) representing the masses of the particles.
-    config: NamedTuple
-        Configuration parameters.
-    params: NamedTuple
-        Simulation parameters.
-    
-    Returns
-    -------
-    Tuple
-        - Acceleration: jnp.ndarray 
-            Acecleration of all particles due to all other particles.
-        - Potential: jnp.ndarray
-            Potential energy of all particles due to all other particles
-            Returned only if return_potential is True.   
+    Args:
+        state: Array of shape (N, 2, 3) containing the positions and velocities of the particles.
+        mass: Array of shape (N,) containing the masses of the particles.
+        config: Configuration object containing the number of particles (N_particles) and softening parameter.
+        params: Parameters object containing the gravitational constant (G).
+        return_potential: If True, also return the potential energy. Defaults to False.
+
+    Returns:
+        Array of shape (N, 3) containing the accelerations of the particles.
+        Array of shape (N,) containing the potential energy of the particles, if return_potential is True.
     
     """
 
@@ -101,39 +93,35 @@ def direct_acc(state, mass, config, params, return_potential=False):
     return vmap(net_force_on_body)(state, mass)
 
 
-
+@jaxtyped(typechecker=typechecker)
 @partial(jax.jit, static_argnames=['config', 'return_potential'])
-def direct_acc_laxmap(state, mass, config, params, return_potential=False, ):
+def direct_acc_laxmap(state: jnp.ndarray,
+                       mass: jnp.ndarray,
+                       config: NamedTuple,
+                       params: NamedTuple,
+                       return_potential=False):
     """
-    Compute acceleration of all particles due to all other particles by vmap of the single_body_acc function.
+    Compute acceleration of all particles due to all other particles by using lax.map of the single_body_acc function.
+    If config.double_map is True, lax.map uses lax.map for both loops, otherwise the inner loop is vectorized using vmap.
+    Memory usage is reduced by using lax.map instead of vmap thanks to batching.
 
-    Parameters
-    ----------
-    state : jnp.ndarray
-        Array of shape (N_particles, 6) representing the positions and velocities of the particles.
-    mass : jnp.ndarray
-        Array of shape (N_particles,) representing the masses of the particles.
-    config: NamedTuple
-        Configuration parameters.
-    params: NamedTuple
-        Simulation parameters.
-    
-    Returns
-    -------
-    Tuple
-        - Acceleration: jnp.ndarray 
-            Acecleration of all particles due to all other particles.
-        - Potential: jnp.ndarray
-            Potential energy of all particles due to all other particles
-            Returned only if return_potential is True.   
-    
+    Args:
+        state: Array of shape (N, 2, 3) containing the positions and velocities of the particles.
+        mass: Array of shape (N,) containing the masses of the particles.
+        config: Configuration object containing the number of particles (N_particles) and softening parameter.
+        params: Parameters object containing the gravitational constant (G).
+        return_potential: If True, also return the potential energy. Defaults to False.
+
+    Returns:
+        Array of shape (N, 3) containing the accelerations of the particles.
+        Array of shape (N,) containing the potential energy of the particles, if return_potential is True.
     """
 
     def net_force_on_body(state_and_mass):
         particle_i, mass_i = state_and_mass
 
         if config.double_map:
-            @partial(jax.jit,)
+            @partial(jax.jit)
             def single_body_acc_lax(state_and_mass_j):
                 particle_j, mass_j = state_and_mass_j
                 return single_body_acc(particle_i, particle_j, mass_i, mass_j, config, params)
@@ -149,10 +137,27 @@ def direct_acc_laxmap(state, mass, config, params, return_potential=False, ):
     return jax.lax.map(net_force_on_body, (state, mass), batch_size=config.batch_size)
 
 
-# @partial(jax.jit, static_argnames=['config', 'return_potential'])
-
+@jaxtyped(typechecker=typechecker)
 @eqx.filter_jit(donate='all')
-def direct_acc_matrix(state, mass, config, params, return_potential=False):
+def direct_acc_matrix(state: jnp.ndarray, 
+                      mass: jnp.ndarray, 
+                      config: NamedTuple, 
+                      params: NamedTuple, 
+                     return_potential: bool = False) -> Union[jnp.ndarray, Tuple[jnp.ndarray, jnp.ndarray]]:
+    """
+    Compute the direct acceleration matrix for a system of particles. Uses matrix operations.
+
+    Args:
+        state: Array of shape (N, 2, 3) containing the positions and velocities of the particles.
+        mass: Array of shape (N,) containing the masses of the particles.
+        config: Configuration object containing the number of particles (N_particles) and softening parameter.
+        params: Parameters object containing the gravitational constant (G).
+        return_potential: If True, also return the potential energy. Defaults to False.
+
+    Returns:
+        Array of shape (N, 3) containing the accelerations of the particles.
+        Array of shape (N,) containing the potential energy of the particles, if return_potential is True.
+    """
     pos = state[:, 0, :]  # Extract positions (N, 3)
 
     # Compute pairwise differences
@@ -177,8 +182,28 @@ def direct_acc_matrix(state, mass, config, params, return_potential=False):
     else:
         return acc
     
+@jaxtyped(typechecker=typechecker)
 @partial(jax.jit, static_argnames=['config', 'return_potential'])
-def direct_acc_for_loop(state, mass, config, params, return_potential=False):
+def direct_acc_for_loop(state: jnp.ndarray, 
+                      mass: jnp.ndarray, 
+                      config: NamedTuple, 
+                      params: NamedTuple, 
+                     return_potential: bool = False) -> Union[jnp.ndarray, Tuple[jnp.ndarray, jnp.ndarray]]:
+    """
+    Compute the direct acceleration matrix for a system of particles. Uses a double for loop and Newton's third low to reduce the 
+    computation from O(N^2) to O(N^2 /2).
+
+    Args:
+        state: Array of shape (N, 2, 3) containing the positions and velocities of the particles.
+        mass: Array of shape (N,) containing the masses of the particles.
+        config: Configuration object containing the number of particles (N_particles) and softening parameter.
+        params: Parameters object containing the gravitational constant (G).
+        return_potential: If True, also return the potential energy. Defaults to False.
+
+    Returns:
+        Array of shape (N, 3) containing the accelerations of the particles.
+        Array of shape (N,) containing the potential energy of the particles, if return_potential is True.
+    """
 
     def compute_acc(carry, pos):
         if return_potential:
@@ -206,8 +231,29 @@ def direct_acc_for_loop(state, mass, config, params, return_potential=False):
         _, acc = jax.lax.scan(compute_acc, initial_acc, positions)
         return acc
 
+@jaxtyped(typechecker=typechecker)
 @eqx.filter_jit(donate='all')
-def direct_acc_sharding(state, mass, config, params, return_potential=False):
+def direct_acc_sharding(state: jnp.ndarray, 
+                      mass: jnp.ndarray, 
+                      config: NamedTuple, 
+                      params: NamedTuple, 
+                     return_potential: bool = False) -> Union[jnp.ndarray, Tuple[jnp.ndarray, jnp.ndarray]]:
+    """
+    Compute the direct acceleration matrix for a system of particles. Shard the positions to allow for parallel computation.
+
+
+    Args:
+        state: Array of shape (N, 2, 3) containing the positions and velocities of the particles.
+        mass: Array of shape (N,) containing the masses of the particles.
+        config: Configuration object containing the number of particles (N_particles) and softening parameter.
+        params: Parameters object containing the gravitational constant (G).
+        return_potential: If True, also return the potential energy. Defaults to False.
+
+    Returns:
+        Array of shape (N, 3) containing the accelerations of the particles.
+        Array of shape (N,) containing the potential energy of the particles, if return_potential is True.
+    """
+    
     pos = state[:, 0]
     # Create a mesh from all devices
     devices = jax.devices()
