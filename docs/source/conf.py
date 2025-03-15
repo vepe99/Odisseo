@@ -30,8 +30,7 @@ extensions = [
     'sphinxcontrib.apidoc',
 
     # enable google style docstrings
-    # 'sphinx.ext.napoleon', 
-    'numpydoc',
+    'sphinx.ext.napoleon', 
 
     # myst parser with notebook support
     'myst_nb',
