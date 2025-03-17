@@ -1,6 +1,6 @@
 from typing import Optional, Tuple, Callable, Union, List, NamedTuple
 from functools import partial
-from jaxtyping import jaxtyped
+from jaxtyping import jaxtyped, PRNGKeyArray
 from beartype import beartype as typechecker
 
 import jax
@@ -11,8 +11,9 @@ from multiprocessing import Pool
 
 from odisseo.option_classes import SimulationConfig, SimulationParams
 
+@jaxtyped(typechecker=typechecker)
 @partial(jax.jit, static_argnames=['config'])
-def Plummer_sphere(key: jax.random.PRNGKey,
+def Plummer_sphere(key: PRNGKeyArray,
                     config: SimulationConfig,
                     params: SimulationParams) -> Tuple:
     """
@@ -154,9 +155,9 @@ def ic_two_body(mass1: float,
 
     return pos, vel, mass
     
-
+@jaxtyped(typechecker=typechecker)
 @partial(jax.jit)
-def sample_position_on_sphere(key: jax.random.PRNGKey,
+def sample_position_on_sphere(key: PRNGKeyArray,
                               r_p: float,
                               num_samples: int = 1):
     """
@@ -186,8 +187,9 @@ def sample_position_on_sphere(key: jax.random.PRNGKey,
 
     return jnp.stack([x, y, z], axis=-1)
 
-@partial(jax.jit, )
-def sample_position_on_circle(key: jax.random.PRNGKey,
+@jaxtyped(typechecker=typechecker)
+@partial(jax.jit, static_argnames=['num_samples'])
+def sample_position_on_circle(key: PRNGKeyArray,
                              r_p: float,
                              num_samples: int =1):
     """
@@ -231,7 +233,7 @@ def inclined_position(position: jnp.ndarray,
         jnp.ndarray: (x, y, z) position of the Plummer sphere after inclination.
     """
     x, y, z = position.T
-    phi = jnp.arctan2(y, x).tolist()[0]  # Azimuthal angle
+    phi = jnp.arctan2(y, x)[0]  # Azimuthal angle
 
     # Rotation matrix around x-axis by inclination
     R_x = jnp.array([
@@ -248,7 +250,7 @@ def inclined_position(position: jnp.ndarray,
 @jaxtyped(typechecker=typechecker)
 @partial(jax.jit,)
 def inclined_circular_velocity(position: jnp.ndarray, 
-                               v_c: float, 
+                               v_c: jnp.ndarray, 
                                inclination: float):
     """
     Convert circular velocity module on the xy plane to an inclined orbit Cartesian components.
@@ -262,10 +264,9 @@ def inclined_circular_velocity(position: jnp.ndarray,
     """
     x, y, z = position.T
     phi = jnp.arctan2(y, x)[0] # Azimuthal angle
-    v_c = v_c[0]
     # Initial velocity vector
     velocity = jnp.zeros(3)
-    velocity = velocity.at[1].set(v_c)
+    velocity = velocity.at[1].set(v_c[0])
     # Rotation matrix around z-axis by phi
     R_z = jnp.array([
         [jnp.cos(phi), -jnp.sin(phi), 0],

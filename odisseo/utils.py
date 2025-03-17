@@ -46,7 +46,7 @@ def E_kin(state: jnp.ndarray,
     return 0.5 * jnp.sum(jnp.sum(state[:, 1]**2, axis=1) * mass)
 
 @jaxtyped(typechecker=typechecker)
-@partial(jax.jit,)
+@partial(jax.jit, static_argnames=['config'])
 def E_pot(state: jnp.ndarray,
         mass: jnp.ndarray,
         config: SimulationConfig,

@@ -1,6 +1,6 @@
 from typing import Optional, Tuple, Callable, Union, List, NamedTuple
 from functools import partial
-from jaxtyping import jaxtyped
+from jaxtyping import jaxtyped, Array, Float, Scalar
 from beartype import beartype as typechecker
 
 import jax
@@ -18,7 +18,7 @@ from odisseo.option_classes import SimulationConfig, SimulationParams
 @partial(jax.jit, static_argnames=['config'])
 def leapfrog(state: jnp.ndarray,
              mass: jnp.ndarray,
-             dt: float,
+             dt: Scalar,
              config: SimulationConfig,
              params: SimulationParams):
     """
@@ -72,7 +72,7 @@ def leapfrog(state: jnp.ndarray,
 @partial(jax.jit, static_argnames=['config'])
 def RungeKutta4(state: jnp.ndarray,
              mass: jnp.ndarray,
-             dt: float,
+             dt: Scalar,
              config: SimulationConfig,
              params: SimulationParams):
     """
