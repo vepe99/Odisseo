@@ -1,21 +1,22 @@
 from timeit import default_timer as timer
 from functools import partial
 from typing import Union, NamedTuple
-from jaxtyping import Array, Float, jaxtyped
+from jaxtyping import jaxtyped
 from beartype import beartype as typechecker
 
 import jax
 from jax import jit
 import jax.numpy as jnp
-from jaxtyping import Array, Float, jaxtyped
+
+
 from equinox.internal._loop.checkpointed import checkpointed_while_loop
 import equinox as eqx
 
 
-
 from odisseo.integrators import leapfrog
 from odisseo.option_classes import SimulationConfig, SimulationParams
-from odisseo.integrators import LEAPFROG, leapfrog, RK4, RungeKutta4
+from odisseo.option_classes import LEAPFROG, RK4
+from odisseo.integrators import leapfrog,RungeKutta4
 from odisseo.utils import E_tot, Angular_momentum
 
 class SnapshotData(NamedTuple):
@@ -47,8 +48,8 @@ class SnapshotData(NamedTuple):
 @partial(jax.jit, static_argnames=['config',])
 def time_integration(primitive_state: jnp.ndarray,
                      mass: jnp.ndarray,
-                     config: NamedTuple,
-                     params: NamedTuple, ):
+                     config: SimulationConfig,
+                     params: SimulationParams, ):
     """
     Integrate the Nbody simulation in time. For the options of
     the time integration see the simulation configuration and

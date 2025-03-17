@@ -1,6 +1,6 @@
 from typing import Optional, Tuple, Callable, Union, List, NamedTuple
 from functools import partial
-from jaxtyping import Array, Float, jaxtyped
+from jaxtyping import jaxtyped
 from beartype import beartype as typechecker
 
 import jax
@@ -9,11 +9,12 @@ from jax import vmap, random
 import numpy as np
 from multiprocessing import Pool
 
-@jaxtyped(typechecker=typechecker)
+from odisseo.option_classes import SimulationConfig, SimulationParams
+
 @partial(jax.jit, static_argnames=['config'])
 def Plummer_sphere(key: jax.random.PRNGKey,
-                    config: NamedTuple,
-                    params: NamedTuple) -> Tuple:
+                    config: SimulationConfig,
+                    params: SimulationParams) -> Tuple:
     """
     Create initial conditions for a Plummer sphere. The sampling of velocities is done by inverse fitting 
     the cumulative distribution function of the Plummer sphere.
@@ -113,7 +114,7 @@ def ic_two_body(mass1: float,
                 mass2: float,
                 rp: float,
                 e: float,
-                params: NamedTuple) -> Tuple:
+                params: SimulationParams) -> Tuple:
     """
     Create initial conditions for a two-body system.
     
@@ -154,7 +155,6 @@ def ic_two_body(mass1: float,
     return pos, vel, mass
     
 
-@jaxtyped(typechecker=typechecker)
 @partial(jax.jit)
 def sample_position_on_sphere(key: jax.random.PRNGKey,
                               r_p: float,
@@ -186,7 +186,6 @@ def sample_position_on_sphere(key: jax.random.PRNGKey,
 
     return jnp.stack([x, y, z], axis=-1)
 
-@jaxtyped(typechecker=typechecker)
 @partial(jax.jit, )
 def sample_position_on_circle(key: jax.random.PRNGKey,
                              r_p: float,

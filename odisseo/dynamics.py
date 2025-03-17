@@ -1,6 +1,6 @@
 from typing import Optional, Tuple, Callable, Union, List, NamedTuple
 from functools import partial
-from jaxtyping import Array, Float, jaxtyped
+from jaxtyping import jaxtyped
 from beartype import beartype as typechecker
 
 import jax
@@ -11,17 +11,14 @@ import jax
 import jax.numpy as jnp
 from jax.sharding import Mesh, NamedSharding
 from jax.sharding import PartitionSpec as P
-
 from jax.experimental.shard_map import shard_map
 
 import equinox as eqx
 
+from odisseo.option_classes import SimulationConfig, SimulationParams
+from odisseo.option_classes import DIRECT_ACC, DIRECT_ACC_LAXMAP, DIRECT_ACC_MATRIX, DIRECT_ACC_FOR_LOOP, DIRECT_ACC_SHARDING
 
-DIRECT_ACC = 0
-DIRECT_ACC_LAXMAP = 1
-DIRECT_ACC_MATRIX = 2
-DIRECT_ACC_FOR_LOOP = 3
-DIRECT_ACC_SHARDING = 4
+
 
 @jaxtyped(typechecker=typechecker)
 @partial(jax.jit, static_argnames=['config'])
@@ -29,8 +26,8 @@ def single_body_acc(particle_i: jnp.ndarray,
                     particle_j: jnp.ndarray, 
                     mass_i: float, 
                     mass_j: float, 
-                    config: NamedTuple, 
-                    params: NamedTuple) -> jnp.ndarray:
+                    config: SimulationConfig, 
+                    params: SimulationParams) -> jnp.ndarray:
     """
     Compute acceleration of particle_i due to particle_j.
     
@@ -63,8 +60,8 @@ def single_body_acc(particle_i: jnp.ndarray,
 @partial(jax.jit, static_argnames=['config', 'return_potential'])
 def direct_acc(state: jnp.ndarray, 
                mass: jnp.ndarray, 
-               config: NamedTuple, 
-               params: NamedTuple, 
+               config: SimulationConfig, 
+               params: SimulationParams, 
                return_potential=False):
     """
     Compute acceleration of all particles due to all other particles by vmap of the single_body_acc function.
@@ -97,8 +94,8 @@ def direct_acc(state: jnp.ndarray,
 @partial(jax.jit, static_argnames=['config', 'return_potential'])
 def direct_acc_laxmap(state: jnp.ndarray,
                        mass: jnp.ndarray,
-                       config: NamedTuple,
-                       params: NamedTuple,
+                       config: SimulationConfig,
+                       params: SimulationParams,
                        return_potential=False):
     """
     Compute acceleration of all particles due to all other particles by using lax.map of the single_body_acc function.
@@ -141,8 +138,8 @@ def direct_acc_laxmap(state: jnp.ndarray,
 @eqx.filter_jit(donate='all')
 def direct_acc_matrix(state: jnp.ndarray, 
                       mass: jnp.ndarray, 
-                      config: NamedTuple, 
-                      params: NamedTuple, 
+                      config: SimulationConfig, 
+                      params: SimulationParams, 
                      return_potential: bool = False) -> Union[jnp.ndarray, Tuple[jnp.ndarray, jnp.ndarray]]:
     """
     Compute the direct acceleration matrix for a system of particles. Uses matrix operations.
@@ -186,8 +183,8 @@ def direct_acc_matrix(state: jnp.ndarray,
 @partial(jax.jit, static_argnames=['config', 'return_potential'])
 def direct_acc_for_loop(state: jnp.ndarray, 
                       mass: jnp.ndarray, 
-                      config: NamedTuple, 
-                      params: NamedTuple, 
+                      config: SimulationConfig, 
+                      params: SimulationParams, 
                      return_potential: bool = False) -> Union[jnp.ndarray, Tuple[jnp.ndarray, jnp.ndarray]]:
     """
     Compute the direct acceleration matrix for a system of particles. Uses a double for loop and Newton's third low to reduce the 
@@ -235,8 +232,8 @@ def direct_acc_for_loop(state: jnp.ndarray,
 @eqx.filter_jit(donate='all')
 def direct_acc_sharding(state: jnp.ndarray, 
                       mass: jnp.ndarray, 
-                      config: NamedTuple, 
-                      params: NamedTuple, 
+                      config: SimulationConfig, 
+                      params: SimulationParams, 
                      return_potential: bool = False) -> Union[jnp.ndarray, Tuple[jnp.ndarray, jnp.ndarray]]:
     """
     Compute the direct acceleration matrix for a system of particles. Shard the positions to allow for parallel computation.

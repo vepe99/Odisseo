@@ -1,6 +1,6 @@
 from typing import Optional, Tuple, Callable, Union, List, NamedTuple
 from functools import partial
-from jaxtyping import Array, Float, jaxtyped
+from jaxtyping import jaxtyped
 from beartype import beartype as typechecker
 
 import jax
@@ -8,15 +8,14 @@ import jax.numpy as jnp
 from jax import vmap, jit, lax
 from jax import random
 
-NFW_POTENTIAL = 0
-POINT_MASS = 1
-MN_POTENTIAL = 2
+from odisseo.option_classes import SimulationConfig, SimulationParams
+from odisseo.option_classes import NFW_POTENTIAL, POINT_MASS, MN_POTENTIAL
 
 @jaxtyped(typechecker=typechecker)
 @partial(jax.jit, static_argnames=['config', 'return_potential'])
 def combined_external_acceleration(state: jnp.ndarray, 
-                                   config: NamedTuple,
-                                   params: NamedTuple,
+                                   config: SimulationConfig,
+                                   params: SimulationParams,
                                    return_potential=False):
     """
     Compute the total acceleration of all particles due to all external potentials. Sequential way 
@@ -58,8 +57,8 @@ def combined_external_acceleration(state: jnp.ndarray,
 @jaxtyped(typechecker=typechecker)
 @partial(jax.jit, static_argnames=['config', 'return_potential'])    
 def combined_external_acceleration_vmpa_switch(state: jnp.ndarray, 
-                                                config: NamedTuple,
-                                                params: NamedTuple,
+                                                config: SimulationConfig,
+                                                params: SimulationParams,
                                                 return_potential=False):
 
     """
@@ -103,8 +102,8 @@ def combined_external_acceleration_vmpa_switch(state: jnp.ndarray,
 @jaxtyped(typechecker=typechecker)
 @partial(jax.jit, static_argnames=['config', 'return_potential'])
 def NFW(state: jnp.ndarray, 
-        config: NamedTuple,
-        params: NamedTuple,
+        config: SimulationConfig,
+        params: SimulationParams,
         return_potential=False):
     """
     Compute acceleration of all particles due to a NFW profile.
@@ -138,8 +137,8 @@ def NFW(state: jnp.ndarray,
 @jaxtyped(typechecker=typechecker)
 @partial(jax.jit, static_argnames=['config', 'return_potential'])
 def point_mass(state: jnp.ndarray, 
-        config: NamedTuple,
-        params: NamedTuple,
+        config: SimulationConfig,
+        params: SimulationParams,
         return_potential=False):
     """
     Compute acceleration of all particles due to a point mass potential.
@@ -169,8 +168,8 @@ def point_mass(state: jnp.ndarray,
 @jaxtyped(typechecker=typechecker)
 @partial(jax.jit, static_argnames=['config', 'return_potential'])
 def MyamotoNagai(state: jnp.ndarray, 
-        config: NamedTuple,
-        params: NamedTuple,
+        config: SimulationConfig,
+        params: SimulationParams,
         return_potential=False):
     """
     Compute acceleration of all particles due to a MyamotoNagai disk profile.

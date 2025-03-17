@@ -3,9 +3,12 @@ from functools import partial
 import jax
 from jax import jit
 import jax.numpy as jnp
-from odisseo.dynamics import DIRECT_ACC, direct_acc, DIRECT_ACC_LAXMAP, direct_acc_laxmap, DIRECT_ACC_MATRIX, direct_acc_matrix, DIRECT_ACC_FOR_LOOP, direct_acc_for_loop, DIRECT_ACC_SHARDING, direct_acc_sharding
+from odisseo.dynamics import direct_acc, direct_acc_laxmap, direct_acc_matrix, direct_acc_for_loop, direct_acc_sharding
 from odisseo.potentials import combined_external_acceleration, combined_external_acceleration_vmpa_switch
-from jaxtyping import Array, Float, jaxtyped
+from odisseo.option_classes import SimulationConfig, SimulationParams
+from odisseo.option_classes import DIRECT_ACC, DIRECT_ACC_LAXMAP, DIRECT_ACC_MATRIX, DIRECT_ACC_FOR_LOOP, DIRECT_ACC_SHARDING
+
+from jaxtyping import jaxtyped
 from beartype import beartype as typechecker
 
 @jaxtyped(typechecker=typechecker)
@@ -46,8 +49,8 @@ def E_kin(state: jnp.ndarray,
 @partial(jax.jit,)
 def E_pot(state: jnp.ndarray,
         mass: jnp.ndarray,
-        config: NamedTuple,
-        params: NamedTuple, ):
+        config: SimulationConfig,
+        params: SimulationParams, ):
     """
     Return the potential energy of the system.
 
@@ -87,10 +90,10 @@ def E_pot(state: jnp.ndarray,
 
 @jaxtyped(typechecker=typechecker)
 @partial(jax.jit, static_argnames=['config'])
-def E_pot(state: jnp.ndarray,
+def E_tot(state: jnp.ndarray,
         mass: jnp.ndarray,
-        config: NamedTuple,
-        params: NamedTuple, ):
+        config: SimulationConfig,
+        params: SimulationParams, ):
     """
     Return the total energy of the system.
 

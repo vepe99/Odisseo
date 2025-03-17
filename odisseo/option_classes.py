@@ -1,11 +1,24 @@
 from typing import NamedTuple
-from odisseo.integrators import LEAPFROG
-from odisseo.dynamics import DIRECT_ACC
-from odisseo.potentials import NFW_POTENTIAL, POINT_MASS, MN_POTENTIAL
 from astropy import units as u
 from astropy import constants as c
 from math import log
 
+
+#integratiopn schemes
+LEAPFROG = 0
+RK4 = 1
+
+#acceleartion schemes
+DIRECT_ACC = 0
+DIRECT_ACC_LAXMAP = 1
+DIRECT_ACC_MATRIX = 2
+DIRECT_ACC_FOR_LOOP = 3
+DIRECT_ACC_SHARDING = 4
+
+#external potential 
+NFW_POTENTIAL = 0
+POINT_MASS = 1
+MN_POTENTIAL = 2
 
 class PlummerParams(NamedTuple):
     """

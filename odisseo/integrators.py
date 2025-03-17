@@ -1,6 +1,6 @@
 from typing import Optional, Tuple, Callable, Union, List, NamedTuple
 from functools import partial
-from jaxtyping import Array, Float, jaxtyped
+from jaxtyping import jaxtyped
 from beartype import beartype as typechecker
 
 import jax
@@ -8,17 +8,19 @@ import jax.numpy as jnp
 from jax import vmap, jit
 from jax import random
 from odisseo.potentials import combined_external_acceleration, combined_external_acceleration_vmpa_switch
-from odisseo.dynamics import DIRECT_ACC, direct_acc, DIRECT_ACC_LAXMAP, direct_acc_laxmap, DIRECT_ACC_MATRIX, direct_acc_matrix, DIRECT_ACC_FOR_LOOP, direct_acc_for_loop, DIRECT_ACC_SHARDING, direct_acc_sharding
-LEAPFROG = 0
-RK4 = 1
+from odisseo.dynamics import direct_acc, direct_acc_laxmap, direct_acc_matrix, direct_acc_for_loop, direct_acc_sharding
+
+from odisseo.option_classes import DIRECT_ACC, DIRECT_ACC_LAXMAP, DIRECT_ACC_MATRIX, DIRECT_ACC_FOR_LOOP, DIRECT_ACC_SHARDING
+from odisseo.option_classes import SimulationConfig, SimulationParams
+
 
 @jaxtyped(typechecker=typechecker)
 @partial(jax.jit, static_argnames=['config'])
 def leapfrog(state: jnp.ndarray,
              mass: jnp.ndarray,
-             dt: Float,
-             config: NamedTuple,
-             params: NamedTuple):
+             dt: float,
+             config: SimulationConfig,
+             params: SimulationParams):
     """
     Simple implementation of a symplectic Leapfrog (Verlet) integrator for N-body simulations.
 
@@ -70,9 +72,9 @@ def leapfrog(state: jnp.ndarray,
 @partial(jax.jit, static_argnames=['config'])
 def RungeKutta4(state: jnp.ndarray,
              mass: jnp.ndarray,
-             dt: Float,
-             config: NamedTuple,
-             params: NamedTuple):
+             dt: float,
+             config: SimulationConfig,
+             params: SimulationParams):
     """
     Simple implementation of a 4th order Runge-Kutta integrator for N-body simulations.
 
