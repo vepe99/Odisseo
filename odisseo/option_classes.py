@@ -4,6 +4,10 @@ from astropy import constants as c
 from math import log
 
 
+# differentiation modes
+FORWARDS = 0
+BACKWARDS = 1
+
 #integratiopn schemes
 LEAPFROG = 0
 RK4 = 1
@@ -107,5 +111,9 @@ class SimulationConfig(NamedTuple):
     double_map: bool = False
 
     external_accelerations: tuple = ()
+
+    differentation_mode: int = BACKWARDS
+
+    num_checkpoints: int = 100
 
     

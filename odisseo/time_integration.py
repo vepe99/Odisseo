@@ -16,6 +16,7 @@ import equinox as eqx
 from odisseo.integrators import leapfrog
 from odisseo.option_classes import SimulationConfig, SimulationParams
 from odisseo.option_classes import LEAPFROG, RK4
+from odisseo.option_classes import FORWARDS, BACKWARDS
 from odisseo.integrators import leapfrog,RungeKutta4
 from odisseo.utils import E_tot, Angular_momentum
 
@@ -202,9 +203,14 @@ def _time_integration_fixed_steps_snapshot(primitive_state: jnp.ndarray,
         carry = (0.0, primitive_state)
     
     start = timer()
-    carry = jax.lax.while_loop(condition, update_step, carry)
-    # carry = checkpointed_while_loop(condition, update_step, carry)
-    # carry = jax.lax.fori_loop(0, config.num_timesteps, update_step, carry)
+
+    
+    if config.differentation_mode == FORWARDS:
+        carry = jax.lax.while_loop(condition, update_step, carry)
+    elif config.differentation_mode == BACKWARDS:
+        carry = checkpointed_while_loop(condition, update_step, carry, checkpoints = config.num_checkpoints)
+    else: 
+        carry = jax.lax.fori_loop(0, config.num_timesteps, update_step, carry)
     end = timer()
     duration = end - start
 
