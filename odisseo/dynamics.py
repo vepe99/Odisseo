@@ -24,10 +24,10 @@ from odisseo.option_classes import DIRECT_ACC, DIRECT_ACC_LAXMAP, DIRECT_ACC_MAT
 @partial(jax.jit, static_argnames=['config'])
 def single_body_acc(particle_i: jnp.ndarray, 
                     particle_j: jnp.ndarray, 
-                    mass_i: float, 
-                    mass_j: float, 
+                    mass_i: jnp.ndarray, 
+                    mass_j: jnp.ndarray, 
                     config: SimulationConfig, 
-                    params: SimulationParams) -> jnp.ndarray:
+                    params: SimulationParams) -> Tuple[jnp.ndarray, jnp.ndarray]:
     """
     Compute acceleration of particle_i due to particle_j.
     
