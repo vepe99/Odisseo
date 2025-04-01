@@ -237,6 +237,7 @@ def direct_acc_sharding(state: jnp.ndarray,
                      return_potential: bool = False) -> Union[jnp.ndarray, Tuple[jnp.ndarray, jnp.ndarray]]:
     """
     Compute the direct acceleration matrix for a system of particles. Shard the positions to allow for parallel computation.
+    CURRENTLY NOT WORKING.
 
 
     Args:
