@@ -156,7 +156,7 @@ def ic_two_body(mass1: float,
     return pos, vel, mass
     
 @jaxtyped(typechecker=typechecker)
-@partial(jax.jit)
+@partial(jax.jit, static_argnames=['num_samples'])
 def sample_position_on_sphere(key: PRNGKeyArray,
                               r_p: float,
                               num_samples: int = 1):
@@ -251,7 +251,7 @@ def inclined_position(position: jnp.ndarray,
 @partial(jax.jit,)
 def inclined_circular_velocity(position: jnp.ndarray, 
                                v_c: jnp.ndarray, 
-                               inclination: float):
+                               inclination: jnp.ndarray):
     """
     Convert circular velocity module on the xy plane to an inclined orbit Cartesian components.
     
