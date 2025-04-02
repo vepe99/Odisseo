@@ -221,13 +221,13 @@ def sample_position_on_circle(key: PRNGKeyArray,
 @jaxtyped(typechecker=typechecker)
 @partial(jax.jit,)
 def inclined_position(position: jnp.ndarray,
-                     inclination: float):
+                     inclination: jnp.ndarray):
     """
     Convert position on the xy-plane to an inclined orbit.
 
    Args:
         position (jnp.ndarray): (x, y, z) position of the Plummer sphere.
-        inclination (float): Inclination angle in radians.
+        inclination (jnp.ndarray): Inclination angle in radians.
 
     Returns:
         jnp.ndarray: (x, y, z) position of the Plummer sphere after inclination.
