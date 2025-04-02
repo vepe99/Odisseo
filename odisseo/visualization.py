@@ -46,6 +46,39 @@ def energy_angular_momentum_plot(snapshots, code_units, filename=None):
         fig.savefig(filename)
     plt.show()
 
+def plot_last_snapshot(snapshots, code_units, rp, plotting_units_length, filename=None):
+    """
+    Plots the last snapshot of the particles in 3D space.
+
+    Args:
+        snapshots (object): An object containing the states of the particles at different time steps.
+        code_units (object): An object containing the code units for length conversion.
+        plotting_units_length (object): The units to which the lengths should be converted for plotting.
+        filename (str, optional): The filename to save the plot. If None, the plot is not saved (default is None).
+
+    Returns:
+        None
+    """
+
+    fig = plt.figure(figsize=(10, 10), tight_layout=True)
+    ax = fig.add_subplot(111, projection='3d')
+    ax.set_xlabel(f'X {plotting_units_length}')
+    ax.set_ylabel(f'Y {plotting_units_length}')
+    ax.set_zlabel(f'Z {plotting_units_length}')
+
+    ax.scatter((snapshots.states[-1, :, 0, 0]* code_units.code_length).to(plotting_units_length).value,
+                (snapshots.states[-1, :, 0, 1]* code_units.code_length).to(plotting_units_length).value,
+                (snapshots.states[-1, :, 0, 2]* code_units.code_length).to(plotting_units_length).value)
+    ax.scatter(0, 0, 0, s=100, marker='*', color='r')
+    ax.set_xlim(-(rp* code_units.code_length).to(plotting_units_length).value, (rp* code_units.code_length).to(plotting_units_length).value)
+    ax.set_ylim(-(rp* code_units.code_length).to(plotting_units_length).value, (rp* code_units.code_length).to(plotting_units_length).value)
+    ax.set_zlim(-(rp* code_units.code_length).to(plotting_units_length).value, (rp* code_units.code_length).to(plotting_units_length).value)
+    
+    if filename is not None:
+        fig.savefig(filename)
+    
+    plt.show()
+
 def plot_orbit(snapshots, ax_lim, code_units, plotting_units_length, config, filename=None):
     """
     Plots the orbit of particles in 3D space.
