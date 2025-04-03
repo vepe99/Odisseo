@@ -110,11 +110,11 @@ def Plummer_sphere_multiprocess(mass, config, params):
     return jnp.array(positions), jnp.array(velocities), 1/config.N_particles*jnp.ones(config.N_particles)
 
 @jaxtyped(typechecker=typechecker)
-@partial(jax.jit,)
-def ic_two_body(mass1: float,
-                mass2: float,
-                rp: float,
-                e: float,
+@partial(jax.jit, static_argnames=['e'])
+def ic_two_body(mass1: Union[float, jnp.ndarray],
+                mass2: Union[float, jnp.ndarray],
+                rp: Union[float, jnp.ndarray],
+                e: Union[float, jnp.ndarray],
                 params: SimulationParams) -> Tuple:
     """
     Create initial conditions for a two-body system.

@@ -126,7 +126,7 @@ def NFW(state: jnp.ndarray,
     NUM = (params_NFW.r_s+r)*jnp.log(1+r/params_NFW.r_s) - r
     DEN = r*r*r*(params_NFW.r_s+r)*params_NFW.d_c
 
-    acc =  - params.G * params_NFW.Mvir*NUM[:, jnp.newaxis]/DEN[:, jnp.newaxis] * state[:, 0]
+    acc = - params.G * params_NFW.Mvir*NUM[:, jnp.newaxis]/DEN[:, jnp.newaxis] * state[:, 0]
     pot = - params.G * params_NFW.Mvir*jnp.log(1+r/params_NFW.r_s)/(r*params_NFW.d_c)
 
     if return_potential:
