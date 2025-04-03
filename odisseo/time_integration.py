@@ -153,8 +153,8 @@ def _time_integration_fixed_steps_snapshot(primitive_state: jnp.ndarray,
             def update_snapshot_data(snapshot_data):
                 times = snapshot_data.times.at[snapshot_data.current_checkpoint].set(time)
                 states = snapshot_data.states.at[snapshot_data.current_checkpoint].set(state)
-                total_energy = snapshot_data.total_energy.at[snapshot_data.current_checkpoint].set(E_tot(state, mass, config, params))
-                angular_momentum = snapshot_data.angular_momentum.at[snapshot_data.current_checkpoint].set(Angular_momentum(state, mass))
+                total_energy = snapshot_data.total_energy.at[snapshot_data.current_checkpoint].set(jnp.sum(E_tot(state, mass, config, params)))
+                angular_momentum = snapshot_data.angular_momentum.at[snapshot_data.current_checkpoint].set(jnp.sum(Angular_momentum(state, mass), axis=0))
                 current_checkpoint = snapshot_data.current_checkpoint + 1
                 snapshot_data = snapshot_data._replace(times = times, 
                                                        states = states, 
