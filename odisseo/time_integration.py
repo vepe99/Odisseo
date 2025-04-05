@@ -151,6 +151,7 @@ def _time_integration_fixed_steps_snapshot(primitive_state: jnp.ndarray,
             time, state, snapshot_data = carry
 
             def update_snapshot_data(snapshot_data):
+                jax.debug.print('{time}', time = time)
                 times = snapshot_data.times.at[snapshot_data.current_checkpoint].set(time)
                 states = snapshot_data.states.at[snapshot_data.current_checkpoint].set(state)
                 total_energy = snapshot_data.total_energy.at[snapshot_data.current_checkpoint].set(jnp.sum(E_tot(state, mass, config, params)))
@@ -166,7 +167,7 @@ def _time_integration_fixed_steps_snapshot(primitive_state: jnp.ndarray,
             def dont_update_snapshot_data(snapshot_data):
                 return snapshot_data
 
-            snapshot_data = jax.lax.cond(time >= snapshot_data.current_checkpoint * params.t_end / config.num_snapshots, update_snapshot_data, dont_update_snapshot_data, snapshot_data)
+            snapshot_data = jax.lax.cond(abs(time) >= abs(snapshot_data.current_checkpoint * params.t_end / config.num_snapshots), update_snapshot_data, dont_update_snapshot_data, snapshot_data)
 
             num_iterations = snapshot_data.num_iterations + 1
             snapshot_data = snapshot_data._replace(num_iterations = num_iterations)
@@ -182,6 +183,7 @@ def _time_integration_fixed_steps_snapshot(primitive_state: jnp.ndarray,
             state = RungeKutta4(state, mass, dt, config, params)
 
         time += dt
+        
 
         if config.return_snapshots:
             carry = (time, state, snapshot_data)
@@ -195,7 +197,7 @@ def _time_integration_fixed_steps_snapshot(primitive_state: jnp.ndarray,
             t, _, _ = carry
         else:
             t, _ = carry
-        return t < params.t_end
+        return abs(t) < abs(params.t_end)
     
     if config.return_snapshots:
         carry = (0.0, primitive_state, snapshot_data)
