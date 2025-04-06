@@ -151,7 +151,6 @@ def _time_integration_fixed_steps_snapshot(primitive_state: jnp.ndarray,
             time, state, snapshot_data = carry
 
             def update_snapshot_data(snapshot_data):
-                jax.debug.print('{time}', time = time)
                 times = snapshot_data.times.at[snapshot_data.current_checkpoint].set(time)
                 states = snapshot_data.states.at[snapshot_data.current_checkpoint].set(state)
                 total_energy = snapshot_data.total_energy.at[snapshot_data.current_checkpoint].set(jnp.sum(E_tot(state, mass, config, params)))
