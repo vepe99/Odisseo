@@ -12,10 +12,11 @@ from odisseo.dynamics import direct_acc, direct_acc_laxmap, direct_acc_matrix, d
 
 from odisseo.option_classes import DIRECT_ACC, DIRECT_ACC_LAXMAP, DIRECT_ACC_MATRIX, DIRECT_ACC_FOR_LOOP, DIRECT_ACC_SHARDING
 from odisseo.option_classes import SimulationConfig, SimulationParams
-from odisseo.option_classes import DOPRI5, TSIT5, SEMIIMPLICITEULER
+from odisseo.option_classes import DOPRI5, TSIT5, SEMIIMPLICITEULER, REVERSIBLEHEUN, LEAPFROGMIDPOINT
 
 from diffrax import diffeqsolve, ODETerm, SaveAt
-from diffrax import Tsit5, Dopri5, SemiImplicitEuler
+from diffrax import Tsit5, Dopri5
+from diffrax import SemiImplicitEuler, ReversibleHeun, LeapfrogMidpoint
 
 
 @jaxtyped(typechecker=typechecker)
@@ -171,18 +172,42 @@ def diffrax_solver(state,
         Returns:
             jax.numpy.ndarray: The updated state of the particles.
         """
-        positions, velocities = y
+        pos_x, pos_y, pos_z, vel_x, vel_y, vel_z = y
         # Unpack the args
         mass  = args
 
+        positions = jnp.stack((pos_x, pos_y, pos_z), axis=1)
+        velocities = jnp.stack((vel_x, vel_y, vel_z), axis=1)
         state = jnp.stack((positions, velocities), axis=1)
 
+        d_xpos = vel_x
+        d_ypos = vel_y
+        d_zpos = vel_z
 
-        d_positions = velocities  
-        d_velocities = acc_func(state, mass, config, params) + external_acc_func(state, config, params)
+        d_vx = acc_func(state, mass, config, params)[:, 0] +  external_acc_func(state, config, params)[:, 0]
+        d_vy = acc_func(state, mass, config, params)[:, 1] +  external_acc_func(state, config, params)[:, 1]
+        d_vz = acc_func(state, mass, config, params)[:, 2] +  external_acc_func(state, config, params)[:, 2]
 
-        d_y = d_positions, d_velocities
+        d_y = jnp.array([d_xpos, d_ypos, d_zpos, d_vx, d_vy, d_vz])
+
         return d_y
+
+    
+    def f(t, y, args):
+        """
+        Vector field for the transform of positions
+        """
+        return y
+    
+    def g(t, y, args):
+        """
+        Vector field for the transform of velocities
+        """
+        state = jnp.zeros((config.N_particles, 2, 3))
+        state = state.at[:, 0].set(y)
+
+        return acc_func(state, args, config, params) + external_acc_func(state, config, params)
+
 
     if config.acceleration_scheme == DIRECT_ACC:
         acc_func = direct_acc
@@ -200,16 +225,27 @@ def diffrax_solver(state,
 
     if config.diffrax_solver == DOPRI5:
         solver = Dopri5()
+        term = ODETerm(vector_field)
     elif config.diffrax_solver == TSIT5:
         solver = Tsit5()
+        term = ODETerm(vector_field)
+
+    # Symplectic methods
     elif config.diffrax_solver == SEMIIMPLICITEULER:
         solver = SemiImplicitEuler()
+        term = (ODETerm(f), ODETerm(g))
+    elif config.diffrax_solver == REVERSIBLEHEUN:
+        solver = ReversibleHeun()
+        term = ODETerm(vector_field)
+    elif config.diffrax_solver == LEAPFROGMIDPOINT:
+        solver = LeapfrogMidpoint()
+        term = ODETerm(vector_field)
     
-    term = ODETerm(vector_field)
+    
     t0 = 0.0
     dt0 = dt
     t1 = dt #in the fixed number of timesteps case we want to integrate only one step
-    y0 = state[:, 0], state[:, 1]  
+    y0 = jnp.array([state[:, 0, 0], state[:, 0, 1], state[:, 0, 2], state[:, 1, 0], state[:, 1, 1], state[:, 1, 2]])
     args = mass
     sol = diffeqsolve(
         terms = term,
@@ -219,10 +255,12 @@ def diffrax_solver(state,
         dt0 = dt0,
         y0 = y0,
         args=args,)
+    pos = jnp.stack((sol.ys[0][0], sol.ys[0][1], sol.ys[0][2]), axis=1)
+    vel = jnp.stack((sol.ys[0][3], sol.ys[0][4], sol.ys[0][5]), axis=1)
 
-    return jnp.stack((sol.ys[0][0], sol.ys[0][1]), axis=1) 
+    return jnp.stack((pos, vel), axis=1) 
 
-
+ 
 
      
 
