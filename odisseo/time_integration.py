@@ -15,9 +15,9 @@ import equinox as eqx
 
 from odisseo.integrators import leapfrog
 from odisseo.option_classes import SimulationConfig, SimulationParams
-from odisseo.option_classes import LEAPFROG, RK4
+from odisseo.option_classes import LEAPFROG, RK4, DIFFRAX_BACKEND
 from odisseo.option_classes import FORWARDS, BACKWARDS
-from odisseo.integrators import leapfrog,RungeKutta4
+from odisseo.integrators import leapfrog,RungeKutta4, diffrax_solver
 from odisseo.utils import E_tot, Angular_momentum
 
 class SnapshotData(NamedTuple):
@@ -176,11 +176,15 @@ def _time_integration_fixed_steps_snapshot(primitive_state: jnp.ndarray,
 
         dt = params.t_end / config.num_timesteps
         
+        # Update the state using the chosen integrator
         if config.integrator == LEAPFROG:
             state = leapfrog(state, mass, dt, config, params)
         elif config.integrator == RK4:
             state = RungeKutta4(state, mass, dt, config, params)
+        elif config.integrator == DIFFRAX_BACKEND:
+            state = diffrax_solver(state, mass, dt, config, params)
 
+        # Update the time
         time += dt
         
 

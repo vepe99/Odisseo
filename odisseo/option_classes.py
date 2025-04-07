@@ -11,6 +11,13 @@ BACKWARDS = 1
 #integratiopn schemes
 LEAPFROG = 0
 RK4 = 1
+DIFFRAX_BACKEND = 2
+
+#diffrax solvers
+DOPRI5 = 0
+TSIT5 = 1
+SEMIIMPLICITEULER = 2
+
 
 #acceleartion schemes
 DIRECT_ACC = 0
@@ -103,6 +110,8 @@ class SimulationConfig(NamedTuple):
     softening: float = 1e-10
     
     integrator: int = LEAPFROG
+
+    diffrax_solver: int = DOPRI5
     
     acceleration_scheme: int = DIRECT_ACC
 
@@ -115,5 +124,6 @@ class SimulationConfig(NamedTuple):
     differentation_mode: int = BACKWARDS
 
     num_checkpoints: int = 100
+
 
     
