@@ -357,6 +357,4 @@ def halo_to_gd1_all(Xhalo: jnp.ndarray, Vhalo: jnp.ndarray, code_units: CodeUnit
     return jnp.concatenate((halo_to_gd1(Xhalo, code_units), halo_to_gd1_velocity(Xhalo, Vhalo, code_units)))
 
 
-gd1_projection_vmap = jax.jit(
-    jax.vmap(halo_to_gd1_all, (0, 0)), static_argnames=['code_units']
-)  # Vectorised version of position and velocity co-ordinate transformation from simulation frame to angular GD1 co-ordinates
+gd1_projection_vmap = jax.vmap(halo_to_gd1_all, (0, 0, None)) # Vectorised version of position and velocity co-ordinate transformation from simulation frame to angular GD1 co-ordinates
