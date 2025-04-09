@@ -20,7 +20,6 @@ SEMIIMPLICITEULER = 2
 REVERSIBLEHEUN = 3
 LEAPFROGMIDPOINT = 4
 
-
 #acceleartion schemes
 DIRECT_ACC = 0
 DIRECT_ACC_LAXMAP = 1
@@ -32,6 +31,7 @@ DIRECT_ACC_SHARDING = 4
 NFW_POTENTIAL = 0
 POINT_MASS = 1
 MN_POTENTIAL = 2
+PSP_POTENTIAL = 3
 
 class PlummerParams(NamedTuple):
     """
@@ -74,6 +74,13 @@ class MNParams(NamedTuple):
 
     b: float = 0.28 #kpc
 
+class PSPParams(NamedTuple):
+
+
+    alpha: float = -1.8 
+
+    r_c: float   = 1.9 #kpc
+
 
 class SimulationParams(NamedTuple):
     """
@@ -91,6 +98,8 @@ class SimulationParams(NamedTuple):
     PointMass_params: PointMassParams = PointMassParams()
 
     MN_params: MNParams = MNParams()
+
+    PSP_params: PSPParams = PSPParams()
     
 class SimulationConfig(NamedTuple):
     """
