@@ -19,6 +19,7 @@ from odisseo.option_classes import LEAPFROG, RK4, DIFFRAX_BACKEND
 from odisseo.option_classes import FORWARDS, BACKWARDS
 from odisseo.integrators import leapfrog,RungeKutta4, diffrax_solver
 from odisseo.utils import E_tot, Angular_momentum
+from odisseo.units import CodeUnits
 
 class SnapshotData(NamedTuple):
     """Return format for the time integration, when snapshots are requested."""
@@ -46,11 +47,12 @@ class SnapshotData(NamedTuple):
 
 
 @jaxtyped(typechecker=typechecker)
-@partial(jax.jit, static_argnames=['config',])
+@partial(jax.jit, static_argnames=['config', "code_units"])
 def time_integration(primitive_state: jnp.ndarray,
                      mass: jnp.ndarray,
                      config: SimulationConfig,
-                     params: SimulationParams, ):
+                     params: SimulationParams, 
+                     code_units: CodeUnits):
     """
     Integrate the Nbody simulation in time. For the options of
     the time integration see the simulation configuration and
@@ -69,19 +71,20 @@ def time_integration(primitive_state: jnp.ndarray,
 
     if config.fixed_timestep:
         if config.return_snapshots:
-            return _time_integration_fixed_steps_snapshot(primitive_state, mass, config, params)
+            return _time_integration_fixed_steps_snapshot(primitive_state, mass, config, params, code_units)
         else:
-            return _time_integration_fixed_steps(primitive_state, mass, config, params)
+            return _time_integration_fixed_steps(primitive_state, mass, config, params, code_units)
     
     else:
         raise NotImplementedError("Adaptive time stepping not implemented yet")
 
 @jaxtyped(typechecker=typechecker)
-@partial(jax.jit, static_argnames=['config'])
+@partial(jax.jit, static_argnames=['config',  "code_units"])
 def _time_integration_fixed_steps(primitive_state: jnp.ndarray,
                                 mass: jnp.ndarray,
                                 config: SimulationConfig,
-                                params: SimulationParams, ):
+                                params: SimulationParams, 
+                                code_units: CodeUnits):
 
     """ Fixed time stepping integration of the primitave state of the system.
     Return the final state of the system after the time integration.
@@ -102,9 +105,9 @@ def _time_integration_fixed_steps(primitive_state: jnp.ndarray,
     def update_step(_, state):
         
         if config.integrator == LEAPFROG:
-            return leapfrog(state, mass, dt, config, params)
+            return leapfrog(state, mass, dt, config, params, code_units)
         elif config.integrator == RK4:
-            return RungeKutta4(state, mass, dt, config, params)
+            return RungeKutta4(state, mass, dt, config, params, code_units)
             
 
     # use lax fori_loop to unroll the loop
@@ -113,11 +116,12 @@ def _time_integration_fixed_steps(primitive_state: jnp.ndarray,
     return state  
 
 @jaxtyped(typechecker=typechecker)
-@partial(jax.jit, static_argnames=['config'])
+@partial(jax.jit, static_argnames=['config', "code_units"])
 def _time_integration_fixed_steps_snapshot(primitive_state: jnp.ndarray,
                      mass: jnp.ndarray,
                      config: SimulationConfig,
-                     params: SimulationParams, ):  
+                     params: SimulationParams, 
+                     code_units: CodeUnits):  
     """ Fixed time stepping integration of the primitave state of the system.
     Return the snapshot of the state of the system at fixed point in the time integration.
 
@@ -153,7 +157,7 @@ def _time_integration_fixed_steps_snapshot(primitive_state: jnp.ndarray,
             def update_snapshot_data(snapshot_data):
                 times = snapshot_data.times.at[snapshot_data.current_checkpoint].set(time)
                 states = snapshot_data.states.at[snapshot_data.current_checkpoint].set(state)
-                total_energy = snapshot_data.total_energy.at[snapshot_data.current_checkpoint].set(jnp.sum(E_tot(state, mass, config, params)))
+                total_energy = snapshot_data.total_energy.at[snapshot_data.current_checkpoint].set(jnp.sum(E_tot(state, mass, config, params, code_units)))
                 angular_momentum = snapshot_data.angular_momentum.at[snapshot_data.current_checkpoint].set(jnp.sum(Angular_momentum(state, mass), axis=0))
                 current_checkpoint = snapshot_data.current_checkpoint + 1
                 snapshot_data = snapshot_data._replace(times = times, 
@@ -178,11 +182,11 @@ def _time_integration_fixed_steps_snapshot(primitive_state: jnp.ndarray,
         
         # Update the state using the chosen integrator
         if config.integrator == LEAPFROG:
-            state = leapfrog(state, mass, dt, config, params)
+            state = leapfrog(state, mass, dt, config, params, code_units)
         elif config.integrator == RK4:
-            state = RungeKutta4(state, mass, dt, config, params)
+            state = RungeKutta4(state, mass, dt, config, params, code_units)
         elif config.integrator == DIFFRAX_BACKEND:
-            state = diffrax_solver(state, mass, dt, config, params)
+            state = diffrax_solver(state, mass, dt, config, params, code_units)
 
         # Update the time
         time += dt

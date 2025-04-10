@@ -54,11 +54,12 @@ def E_kin(state: jnp.ndarray,
     
 
 @jaxtyped(typechecker=typechecker)
-@partial(jax.jit, static_argnames=['config'])
+@partial(jax.jit, static_argnames=['config', 'code_units'])
 def E_pot(state: jnp.ndarray,
         mass: jnp.ndarray,
         config: SimulationConfig,
-        params: SimulationParams, ) -> jnp.ndarray:
+        params: SimulationParams, 
+        code_units: CodeUnits) -> jnp.ndarray:
     """
     Return the potential energy of the system.
 
@@ -88,17 +89,18 @@ def E_pot(state: jnp.ndarray,
 
     external_Epot = 0.
     if len(config.external_accelerations) > 0:
-        _, external_pot = combined_external_acceleration_vmpa_switch(state, config, params, return_potential=True)
+        _, external_pot = combined_external_acceleration_vmpa_switch(state, config, params,code_units, return_potential=True)
         external_Epot = external_pot*mass
         
     return self_Epot + external_Epot
 
 @jaxtyped(typechecker=typechecker)
-@partial(jax.jit, static_argnames=['config'])
+@partial(jax.jit, static_argnames=['config', 'code_units'])
 def E_tot(state: jnp.ndarray,
         mass: jnp.ndarray,
         config: SimulationConfig,
-        params: SimulationParams, ) -> jnp.ndarray:
+        params: SimulationParams,
+        code_units: CodeUnits ) -> jnp.ndarray:
     """
     Return the total energy of the system.
 
@@ -113,7 +115,7 @@ def E_tot(state: jnp.ndarray,
 
     """
     
-    return E_kin(state, mass) + E_pot(state, mass, config, params)
+    return E_kin(state, mass) + E_pot(state, mass, config, params, code_units)
 
 @jaxtyped(typechecker=typechecker)
 @partial(jax.jit, )
@@ -354,7 +356,9 @@ def halo_to_gd1_all(Xhalo: jnp.ndarray, Vhalo: jnp.ndarray, code_units: CodeUnit
     --------
     >>> halo_to_gd1_all(jnp.array([1.0, 2.0, 3.0]), jnp.array([1.0, 2.0, 3.0]))
     """
-    return jnp.concatenate((halo_to_gd1(Xhalo, code_units), halo_to_gd1_velocity(Xhalo, Vhalo, code_units)))
+    Xhalo_kpc = Xhalo * code_units.code_length.to(u.kpc)
+    Vhalo_kpcMyr = Vhalo * code_units.code_velocity.to(u.kpc / u.Myr) 
+    return jnp.concatenate((halo_to_gd1(Xhalo_kpc, code_units), halo_to_gd1_velocity(Xhalo_kpc, Vhalo_kpcMyr, code_units)))
 
 
 gd1_projection_vmap = jax.vmap(halo_to_gd1_all, (0, 0, None)) # Vectorised version of position and velocity co-ordinate transformation from simulation frame to angular GD1 co-ordinates

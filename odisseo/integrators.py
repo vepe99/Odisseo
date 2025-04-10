@@ -13,6 +13,7 @@ from odisseo.dynamics import direct_acc, direct_acc_laxmap, direct_acc_matrix, d
 from odisseo.option_classes import DIRECT_ACC, DIRECT_ACC_LAXMAP, DIRECT_ACC_MATRIX, DIRECT_ACC_FOR_LOOP, DIRECT_ACC_SHARDING
 from odisseo.option_classes import SimulationConfig, SimulationParams
 from odisseo.option_classes import DOPRI5, TSIT5, SEMIIMPLICITEULER, REVERSIBLEHEUN, LEAPFROGMIDPOINT
+from odisseo.units import CodeUnits
 
 from diffrax import diffeqsolve, ODETerm, SaveAt
 from diffrax import Tsit5, Dopri5
@@ -20,12 +21,13 @@ from diffrax import SemiImplicitEuler, ReversibleHeun, LeapfrogMidpoint
 
 
 @jaxtyped(typechecker=typechecker)
-@partial(jax.jit, static_argnames=['config'])
+@partial(jax.jit, static_argnames=['config', 'code_units'])
 def leapfrog(state: jnp.ndarray,
              mass: jnp.ndarray,
              dt: Scalar,
              config: SimulationConfig,
-             params: SimulationParams):
+             params: SimulationParams,
+             code_units: CodeUnits):
     """
     Simple implementation of a symplectic Leapfrog (Verlet) integrator for N-body simulations.
 
@@ -59,7 +61,7 @@ def leapfrog(state: jnp.ndarray,
 
     # Check additional accelerations
     if add_external_acceleration:
-        acc = acc + combined_external_acceleration_vmpa_switch(state, config, params)
+        acc = acc + combined_external_acceleration_vmpa_switch(state, config, params, code_units)
             
     # removing half-step velocity
     state = state.at[:, 0].set(state[:, 0] + state[:, 1]*dt + 0.5*acc*(dt**2))
@@ -67,14 +69,14 @@ def leapfrog(state: jnp.ndarray,
     acc2 = acc_func(state, mass, config, params)
 
     if add_external_acceleration:
-        acc2 = acc2 + combined_external_acceleration_vmpa_switch(state, config, params)
+        acc2 = acc2 + combined_external_acceleration_vmpa_switch(state, config, params, code_units)
          
     state = state.at[:, 1].set(state[:, 1] + 0.5*(acc + acc2)*dt)
     
     return state
 
 @jaxtyped(typechecker=typechecker)
-@partial(jax.jit, static_argnames=['config'])
+@partial(jax.jit, static_argnames=['config', ])
 def RungeKutta4(state: jnp.ndarray,
              mass: jnp.ndarray,
              dt: Scalar,
