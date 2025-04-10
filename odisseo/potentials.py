@@ -128,10 +128,18 @@ def NFW(state: jnp.ndarray,
     NUM = (params_NFW.r_s+r)*jnp.log(1+r/params_NFW.r_s) - r
     DEN = r*r*r*(params_NFW.r_s+r)*params_NFW.d_c
 
-    acc = - params.G * params_NFW.Mvir*NUM[:, jnp.newaxis]/DEN[:, jnp.newaxis] * state[:, 0]
-    pot = - params.G * params_NFW.Mvir*jnp.log(1+r/params_NFW.r_s)/(r*params_NFW.d_c)
+    @jit
+    def acceleration(state):
+        return - params.G * params_NFW.Mvir*NUM[:, jnp.newaxis]/DEN[:, jnp.newaxis] * state[:, 0]
+
+    @jit 
+    def potential(state):
+        return - params.G * params_NFW.Mvir*jnp.log(1+r/params_NFW.r_s)/(r*params_NFW.d_c)
+    
+    acc = acceleration(state)
 
     if return_potential:
+        pot = potential(state)
         return acc, pot
     else:
         return acc
@@ -158,11 +166,19 @@ def point_mass(state: jnp.ndarray,
     params_point_mass = params.PointMass_params
     
     r  = jnp.linalg.norm(state[:, 0], axis=1)
+
+    @jit
+    def acceleration(state):
+        return - params.G * params_point_mass.M * state[:, 0] / (r**3)[:, None]
     
-    acc = - params.G * params_point_mass.M * state[:, 0] / (r**3)[:, None]
-    pot = - params.G * params_point_mass.M / r
+    @jit
+    def potential(state):
+        return - params.G * params_point_mass.M / r
+    
+    acc = acceleration(state)
     
     if return_potential:
+        pot = potential(state)
         return acc, pot
     else:
         return acc
@@ -195,14 +211,22 @@ def MyamotoNagai(state: jnp.ndarray,
     Dz = (a+(z2+b**2)**0.5)
     D = jnp.sum(state[:, 0, :2]**2, axis=1) + Dz**2
     K = params.G * params_MN.M / D**(3/2)
-    ax = -K * state[:, 0, 0]
-    ay = -K * state[:, 0, 1]
-    az = -K * state[:, 0, 2] * Dz / (z2 + b**2)**0.5
-    acc = jnp.stack([ax, ay, az], axis=1)
 
-    pot = - params.G * params_MN.M / jnp.sqrt(D)
+    @jit
+    def acceleration(state):
+        ax = -K * state[:, 0, 0]
+        ay = -K * state[:, 0, 1]
+        az = -K * state[:, 0, 2] * Dz / (z2 + b**2)**0.5
+        return jnp.stack([ax, ay, az], axis=1)
     
+    @jit
+    def potential(state):
+        return - params.G * params_MN.M / jnp.sqrt(D)
+
+    acc = acceleration(state)
+
     if return_potential:
+        pot = potential(state)
         return acc, pot
     else:
         return acc
@@ -245,10 +269,18 @@ def PowerSphericalPotentialwCutoff(state: jnp.ndarray,
 
     M_enc = vmap(enclosed_mass)(r)
 
-    acc = - params.G * state[:, 0] / (r**3)[:, None]
-    pot = - params.G * M_enc / r
+    @jit
+    def acceleration(state):
+        return - params.G * state[:, 0] / (r**3)[:, None]
+    
+    @jit 
+    def potential(state):
+        return - params.G * M_enc / r
+
+    acc = acceleration(state)
     
     if return_potential:
+        pot = potential(state)
         return acc, pot
     else:
         return acc
