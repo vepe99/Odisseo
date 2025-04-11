@@ -209,14 +209,14 @@ def MyamotoNagai(state: jnp.ndarray,
     a = params_MN.a
 
     Dz = (a+(z2+b**2)**0.5)
-    D = jnp.sum(state[:, 0, :2]**2, axis=1) + Dz**2
-    K = params.G * params_MN.M / D**(3/2)
+    D = jnp.linalg.norm(state[:, 0, :2], axis=1)**2 + Dz**2
+    K = - params.G * params_MN.M / D**(3/2)
 
     @jit
     def acceleration(state):
-        ax = -K * state[:, 0, 0]
-        ay = -K * state[:, 0, 1]
-        az = -K * state[:, 0, 2] * Dz / (z2 + b**2)**0.5
+        ax = K * state[:, 0, 0]
+        ay = K * state[:, 0, 1]
+        az = K * state[:, 0, 2] * Dz / (z2 + b**2)**0.5
         return jnp.stack([ax, ay, az], axis=1)
     
     @jit
@@ -267,20 +267,19 @@ def PowerSphericalPotentialwCutoff(state: jnp.ndarray,
         rho_1 = rho(r_1)
         return 4 * jnp.pi * jax.scipy.integrate.trapezoid(rho_1*r_1**2, r_1)
 
-    M_enc = vmap(enclosed_mass)(r)
-
     @jit
     def acceleration(state):
         return - params.G * state[:, 0] / (r**3)[:, None]
     
     @jit 
-    def potential(state):
+    def potential():
+        M_enc = vmap(enclosed_mass)(r)
         return - params.G * M_enc / r
 
     acc = acceleration(state)
     
     if return_potential:
-        pot = potential(state)
+        pot = potential()
         return acc, pot
     else:
         return acc

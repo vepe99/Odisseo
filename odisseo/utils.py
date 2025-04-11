@@ -148,7 +148,8 @@ def halo_to_sun(Xhalo: jnp.ndarray, code_units: CodeUnits ) -> jnp.ndarray:
     --------
     >>> halo_to_sun(jnp.array([1.0, 2.0, 3.0]))
     """
-    sunx = (8.0 * u.kpc).to(code_units.code_length).value
+    # sunx = (8.0 * u.kpc).to(code_units.code_length).value
+    sunx = 8.0 # kpc 
     xsun = sunx - Xhalo[0]
     ysun = Xhalo[1]
     zsun = Xhalo[2]
@@ -354,7 +355,9 @@ def halo_to_gd1_all(Xhalo: jnp.ndarray, Vhalo: jnp.ndarray, code_units: CodeUnit
     --------
     >>> halo_to_gd1_all(jnp.array([1.0, 2.0, 3.0]), jnp.array([1.0, 2.0, 3.0]))
     """
-    return jnp.concatenate((halo_to_gd1(Xhalo, code_units), halo_to_gd1_velocity(Xhalo, Vhalo, code_units)))
+    Xhalo_kpc = Xhalo * code_units.code_length.to(u.kpc)
+    Vhalo_kpcMyr = Vhalo * code_units.code_velocity.to(u.kpc / u.Myr) 
+    return jnp.concatenate((halo_to_gd1(Xhalo_kpc, code_units), halo_to_gd1_velocity(Xhalo_kpc, Vhalo_kpcMyr, code_units)))
 
 
 gd1_projection_vmap = jax.vmap(halo_to_gd1_all, (0, 0, None)) # Vectorised version of position and velocity co-ordinate transformation from simulation frame to angular GD1 co-ordinates
