@@ -14,7 +14,7 @@ version = "0.1.0"
 description = "differentiable N-body simulator"
 authors = [{ name = "Giuseppe Viterbo" }]
 readme = "README.md"
-requires-python = ">=3.12"
+requires-python = ">=3.11"
 license = { text = "MIT" }
 classifiers = [
     "Programming Language :: Python :: 3",
@@ -25,7 +25,7 @@ classifiers = [
 dependencies = [
     "sphinx-autodoc2",
     "optax >=0.2.0",
-    "diffrax" >= 0.7.0",
+    "diffrax >= 0.7.0",
     "optimistix >=0.0.1",
     "jax >=0.4.35",
     "scipy >= 1.0.0",
