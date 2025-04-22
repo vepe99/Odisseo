@@ -109,8 +109,7 @@ def Plummer_sphere_multiprocess(mass, config, params):
         velocities = pool.map(generate_velocity_Plummer, potential)
     return jnp.array(positions), jnp.array(velocities), 1/config.N_particles*jnp.ones(config.N_particles)
 
-@jaxtyped(typechecker=typechecker)
-@partial(jax.jit, static_argnames=['e'])
+@partial(jax.jit)
 def ic_two_body(mass1: Union[float, jnp.ndarray],
                 mass2: Union[float, jnp.ndarray],
                 rp: Union[float, jnp.ndarray],
@@ -140,11 +139,23 @@ def ic_two_body(mass1: Union[float, jnp.ndarray],
 
     Mtot=mass1+mass2
 
-    if e==1.:
-        vrel=jnp.sqrt(params.G * 2*Mtot/rp)
-    else:
+    # if e==1.:
+    #     vrel=jnp.sqrt(params.G * 2*Mtot/rp)
+    # else:
+    #     a=rp/(1-e)
+    #     vrel=jnp.sqrt(params.G * Mtot*(2./rp-1./a))
+
+    def circular_orbit():
+        return jnp.sqrt(params.G * 2*Mtot/rp)
+    def elliptical_orbit():
         a=rp/(1-e)
-        vrel=jnp.sqrt(params.G * Mtot*(2./rp-1./a))
+        return jnp.sqrt(params.G * Mtot*(2./rp-1./a))
+
+    vrel = jax.lax.cond(
+            e == 1.,
+            circular_orbit,
+            elliptical_orbit,
+            )
 
     v1 = -params.G*mass2/Mtot * vrel
     v2 = params.G*mass1/Mtot * vrel
@@ -263,7 +274,7 @@ def inclined_circular_velocity(position: jnp.ndarray,
         jnp.ndarray: (v_x, v_y, v_z) velocity components.
     """
     x, y, z = position.T
-    phi = jnp.arctan2(y, x)[0] # Azimuthal angle
+    phi = jnp.arctan2(y, x) # Azimuthal angle
     # Initial velocity vector
     velocity = jnp.zeros(3)
     velocity = velocity.at[1].set(v_c[0])
