@@ -27,13 +27,15 @@ dependencies = [
     "optax >=0.2.0",
     "diffrax >= 0.7.0",
     "optimistix >=0.0.1",
-    "jax >=0.4.35",
+    "jax >=0.6.00",
     "scipy >= 1.0.0",
     "astropy >= 6.0.0",
     "numpy >= 1.0.0",
     "matplotlib >= 3.9.0",
     "equinox >= 0.11.0",
     "beartype >= 0.19.0",
+    "dm-haiku >= 0.0.14",
+    "numpyro >= 0.18.0",
 ]
 
 [project.optional-dependencies]
