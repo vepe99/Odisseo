@@ -1,5 +1,5 @@
 import os
-os.environ["CUDA_VISIBLE_DEVICES"] = "2"
+os.environ["CUDA_VISIBLE_DEVICES"] = "6"
 
 from typing import NamedTuple
 
@@ -319,10 +319,15 @@ model = partial(
     with_noise=True,
 )
 
-num_chunks = 1000
+print('Beginning sampling...')
+num_chunks = 10_000
 for i in range(num_chunks):
     (log_prob, sample), score = get_samples_and_scores(
                                     model,
                                     key=random.PRNGKey(0),   
                                 )
-    np.savez_compressed(f"./data/data_NFW/chunk_{i:03d}.npz", theta=sample["theta"][0], x=sample["y"][0], score=score[0])
+    np.savez_compressed(f"./data/data_NFW/chunk_{i:06d}.npz",
+                         theta=sample["theta"][0],
+                           x=sample["y"][0],
+                             score=score[0])
+    print('chunk', i)
