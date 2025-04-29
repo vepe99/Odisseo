@@ -1,5 +1,5 @@
 import os
-os.environ["CUDA_VISIBLE_DEVICES"] = "6"
+os.environ["CUDA_VISIBLE_DEVICES"] = "8"
 
 from typing import NamedTuple
 
@@ -114,7 +114,8 @@ def run_simulation(key,
                           return_snapshots = False, 
                           num_timesteps = 1000, 
                           external_accelerations=(NFW_POTENTIAL, ), 
-                          acceleration_scheme = DIRECT_ACC_MATRIX,
+                          acceleration_scheme = DIRECT_ACC_LAXMAP,
+                          batch_size = 1000,
                           softening = (0.1 * u.kpc).to(code_units.code_length).value) #default values
     
     # simulation parameters to be sampled 
@@ -320,8 +321,8 @@ model = partial(
 )
 
 print('Beginning sampling...')
-num_chunks = 10_000
-for i in range(num_chunks):
+num_chunks = 5_000
+for i in range(1013, num_chunks):
     (log_prob, sample), score = get_samples_and_scores(
                                     model,
                                     key=random.PRNGKey(0),   
