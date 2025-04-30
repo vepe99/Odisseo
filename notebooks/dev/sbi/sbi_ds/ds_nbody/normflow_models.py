@@ -149,9 +149,8 @@ class AffineCoupling(hk.Module):
         net = jnp.concatenate([x, self.y], axis=-1)
         for i, layer_size in enumerate(self.layers):
             net = self.activation(hk.Linear(layer_size, name="layer%d" % i)(net))
-
         shifter = tfb.Shift(hk.Linear(output_units)(net))
-        scaler = tfb.Scale(jnp.clip(jnp.exp(hk.Linear(output_units)(net)), 1e-2, 1e2))
+        scaler = tfb.Scale(jnp.clip(jnp.exp(hk.Linear(output_units)(net)), 1e-2, 1e2), )
         return tfb.Chain([shifter, scaler])
 
 
