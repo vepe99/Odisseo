@@ -1,15 +1,13 @@
-import jax
-import jax.numpy as jnp
-from jax import vmap, jit, pmap
-from jax import random
-import optax
-import numpyro.distributions as dist
-
 from functools import partial
 import haiku as hk
 from tensorflow_probability.substrates import jax as tfp
 from jaxopt import Bisection
 from jaxopt.linear_solve import solve_normal_cg
+
+import jax
+import jax.numpy as jnp
+
+
 
 # tfp = tfp.substrates.jax
 tfb = tfp.bijectors
@@ -149,8 +147,9 @@ class AffineCoupling(hk.Module):
         net = jnp.concatenate([x, self.y], axis=-1)
         for i, layer_size in enumerate(self.layers):
             net = self.activation(hk.Linear(layer_size, name="layer%d" % i)(net))
+
         shifter = tfb.Shift(hk.Linear(output_units)(net))
-        scaler = tfb.Scale(jnp.clip(jnp.exp(hk.Linear(output_units)(net)), 1e-2, 1e2), )
+        scaler = tfb.Scale(jnp.clip(jnp.exp(hk.Linear(output_units)(net)), 1e-2, 1e2))
         return tfb.Chain([shifter, scaler])
 
 
@@ -242,4 +241,3 @@ class ConditionalRealNVP(hk.Module):
         )
 
         return nvp
-
