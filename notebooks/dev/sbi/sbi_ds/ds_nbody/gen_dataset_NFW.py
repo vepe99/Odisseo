@@ -1,5 +1,5 @@
 import os
-os.environ["CUDA_VISIBLE_DEVICES"] = "9"
+os.environ["CUDA_VISIBLE_DEVICES"] = "6"
 
 from typing import NamedTuple
 
@@ -320,8 +320,8 @@ model = partial(
 )
 
 print('Beginning sampling...')
-num_chunks = 10_000
-for i in range(5000, num_chunks):
+num_chunks = 100_000
+for i in range(10_000, num_chunks):
     (log_prob, sample), score = get_samples_and_scores(
                                     model,
                                     key=random.PRNGKey(0),   
