@@ -1,5 +1,6 @@
 import os
 os.environ["CUDA_VISIBLE_DEVICES"] = "6"
+import time
 
 from typing import NamedTuple
 
@@ -320,14 +321,23 @@ model = partial(
 )
 
 print('Beginning sampling...')
-num_chunks = 100_000
-for i in range(10_000, num_chunks):
+start_time = time.time()
+batch_size = 5
+num_chunks = 50_000
+name_str = 0
+for i in range(0, int(num_chunks/batch_size)):
     (log_prob, sample), score = get_samples_and_scores(
                                     model,
-                                    key=random.PRNGKey(0),   
+                                    batch_size=batch_size,
+                                    key=random.PRNGKey(i),   
                                 )
-    np.savez_compressed(f"./data/data_NFW/chunk_{i:06d}.npz",
-                         theta=sample["theta"][0],
-                           x=sample["y"][0],
-                             score=score[0])
-    print('chunk', i)
+    for j in range(batch_size):
+        # Save the samples and scores
+        np.savez_compressed(f"./data/data_NFW/chunk_{name_str:06d}.npz",
+                             theta=sample["theta"][j],
+                               x=sample["y"][j],
+                                 score=score[j])
+        name_str += 1
+        print('chunk', name_str-1)
+end_time = time.time()
+print("Time taken to sample in seconds:", end_time - start_time)
