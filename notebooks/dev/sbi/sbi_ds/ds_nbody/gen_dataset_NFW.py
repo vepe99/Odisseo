@@ -1,5 +1,5 @@
 import os
-os.environ["CUDA_VISIBLE_DEVICES"] = "6"
+os.environ["CUDA_VISIBLE_DEVICES"] = "7"
 import time
 
 from typing import NamedTuple
@@ -322,10 +322,10 @@ model = partial(
 
 print('Beginning sampling...')
 start_time = time.time()
-batch_size = 5
+batch_size = 4
 num_chunks = 50_000
-name_str = 0
-for i in range(0, int(num_chunks/batch_size)):
+name_str = 10_000
+for i in range(10_000, int(num_chunks/batch_size)):
     (log_prob, sample), score = get_samples_and_scores(
                                     model,
                                     batch_size=batch_size,
