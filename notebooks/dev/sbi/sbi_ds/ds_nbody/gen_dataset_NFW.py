@@ -324,8 +324,8 @@ print('Beginning sampling...')
 start_time = time.time()
 batch_size = 4
 num_chunks = 50_000
-name_str = 10_000
-for i in range(10_000, int(num_chunks/batch_size)):
+name_str = 20_000
+for i in range(20_000, num_chunks, batch_size):
     (log_prob, sample), score = get_samples_and_scores(
                                     model,
                                     batch_size=batch_size,
