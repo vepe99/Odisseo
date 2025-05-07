@@ -1,5 +1,8 @@
-import os
-os.environ["CUDA_VISIBLE_DEVICES"] = "7"
+# import os
+# os.environ["CUDA_VISIBLE_DEVICES"] = "9"
+from autocvd import autocvd
+autocvd(num_gpus = 1)
+
 import time
 
 from typing import NamedTuple
@@ -322,10 +325,10 @@ model = partial(
 
 print('Beginning sampling...')
 start_time = time.time()
-batch_size = 4
-num_chunks = 50_000
-name_str = 20_000
-for i in range(20_000, num_chunks, batch_size):
+batch_size = 1
+num_chunks = 100_000
+name_str = 90_000
+for i in range(name_str, num_chunks, batch_size):
     (log_prob, sample), score = get_samples_and_scores(
                                     model,
                                     batch_size=batch_size,
