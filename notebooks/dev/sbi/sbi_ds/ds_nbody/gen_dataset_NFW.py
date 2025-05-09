@@ -1,5 +1,5 @@
 # import os
-# os.environ["CUDA_VISIBLE_DEVICES"] = "9"
+# os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 from autocvd import autocvd
 autocvd(num_gpus = 1)
 
@@ -326,8 +326,8 @@ model = partial(
 print('Beginning sampling...')
 start_time = time.time()
 batch_size = 1
-num_chunks = 100_000
-name_str = 90_000
+num_chunks = 70_000
+name_str = 65_971
 for i in range(name_str, num_chunks, batch_size):
     (log_prob, sample), score = get_samples_and_scores(
                                     model,
@@ -336,7 +336,7 @@ for i in range(name_str, num_chunks, batch_size):
                                 )
     for j in range(batch_size):
         # Save the samples and scores
-        np.savez_compressed(f"./data/data_NFW/chunk_{name_str:06d}.npz",
+        np.savez_compressed(f"/export/data/vgiusepp/odisseo_data/data/data_NFW/chunk_{name_str:06d}.npz",
                              theta=sample["theta"][j],
                                x=sample["y"][j],
                                  score=score[j])
@@ -344,3 +344,4 @@ for i in range(name_str, num_chunks, batch_size):
         print('chunk', name_str-1)
 end_time = time.time()
 print("Time taken to sample in seconds:", end_time - start_time)
+
