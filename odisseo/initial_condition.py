@@ -280,8 +280,8 @@ def inclined_circular_velocity(position: jnp.ndarray,
     velocity = velocity.at[1].set(v_c[0])
     # Rotation matrix around z-axis by phi
     R_z = jnp.array([
-        [jnp.cos(phi), -jnp.sin(phi), 0],
-        [jnp.sin(phi), jnp.cos(phi), 0],
+        [jnp.cos(phi[0]), -jnp.sin(phi[0]), 0],
+        [jnp.sin(phi[0]), jnp.cos(phi[0]), 0],
         [0, 0, 1]
     ])
 
