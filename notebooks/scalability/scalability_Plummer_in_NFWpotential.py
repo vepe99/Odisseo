@@ -43,8 +43,8 @@ code_mass = 1e8 * u.Msun
 G = 1 
 code_units = CodeUnits(code_length, code_mass, G=G)
 
-runtime_list_direct_acc_laxmap = []
-N_particles_list = [10, 100, 500, 1_000, 10_000, 100_000]
+runtime = []
+N_particles_list = [10, 50, 100, 500, 1_000, 10_000]
 for N_particles in N_particles_list:
 
     config = SimulationConfig(N_particles=N_particles, 
@@ -52,9 +52,7 @@ for N_particles in N_particles_list:
                           num_snapshots=100, 
                           num_timesteps=1000, 
                           external_accelerations=(NFW_POTENTIAL,  ), 
-                          acceleration_scheme=DIRECT_ACC_LAXMAP,
-                          double_map=True,
-                          batch_size=1_000,
+                          acceleration_scheme=DIRECT_ACC_MATRIX,
                           softening=(0.1 * u.kpc).to(code_units.code_length).value) #default values
 
     params = SimulationParams(t_end = (10 * u.Gyr).to(code_units.code_time).value,  
@@ -73,7 +71,7 @@ for N_particles in N_particles_list:
     mass_inside_rp = 4*jnp.pi*params.NFW_params.d_c*params.NFW_params.r_s**3*(jnp.log(1+rp/params.NFW_params.r_s)-rp/(rp+params.NFW_params.r_s))
 
     if len(config.external_accelerations)>0:
-        pos, vel, _ = ic_two_body(mass_inside_rp, params.Plummer_params.Mtot, rp=rp, e=0., config=config, params=params)
+        pos, vel, _ = ic_two_body(mass_inside_rp, params.Plummer_params.Mtot, rp=rp, e=0., params=params)
         velocities = velocities + vel[1]
         positions = positions + pos[1]
 
@@ -90,6 +88,6 @@ for N_particles in N_particles_list:
 
     mean_runtime = np.mean(times)
     std_runtime = np.std(times)
-    runtime_list_direct_acc_laxmap.append((mean_runtime, std_runtime))
+    runtime.append((mean_runtime, std_runtime))
 
-np.save(f"runtime_list_direct_acc_N_{N_particles}.npy", runtime_list_direct_acc_laxmap)
+np.save(f"./kartick_test_data/m4test.npy", runtime)
