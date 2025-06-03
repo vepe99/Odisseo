@@ -27,7 +27,7 @@ dependencies = [
     "optax >=0.2.0",
     "diffrax >= 0.7.0",
     "optimistix >=0.0.1",
-    "jax[cuda12] == 0.6.1",
+    "jax == 0.6.1",
     "scipy >= 1.0.0",
     "astropy >= 6.0.0",
     "numpy >= 1.0.0",
