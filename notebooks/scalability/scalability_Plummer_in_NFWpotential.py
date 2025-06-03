@@ -1,9 +1,11 @@
 import os
 from math import pi
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "1"  # Use only the first GPU
+# os.environ["CUDA_VISIBLE_DEVICES"] = "1"  # Use only the first GPU
 from typing import Optional, Tuple, Callable, Union, List
 from functools import partial
+
+from tqdm import tqdm
 
 import matplotlib.pyplot as plt
 import jax
@@ -45,7 +47,7 @@ code_units = CodeUnits(code_length, code_mass, G=G)
 
 runtime = []
 N_particles_list = [10, 50, 100, 500, 1_000, 10_000]
-for N_particles in N_particles_list:
+for N_particles in tqdm(N_particles_list):
 
     config = SimulationConfig(N_particles=N_particles, 
                           return_snapshots=True, 
@@ -90,4 +92,4 @@ for N_particles in N_particles_list:
     std_runtime = np.std(times)
     runtime.append((mean_runtime, std_runtime))
 
-np.save(f"./kartick_test_data/m4test.npy", runtime)
+np.save(f"./kartick_test_data/compgpu4.npy", runtime)
