@@ -283,3 +283,48 @@ def PowerSphericalPotentialwCutoff(state: jnp.ndarray,
         return acc, pot
     else:
         return acc
+ 
+@jaxtyped(typechecker=typechecker)
+@partial(jax.jit, static_argnames=['config', 'return_potential'])  
+def logarithmic_potential(state: jnp.ndarray,
+                          config: SimulationConfig,
+                          params: SimulationParams,
+                          return_potential=False):
+    """
+    Compute acceleration of all particles due to a logarithmic potential.
+
+    Args:
+        state (jnp.ndarray): Array of shape (N_particles, 2, 3) representing the positions and velocities of the particles.
+        config (NamedTuple): Configuration parameters.
+        params (NamedTuple): Simulation parameters.
+        return_potential (bool, optional): If True, also returns the potential energy of the logarithmic potential. Defaults to False.
+    
+    Returns:
+        Tuple[jnp.ndarray, jnp.ndarray]: 
+            - Acceleration (jnp.ndarray): Acceleration of all particles due to logarithmic external potential.
+            - Potential (jnp.ndarray): Potential energy of all particles due to logarithmic external potential. Returned only if return_potential is True.
+    """
+    r = jnp.linalg.norm(state[:, 0], axis=1)
+    z = state[:, 0, 2]
+    v2_0 = params.Logarithmic_potential_params.v2_0
+    q = params.Logarithmic_potential_params.q
+    
+    @jit
+    def potential(state):
+        return - v2_0 * jnp.log(r**2 + (z/q)**2)
+
+    @jit
+    def acceleration(state):
+        r2 = r**2 + (z/q)**2
+        ax = - v2_0 * state[:, 0, 0] / r2
+        ay = - v2_0 * state[:, 0, 1] / r2
+        az = - v2_0 * z * (1/q**2) / r2
+        return jnp.stack([ax, ay, az], axis=1)
+    
+    acc = acceleration(state)
+    
+    if return_potential:
+        pot = potential(state)
+        return acc, pot
+    else:
+        return acc
