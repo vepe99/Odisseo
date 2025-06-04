@@ -83,9 +83,10 @@ def combined_external_acceleration_vmpa_switch(state: jnp.ndarray,
     if return_potential:
         # The POTENTIAL_LIST NEEDS TO BE IN THE SAME ORDER AS THE INTEGER VALUES 
         POTENTIAL_LIST = [lambda state: NFW(state, config=config, params=params, return_potential=True), 
-                        lambda state: point_mass(state, config=config, params=params, return_potential=True),
-                        lambda state: MyamotoNagai(state, config=config, params=params, return_potential=True),
-                        lambda state: PowerSphericalPotentialwCutoff(state, config=config, params=params, return_potential=True)]
+                          lambda state: point_mass(state, config=config, params=params, return_potential=True),
+                          lambda state: MyamotoNagai(state, config=config, params=params, return_potential=True),
+                          lambda state: PowerSphericalPotentialwCutoff(state, config=config, params=params, return_potential=True), 
+                          lambda state: logarithmic_potential(state, config=config, params=params, return_potential=True)]
         vmap_function = vmap(lambda i, state: lax.switch(i, POTENTIAL_LIST, state))
         external_acc, external_pot = vmap_function(jnp.array(config.external_accelerations), state_tobe_vmap)
         total_external_acceleration = jnp.sum(external_acc, axis=0)
@@ -95,7 +96,8 @@ def combined_external_acceleration_vmpa_switch(state: jnp.ndarray,
         POTENTIAL_LIST = [lambda state: NFW(state, config=config, params=params, return_potential=False),
                           lambda state: point_mass(state, config=config, params=params, return_potential=False),
                           lambda state: MyamotoNagai(state, config=config, params=params, return_potential=False),
-                          lambda state: PowerSphericalPotentialwCutoff(state, config=config, params=params, return_potential=False)]
+                          lambda state: PowerSphericalPotentialwCutoff(state, config=config, params=params, return_potential=False),
+                          lambda state: logarithmic_potential(state, config=config, params=params, return_potential=False)]
         vmap_function = vmap(lambda i, state: lax.switch(i, POTENTIAL_LIST, state))
         external_acc = vmap_function(jnp.array(config.external_accelerations), state_tobe_vmap)
         total_external_acceleration = jnp.sum(external_acc, axis=0)
@@ -304,21 +306,21 @@ def logarithmic_potential(state: jnp.ndarray,
             - Acceleration (jnp.ndarray): Acceleration of all particles due to logarithmic external potential.
             - Potential (jnp.ndarray): Potential energy of all particles due to logarithmic external potential. Returned only if return_potential is True.
     """
-    r = jnp.linalg.norm(state[:, 0], axis=1)
+    r = jnp.sqrt(state[:, 0, 0]**2 + state[:, 0, 1]**2)
     z = state[:, 0, 2]
-    v2_0 = params.Logarithmic_potential_params.v2_0
-    q = params.Logarithmic_potential_params.q
+    v2_0 = params.Logarithmic_Params.v0**2
+    q2 = params.Logarithmic_Params.q**2
     
     @jit
     def potential(state):
-        return - v2_0 * jnp.log(r**2 + (z/q)**2)
+        return v2_0/2 * jnp.log(r**2 + (z**2/q2))
 
     @jit
     def acceleration(state):
-        r2 = r**2 + (z/q)**2
-        ax = - v2_0 * state[:, 0, 0] / r2
-        ay = - v2_0 * state[:, 0, 1] / r2
-        az = - v2_0 * z * (1/q**2) / r2
+        DEN = r**2 + (z**2/q2)
+        ax = - v2_0 * state[:, 0, 0] / DEN
+        ay = - v2_0 * state[:, 0, 1] / DEN
+        az = - v2_0 * z * (1/q2) / DEN
         return jnp.stack([ax, ay, az], axis=1)
     
     acc = acceleration(state)
