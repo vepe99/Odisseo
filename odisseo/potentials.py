@@ -268,14 +268,14 @@ def PowerSphericalPotentialwCutoff(state: jnp.ndarray,
         r_1 = jnp.linspace(0, radius, 1000)
         rho_1 = rho(r_1)
         return 4 * jnp.pi * jax.scipy.integrate.trapezoid(rho_1*r_1**2, r_1)
-
+    
+    M_enc = vmap(enclosed_mass)(r)
     @jit
     def acceleration(state):
-        return - params.G * state[:, 0] / (r**3)[:, None]
+        return - params.G * M_enc[:, None] * state[:, 0] / (r**3)[:, None]
     
     @jit 
     def potential():
-        M_enc = vmap(enclosed_mass)(r)
         return - params.G * M_enc / r
 
     acc = acceleration(state)

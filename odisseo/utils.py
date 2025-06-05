@@ -1,4 +1,4 @@
-from typing import Union, NamedTuple
+from typing import Union, NamedTuple, Tuple
 from functools import partial
 import jax
 from jax import jit
@@ -343,7 +343,7 @@ halo_to_gd1_velocity_vmap = jax.jit(
 
 @jaxtyped(typechecker=typechecker)
 @partial(jax.jit, static_argnames=['code_units'])
-def halo_to_gd1_all(Xhalo: jnp.ndarray, Vhalo: jnp.ndarray, code_units: CodeUnits) -> jnp.ndarray:
+def halo_to_gd1_all(Xhalo: jnp.ndarray, Vhalo: jnp.ndarray, code_units: CodeUnits) -> Tuple:
     """
     Position and Velocity conversion from equatorial frame co-ordinates to angular GD1 co-ordinates
     Args:
@@ -357,7 +357,7 @@ def halo_to_gd1_all(Xhalo: jnp.ndarray, Vhalo: jnp.ndarray, code_units: CodeUnit
     """
     Xhalo_kpc = Xhalo * code_units.code_length.to(u.kpc)
     Vhalo_kpcMyr = Vhalo * code_units.code_velocity.to(u.kpc / u.Myr) 
-    return jnp.concatenate((halo_to_gd1(Xhalo_kpc, code_units), halo_to_gd1_velocity(Xhalo_kpc, Vhalo_kpcMyr, code_units)))
+    return (halo_to_gd1(Xhalo_kpc, code_units), halo_to_gd1_velocity(Xhalo_kpc, Vhalo_kpcMyr, code_units))
 
 
 gd1_projection_vmap = jax.vmap(halo_to_gd1_all, (0, 0, None)) # Vectorised version of position and velocity co-ordinate transformation from simulation frame to angular GD1 co-ordinates
