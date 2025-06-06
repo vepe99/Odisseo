@@ -181,7 +181,7 @@ def NFW(state: jnp.ndarray,
     
     @jit 
     def acceleration(r):
-        return - params.G * mass_enclosed(r)[:, None] * state[:, 0] / (r**2)[:, None] 
+        return - params.G * mass_enclosed(r)[:, None] * state[:, 0] / (r**3)[:, None] 
     
     # @jit
     # def acceleration(r):
@@ -275,16 +275,16 @@ def MyamotoNagai(state: jnp.ndarray,
     D = jnp.linalg.norm(state[:, 0, :2], axis=1)**2 + Dz**2
     K = - params.G * params_MN.M / D**(3/2)
 
-    # @jit
-    # def acceleration(state):
-    #     ax = K * state[:, 0, 0]
-    #     ay = K * state[:, 0, 1]
-    #     az = K * state[:, 0, 2] * Dz / (z2 + b**2)**0.5
-    #     return jnp.stack([ax, ay, az], axis=1)
+    @jit
+    def acceleration(pos):
+        ax = K * pos[:, 0]
+        ay = K * pos[:, 1]
+        az = K * pos[:, 2] * Dz / (z2 + b**2)**0.5
+        return jnp.stack([ax, ay, az], axis=1)
 
-    # @jit
-    # def potential(state):
-    #     return - params.G * params_MN.M / jnp.sqrt(D)
+    @jit
+    def potential(pos):
+        return - params.G * params_MN.M / jnp.sqrt(D)
 
     # def acceleration(state):
     #     R2 = state[:, 0, 0]**2 + state[:, 0, 1]**2
@@ -299,22 +299,23 @@ def MyamotoNagai(state: jnp.ndarray,
 
     #     return  - 0.6  * ftot * dimless_prefactor[:, None] * direction
 
-    pos = state[:, 0]
-
-    @jit
-    def potential(pos):
-        R2 = jnp.linalg.norm(pos[:2])**2
-        zp2 = (jnp.sqrt(pos[2]**2 + b**2) +a )**2
-        return -params.G * M / jnp.sqrt(R2 + zp2)
     
-    @jit 
-    def acceleration(pos):
-        return -jax.vmap(jax.grad((potential)))(pos)
 
+    # @jit
+    # def potential(pos):
+    #     R2 = jnp.linalg.norm(pos[:2])**2
+    #     zp2 = (jnp.sqrt(pos[2]**2 + b**2) +a )**2
+    #     return -params.G * M / jnp.sqrt(R2 + zp2)
+    
+    # @jit 
+    # def acceleration(pos):
+    #     return -jax.vmap(jax.grad((potential)))(pos)
+
+    pos = state[:, 0]
     acc = acceleration(pos)
 
     if return_potential:
-        pot = jax.vmap(potential)(pos)
+        pot = potential(pos)
         return acc, pot
     else:
         return acc
@@ -360,13 +361,34 @@ def PowerSphericalPotentialwCutoff(state: jnp.ndarray,
         a = alpha/2
         s2 = (r/r_c)**2
         GM = params.G * M
-        pot_value = - GM * ((a - 1.5) * _safe_gamma_inc(1.5 - 1, s2) / (r * jax.scipy.special.gamma(2.5 - a)) 
+        pot_value =  GM * ((a - 1.5) * _safe_gamma_inc(1.5 - 1, s2) / (r * jax.scipy.special.gamma(2.5 - a)) 
                     + _safe_gamma_inc(1 - a, s2) / (r_c * jax.scipy.special.gamma(1.5 - a)))   
         return jnp.squeeze(pot_value)
     
     @jit 
     def acceleration(pos):
         return -jax.vmap(jax.grad((potential)))(pos)
+    
+    # def _mass(R,):
+    #     out = (
+    #         2.0
+    #         * jnp.pi
+    #         * R ** (3.0 - alpha)
+    #         / (1.5 - alpha / 2.0)
+    #         * jax.scipy.special.hyp1f1(
+    #             1.5 - alpha / 2.0,
+    #             2.5 - alpha / 2.0,
+    #             -((R / r_c) ** 2.0),
+    #         )
+    #     )
+    #     return out
+    
+    # @jit
+    # def acceleration(pos):
+    #     r = jnp.linalg.norm(pos, axis=1)
+         
+    #     return - params.G * _mass(r)[:, None] * pos / (r**3)[:, None]
+    
 
     # @jax.jit
     # def gamma_low(x: float, y: float) -> float:
