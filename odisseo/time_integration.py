@@ -114,6 +114,128 @@ def _time_integration_fixed_steps(primitive_state: jnp.ndarray,
 
     return state  
 
+# @jaxtyped(typechecker=typechecker)
+# @partial(jax.jit, static_argnames=['config'])
+# def _time_integration_fixed_steps_snapshot(primitive_state: jnp.ndarray,
+#                      mass: jnp.ndarray,
+#                      config: SimulationConfig,
+#                      params: SimulationParams, ):  
+#     """ Fixed time stepping integration of the primitave state of the system.
+#     Return the snapshot of the state of the system at fixed point in the time integration.
+
+#     Args:
+#         primitive_state: The primitive state array.
+#         config: The simulation configuration.
+#         params: The simulation parameters.
+#         helper_data: The helper data.
+
+#     Returns:
+#         Depending on the configuration (return_snapshots, num_snapshots) either the final state of the fluid
+#         after the time integration of snapshots of the time evolution
+#     """  
+#     num_snapshots = config.num_snapshots
+#     num_timesteps = config.num_timesteps
+
+#     snapshot_times = jnp.linspace(0.0, params.t_end, num_snapshots)
+
+
+#     if config.return_snapshots:
+#         times = jnp.zeros(config.num_snapshots)
+#         states = jnp.zeros((config.num_snapshots, primitive_state.shape[0], primitive_state.shape[1], primitive_state.shape[2]))
+#         total_energy = jnp.zeros(config.num_snapshots)
+#         angular_momentum = jnp.zeros((config.num_snapshots, 3))
+#         current_checkpoint = 0
+#         snapshot_data = SnapshotData(times = times, 
+#                                      states = states, 
+#                                      total_energy = total_energy, 
+#                                      angular_momentum = angular_momentum,
+#                                      current_checkpoint = current_checkpoint)
+
+#     def update_step(carry):
+
+#         if config.return_snapshots:
+#             time, state, snapshot_data = carry
+
+#             def update_snapshot_data(snapshot_data):
+#                 times = snapshot_data.times.at[snapshot_data.current_checkpoint].set(time)
+#                 states = snapshot_data.states.at[snapshot_data.current_checkpoint].set(state)
+#                 total_energy = snapshot_data.total_energy.at[snapshot_data.current_checkpoint].set(jnp.sum(E_tot(state, mass, config, params)))
+#                 angular_momentum = snapshot_data.angular_momentum.at[snapshot_data.current_checkpoint].set(jnp.sum(Angular_momentum(state, mass), axis=0))
+#                 current_checkpoint = snapshot_data.current_checkpoint + 1
+#                 snapshot_data = snapshot_data._replace(times = times, 
+#                                                        states = states, 
+#                                                        total_energy = total_energy, 
+#                                                        angular_momentum = angular_momentum,
+#                                                        current_checkpoint = current_checkpoint)
+#                 return snapshot_data
+            
+#             def dont_update_snapshot_data(snapshot_data):
+#                 return snapshot_data
+
+#             snapshot_data = jax.lax.cond(jnp.logical_and(current_checkpoint < num_snapshots, abs(time) >= abs(snapshot_times[current_checkpoint])), 
+#                                          update_snapshot_data, 
+#                                          dont_update_snapshot_data, 
+#                                          snapshot_data)
+
+#             num_iterations = snapshot_data.num_iterations + 1
+#             snapshot_data = snapshot_data._replace(num_iterations = num_iterations)
+
+#         else:
+#             time, state = carry
+
+#         dt = params.t_end / config.num_timesteps
+        
+#         # Update the state using the chosen integrator
+#         if config.integrator == LEAPFROG:
+#             state = leapfrog(state, mass, dt, config, params)
+#         elif config.integrator == RK4:
+#             state = RungeKutta4(state, mass, dt, config, params)
+#         elif config.integrator == DIFFRAX_BACKEND:
+#             state = diffrax_solver(state, mass, dt, config, params)
+
+#         # Update the time
+#         time += dt
+        
+
+#         if config.return_snapshots:
+#             carry = (time, state, snapshot_data)
+#         else:
+#             carry = (time, state)
+
+#         return carry
+    
+#     def condition(carry):
+#         if config.return_snapshots:
+#             t, _, _ = carry
+#         else:
+#             t, _ = carry
+#         return abs(t) <= abs(params.t_end)
+    
+#     if config.return_snapshots:
+#         carry = (0.0, primitive_state, snapshot_data)
+#     else:
+#         carry = (0.0, primitive_state)
+    
+#     start = timer()
+
+    
+#     if config.differentation_mode == FORWARDS:
+#         carry = jax.lax.while_loop(condition, update_step, carry)
+#     elif config.differentation_mode == BACKWARDS:
+#         carry = checkpointed_while_loop(condition, update_step, carry, checkpoints = config.num_checkpoints)
+#     else: 
+#         carry = jax.lax.fori_loop(0, config.num_timesteps, update_step, carry)
+#     end = timer()
+#     duration = end - start
+
+#     if config.return_snapshots:
+#         _, state, snapshot_data = carry
+#         snapshot_data = snapshot_data._replace(runtime = duration)
+#         return snapshot_data
+#     else:
+#         _, state = carry
+#         return state
+
 @jaxtyped(typechecker=typechecker)
 @partial(jax.jit, static_argnames=['config'])
 def _time_integration_fixed_steps_snapshot(primitive_state: jnp.ndarray,
@@ -133,10 +255,6 @@ def _time_integration_fixed_steps_snapshot(primitive_state: jnp.ndarray,
         Depending on the configuration (return_snapshots, num_snapshots) either the final state of the fluid
         after the time integration of snapshots of the time evolution
     """  
-    num_snapshots = config.num_snapshots
-    num_timesteps = config.num_timesteps
-
-    snapshot_times = jnp.linspace(0.0, params.t_end, num_snapshots)
 
 
     if config.return_snapshots:
@@ -168,14 +286,14 @@ def _time_integration_fixed_steps_snapshot(primitive_state: jnp.ndarray,
                                                        angular_momentum = angular_momentum,
                                                        current_checkpoint = current_checkpoint)
                 return snapshot_data
-            
+
             def dont_update_snapshot_data(snapshot_data):
                 return snapshot_data
 
-            snapshot_data = jax.lax.cond(jnp.logical_and(current_checkpoint < num_snapshots, abs(time) >= abs(snapshot_times[current_checkpoint])), 
-                                         update_snapshot_data, 
-                                         dont_update_snapshot_data, 
-                                         snapshot_data)
+            snapshot_data = jax.lax.cond(abs(time) >= abs(snapshot_data.current_checkpoint * params.t_end / config.num_snapshots), update_snapshot_data, dont_update_snapshot_data, snapshot_data)
+
+
+
 
             num_iterations = snapshot_data.num_iterations + 1
             snapshot_data = snapshot_data._replace(num_iterations = num_iterations)
@@ -184,7 +302,7 @@ def _time_integration_fixed_steps_snapshot(primitive_state: jnp.ndarray,
             time, state = carry
 
         dt = params.t_end / config.num_timesteps
-        
+
         # Update the state using the chosen integrator
         if config.integrator == LEAPFROG:
             state = leapfrog(state, mass, dt, config, params)
@@ -195,7 +313,7 @@ def _time_integration_fixed_steps_snapshot(primitive_state: jnp.ndarray,
 
         # Update the time
         time += dt
-        
+
 
         if config.return_snapshots:
             carry = (time, state, snapshot_data)
@@ -203,22 +321,22 @@ def _time_integration_fixed_steps_snapshot(primitive_state: jnp.ndarray,
             carry = (time, state)
 
         return carry
-    
+
     def condition(carry):
         if config.return_snapshots:
             t, _, _ = carry
         else:
             t, _ = carry
-        return abs(t) <= abs(params.t_end)
-    
+        return abs(t) < abs(params.t_end)
+
     if config.return_snapshots:
         carry = (0.0, primitive_state, snapshot_data)
     else:
         carry = (0.0, primitive_state)
-    
+
     start = timer()
 
-    
+
     if config.differentation_mode == FORWARDS:
         carry = jax.lax.while_loop(condition, update_step, carry)
     elif config.differentation_mode == BACKWARDS:
@@ -235,4 +353,3 @@ def _time_integration_fixed_steps_snapshot(primitive_state: jnp.ndarray,
     else:
         _, state = carry
         return state
-    

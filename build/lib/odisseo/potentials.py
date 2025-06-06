@@ -83,9 +83,10 @@ def combined_external_acceleration_vmpa_switch(state: jnp.ndarray,
     if return_potential:
         # The POTENTIAL_LIST NEEDS TO BE IN THE SAME ORDER AS THE INTEGER VALUES 
         POTENTIAL_LIST = [lambda state: NFW(state, config=config, params=params, return_potential=True), 
-                        lambda state: point_mass(state, config=config, params=params, return_potential=True),
-                        lambda state: MyamotoNagai(state, config=config, params=params, return_potential=True),
-                        lambda state: PowerSphericalPotentialwCutoff(state, config=config, params=params, return_potential=True)]
+                          lambda state: point_mass(state, config=config, params=params, return_potential=True),
+                          lambda state: MyamotoNagai(state, config=config, params=params, return_potential=True),
+                          lambda state: PowerSphericalPotentialwCutoff(state, config=config, params=params, return_potential=True), 
+                          lambda state: logarithmic_potential(state, config=config, params=params, return_potential=True)]
         vmap_function = vmap(lambda i, state: lax.switch(i, POTENTIAL_LIST, state))
         external_acc, external_pot = vmap_function(jnp.array(config.external_accelerations), state_tobe_vmap)
         total_external_acceleration = jnp.sum(external_acc, axis=0)
@@ -95,7 +96,8 @@ def combined_external_acceleration_vmpa_switch(state: jnp.ndarray,
         POTENTIAL_LIST = [lambda state: NFW(state, config=config, params=params, return_potential=False),
                           lambda state: point_mass(state, config=config, params=params, return_potential=False),
                           lambda state: MyamotoNagai(state, config=config, params=params, return_potential=False),
-                          lambda state: PowerSphericalPotentialwCutoff(state, config=config, params=params, return_potential=False)]
+                          lambda state: PowerSphericalPotentialwCutoff(state, config=config, params=params, return_potential=False),
+                          lambda state: logarithmic_potential(state, config=config, params=params, return_potential=False)]
         vmap_function = vmap(lambda i, state: lax.switch(i, POTENTIAL_LIST, state))
         external_acc = vmap_function(jnp.array(config.external_accelerations), state_tobe_vmap)
         total_external_acceleration = jnp.sum(external_acc, axis=0)
@@ -121,29 +123,78 @@ def NFW(state: jnp.ndarray,
             - Potential (jnp.ndarray): Potential energy of all particles due to NFW external potential. Returned only if return_potential is True.
     """
     
-    params_NFW = params.NFW_params
+    # params_NFW = params.NFW_params
     
-    r  = jnp.linalg.norm(state[:, 0], axis=1)
+    # r  = jnp.linalg.norm(state[:, 0], axis=1)
 
-    NUM = (params_NFW.r_s+r)*jnp.log(1+r/params_NFW.r_s) - r
-    DEN = r*r*r*(params_NFW.r_s+r)*params_NFW.d_c
+    # NUM = (params_NFW.r_s+r)*jnp.log(1+r/params_NFW.r_s) - r
+    # DEN = r*r*r*(params_NFW.r_s+r)*params_NFW.d_c
+
+    # @jit
+    # def acceleration(state):
+    #     return - params.G * params_NFW.Mvir*NUM[:, jnp.newaxis]/DEN[:, jnp.newaxis] * state[:, 0]
+
+    
+    # @jit 
+    # def potential(state):
+    #     return - params.G * params_NFW.Mvir*jnp.log(1+r/params_NFW.r_s)/(r*params_NFW.d_c)
+    
+    # acc = acceleration(state)
+
+    # if return_potential:
+    #     pot = potential(state)
+    #     return acc, pot
+    # else:
+    #     return acc
+
+    params_NFW = params.NFW_params
+    M = params_NFW.Mvir
+    r_s = params_NFW.r_s
+
+    r = jnp.linalg.norm(state[:, 0], axis=1)
 
     @jit
-    def acceleration(state):
-        return - params.G * params_NFW.Mvir*NUM[:, jnp.newaxis]/DEN[:, jnp.newaxis] * state[:, 0]
+    def potential(r):
+        r"""Potential for the NFW model.
 
-    @jit 
-    def potential(state):
-        return - params.G * params_NFW.Mvir*jnp.log(1+r/params_NFW.r_s)/(r*params_NFW.d_c)
+        $$ \Phi(r) = -\frac{G m}{r_s} \frac{r_s}{r} \log(1 + \frac{r}{r_s}) $$
+
+        where $m$ is the characteristic mass and $r_s$ is the scale radius.
+
+        """
+        x = r / r_s
+        phi0 = -params.G * M / r_s
+        return phi0 * jnp.log(1 + x) / x
     
-    acc = acceleration(state)
+    @jit
+    def mass_enclosed(r):
+        r"""Enclosed mass for the NFW model.
+
+        $$ M(<r) = \frac{m}{\ln(1 + x) - \frac{x}{1 + x}} $$
+
+        where $x = r / r_s$ is the dimensionless radius and $m$ is the
+        characteristic mass.
+
+        """
+        x = r / r_s
+        return M * (jnp.log(1 + x) - x / (1 + x))
+    
+    @jit 
+    def acceleration(r):
+        return - params.G * mass_enclosed(r) * state[:, 0] / (r**2)[:, None] 
+    
+    #calculate the acceleration
+    acc = acceleration(r)
 
     if return_potential:
-        pot = potential(state)
+        pot = potential(r)
         return acc, pot
     else:
         return acc
     
+    
+
+
 @jaxtyped(typechecker=typechecker)
 @partial(jax.jit, static_argnames=['config', 'return_potential'])
 def point_mass(state: jnp.ndarray, 
@@ -172,7 +223,7 @@ def point_mass(state: jnp.ndarray,
         return - params.G * params_point_mass.M * state[:, 0] / (r**3)[:, None]
     
     @jit
-    def potential(state):
+    def potential(r):
         return - params.G * params_point_mass.M / r
     
     acc = acceleration(state)
@@ -239,7 +290,7 @@ def PowerSphericalPotentialwCutoff(state: jnp.ndarray,
         return_potential=False):
     """
     Compute acceleration of all particles due to a power spherical potential with cutoff.
-
+    taken from galax: https://github.com/GalacticDynamics/galax/blob/main/src/galax/potential/_src/builtin/powerlawcutoff.py#L35
     Args:
         state (jnp.ndarray): Array of shape (N_particles, 2, 3) representing the positions and velocities of the particles.
         config (NamedTuple): Configuration parameters.
@@ -250,36 +301,86 @@ def PowerSphericalPotentialwCutoff(state: jnp.ndarray,
             - Acceleration (jnp.ndarray): Acceleration of all particles due to power spherical external potential.
             - Potential (jnp.ndarray): Potential energy of all particles due to power spherical external potential. Returned only if return_potential is True.
     """
+
+    @partial(jax.jit)
+    def _safe_gamma_inc(a, x):
+        return jax.scipy.special.gammainc(a, x) * jax.scipy.special.gamma(a)
+    
     params_PSP = params.PSP_params
+    M = params_PSP.M
     alpha = params_PSP.alpha
     r_c = params_PSP.r_c
     
-    r = jnp.linalg.norm(state[:, 0], axis=1)
+    pos = state[:, 0]
 
     @jit
     def rho(radius):
         return (1/radius)**alpha * jnp.exp(-(radius/r_c)**2) 
 
     @jit
-    def enclosed_mass(radius):
-        #integration for the enclosed mass
-        r_1 = jnp.linspace(0, radius, 1000)
-        rho_1 = rho(r_1)
-        return 4 * jnp.pi * jax.scipy.integrate.trapezoid(rho_1*r_1**2, r_1)
+    def potential(pos):
+        r = jnp.linalg.norm(pos, axis=1)
+        a = alpha/2
+        s2 = (r/r_c)**2
+        GM = params.G * M
+        pot_value =  GM * ((a - 1.5) * _safe_gamma_inc(1.5 - 1, s2) / (r * jax.scipy.special.gamma(2.5 - a)) 
+                    + _safe_gamma_inc(1 - a, s2) / (r_c * jax.scipy.special.gamma(1.5 - a)))   
+        return jnp.squeeze(pot_value)
+    
+    @jit 
+    def acceleration(pos):
+        return - jax.grad((potential))(pos)
+
+    # compute the acceleration
+
+    acc = acceleration(state)
+    if return_potential:
+        pot = potential(state)[None, ]
+        return acc, pot
+    else:
+        return acc
+ 
+@jaxtyped(typechecker=typechecker)
+@partial(jax.jit, static_argnames=['config', 'return_potential'])  
+def logarithmic_potential(state: jnp.ndarray,
+                          config: SimulationConfig,
+                          params: SimulationParams,
+                          return_potential=False):
+    """
+    Compute acceleration of all particles due to a logarithmic potential.
+
+    Args:
+        state (jnp.ndarray): Array of shape (N_particles, 2, 3) representing the positions and velocities of the particles.
+        config (NamedTuple): Configuration parameters.
+        params (NamedTuple): Simulation parameters.
+        return_potential (bool, optional): If True, also returns the potential energy of the logarithmic potential. Defaults to False.
+    
+    Returns:
+        Tuple[jnp.ndarray, jnp.ndarray]: 
+            - Acceleration (jnp.ndarray): Acceleration of all particles due to logarithmic external potential.
+            - Potential (jnp.ndarray): Potential energy of all particles due to logarithmic external potential. Returned only if return_potential is True.
+    """
+    r = jnp.sqrt(state[:, 0, 0]**2 + state[:, 0, 1]**2)
+    z = state[:, 0, 2]
+    v2_0 = params.Logarithmic_Params.v0**2
+    q2 = params.Logarithmic_Params.q**2
+    
+    @jit
+    def potential(state):
+        return v2_0/2 * jnp.log(r**2 + (z**2/q2))
 
     @jit
     def acceleration(state):
-        return - params.G * state[:, 0] / (r**3)[:, None]
+        DEN = r**2 + (z**2/q2)
+        ax = - v2_0 * state[:, 0, 0] / DEN
+        ay = - v2_0 * state[:, 0, 1] / DEN
+        az = - v2_0 * z * (1/q2) / DEN
+        return jnp.stack([ax, ay, az], axis=1)
     
-    @jit 
-    def potential():
-        M_enc = vmap(enclosed_mass)(r)
-        return - params.G * M_enc / r
-
     acc = acceleration(state)
     
     if return_potential:
-        pot = potential()
+        pot = potential(state)
         return acc, pot
     else:
         return acc

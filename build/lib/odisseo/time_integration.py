@@ -105,6 +105,8 @@ def _time_integration_fixed_steps(primitive_state: jnp.ndarray,
             return leapfrog(state, mass, dt, config, params)
         elif config.integrator == RK4:
             return RungeKutta4(state, mass, dt, config, params)
+        elif config.integrator == DIFFRAX_BACKEND:
+            state = diffrax_solver(state, mass, dt, config, params)
             
 
     # use lax fori_loop to unroll the loop
@@ -131,6 +133,10 @@ def _time_integration_fixed_steps_snapshot(primitive_state: jnp.ndarray,
         Depending on the configuration (return_snapshots, num_snapshots) either the final state of the fluid
         after the time integration of snapshots of the time evolution
     """  
+    num_snapshots = config.num_snapshots
+    num_timesteps = config.num_timesteps
+
+    snapshot_times = jnp.linspace(0.0, params.t_end, num_snapshots)
 
 
     if config.return_snapshots:
@@ -166,7 +172,10 @@ def _time_integration_fixed_steps_snapshot(primitive_state: jnp.ndarray,
             def dont_update_snapshot_data(snapshot_data):
                 return snapshot_data
 
-            snapshot_data = jax.lax.cond(abs(time) >= abs(snapshot_data.current_checkpoint * params.t_end / config.num_snapshots), update_snapshot_data, dont_update_snapshot_data, snapshot_data)
+            snapshot_data = jax.lax.cond(jnp.logical_and(current_checkpoint < num_snapshots, abs(time) >= abs(snapshot_times[current_checkpoint])), 
+                                         update_snapshot_data, 
+                                         dont_update_snapshot_data, 
+                                         snapshot_data)
 
             num_iterations = snapshot_data.num_iterations + 1
             snapshot_data = snapshot_data._replace(num_iterations = num_iterations)
@@ -200,7 +209,7 @@ def _time_integration_fixed_steps_snapshot(primitive_state: jnp.ndarray,
             t, _, _ = carry
         else:
             t, _ = carry
-        return abs(t) < abs(params.t_end)
+        return abs(t) <= abs(params.t_end)
     
     if config.return_snapshots:
         carry = (0.0, primitive_state, snapshot_data)

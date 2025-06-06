@@ -32,6 +32,7 @@ NFW_POTENTIAL = 0
 POINT_MASS = 1
 MN_POTENTIAL = 2
 PSP_POTENTIAL = 3
+LOGARITHMIC_POTENTIAL = 4
 
 class PlummerParams(NamedTuple):
     """
@@ -51,9 +52,9 @@ class NFWParams(NamedTuple):
     
     r_s: float = 15.3 #kpc
     
-    c: float = 10
+    # c: float = 10
 
-    d_c: float = log(1+c) - c/(1+c)
+    # d_c: float = log(1+c) - c/(1+c)
 
 class PointMassParams(NamedTuple):
     """
@@ -76,10 +77,20 @@ class MNParams(NamedTuple):
 
 class PSPParams(NamedTuple):
 
+    M: float = 4501365375.06545 #M☉
 
-    alpha: float = -1.8 
+    alpha: float = 1.8 
 
     r_c: float   = 1.9 #kpc
+
+class LogarithmicParams(NamedTuple):
+    """
+    NamedTuple containing the parameters for the logarithmic potential
+    """
+
+    v0: float = 220.0 #km/s
+    
+    q: float = 0.9 #flattening parameter
 
 
 class SimulationParams(NamedTuple):
@@ -100,7 +111,9 @@ class SimulationParams(NamedTuple):
     MN_params: MNParams = MNParams()
 
     PSP_params: PSPParams = PSPParams()
-    
+
+    Logarithmic_Params: LogarithmicParams = LogarithmicParams()
+        
 class SimulationConfig(NamedTuple):
     """
     NamedTuple containing the configuration for the simulation. This parameter require recompilation

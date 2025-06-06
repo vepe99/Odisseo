@@ -34,11 +34,13 @@ def Plummer_sphere(key: PRNGKeyArray,
     
     Plummer_Mtot = params.Plummer_params.Mtot
     key_r, key_phi, key_sin_i, key_u, key_phi_v, key_sin_i_v= random.split(key, 6)
-    r = jnp.sqrt( params.Plummer_params.a / (random.uniform(key=key_r, shape=(config.N_particles,))**(-3/2) -1))
+    r = jnp.sqrt( params.Plummer_params.a**2 / (random.uniform(key=key_r, shape=(config.N_particles,))**(-2/3) -1  )   )
     phi = random.uniform(key=key_phi, shape=(config.N_particles,), minval=0, maxval=2*jnp.pi) 
     sin_i = random.uniform(key=key_sin_i, shape=(config.N_particles,), minval=-1, maxval=1)
     
-    positions = jnp.array([r*jnp.cos(jnp.arcsin(sin_i))*jnp.cos(phi), r*jnp.cos(jnp.arcsin(sin_i))*jnp.sin(phi), r*sin_i]).T
+    positions = jnp.array([r*jnp.cos(jnp.arcsin(sin_i))*jnp.cos(phi), 
+                           r*jnp.cos(jnp.arcsin(sin_i))*jnp.sin(phi), 
+                           r*sin_i]).T
     potential = - params.G * Plummer_Mtot / jnp.sqrt( jnp.linalg.norm(positions, axis=1)**2 + params.Plummer_params.a**2)
     velocities_escape = jnp.sqrt(-2*potential )
 
@@ -55,7 +57,8 @@ def Plummer_sphere(key: PRNGKeyArray,
         Returns:
             float: Normalized cumulative distribution function.
         """
-        return 1287/16 * ((-2*(1-q)**(9/2))*(99*q**2+36*q+8)/1287 +16/1287)
+        # return 1287/16 * ((-2*(1-q)**(9/2))*(99*q**2+36*q+8)/1287 +16/1287)
+        return 1/(jnp.pi*7/512) * (q*jnp.sqrt(1 - q**2)*(-384*q**8 + 1488*q**6 - 2104*q**4 + 1210*q**2 - 105) + 105*jnp.asin(q))/3840
     
     # Invere fitting
     q = jnp.linspace(0, 1, 100_000)
@@ -71,7 +74,7 @@ def Plummer_sphere(key: PRNGKeyArray,
     velocities = jnp.array([velocities_modulus*jnp.cos(jnp.arcsin(sin_i_v))*jnp.cos(phi_v), velocities_modulus*jnp.cos(jnp.arcsin(sin_i_v))*jnp.sin(phi_v), velocities_modulus*sin_i_v]).T
 
 
-    return jnp.array(positions), jnp.array(velocities), 1/config.N_particles*jnp.ones(config.N_particles)
+    return jnp.array(positions), jnp.array(velocities), Plummer_Mtot/config.N_particles*jnp.ones(config.N_particles)
      
  
   
@@ -96,8 +99,10 @@ def Plummer_sphere_multiprocess(mass, config, params):
     phi = np.random.uniform(size=config.N_particles, low=0, high=2*np.pi) 
     sin_i = np.random.uniform(size=config.N_particles, low=-1, high=1)
     
-    positions = np.array([r*np.cos(np.arcsin(sin_i))*np.cos(phi), r*np.cos(np.arcsin(sin_i))*np.sin(phi), r*sin_i]).T
-    potential = - params.G * Plummer_Mtot / np.sqrt( np.linalg.norm(positions, axis=1)**2 + params.Plummer_params.a**2)
+    positions = np.array([r*np.cos(np.arcsin(sin_i))*np.cos(phi), 
+                          r*np.cos(np.arcsin(sin_i))*np.sin(phi), 
+                          r*sin_i]).T
+    potential = - params.G * Plummer_Mtot / (r**2 + params.Plummer_params.a**2)
 
     def generate_velocity_Plummer(potential_i, rejection_samples=1000):
             velocity_i = np.random.uniform(size=(rejection_samples, 3), low=-np.sqrt(-2*potential_i), high=np.sqrt(-2*potential_i))
