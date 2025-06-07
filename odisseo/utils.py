@@ -135,9 +135,8 @@ def Angular_momentum(state: jnp.ndarray,
 
 
 #### projection, this section is taken from the sstrax repo: https://github.com/undark-lab/sstrax/blob/main/sstrax/projection.py, add the code_units part #####
-@jaxtyped(typechecker=typechecker)
-@partial(jax.jit, static_argnames=['code_units'])
-def halo_to_sun(Xhalo: jnp.ndarray, code_units: CodeUnits ) -> jnp.ndarray:
+@jax.jit
+def halo_to_sun(Xhalo: jnp.ndarray) -> jnp.ndarray:
     """
     Conversion from simulation frame to cartesian frame centred at Sun
     Args:
@@ -148,14 +147,13 @@ def halo_to_sun(Xhalo: jnp.ndarray, code_units: CodeUnits ) -> jnp.ndarray:
     --------
     >>> halo_to_sun(jnp.array([1.0, 2.0, 3.0]))
     """
-    # sunx = (8.0 * u.kpc).to(code_units.code_length).value
-    sunx = 8.0 # kpc 
+    sunx = 8.0   # Distance from the Sun to the Galactic Centre in kpc
     xsun = sunx - Xhalo[0]
     ysun = Xhalo[1]
     zsun = Xhalo[2]
     return jnp.array([xsun, ysun, zsun])
 
-@jaxtyped(typechecker=typechecker)
+
 @jax.jit
 def sun_to_gal(Xsun: jnp.ndarray) -> jnp.ndarray:
     """
@@ -173,7 +171,7 @@ def sun_to_gal(Xsun: jnp.ndarray) -> jnp.ndarray:
     l = jnp.arctan2(Xsun[1], Xsun[0])
     return jnp.array([r, b, l])
 
-@jaxtyped(typechecker=typechecker)
+
 @jax.jit
 def gal_to_equat(Xgal: jnp.ndarray) -> jnp.ndarray:
     """
@@ -205,7 +203,7 @@ def gal_to_equat(Xgal: jnp.ndarray) -> jnp.ndarray:
     delta = jnp.arcsin(jnp.sin(dNGP) * sb + jnp.cos(dNGP) * cb * cl)
     return jnp.array([r, alpha, delta])
 
-@jaxtyped(typechecker=typechecker)
+
 @jax.jit
 def equat_to_gd1cart(Xequat: jnp.ndarray) -> jnp.ndarray:
     """
@@ -235,7 +233,7 @@ def equat_to_gd1cart(Xequat: jnp.ndarray) -> jnp.ndarray:
     )
     return jnp.array([xgd1, ygd1, zgd1])
 
-@jaxtyped(typechecker=typechecker)
+
 @jax.jit
 def gd1cart_to_gd1(Xgd1cart: jnp.ndarray) -> jnp.ndarray:
     """
@@ -253,9 +251,9 @@ def gd1cart_to_gd1(Xgd1cart: jnp.ndarray) -> jnp.ndarray:
     phi2 = jnp.arcsin(Xgd1cart[2] / r)
     return jnp.array([r, phi1, phi2])
 
-@jaxtyped(typechecker=typechecker)
-@partial(jax.jit, static_argnames=['code_units'])
-def halo_to_gd1(Xhalo: jnp.ndarray, code_units:CodeUnits) -> jnp.ndarray:
+
+@jax.jit
+def halo_to_gd1(Xhalo: jnp.ndarray) -> jnp.ndarray:
     """
     Composed conversion from simulation frame co-ordinates to angular GD1 co-ordinates
     Args:
@@ -266,7 +264,7 @@ def halo_to_gd1(Xhalo: jnp.ndarray, code_units:CodeUnits) -> jnp.ndarray:
     --------
     >>> halo_to_gd1(jnp.array([1.0, 2.0, 3.0]))
     """
-    Xsun = halo_to_sun(Xhalo, code_units)
+    Xsun = halo_to_sun(Xhalo)
     Xgal = sun_to_gal(Xsun)
     Xequat = gal_to_equat(Xgal)
     Xgd1cart = equat_to_gd1cart(Xequat)
@@ -275,14 +273,14 @@ def halo_to_gd1(Xhalo: jnp.ndarray, code_units:CodeUnits) -> jnp.ndarray:
 
 
 jacobian_halo_to_gd1 = jax.jit(
-    jax.jacfwd(halo_to_gd1), static_argnames=['code_units']
+    jax.jacfwd(halo_to_gd1)
 )  # Jacobian for computing the velocity transformation from simulation frame to angular GD1 co-ordinates
 
 halo_to_gd1_vmap = jax.jit(
     jax.vmap(halo_to_gd1, (0,))
 )  # Vectorised version of co-ordinate transformation from simulation frame to angular GD1 co-ordinates
 
-@jaxtyped(typechecker=typechecker)
+
 @jax.jit
 def equat_to_gd1(Xequat: jnp.ndarray) -> jnp.ndarray:
     """
@@ -304,7 +302,7 @@ jacobian_equat_to_gd1 = jax.jit(
     jax.jacfwd(equat_to_gd1)
 )  # Jacobian for computing the velocity transformation from equatorial frame to angular GD1 co-ordinates
 
-@jaxtyped(typechecker=typechecker)
+
 @jax.jit
 def equat_to_gd1_velocity(Xequat: jnp.ndarray, Vequat: jnp.ndarray) -> jnp.ndarray:
     """
@@ -320,9 +318,9 @@ def equat_to_gd1_velocity(Xequat: jnp.ndarray, Vequat: jnp.ndarray) -> jnp.ndarr
     """
     return jnp.matmul(jacobian_equat_to_gd1(Xequat), Vequat)
 
-@jaxtyped(typechecker=typechecker)
-@partial(jax.jit, static_argnames=['code_units'])
-def halo_to_gd1_velocity(Xhalo: jnp.ndarray, Vhalo: jnp.ndarray, code_units: CodeUnits) -> jnp.ndarray:
+
+@jax.jit
+def halo_to_gd1_velocity(Xhalo: jnp.ndarray, Vhalo: jnp.ndarray) -> jnp.ndarray:
     """
     Velocity conversion from equatorial frame co-ordinates to angular GD1 co-ordinates
     Args:
@@ -334,30 +332,50 @@ def halo_to_gd1_velocity(Xhalo: jnp.ndarray, Vhalo: jnp.ndarray, code_units: Cod
     --------
     >>> halo_to_gd1_velocity(jnp.array([1.0, 2.0, 3.0]), jnp.array([1.0, 2.0, 3.0]))
     """
-    return jnp.matmul(jacobian_halo_to_gd1(Xhalo, code_units), Vhalo)
+    return jnp.matmul(jacobian_halo_to_gd1(Xhalo), Vhalo)
+    
 
 
 halo_to_gd1_velocity_vmap = jax.jit(
     jax.vmap(halo_to_gd1_velocity, (0, 0))
 )  # Vectorised version of velocity co-ordinate transformation from simulation frame to angular GD1 co-ordinates
 
-@jaxtyped(typechecker=typechecker)
-@partial(jax.jit, static_argnames=['code_units'])
-def halo_to_gd1_all(Xhalo: jnp.ndarray, Vhalo: jnp.ndarray, code_units: CodeUnits) -> Tuple:
+
+@jax.jit
+def halo_to_gd1_all(Xhalo: jnp.ndarray, Vhalo: jnp.ndarray) -> jnp.ndarray:
     """
     Position and Velocity conversion from equatorial frame co-ordinates to angular GD1 co-ordinates
     Args:
       Xhalo: 3d position (x [kpc], y [kpc], z [kpc]) in simulation frame
       Vhalo: 3d velocity (v_x [kpc/Myr], v_y [kpc/Myr], v_z [kpc/Myr]) in simulation frame
     Returns:
-      6d phase space (r [kpc], phi1 [rad], phi2 [rad], v_r [kpc/Myr], v_phi1 [rad/Myr], v_phi2 [rad/Myr]) in angular GD1 frame
+      6d phase space (x [kpc], y [kpc], z[kpv], v_r [kpc/Myr], v_phi1 [rad/Myr], v_phi2 [rad/Myr]) in angular GD1 frame
     Examples
     --------
     >>> halo_to_gd1_all(jnp.array([1.0, 2.0, 3.0]), jnp.array([1.0, 2.0, 3.0]))
     """
-    Xhalo_kpc = Xhalo * code_units.code_length.to(u.kpc)
-    Vhalo_kpcMyr = Vhalo * code_units.code_velocity.to(u.kpc / u.Myr) 
-    return (halo_to_gd1(Xhalo_kpc, code_units), halo_to_gd1_velocity(Xhalo_kpc, Vhalo_kpcMyr, code_units))
+    return jnp.concatenate((halo_to_gd1(Xhalo), halo_to_gd1_velocity(Xhalo, Vhalo)))
 
 
-gd1_projection_vmap = jax.vmap(halo_to_gd1_all, (0, 0, None)) # Vectorised version of position and velocity co-ordinate transformation from simulation frame to angular GD1 co-ordinates
+gd1_projection_vmap = jax.jit(
+    jax.vmap(halo_to_gd1_all, (0, 0))
+)  # Vectorised version of position and velocity co-ordinate transformation from simulation frame to angular GD1 co-ordinates
+
+
+@partial(jax.jit, static_argnames=['code_units'])
+def projection_on_GD1(final_state, code_units: CodeUnits) -> jnp.ndarray:
+    final_positions, final_velocities = final_state[:, 0], final_state[:, 1]
+    final_positions = final_positions * code_units.code_length.to(u.kpc)
+    final_velocities = final_velocities * code_units.code_velocity.to(u.kpc / u.Myr)
+
+    #first map on GD1 stream, needs kpc and kpc/Myr units
+    gd1_positions = halo_to_gd1_vmap(final_positions) # R, phi1, ph2
+    gd1_velocities = halo_to_gd1_velocity_vmap(final_positions, final_velocities) #v_r, v_phi1, v_phi2
+
+    #convert to sensible units
+    gd1_velocities = gd1_velocities.at[:, 0].set(gd1_velocities[:, 0] * (u.kpc/u.Myr).to(u.km/u.s) ) #v_r in km/s
+    gd1_velocities = gd1_velocities.at[:, 1].set(gd1_velocities[:, 1]/gd1_positions[:, 0] * 2.0626480624709636e8 / 1e6) #mas/yr $v_{\phi_1}\cos(\phi_2)$
+    gd1_velocities = gd1_velocities.at[:, 2].set(gd1_velocities[:, 2]/gd1_positions[:, 0] * 2.0626480624709636e8 / 1e6) #mas/yr
+    gd1_positions = gd1_positions.at[:, 1].set(jnp.rad2deg(gd1_positions[:, 1])) #phi1 in degrees 
+    gd1_positions = gd1_positions.at[:, 2].set(jnp.rad2deg(gd1_positions[:, 2])) #phi2 in degrees
+    return jnp.concatenate((gd1_positions, gd1_velocities), axis=1)
