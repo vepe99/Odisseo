@@ -74,7 +74,8 @@ def Plummer_sphere(key: PRNGKeyArray,
                                                 sin_i_v]).T
 
 
-    return jnp.array(positions), jnp.array(velocities), params.Plummer_params.Mtot/config.N_particles*jnp.ones(config.N_particles)
+    # return jnp.array(positions), jnp.array(velocities), params.Plummer_params.Mtot/config.N_particles*jnp.ones(config.N_particles)
+    return jnp.array(positions), jnp.array(velocities), 1/config.N_particles*jnp.ones(config.N_particles)
      
  
   
@@ -112,7 +113,7 @@ def Plummer_sphere_multiprocess(mass, config, params):
     
     with Pool(processes=1) as pool:
         velocities = pool.map(generate_velocity_Plummer, potential)
-    return jnp.array(positions), jnp.array(velocities), 1/config.N_particles*jnp.ones(config.N_particles)
+    return jnp.array(positions), jnp.array(velocities), 100/config.N_particles*jnp.ones(config.N_particles)
 
 @partial(jax.jit)
 def ic_two_body(mass1: Union[float, jnp.ndarray],
