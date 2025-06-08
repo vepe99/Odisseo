@@ -163,7 +163,7 @@ def direct_acc_matrix(state: jnp.ndarray,
     eye = jax.lax.stop_gradient(jnp.eye(config.N_particles))
 
     # Compute squared distances with softening plus avoid self interaction
-    r2_safe = jnp.sum(dpos**2, axis=-1) + config.softening**2 + eye # Shape: (N, N)
+    r2_safe = jnp.sum(dpos**2, axis=-1) + config.softening**2  # Shape: (N, N)
 
     # Compute 1/r^3 safely
     inv_r3 = r2_safe**-1.5 * (1.0 - eye)  # Diagonal is zero
