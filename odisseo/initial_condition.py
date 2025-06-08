@@ -32,16 +32,14 @@ def Plummer_sphere(key: PRNGKeyArray,
             masses (jnp.array): Array of shape (N_particles,) representing the masses of the particles.
     """
     
-    Plummer_Mtot = params.Plummer_params.Mtot
     key_r, key_phi, key_sin_i, key_u, key_phi_v, key_sin_i_v= random.split(key, 6)
     r = jnp.sqrt( params.Plummer_params.a**2 / (random.uniform(key=key_r, shape=(config.N_particles,))**(-2/3) -1  )   )
     phi = random.uniform(key=key_phi, shape=(config.N_particles,), minval=0, maxval=2*jnp.pi) 
     sin_i = random.uniform(key=key_sin_i, shape=(config.N_particles,), minval=-1, maxval=1)
-    
     positions = jnp.array([r*jnp.cos(jnp.arcsin(sin_i))*jnp.cos(phi), 
                            r*jnp.cos(jnp.arcsin(sin_i))*jnp.sin(phi), 
                            r*sin_i]).T
-    potential = - params.G * Plummer_Mtot / jnp.sqrt( jnp.linalg.norm(positions, axis=1)**2 + params.Plummer_params.a**2)
+    potential = - params.G * params.Plummer_params.Mtot / jnp.sqrt( jnp.linalg.norm(positions, axis=1)**2 + params.Plummer_params.a**2)
     velocities_escape = jnp.sqrt(-2*potential )
 
 
@@ -61,7 +59,7 @@ def Plummer_sphere(key: PRNGKeyArray,
         return 1/(jnp.pi*7/512) * (q*jnp.sqrt(1 - q**2)*(-384*q**8 + 1488*q**6 - 2104*q**4 + 1210*q**2 - 105) + 105*jnp.asin(q))/3840
     
     # Invere fitting
-    q = jnp.linspace(0, 1, 100_000)
+    q = jnp.linspace(0, 1, 500)
     y = G(q)
 
     u = random.uniform(key=key_u, shape=(config.N_particles,))
@@ -71,10 +69,12 @@ def Plummer_sphere(key: PRNGKeyArray,
     # Generate random angles for the velocity
     phi_v = random.uniform(key=key_phi_v, shape=(config.N_particles,), minval=0, maxval=2*jnp.pi) 
     sin_i_v = random.uniform(key=key_sin_i_v, shape=(config.N_particles,), minval=-1, maxval=1)
-    velocities = jnp.array([velocities_modulus*jnp.cos(jnp.arcsin(sin_i_v))*jnp.cos(phi_v), velocities_modulus*jnp.cos(jnp.arcsin(sin_i_v))*jnp.sin(phi_v), velocities_modulus*sin_i_v]).T
+    velocities = velocities_modulus[:, None]*jnp.array([jnp.cos(jnp.arcsin(sin_i_v))*jnp.cos(phi_v), 
+                                                jnp.cos(jnp.arcsin(sin_i_v))*jnp.sin(phi_v), 
+                                                sin_i_v]).T
 
 
-    return jnp.array(positions), jnp.array(velocities), Plummer_Mtot/config.N_particles*jnp.ones(config.N_particles)
+    return jnp.array(positions), jnp.array(velocities), params.Plummer_params.Mtot/config.N_particles*jnp.ones(config.N_particles)
      
  
   

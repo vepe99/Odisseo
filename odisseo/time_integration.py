@@ -106,7 +106,7 @@ def _time_integration_fixed_steps(primitive_state: jnp.ndarray,
         elif config.integrator == RK4:
             return RungeKutta4(state, mass, dt, config, params)
         elif config.integrator == DIFFRAX_BACKEND:
-            state = diffrax_solver(state, mass, dt, config, params)
+            return diffrax_solver(state, mass, dt, config, params)
             
 
     # use lax fori_loop to unroll the loop
