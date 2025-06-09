@@ -112,38 +112,58 @@ def vmapped_run_simulation(rng_key, params_values):
 
 
 start_time = time.time()
-batch_size = 125
+batch_size = 100
 num_chunks = 100_000
-name_str = 75_000
+name_str = 50_000
 for i in range(name_str, num_chunks, batch_size):
     rng_key = random.PRNGKey(i)
     parameter_value = jax.random.uniform(rng_key, 
-                                         shape=(batch_size, 7), 
+                                         shape=(batch_size, 13), 
                                          minval=jnp.array([0.5, # t_end in Gyr
                                                            10**3.0, # Plummer mass
                                                            params_true.Plummer_params.a*(1/4),
                                                            params_true.NFW_params.Mvir*(1/4),
                                                            params_true.NFW_params.r_s*(1/4), 
                                                            params_true.MN_params.M*(1/4), 
-                                                           params_true.MN_params.a*(1/4), ]),
+                                                           params_true.MN_params.a*(1/4), 
+                                                           10.0, #x
+                                                           0.1, #y
+                                                           6.0, #z
+                                                           90.0, #vx
+                                                           -280.0, #vy
+                                                           -120.0]), #vz
+                                                           
                                          maxval=jnp.array([5, # t_end in Gyr
                                                            10**4.5, #Plummer mass
                                                            params_true.Plummer_params.a*(8/4),
                                                            params_true.NFW_params.Mvir*(8/4), 
                                                            params_true.NFW_params.r_s*(8/4), 
                                                            params_true.MN_params.M*(8/4), 
-                                                           params_true.MN_params.a*(8/4),]))
+                                                           params_true.MN_params.a*(8/4),
+                                                           14.0, #x
+                                                           2.5,  #y
+                                                           8.0,  #z
+                                                           115.0, #vx
+                                                           -230.0, #vy
+                                                           -80.0])) #vz
+    
     parameter_value_code_units = jnp.array([parameter_value[:, 0] * u.Gyr.to(code_units.code_time),
                                             parameter_value[:, 1] * u.Msun.to(code_units.code_mass),
                                             parameter_value[:, 2],
                                             parameter_value[:, 3],
                                             parameter_value[:, 4],
                                             parameter_value[:, 5],
-                                            parameter_value[:, 6],]).T
+                                            parameter_value[:, 6],
+                                            parameter_value[:, 7],
+                                            parameter_value[:, 8],
+                                            parameter_value[:, 9],
+                                            parameter_value[:, 10],
+                                            parameter_value[:, 11],
+                                            parameter_value[:, 12]]).T
     
     stream_samples = jax.vmap(vmapped_run_simulation, )(random.split(rng_key, batch_size)[:, 0], parameter_value_code_units)
     for j in range(batch_size):
-        np.savez_compressed(f"/export/data/vgiusepp/odisseo_data/data_fix_position/file_{name_str:06d}.npz",
+        np.savez_compressed(f"/export/data/vgiusepp/odisseo_data/data_varying_position/file_{name_str:06d}.npz",
                             x = stream_samples[j],
                             theta = parameter_value[j],)
         name_str += 1
