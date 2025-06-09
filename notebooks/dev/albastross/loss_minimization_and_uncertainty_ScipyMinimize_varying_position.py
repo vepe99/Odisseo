@@ -167,14 +167,20 @@ config =  config._replace(return_snapshots=False,)
 config_com = config_com._replace(return_snapshots=False,)
 
 @jit
-def time_integration_fix_position_grad(t_end, 
-                                       M_plummer,
-                                       a_plummer,
-                                       M_NFW,
-                                       r_s_NFW,
-                                       M_MN,
-                                       a_MN,
-                                       key):
+def time_integration_varying_position_grad(t_end, 
+                                            M_plummer,
+                                            a_plummer,
+                                            M_NFW,
+                                            r_s_NFW,
+                                            M_MN,
+                                            a_MN,
+                                            x,
+                                            y,
+                                            z,
+                                            vx,
+                                            vy,
+                                            vz,
+                                            key):
 
     #Creation of the Plummer sphere requires a key 
     # key = random.PRNGKey(key)
@@ -201,8 +207,8 @@ def time_integration_fix_position_grad(t_end,
     new_params_com = new_params._replace(t_end=-t_end,)
 
     #Final position and velocity of the center of mass
-    pos_com_final = jnp.array([[11.8, 0.79, 6.4]]) * u.kpc.to(code_units.code_length)
-    vel_com_final = jnp.array([[109.5,-254.5,-90.3]]) * (u.km/u.s).to(code_units.code_velocity)
+    pos_com_final = jnp.array([[x, y, z]]) * u.kpc.to(code_units.code_length)
+    vel_com_final = jnp.array([[vx, vy, vz]]) * (u.km/u.s).to(code_units.code_velocity)
     mass_com = jnp.array([params.Plummer_params.Mtot]) 
     
     #we construmt the initial state of the com 
@@ -255,36 +261,48 @@ def time_integration_fix_position_grad(t_end,
 
 
 @jit
-def time_integration_fix_position_grad_ScipyMinimize(param, key):
-    t_end, M_plummer, a_plummer, Mvir, r_s_NFW, M_MN, a_MN = param
-    return time_integration_fix_position_grad(t_end, 
-                                              M_plummer,
-                                              a_plummer,
-                                              Mvir,
-                                              r_s_NFW,
-                                              M_MN,
-                                              a_MN,
-                                              key)
+def time_integration_varying_position_grad_ScipyMinimize(param, key):
+    t_end, M_plummer, a_plummer, Mvir, r_s_NFW, M_MN, a_MN, x, y, z, vx, vy, vz = param
+    return time_integration_varying_position_grad(t_end, 
+                                                M_plummer,
+                                                a_plummer,
+                                                Mvir,
+                                                r_s_NFW,
+                                                M_MN,
+                                                a_MN,
+                                                x,
+                                                y,
+                                                z,
+                                                vx,
+                                                vy,
+                                                vz,
+                                                key)
 
 optimizer = ScipyMinimize(
      method="l-bfgs-b", 
      dtype=jnp.float64,
-     fun=time_integration_fix_position_grad_ScipyMinimize, 
+     fun=time_integration_varying_position_grad_ScipyMinimize, 
      tol=1e-6, 
     )
 
 
-# key = random.PRNGKey(42) #compgpu8
-key = random.PRNGKey(43) #compgpu9
+# key = random.PRNGKey(42) #tmux 5 0-500
+key = random.PRNGKey(43) #tmux 6
 parameter_value = jax.random.uniform(key=key, 
-                                    shape=(1000, 7), 
+                                    shape=(500, 13), 
                                     minval=jnp.array([0.5 * u.Gyr.to(code_units.code_time), # t_end in Gyr
                                                     10**3.0 * u.Msun.to(code_units.code_mass), # Plummer mass
                                                     params.Plummer_params.a*(1/4),
                                                     params.NFW_params.Mvir*(1/4),
                                                     params.NFW_params.r_s*(1/4), 
                                                     params.MN_params.M*(1/4), 
-                                                    params.MN_params.a*(1/4),]), 
+                                                    params.MN_params.a*(1/4),
+                                                    10.0, #x can be left in kpc
+                                                    0.1, #y
+                                                    6.0, #z
+                                                    90.0, #vx can be left in km/s
+                                                    -280.0, #vy
+                                                    -120.0]), #vz
                                                     
                                     maxval=jnp.array([5 * u.Gyr.to(code_units.code_time), # t_end in Gyr
                                                     10**4.5 * u.Msun.to(code_units.code_mass), #Plummer mass
@@ -292,14 +310,20 @@ parameter_value = jax.random.uniform(key=key,
                                                     params.NFW_params.Mvir*(8/4), 
                                                     params.NFW_params.r_s*(8/4), 
                                                     params.MN_params.M*(8/4), 
-                                                    params.MN_params.a*(8/4),])) 
+                                                    params.MN_params.a*(8/4),
+                                                    14.0, #x
+                                                    2.5,  #y
+                                                    8.0,  #z
+                                                    115.0, #vx
+                                                    -230.0, #vy
+                                                    -80.0])) #vz) 
 print('Start sampling with ScipyMinimize')
 start_time = time.time()
-i = 1_000
+i = 500
 for p, k in tqdm(zip(parameter_value, random.split(key, parameter_value.shape[0]) ) ):
     sol = optimizer.run(init_params=p, 
                         key=k)
-    np.savez(f'./sampling_ScipyMinimize/sample_{i}.npz', 
+    np.savez(f'./sampling_ScipyMinimize_varying_position/sample_{i}.npz', 
              sample=np.array(sol.params),
              loss=np.array(sol.state.fun_val), )
     i += 1
