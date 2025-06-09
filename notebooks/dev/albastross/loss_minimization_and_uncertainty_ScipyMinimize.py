@@ -270,7 +270,7 @@ optimizer = ScipyMinimize(
      method="l-bfgs-b", 
      dtype=jnp.float64,
      fun=time_integration_fix_position_grad_ScipyMinimize, 
-     tol=1e-8, 
+     tol=1e-6, 
     )
 
 
