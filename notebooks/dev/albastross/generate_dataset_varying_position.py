@@ -112,7 +112,7 @@ def vmapped_run_simulation(rng_key, params_values):
 
 
 start_time = time.time()
-batch_size = 100
+batch_size = 125
 num_chunks = 100_000
 name_str = 50_000
 for i in range(name_str, num_chunks, batch_size):
