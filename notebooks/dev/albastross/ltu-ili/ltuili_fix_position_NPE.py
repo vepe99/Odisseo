@@ -60,7 +60,7 @@ params_true = SimulationParams(t_end = (3 * u.Gyr).to(code_units.code_time).valu
 
 
 class DiskDataset(Dataset):
-    def __init__(self, file_paths, file_type="npy", transform=None, ):
+    def __init__(self, file_paths, file_type="npy", transform=None, code_units=code_units):
         """
         Args:
             file_paths (List[str]): List of paths to data files.
@@ -73,8 +73,10 @@ class DiskDataset(Dataset):
 
         path = self.file_paths[0]
         if self.file_type == "npz":
-            x, theta = np.load(path)['x'], np.load(path)['theta'] #need to change here to convert x to a histogram
+            x = np.load(path)['x'], 
+            theta = np.load(path)['theta'] 
             x, theta = torch.from_numpy(x), torch.from_numpy(theta)
+            x = self.transform_in_histogram(x)
         self.tensors = x.unsqueeze(0), theta.unsqueeze(0)
         print(self.tensors[0].shape, self.tensors[1].shape)
 
@@ -94,22 +96,22 @@ class DiskDataset(Dataset):
         return len(self.file_paths)
 
     def __getitem__(self, idx):
-        path = self.file_paths[idx]
-        
-        if self.file_type == "npz":
-            x, theta = np.load(path)['x'], np.load(path)['theta']
-            x, theta = torch.from_numpy(x), torch.from_numpy(theta)
-        elif self.file_type == "pt":
-            data = torch.load(path)
-        else:
-            raise ValueError(f"Unsupported file type: {self.file_type}")
 
-        if self.transform:
-            data = self.transform(data)
+        path = self.file_paths[idx]
+        x, theta = np.load(path)['x'], np.load(path)['theta']
+        x, theta = torch.from_numpy(x), torch.from_numpy(theta)
         
+        x = self.transform_in_histogram(x)
+
         self.tensors = x, theta
 
         return x, theta
+    
+    def transform_in_histogram(self, x, bins=[64, 32]):
+        ph1_ph2 = torch.histogramdd(input=torch.tensor(x[:, 1], x[:, 2]), bins = bins, range = [-120., 70., -8, 2] )
+        R_vR = torch.histogramdd(input=torch.tensor(x[:, 0], x[:, 3]), bins = bins, range = [6., 20., -250., 250.] )
+        vphicosphi2_vphi2 = torch.histogramdd(input=torch.tensor(x[:, 4], x[:, 5]), bins = bins, range = [-2., 1., -0.1, 0.1 ] )
+        return torch.stack([ph1_ph2, R_vR, vphicosphi2_vphi2], dim=0)
 
 
 #load data paths
