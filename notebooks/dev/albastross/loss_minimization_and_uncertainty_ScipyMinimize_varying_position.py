@@ -293,7 +293,8 @@ optimizer = ScipyBoundedMinimize(
 
 # key = random.PRNGKey(42) #tmux 5 0-500
 # key = random.PRNGKey(43) #tmux 6
-key = random.PRNGKey(44) #tmux 7
+# key = random.PRNGKey(44) #tmux 7
+key = random.PRNGKey(45) #tmux 8
 parameter_value = jax.random.uniform(key=key, 
                                     shape=(500, 13), 
                                     minval=jnp.array([0.5 * u.Gyr.to(code_units.code_time), # t_end in Gyr
@@ -325,7 +326,7 @@ parameter_value = jax.random.uniform(key=key,
                                                     -80.0])) #vz) 
 print('Start sampling with ScipyMinimize')
 start_time = time.time()
-i = 1000
+i = 1500
 for p, k in tqdm(zip(parameter_value, random.split(key, parameter_value.shape[0]) ) ):
     sol = optimizer.run(init_params=p, 
                         key=k,
