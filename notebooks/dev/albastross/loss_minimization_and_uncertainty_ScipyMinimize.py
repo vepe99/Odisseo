@@ -30,7 +30,7 @@ from flowjax.flows import masked_autoregressive_flow
 from flowjax.train import fit_to_data
 
 #optimization
-from jaxopt import ScipyMinimize, LBFGS
+from jaxopt import ScipyBoundedMinimize, LBFGS
 import optax
 
 from chainconsumer import Chain, ChainConsumer, Truth, make_sample
@@ -185,15 +185,15 @@ def time_integration_fix_position_grad(t_end,
     new_params = params._replace(
                 t_end = t_end,
                 Plummer_params=params.Plummer_params._replace(
-                    Mtot=M_plummer,
+                    Mtot=10**M_plummer,
                     a=a_plummer
                 ),
                 NFW_params=params.NFW_params._replace(
-                    Mvir=M_NFW,
+                    Mvir=10**M_NFW,
                     r_s=r_s_NFW
                 ),
                 MN_params=params.MN_params._replace(
-                    M=M_MN,
+                    M=10**M_MN,
                     a=a_MN
                 ))
     #parameters of the center of mass
@@ -266,7 +266,7 @@ def time_integration_fix_position_grad_ScipyMinimize(param, key):
                                               a_MN,
                                               key)
 
-optimizer = ScipyMinimize(
+optimizer = ScipyBoundedMinimize(
      method="l-bfgs-b", 
      dtype=jnp.float64,
      fun=time_integration_fix_position_grad_ScipyMinimize, 
@@ -275,31 +275,48 @@ optimizer = ScipyMinimize(
 
 
 # key = random.PRNGKey(42) #compgpu8
-key = random.PRNGKey(43) #compgpu9
+# key = random.PRNGKey(43) #compgpu9 tmux 2
+# key = random.PRNGKey(44) #compgpu19 tmux 4
+key =  random.PRNGKey(45) #compgpu20 tmux 6
 parameter_value = jax.random.uniform(key=key, 
-                                    shape=(1000, 7), 
+                                    shape=(500, 7), 
                                     minval=jnp.array([0.5 * u.Gyr.to(code_units.code_time), # t_end in Gyr
-                                                    10**3.0 * u.Msun.to(code_units.code_mass), # Plummer mass
+                                                    np.log10(10**3.0 * u.Msun.to(code_units.code_mass)).item(), # Plummer mass
                                                     params.Plummer_params.a*(1/4),
-                                                    params.NFW_params.Mvir*(1/4),
+                                                    np.log10(params.NFW_params.Mvir*(1/4)).item(),
                                                     params.NFW_params.r_s*(1/4), 
-                                                    params.MN_params.M*(1/4), 
+                                                    np.log10(params.MN_params.M*(1/4)).item(), 
                                                     params.MN_params.a*(1/4),]), 
                                                     
                                     maxval=jnp.array([5 * u.Gyr.to(code_units.code_time), # t_end in Gyr
-                                                    10**4.5 * u.Msun.to(code_units.code_mass), #Plummer mass
+                                                    np.log10(10**4.5 * u.Msun.to(code_units.code_mass)).item(), #Plummer mass
                                                     params.Plummer_params.a*(8/4),
-                                                    params.NFW_params.Mvir*(8/4), 
+                                                    np.log10(params.NFW_params.Mvir*(8/4)).item(), 
                                                     params.NFW_params.r_s*(8/4), 
-                                                    params.MN_params.M*(8/4), 
+                                                    np.log10(params.MN_params.M*(8/4)).item(), 
                                                     params.MN_params.a*(8/4),])) 
 print('Start sampling with ScipyMinimize')
 start_time = time.time()
-i = 1_000
+i = 1500
 for p, k in tqdm(zip(parameter_value, random.split(key, parameter_value.shape[0]) ) ):
     sol = optimizer.run(init_params=p, 
-                        key=k)
-    np.savez(f'./sampling_ScipyMinimize/sample_{i}.npz', 
+                        key=k,
+                        bounds = jnp.array([[0.5 * u.Gyr.to(code_units.code_time), 
+                                     np.log10(10**3.0 * u.Msun.to(code_units.code_mass)).item(), 
+                                     params.Plummer_params.a*(1/4),
+                                     np.log10(params.NFW_params.Mvir*(1/4)).item(),
+                                     params.NFW_params.r_s*(1/4), 
+                                     np.log10(params.MN_params.M*(1/4)).item(), 
+                                     params.MN_params.a*(1/4)],
+                                    [5 * u.Gyr.to(code_units.code_time), 
+                                     np.log10(10**4.5 * u.Msun.to(code_units.code_mass)).item(), 
+                                     params.Plummer_params.a*(8/4),
+                                     np.log10(params.NFW_params.Mvir*(8/4)).item(), 
+                                     params.NFW_params.r_s*(8/4), 
+                                     np.log10(params.MN_params.M*(8/4)).item(), 
+                                     params.MN_params.a*(8/4)]]))
+    
+    np.savez(f'./sampling_ScipyMinimize/ScipyBoundedMinimize/sample_{i}.npz', 
              sample=np.array(sol.params),
              loss=np.array(sol.state.fun_val), )
     i += 1

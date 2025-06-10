@@ -1,5 +1,7 @@
 from autocvd import autocvd
 autocvd(num_gpus = 1)
+# import os 
+# os.environ['CUDA_VISIBLE_DEVICES'] = '3' #set the GPU to use, if you have multiple GPUs, you can change this to the desired GPU
 
 import time
 
@@ -30,7 +32,7 @@ from flowjax.flows import masked_autoregressive_flow
 from flowjax.train import fit_to_data
 
 #optimization
-from jaxopt import ScipyMinimize, LBFGS
+from jaxopt import ScipyBoundedMinimize, LBFGS
 import optax
 
 from chainconsumer import Chain, ChainConsumer, Truth, make_sample
@@ -133,6 +135,9 @@ N_background = int(1e6)
 background_selected_probability = jnp.where(jax.random.uniform(key=key_background_selection, shape=(N_background,)) < 1e-3, 1.0, 0.0)
 keys = random.split(key_background_true, N_background)
 selected_background = jax.vmap(lambda key, background_star_probability: jnp.where(background_star_probability, background_assignement(key), jnp.nan))(keys, background_selected_probability)
+#for memory reason we will only select 1_000 background stars
+# N_background = int(1e6 * 1e-3)  # Reduce the number of background stars for memory efficiency
+# selected_background = jax.vmap(background_assignement, )(random.split(key=key_background_true, num=N_background))
 
 # Combine the selected stream and background stars
 stream = jnp.concatenate((selected_stream, selected_background), axis=0)
@@ -191,15 +196,15 @@ def time_integration_varying_position_grad(t_end,
     new_params = params._replace(
                 t_end = t_end,
                 Plummer_params=params.Plummer_params._replace(
-                    Mtot=M_plummer,
+                    Mtot=10**M_plummer,
                     a=a_plummer
                 ),
                 NFW_params=params.NFW_params._replace(
-                    Mvir=M_NFW,
+                    Mvir=10**M_NFW,
                     r_s=r_s_NFW
                 ),
                 MN_params=params.MN_params._replace(
-                    M=M_MN,
+                    M=10**M_MN,
                     a=a_MN
                 ))
     #parameters of the center of mass
@@ -278,7 +283,7 @@ def time_integration_varying_position_grad_ScipyMinimize(param, key):
                                                 vz,
                                                 key)
 
-optimizer = ScipyMinimize(
+optimizer = ScipyBoundedMinimize(
      method="l-bfgs-b", 
      dtype=jnp.float64,
      fun=time_integration_varying_position_grad_ScipyMinimize, 
@@ -287,15 +292,16 @@ optimizer = ScipyMinimize(
 
 
 # key = random.PRNGKey(42) #tmux 5 0-500
-key = random.PRNGKey(43) #tmux 6
+# key = random.PRNGKey(43) #tmux 6
+key = random.PRNGKey(44) #tmux 7
 parameter_value = jax.random.uniform(key=key, 
                                     shape=(500, 13), 
                                     minval=jnp.array([0.5 * u.Gyr.to(code_units.code_time), # t_end in Gyr
-                                                    10**3.0 * u.Msun.to(code_units.code_mass), # Plummer mass
+                                                    np.log10(10**3.0 * u.Msun.to(code_units.code_mass)).item(), # Plummer mass
                                                     params.Plummer_params.a*(1/4),
-                                                    params.NFW_params.Mvir*(1/4),
+                                                    np.log10(params.NFW_params.Mvir*(1/4)).item(),
                                                     params.NFW_params.r_s*(1/4), 
-                                                    params.MN_params.M*(1/4), 
+                                                    np.log10(params.MN_params.M*(1/4)).item(), 
                                                     params.MN_params.a*(1/4),
                                                     10.0, #x can be left in kpc
                                                     0.1, #y
@@ -305,11 +311,11 @@ parameter_value = jax.random.uniform(key=key,
                                                     -120.0]), #vz
                                                     
                                     maxval=jnp.array([5 * u.Gyr.to(code_units.code_time), # t_end in Gyr
-                                                    10**4.5 * u.Msun.to(code_units.code_mass), #Plummer mass
+                                                    np.log10(10**4.5 * u.Msun.to(code_units.code_mass)).item(), #Plummer mass
                                                     params.Plummer_params.a*(8/4),
-                                                    params.NFW_params.Mvir*(8/4), 
+                                                    np.log10(params.NFW_params.Mvir*(8/4)).item(), 
                                                     params.NFW_params.r_s*(8/4), 
-                                                    params.MN_params.M*(8/4), 
+                                                    np.log10(params.MN_params.M*(8/4)).item(), 
                                                     params.MN_params.a*(8/4),
                                                     14.0, #x
                                                     2.5,  #y
@@ -319,13 +325,40 @@ parameter_value = jax.random.uniform(key=key,
                                                     -80.0])) #vz) 
 print('Start sampling with ScipyMinimize')
 start_time = time.time()
-i = 500
+i = 1000
 for p, k in tqdm(zip(parameter_value, random.split(key, parameter_value.shape[0]) ) ):
     sol = optimizer.run(init_params=p, 
-                        key=k)
-    np.savez(f'./sampling_ScipyMinimize_varying_position/sample_{i}.npz', 
+                        key=k,
+                        bounds = jnp.array([[0.5 * u.Gyr.to(code_units.code_time), 
+                                     np.log10(10**3.0 * u.Msun.to(code_units.code_mass)).item(), 
+                                     params.Plummer_params.a*(1/4),
+                                     np.log10(params.NFW_params.Mvir*(1/4)).item(),
+                                     params.NFW_params.r_s*(1/4), 
+                                     np.log10(params.MN_params.M*(1/4)).item(), 
+                                     params.MN_params.a*(1/4),
+                                     10.0, #x can be left in kpc
+                                    0.1, #y
+                                    6.0, #z
+                                    90.0, #vx can be left in km/s
+                                    -280.0, #vy
+                                    -120.0],
+                                    [5 * u.Gyr.to(code_units.code_time), 
+                                     np.log10(10**4.5 * u.Msun.to(code_units.code_mass)).item(), 
+                                     params.Plummer_params.a*(8/4),
+                                     np.log10(params.NFW_params.Mvir*(8/4)).item(), 
+                                     params.NFW_params.r_s*(8/4), 
+                                     np.log10(params.MN_params.M*(8/4)).item(), 
+                                     params.MN_params.a*(8/4),
+                                     14.0, #x
+                                    2.5,  #y
+                                    8.0,  #z
+                                    115.0, #vx
+                                    -230.0, #vy
+                                    -80.0]]))
+    np.savez(f'./sampling_ScipyMinimize_varying_position/ScipyBoundedMinimize/sample_{i}.npz', 
              sample=np.array(sol.params),
-             loss=np.array(sol.state.fun_val), )
+             loss=np.array(sol.state.fun_val),)
+
     i += 1
 
 end_time = time.time()
