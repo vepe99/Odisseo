@@ -1,6 +1,8 @@
-from autocvd import autocvd
-autocvd(num_gpus = 1)
+# from autocvd import autocvd
+# autocvd(num_gpus = 1)
 
+import os
+os.environ['CUDA_VISIBLE_DEVICES'] = '4'  # Set to the 0 for tmux 6
 import time
 
 import jax 
@@ -277,9 +279,10 @@ optimizer = ScipyBoundedMinimize(
 # key = random.PRNGKey(42) #compgpu8
 # key = random.PRNGKey(43) #compgpu9 tmux 2
 # key = random.PRNGKey(44) #compgpu19 tmux 4
-key =  random.PRNGKey(45) #compgpu20 tmux 6
+# key =  random.PRNGKey(45) #compgpu20 tmux 6
+key = random.PRNGKey(46) #compgpu4 tmux 7
 parameter_value = jax.random.uniform(key=key, 
-                                    shape=(500, 7), 
+                                    shape=(1000, 7), 
                                     minval=jnp.array([0.5 * u.Gyr.to(code_units.code_time), # t_end in Gyr
                                                     np.log10(10**3.0 * u.Msun.to(code_units.code_mass)).item(), # Plummer mass
                                                     params.Plummer_params.a*(1/4),
@@ -297,7 +300,7 @@ parameter_value = jax.random.uniform(key=key,
                                                     params.MN_params.a*(8/4),])) 
 print('Start sampling with ScipyMinimize')
 start_time = time.time()
-i = 1500
+i = 2000
 for p, k in tqdm(zip(parameter_value, random.split(key, parameter_value.shape[0]) ) ):
     sol = optimizer.run(init_params=p, 
                         key=k,
