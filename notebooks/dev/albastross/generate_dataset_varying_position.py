@@ -1,5 +1,7 @@
-from autocvd import autocvd
-autocvd(num_gpus = 1)
+# from autocvd import autocvd
+# autocvd(num_gpus = 1)
+import os
+os.environ['CUDA_VISIBLE_DEVICES'] = '0'  # Set to the 0 for tmux 6
 
 import time
 
@@ -22,8 +24,8 @@ from odisseo.utils import projection_on_GD1
 
 code_length = 10.0 * u.kpc
 code_mass = 1e4 * u.Msun
-G = 1 
-code_units = CodeUnits(code_length, code_mass, G=G)
+code_time = 3 * u.Gyr
+code_units = CodeUnits(code_length, code_mass, G=1, unit_time = code_time )  
 
 
 config = SimulationConfig(N_particles = 5_000,
@@ -112,9 +114,9 @@ def vmapped_run_simulation(rng_key, params_values):
 
 
 start_time = time.time()
-batch_size = 125
+batch_size = 10
 num_chunks = 100_000
-name_str = 50_000
+name_str = 80_000
 for i in range(name_str, num_chunks, batch_size):
     rng_key = random.PRNGKey(i)
     parameter_value = jax.random.uniform(rng_key, 
