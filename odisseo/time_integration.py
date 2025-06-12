@@ -100,6 +100,9 @@ def _time_integration_fixed_steps(primitive_state: jnp.ndarray,
     dt = params.t_end / config.num_timesteps
     
     def update_step(_, state):
+
+        if config.progress_bar:
+            jax.debug.callback(_show_progress, _, params.t_end)
         
         if config.integrator == LEAPFROG:
             return leapfrog(state, mass, dt, config, params)
@@ -314,6 +317,9 @@ def _time_integration_fixed_steps_snapshot(primitive_state: jnp.ndarray,
         # Update the time
         time += dt
 
+        if config.progress_bar:
+            jax.debug.callback(_show_progress, time, params.t_end)
+
 
         if config.return_snapshots:
             carry = (time, state, snapshot_data)
@@ -353,3 +359,26 @@ def _time_integration_fixed_steps_snapshot(primitive_state: jnp.ndarray,
     else:
         _, state = carry
         return state
+    
+
+# Print progress
+def _show_progress(
+        iteration,
+        total,
+        prefix = '',
+        suffix = '',
+        decimals = 1,
+        length = 100,
+        fill = '█',
+        printEnd = "\r"
+    ) -> None:
+    """
+    Progress bar.
+    """
+    percent = ("{0:." + str(decimals) + "f}").format(100 * (iteration / float(total)))
+    filledLength = int(length * iteration // total)
+    bar = fill * filledLength + '-' * (length - filledLength)
+    print(f'\r{prefix} |{bar}| {percent}% {suffix}', end = printEnd)
+    # Print New Line on Complete
+    if iteration == total: 
+        print()
