@@ -280,7 +280,8 @@ optimizer = ScipyBoundedMinimize(
 # key = random.PRNGKey(43) #compgpu9 tmux 2
 # key = random.PRNGKey(44) #compgpu19 tmux 4
 # key =  random.PRNGKey(45) #compgpu20 tmux 6
-key = random.PRNGKey(46) #compgpu4 tmux 7
+# key = random.PRNGKey(46) #compgpu4 tmux 7
+key = random.PRNGKey(47) #compgpu9 tmux 9
 parameter_value = jax.random.uniform(key=key, 
                                     shape=(1000, 7), 
                                     minval=jnp.array([0.5 * u.Gyr.to(code_units.code_time), # t_end in Gyr

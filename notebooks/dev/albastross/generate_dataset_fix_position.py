@@ -112,9 +112,9 @@ def vmapped_run_simulation(rng_key, params_values):
 
 
 start_time = time.time()
-batch_size = 25
-num_chunks = 100_000
-name_str = 75_000
+batch_size = 50
+num_chunks = 100_725
+name_str = 52_725
 for i in range(name_str, num_chunks, batch_size):
     rng_key = random.PRNGKey(i)
     parameter_value = jax.random.uniform(rng_key, 

@@ -1,7 +1,7 @@
-# from autocvd import autocvd
-# autocvd(num_gpus = 1)
-import os
-os.environ['CUDA_VISIBLE_DEVICES'] = '0'  # Set to the 0 for tmux 6
+from autocvd import autocvd
+autocvd(num_gpus = 1)
+# import os
+# os.environ['CUDA_VISIBLE_DEVICES'] = '0'  # Set to the 0 for tmux 6
 
 import time
 
@@ -114,9 +114,9 @@ def vmapped_run_simulation(rng_key, params_values):
 
 
 start_time = time.time()
-batch_size = 10
-num_chunks = 100_000
-name_str = 80_000
+batch_size = 60
+num_chunks = 40_000
+name_str = 22_960
 for i in range(name_str, num_chunks, batch_size):
     rng_key = random.PRNGKey(i)
     parameter_value = jax.random.uniform(rng_key, 
