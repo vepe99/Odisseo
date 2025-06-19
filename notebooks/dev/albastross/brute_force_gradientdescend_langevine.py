@@ -1,7 +1,7 @@
 import os
 
 from autocvd import autocvd
-autocvd(num_gpus = 2)
+autocvd(num_gpus = 4)
 
 # os.environ['CUDA_VISIBLE_DEVICES'] = '4, 6, 9, 7'  # Set the visible GPUs
 
@@ -113,7 +113,6 @@ stream_target = projection_on_GD1(snapshots.states[-1, :], code_units=code_units
 # for now we will only use the last snapshot to caluclate the loss and the gradient
 config =  config._replace(return_snapshots=False,)
 config_com = config_com._replace(return_snapshots=False,)
-stream_target = s
 
 def normalize_data(X):
     """Z-score normalization"""
@@ -317,30 +316,30 @@ print("Loss:\n", loss)
 
 
 ### GRID SEARCH 
-n_sim = 2
+n_sim = 7
 
-# t_end_values = jnp.linspace(params.t_end * (1/4), params.t_end * (8/4), n_sim-1)   # Adjust range based on expected timescales
-# M_plummer_values = jnp.linspace(params.Plummer_params.Mtot*(1/4), params.Plummer_params.Mtot*(8/4), n_sim-1)  # Adjust range based on expected values
-# a_plummer_values = jnp.linspace(params.Plummer_params.a*(1/4), params.Plummer_params.a*(8/4), n_sim-1)  # Adjust range based on expected values
-# M_NFW_values = jnp.linspace(params.NFW_params.Mvir*(1/4), params.NFW_params.Mvir*(8/4), n_sim-1)  # Adjust range based on expected values
-# rs_NFW_values = jnp.linspace(params.NFW_params.r_s*(1/4), params.NFW_params.r_s*(8/4), n_sim-1)  # Adjust range based on expected values
-# M_MN_values = jnp.linspace(params.MN_params.M*(1/4), params.MN_params.M*(8/4), n_sim-1)  # Adjust range based on expected values
-# a_MN_values = jnp.linspace(params.MN_params.a*(1/4), params.MN_params.a*(8/4), n_sim-1)  # Adjust range based on expected values
-t_end_values = jax.random.uniform(random.PRNGKey(0), shape=(n_sim-1,), minval=params.t_end * (1/4), maxval=params.t_end * (8/4))  # Random values in the range
-M_plummer_values = jax.random.uniform(random.PRNGKey(1), shape=(n_sim-1,), minval=params.Plummer_params.Mtot*(1/4), maxval=params.Plummer_params.Mtot*(8/4))  # Random values in the range
-a_plummer_values = jax.random.uniform(random.PRNGKey(2), shape=(n_sim-1,), minval=params.Plummer_params.a*(1/4), maxval=params.Plummer_params.a*(8/4))  # Random values in the range
-M_NFW_values = jax.random.uniform(random.PRNGKey(3), shape=(n_sim-1,), minval=params.NFW_params.Mvir*(1/4), maxval=params.NFW_params.Mvir*(8/4))  # Random values in the range
-rs_NFW_values = jax.random.uniform(random.PRNGKey(4), shape=(n_sim-1,), minval=params.NFW_params.r_s*(1/4), maxval=params.NFW_params.r_s*(8/4))  # Random values in the range
-M_MN_values = jax.random.uniform(random.PRNGKey(5), shape=(n_sim-1,), minval=params.MN_params.M*(1/4), maxval=params.MN_params.M*(8/4))  # Random values in the range
-a_MN_values = jax.random.uniform(random.PRNGKey(6), shape=(n_sim-1,), minval=params.MN_params.a*(1/4), maxval=params.MN_params.a*(8/4))  # Random values in the range
+t_end_values = jnp.linspace(params.t_end * (1/4), params.t_end * (8/4), n_sim-1)   # Adjust range based on expected timescales
+M_plummer_values = jnp.linspace(params.Plummer_params.Mtot*(1/4), params.Plummer_params.Mtot*(8/4), n_sim-1)  # Adjust range based on expected values
+a_plummer_values = jnp.linspace(params.Plummer_params.a*(1/4), params.Plummer_params.a*(8/4), n_sim-1)  # Adjust range based on expected values
+M_NFW_values = jnp.linspace(params.NFW_params.Mvir*(1/4), params.NFW_params.Mvir*(8/4), n_sim-1)  # Adjust range based on expected values
+rs_NFW_values = jnp.linspace(params.NFW_params.r_s*(1/4), params.NFW_params.r_s*(8/4), n_sim-1)  # Adjust range based on expected values
+M_MN_values = jnp.linspace(params.MN_params.M*(1/4), params.MN_params.M*(8/4), n_sim-1)  # Adjust range based on expected values
+a_MN_values = jnp.linspace(params.MN_params.a*(1/4), params.MN_params.a*(8/4), n_sim-1)  # Adjust range based on expected values
+# t_end_values = jax.random.uniform(random.PRNGKey(0), shape=(n_sim-1,), minval=params.t_end * (1/4), maxval=params.t_end * (8/4))  # Random values in the range
+# M_plummer_values = jax.random.uniform(random.PRNGKey(1), shape=(n_sim-1,), minval=params.Plummer_params.Mtot*(1/4), maxval=params.Plummer_params.Mtot*(8/4))  # Random values in the range
+# a_plummer_values = jax.random.uniform(random.PRNGKey(2), shape=(n_sim-1,), minval=params.Plummer_params.a*(1/4), maxval=params.Plummer_params.a*(8/4))  # Random values in the range
+# M_NFW_values = jax.random.uniform(random.PRNGKey(3), shape=(n_sim-1,), minval=params.NFW_params.Mvir*(1/4), maxval=params.NFW_params.Mvir*(8/4))  # Random values in the range
+# rs_NFW_values = jax.random.uniform(random.PRNGKey(4), shape=(n_sim-1,), minval=params.NFW_params.r_s*(1/4), maxval=params.NFW_params.r_s*(8/4))  # Random values in the range
+# M_MN_values = jax.random.uniform(random.PRNGKey(5), shape=(n_sim-1,), minval=params.MN_params.M*(1/4), maxval=params.MN_params.M*(8/4))  # Random values in the range
+# a_MN_values = jax.random.uniform(random.PRNGKey(6), shape=(n_sim-1,), minval=params.MN_params.a*(1/4), maxval=params.MN_params.a*(8/4))  # Random values in the range
 # Append the true values to the arrays
-t_end_values = jnp.concatenate([t_end_values, jnp.array([params.t_end])])  # Append the true t_end value
-M_plummer_values = jnp.concatenate([M_plummer_values, jnp.array([params.Plummer_params.Mtot])])  # Append the true Mtot value
-a_plummer_values = jnp.concatenate([a_plummer_values, jnp.array([params.Plummer_params.a])])  # Append the true a value
-M_NFW_values = jnp.concatenate([M_NFW_values, jnp.array([params.NFW_params.Mvir])])  # Append the true Mvir value
-rs_NFW_values = jnp.concatenate([rs_NFW_values, jnp.array([params.NFW_params.r_s])])  # Append the true r_s value
-M_MN_values = jnp.concatenate([M_MN_values, jnp.array([params.MN_params.M])])  # Append the true Mtot value
-a_MN_values = jnp.concatenate([a_MN_values, jnp.array([params.MN_params.a])])  # Append the true a value
+# t_end_values = jnp.concatenate([t_end_values, jnp.array([params.t_end])])  # Append the true t_end value
+# M_plummer_values = jnp.concatenate([M_plummer_values, jnp.array([params.Plummer_params.Mtot])])  # Append the true Mtot value
+# a_plummer_values = jnp.concatenate([a_plummer_values, jnp.array([params.Plummer_params.a])])  # Append the true a value
+# M_NFW_values = jnp.concatenate([M_NFW_values, jnp.array([params.NFW_params.Mvir])])  # Append the true Mvir value
+# rs_NFW_values = jnp.concatenate([rs_NFW_values, jnp.array([params.NFW_params.r_s])])  # Append the true r_s value
+# M_MN_values = jnp.concatenate([M_MN_values, jnp.array([params.MN_params.M])])  # Append the true Mtot value
+# a_MN_values = jnp.concatenate([a_MN_values, jnp.array([params.MN_params.a])])  # Append the true a value
 # Ensure all arrays are sorted
 t_end_values = jnp.sort(t_end_values)
 M_plummer_values = jnp.sort(M_plummer_values)
@@ -380,7 +379,7 @@ def time_integration_for_laxmap(input):
 loss, grad = jax.lax.map(f=time_integration_for_laxmap,
                          xs=(M_plummer_sharded, a_plummer_sharded, t_end_sharded,
                               M_NFW_sharded, rs_NFW_sharded, M_MN_sharded, a_MN_sharded, keys_sharded),
-                         batch_size=15)
+                         batch_size=18)
 
 
 loss_min, min_index = jnp.min(loss), jnp.argmin(loss)
@@ -528,7 +527,7 @@ params_MLE = {'t_end': jnp.log10(t_end_min),
               'M_MN': jnp.log10(M_MN_min), 
               'a_MN': jnp.log10(a_MN_min)}
 rng_key = random.PRNGKey(42)
-out_samps = langevin_sampler(params_MLE, 1000, 1e-7, rng_key)
+out_samps = langevin_sampler(params_MLE, 5000, 1e-7, rng_key)
 
 np.savez('./brute_force_gradientdescend_langevine/langevin_samples.npz',
             out_samps=out_samps,

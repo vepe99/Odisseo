@@ -17,8 +17,9 @@ def Plummer_sphere(key: PRNGKeyArray,
                     config: SimulationConfig,
                     params: SimulationParams) -> Tuple:
     """
-    Create initial conditions for a Plummer sphere. The sampling of velocities is done by inverse fitting 
-    the cumulative distribution function of the Plummer sphere.
+    Create initial conditions for a Plummer sphere. The sampling of velocities 
+    is done by inverse fitting the cumulative distribution function of the 
+    Plummer sphere.
 
     Args:
         key (jax.random.PRNGKey): Random key.

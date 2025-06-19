@@ -149,6 +149,6 @@ class SimulationConfig(NamedTuple):
 
     num_checkpoints: int = 100
 
-    progress_bar: bool = True
+    progress_bar: bool = False
 
     
