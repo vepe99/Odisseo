@@ -1,8 +1,8 @@
-# from autocvd import autocvd
-# autocvd(num_gpus = 1)
+from autocvd import autocvd
+autocvd(num_gpus = 1)
 
-import os
-os.environ['CUDA_VISIBLE_DEVICES'] = '4'  # Set to the 0 for tmux 6
+# import os
+# os.environ['CUDA_VISIBLE_DEVICES'] = '4'  # Set to the 0 for tmux 6
 import time
 
 import jax 
@@ -147,26 +147,18 @@ stream_mean = jnp.nanmean(stream, axis=0)
 stream_std = jnp.nanstd(stream, axis=0)
 stream = (stream - stream_mean) / stream_std  # Standardize the data
 
-# Assign a new out of the observational windows value to the NaN values, and use constrain support NF, not implemented yet
-# stream = jax.vmap(lambda stream_star: jnp.where(jnp.isnan(stream_star), jnp.ones((6))*100, stream_star))(stream)
-
-
-# create the flow
-subkey, rng = jax.random.split(key_flow)
-flow = masked_autoregressive_flow(
-    subkey,
-    base_dist=Normal(jnp.zeros(stream.shape[1])),
-    transformer=RationalQuadraticSpline(knots=8, interval=4),
-)
-
-#we train only on the non NaN values of the stream
-key, subkey = jax.random.split(key_flow)
-flow, losses = fit_to_data(subkey, flow, stream[~jnp.isnan(stream)].reshape(-1, 6), learning_rate=1e-3)
+stream_target = stream[~jnp.isnan(stream)].reshape(-1, 6)  # Flatten the stream for training
 
 
 # for now we will only use the last snapshot to caluclate the loss and the gradient
 config =  config._replace(return_snapshots=False,)
 config_com = config_com._replace(return_snapshots=False,)
+
+@jit
+def rbf_kernel(x, y, sigma):
+    """RBF kernel optimized for 6D astronomical data"""
+    return jnp.exp(-jnp.sum((x - y)**2) / (2 * sigma**2))
+
 
 @jit
 def time_integration_fix_position_grad(t_end, 
@@ -231,7 +223,8 @@ def time_integration_fix_position_grad(t_end,
     #Stream selection success
     keys_selection = random.split(key_selection, stream.shape[0])
     p = jnp.ones(shape=(stream.shape[0]))* 0.95
-    selected_stream = jax.vmap(selection_function, )(stream, p, keys_selection)
+    # selected_stream = jax.vmap(selection_function, )(stream, p, keys_selection)
+    selected_stream = stream
 
     # #background contamination
     N_background = int(1e6)
@@ -249,16 +242,65 @@ def time_integration_fix_position_grad(t_end,
     noise_std = jnp.array([0.25, 0.001, 0.15, 5., 0.1, 0.0])
     stream = stream + jax.random.normal(key=key_noise, shape=stream.shape) * noise_std
     #we calculate the loss as the negative log likelihood of the stream
-    log_prob = eqx.filter_jit(flow.log_prob)((stream-stream_mean)/stream_std)  # Subtract the mean and divde by the std for normalization
+    bounds = jnp.array([
+        [6, 20],        # R [kpc]
+        [-120, 70],     # phi1 [deg]  
+        [-8, 2],        # phi2 [deg]
+        [-250, 250],    # vR [km/s]
+        [-2., 1.0],     # v1_cosphi2 [mas/yr]
+        [-0.10, 0.10]   # v2 [mas/yr]
+    ])
+        
+    def normalize_stream(stream):
+        # Normalize each dimension to [0,1]
+        return (stream - bounds[:, 0]) / (bounds[:, 1] - bounds[:, 0])
+    
+    sim_norm = normalize_stream(stream)
+    target_norm = normalize_stream(stream_target)
+    
+    # Adaptive bandwidth for 6D data
+    n_sim, n_target = len(stream), len(stream_target)
+    sigma = 0.5 * jnp.power(n_sim + n_target, -1/(6+4))  # Rule of thumb for 6D
+    
+    # # Compute MMD terms
+    # xx = jnp.mean(jax.vmap(lambda xi: jax.vmap(lambda xj: rbf_kernel(xi, xj, sigma))(sim_norm))(sim_norm))
+    # yy = jnp.mean(jax.vmap(lambda yi: jax.vmap(lambda yj: rbf_kernel(yi, yj, sigma))(target_norm))(target_norm))
+    # xy = jnp.mean(jax.vmap(lambda xi: jax.vmap(lambda yj: rbf_kernel(xi, yj, sigma))(target_norm))(sim_norm))
+    
+    # return xx + yy - 2 * xy
 
-    loss = - jnp.sum( jnp.where( jnp.isinf(log_prob), 0., log_prob  )  ) #if the NaN value are passed the value of the log_prob is -inf, we set it to 0 to not contribute to the loss
+    @jit 
+    def compute_mmd(sim_norm, target_norm, sigmas):
+        xx = jnp.mean(jax.vmap(lambda xi: jax.vmap(lambda xj: rbf_kernel(xi, xj, sigmas))(sim_norm))(sim_norm))
+        yy = jnp.mean(jax.vmap(lambda yi: jax.vmap(lambda yj: rbf_kernel(yi, yj, sigmas))(target_norm))(target_norm))
+        xy = jnp.mean(jax.vmap(lambda xi: jax.vmap(lambda yj: rbf_kernel(xi, yj, sigmas))(target_norm))(sim_norm))
+        return xx + yy - 2 * xy
 
-    return loss
+    distances = jax.vmap(lambda x: jax.vmap(lambda y: jnp.linalg.norm(x - y))(target_norm))(sim_norm)
+    distance_flat = distances.flatten()
+
+    # # Use percentiles as natural scales
+    sigmas = jnp.array([
+        jnp.percentile(distance_flat, 10),   # Fine scale
+        jnp.percentile(distance_flat, 25),   # Small scale  
+        jnp.percentile(distance_flat, 50),   # Medium scale (median)
+        jnp.percentile(distance_flat, 75),   # Large scale
+        jnp.percentile(distance_flat, 90),   # Very large scale
+    ])
+
+    # Adaptive weights based on scale separation
+    # scale_weights = jnp.array([0.15, 0.2, 0.3, 0.25, 0.1])
+    scale_weights = jnp.ones_like(sigmas)  # Equal weights for simplicity
+
+    # Compute MMD with multiple kernels
+    mmd_total = jnp.sum(scale_weights * jax.vmap(lambda sigma: compute_mmd(sim_norm, target_norm, sigma))(sigmas))
+    
+    return mmd_total / len(sigmas)
 
 
 @jit
 def time_integration_fix_position_grad_ScipyMinimize(param, key):
-    t_end, M_plummer, a_plummer, Mvir, r_s_NFW, M_MN, a_MN = param
+    t_end, M_plummer, a_plummer, Mvir, r_s_NFW, M_MN, a_MN = 10**param
     return time_integration_fix_position_grad(t_end, 
                                               M_plummer,
                                               a_plummer,
@@ -272,55 +314,54 @@ optimizer = ScipyBoundedMinimize(
      method="l-bfgs-b", 
      dtype=jnp.float64,
      fun=time_integration_fix_position_grad_ScipyMinimize, 
-     tol=1e-6, 
+     tol=1e-8, 
     )
 
 
-# key = random.PRNGKey(42) #compgpu8
-# key = random.PRNGKey(43) #compgpu9 tmux 2
-# key = random.PRNGKey(44) #compgpu19 tmux 4
-# key =  random.PRNGKey(45) #compgpu20 tmux 6
-# key = random.PRNGKey(46) #compgpu4 tmux 7
-key = random.PRNGKey(47) #compgpu9 tmux 9
+# key = random.PRNGKey(42) #compgpu8 tmux 0
+# key = random.PRNGKey(43) #compgpu8 tmux 1
+key = random.PRNGKey(44) #compgpu8 tmux 2
+# key = random.PRNGKey(45) #compgpu8 tmux 1
+
 parameter_value = jax.random.uniform(key=key, 
                                     shape=(1000, 7), 
-                                    minval=jnp.array([0.5 * u.Gyr.to(code_units.code_time), # t_end in Gyr
+                                    minval=jnp.array([np.log10(0.5 * u.Gyr.to(code_units.code_time)).item(), # t_end in Gyr
                                                     np.log10(10**3.0 * u.Msun.to(code_units.code_mass)).item(), # Plummer mass
-                                                    params.Plummer_params.a*(1/4),
-                                                    np.log10(params.NFW_params.Mvir*(1/4)).item(),
-                                                    params.NFW_params.r_s*(1/4), 
+                                                    np.log10(params.Plummer_params.a*(1/4)).item(),
+                                                    np.log10(np.log10(params.NFW_params.Mvir*(1/4)).item()),
+                                                    np.log10(params.NFW_params.r_s*(1/4)).item(), 
                                                     np.log10(params.MN_params.M*(1/4)).item(), 
-                                                    params.MN_params.a*(1/4),]), 
+                                                    np.log10(params.MN_params.a*(1/4)).item(),]), 
                                                     
-                                    maxval=jnp.array([5 * u.Gyr.to(code_units.code_time), # t_end in Gyr
+                                    maxval=jnp.array([np.log10(5 * u.Gyr.to(code_units.code_time)).item(), # t_end in Gyr
                                                     np.log10(10**4.5 * u.Msun.to(code_units.code_mass)).item(), #Plummer mass
-                                                    params.Plummer_params.a*(8/4),
+                                                    np.log10(params.Plummer_params.a*(8/4)).item(),
                                                     np.log10(params.NFW_params.Mvir*(8/4)).item(), 
-                                                    params.NFW_params.r_s*(8/4), 
+                                                    np.log10(params.NFW_params.r_s*(8/4)).item(), 
                                                     np.log10(params.MN_params.M*(8/4)).item(), 
-                                                    params.MN_params.a*(8/4),])) 
+                                                    np.log10(params.MN_params.a*(8/4)).item(),])) 
 print('Start sampling with ScipyMinimize')
 start_time = time.time()
-i = 2000
+i = 1000
 for p, k in tqdm(zip(parameter_value, random.split(key, parameter_value.shape[0]) ) ):
     sol = optimizer.run(init_params=p, 
                         key=k,
-                        bounds = jnp.array([[0.5 * u.Gyr.to(code_units.code_time), 
+                        bounds = jnp.array([[np.log10(0.5 * u.Gyr.to(code_units.code_time)).item(), 
                                      np.log10(10**3.0 * u.Msun.to(code_units.code_mass)).item(), 
-                                     params.Plummer_params.a*(1/4),
+                                     np.log10(params.Plummer_params.a*(1/4)).item(),
                                      np.log10(params.NFW_params.Mvir*(1/4)).item(),
-                                     params.NFW_params.r_s*(1/4), 
+                                     np.log10(params.NFW_params.r_s*(1/4)).item(), 
                                      np.log10(params.MN_params.M*(1/4)).item(), 
-                                     params.MN_params.a*(1/4)],
-                                    [5 * u.Gyr.to(code_units.code_time), 
+                                     np.log10(params.MN_params.a*(1/4)).item()],
+                                    [np.log10(5 * u.Gyr.to(code_units.code_time)).item(), 
                                      np.log10(10**4.5 * u.Msun.to(code_units.code_mass)).item(), 
-                                     params.Plummer_params.a*(8/4),
+                                     np.log10(params.Plummer_params.a*(8/4)).item(),
                                      np.log10(params.NFW_params.Mvir*(8/4)).item(), 
-                                     params.NFW_params.r_s*(8/4), 
+                                     np.log10(params.NFW_params.r_s*(8/4)).item(), 
                                      np.log10(params.MN_params.M*(8/4)).item(), 
-                                     params.MN_params.a*(8/4)]]))
+                                     np.log10(params.MN_params.a*(8/4)).item()]]))
     
-    np.savez(f'./sampling_ScipyMinimize/ScipyBoundedMinimize/sample_{i}.npz', 
+    np.savez(f'./sampling_ScipyMinimize/ScipyBoundedMinimize/new_loss/sample_{i}.npz', 
              sample=np.array(sol.params),
              loss=np.array(sol.state.fun_val), )
     i += 1
