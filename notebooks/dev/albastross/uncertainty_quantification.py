@@ -284,7 +284,7 @@ def compute_minima(key, target_stream_clean=target_stream_clean, noise_std=noise
 
     ## gradient descent 
     ### Gradient of ln-likelihood is simple as
-    grad_func = jax.jit(jax.grad(simulation_time_integration))
+    grad_func = jax.jit(jax.jacfwd(simulation_time_integration))
 
     @partial(jax.jit, static_argnames=('num_iterations',))
     def gradient_ascent(params, learning_rates, num_iterations=nsteps):
@@ -336,7 +336,7 @@ def compute_minima(key, target_stream_clean=target_stream_clean, noise_std=noise
         params, key, trajectory, loglike, keys = jax.lax.fori_loop(0, num_iterations, loop_body, init_carry)
         return params, trajectory,  loglike, keys
 
-    lr = 1e-4
+    lr = 1e-5
     learning_rates = {
         't_end': lr,  # Learning rate for t_end
         'M_plummer': lr,  # Learning rate for M_plummer
@@ -361,7 +361,7 @@ def compute_minima(key, target_stream_clean=target_stream_clean, noise_std=noise
 
 if __name__ == "__main__":
     import time
-    for i in range(89, 1000):
+    for i in range(131, 1000):
         start = time.time()
         key = random.PRNGKey(i)
         params_final = compute_minima(key)
