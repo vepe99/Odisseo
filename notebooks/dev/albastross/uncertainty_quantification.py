@@ -361,7 +361,7 @@ def compute_minima(key, target_stream_clean=target_stream_clean, noise_std=noise
 
 if __name__ == "__main__":
     import time
-    for i in range(200):
+    for i in range(89, 1000):
         start = time.time()
         key = random.PRNGKey(i)
         params_final = compute_minima(key)
