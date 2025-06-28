@@ -8,3 +8,6 @@ odisseo.egg-info/
 #numpy data
 *.npy
 *.npz
+
+#pickle data
+*.pkl
