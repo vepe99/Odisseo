@@ -108,6 +108,9 @@ for file in tqdm(files_path):
                         p_background=1e-3,)
                 
 mean_x, std_x = np.load(os.path.join(save_directory, 'mean_std.npz'))['mean_x'], np.load(os.path.join(save_directory, 'mean_std.npz'))['std_x']
+# np.savez(os.path.join(save_directory, 'mean_std.npz'), mean_x=mean_x, std_x=std_x)
+
+
 # Normalize the dataset needed only once
 # x = np.array([np.load(os.path.join(save_directory, p))['x'] for p in os.listdir(save_directory) 
 #               if p.startswith('preprocess_') and p.endswith('.npz')])
@@ -118,8 +121,10 @@ mean_x, std_x = np.load(os.path.join(save_directory, 'mean_std.npz'))['mean_x'],
 # print("Mean of x:", mean_x)
 # print("Standard deviation of x:", std_x)
 ## Training, validation and test set generation
-from autocvd import autocvd
-autocvd(num_gpus = 1)
+
+# from autocvd import autocvd
+# autocvd(num_gpus = 1)
+os.environ['CUDA_VISIBLE_DEVICES'] = '0'  # Set the GPU to use, if available
 
 # ignore warnings for readability
 import warnings
@@ -409,14 +414,14 @@ trainer = ili.inference.InferenceRunner.load(
 
   # Define a neural network architecture (here, MAF)
   nets = [ili.utils.load_nde_lampe(engine='NPE', 
-                                   model='cnf', 
+                                   model='nsf', 
                                    embedding_net=embedding_net, 
                                    x_normalize=True,
                                    theta_normalize=True,
                                    hidden_features=256,
                                    num_transforms=40),
          ili.utils.load_nde_lampe(engine='NPE', 
-                                   model='cnf', 
+                                   model='nsf', 
                                    embedding_net=embedding_net, 
                                    x_normalize=True,
                                    theta_normalize=True,
