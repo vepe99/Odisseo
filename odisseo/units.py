@@ -2,6 +2,12 @@ from astropy import units as u
 from astropy import constants as c
 
 class CodeUnits:
+    """
+    Class to define code units to convert physical units into simulations units.
+    The user needs to provid length, mass and either time units or the gravitational constant G.
+    If time is not provided, it will be calculated from the gravitational constant.
+    
+    """
 
     def __init__(self, unit_length, unit_mass, G, unit_time=None):
         self.code_length = u.def_unit('code_length', unit_length)

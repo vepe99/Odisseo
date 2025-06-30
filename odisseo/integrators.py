@@ -141,13 +141,13 @@ def RungeKutta4(state: jnp.ndarray,
 
 @jaxtyped(typechecker=typechecker)
 @partial(jax.jit, static_argnames=['config'])
-def diffrax_solver(state,
-                     mass: jnp.ndarray,
-                     dt: Scalar,
-                     config: SimulationConfig,
-                     params: SimulationParams,) -> jnp.ndarray:
+def diffrax_solver(state: jnp.ndarray,
+                    mass: jnp.ndarray,
+                    dt: Scalar,
+                    config: SimulationConfig,
+                    params: SimulationParams,) -> jnp.ndarray:
     """
-    Diffrax backhend
+    Diffrax backhand
 
     Args:
         state (jax.numpy.ndarray): The state of the particles, where the first column represents positions and the second column represents velocities.

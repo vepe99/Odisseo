@@ -39,7 +39,7 @@ API
 
    .. autodoc2-docstring:: odisseo.integrators.RungeKutta4
 
-.. py:function:: diffrax_solver(state, mass: jax.numpy.ndarray, dt: jaxtyping.Scalar, config: odisseo.option_classes.SimulationConfig, params: odisseo.option_classes.SimulationParams) -> jax.numpy.ndarray
+.. py:function:: diffrax_solver(state: jax.numpy.ndarray, mass: jax.numpy.ndarray, dt: jaxtyping.Scalar, config: odisseo.option_classes.SimulationConfig, params: odisseo.option_classes.SimulationParams) -> jax.numpy.ndarray
    :canonical: odisseo.integrators.diffrax_solver
 
    .. autodoc2-docstring:: odisseo.integrators.diffrax_solver

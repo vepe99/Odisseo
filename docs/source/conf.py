@@ -47,9 +47,6 @@ extensions = [
 ]
 
 
-apidoc_module_dir = '../../odisseo'
-apidoc_output_dir = 'source'
-apidoc_separate_modules = True
 
 autodoc2_packages = [
     "../../odisseo",
@@ -79,7 +76,9 @@ myst_enable_extensions = [
 autodoc_default_flags = ['members']
 autosummary_generate = True
 
-napolean_use_rtype = False
+napoleon_google_docstring = True
+napoleon_numpy_docstring = True
+
 
 # templates_path = ['_templates']
 exclude_patterns = []
