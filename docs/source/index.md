@@ -58,12 +58,21 @@ notebooks/Plummer_in_NFWpotential.ipynb
 notebooks/gradient_test/grad_NFW_Potential.ipynb
 ```
 
+```{toctree}
+:maxdepth: 2
+:caption: API 
+
+apidocs/odisseo/odisseo.dynamics
+```
+
 ## Roadmap
 
 - [x] Implement simple `initial_conditions` (two body, self gravitating Plummer sphere )
 - [x] Implement units conversion
 - [x] Implement gradient trought the `time_integration` 
-- [ ] Implement higher order integrators (IAS15, WHFast512)
+- [ ] Implement diffrax backend for integrators
 - [ ] Implement sphere sky projection
 - [x] Implement key `external_potential` for distrupted dwarf galaxies scenarios (Navarro-Frank-White halo, Myamoto-Nagai disk)
-- [ ] Multi gpu parallalization
+- [x] Multi gpu parallalization
+- [ ] Implement adaptive time stepping
+- [ ] 
