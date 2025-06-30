@@ -62,6 +62,7 @@ notebooks/gradient_test/grad_NFW_Potential.ipynb
 :maxdepth: 2
 :caption: API 
 
+apidocs/odisseo/odisseo
 apidocs/odisseo/odisseo.dynamics
 apidocs/odisseo/odisseo.integrators  
 apidocs/odisseo/odisseo.potentials
