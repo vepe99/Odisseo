@@ -90,7 +90,7 @@ API
 
       .. autodoc2-docstring:: odisseo.time_integration.SnapshotData.current_checkpoint
 
-.. py:function:: time_integration(primitive_state: jax.numpy.ndarray, mass: jax.numpy.ndarray, config: typing.NamedTuple, params: typing.NamedTuple)
+.. py:function:: time_integration(primitive_state: jax.numpy.ndarray, mass: jax.numpy.ndarray, config: odisseo.option_classes.SimulationConfig, params: odisseo.option_classes.SimulationParams)
    :canonical: odisseo.time_integration.time_integration
 
    .. autodoc2-docstring:: odisseo.time_integration.time_integration

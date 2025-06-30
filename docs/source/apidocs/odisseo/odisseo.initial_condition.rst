@@ -41,7 +41,7 @@ Functions
 API
 ~~~
 
-.. py:function:: Plummer_sphere(key: jax.random.PRNGKey, config: typing.NamedTuple, params: typing.NamedTuple) -> typing.Tuple
+.. py:function:: Plummer_sphere(key: jaxtyping.PRNGKeyArray, config: odisseo.option_classes.SimulationConfig, params: odisseo.option_classes.SimulationParams) -> typing.Tuple
    :canonical: odisseo.initial_condition.Plummer_sphere
 
    .. autodoc2-docstring:: odisseo.initial_condition.Plummer_sphere
@@ -51,27 +51,27 @@ API
 
    .. autodoc2-docstring:: odisseo.initial_condition.Plummer_sphere_multiprocess
 
-.. py:function:: ic_two_body(mass1: float, mass2: float, rp: float, e: float, params: typing.NamedTuple) -> typing.Tuple
+.. py:function:: ic_two_body(mass1: typing.Union[float, jax.numpy.ndarray], mass2: typing.Union[float, jax.numpy.ndarray], rp: typing.Union[float, jax.numpy.ndarray], e: typing.Union[float, jax.numpy.ndarray], params: odisseo.option_classes.SimulationParams) -> typing.Tuple
    :canonical: odisseo.initial_condition.ic_two_body
 
    .. autodoc2-docstring:: odisseo.initial_condition.ic_two_body
 
-.. py:function:: sample_position_on_sphere(key: jax.random.PRNGKey, r_p: float, num_samples: int = 1)
+.. py:function:: sample_position_on_sphere(key: jaxtyping.PRNGKeyArray, r_p: float, num_samples: int = 1)
    :canonical: odisseo.initial_condition.sample_position_on_sphere
 
    .. autodoc2-docstring:: odisseo.initial_condition.sample_position_on_sphere
 
-.. py:function:: sample_position_on_circle(key: jax.random.PRNGKey, r_p: float, num_samples: int = 1)
+.. py:function:: sample_position_on_circle(key: jaxtyping.PRNGKeyArray, r_p: float, num_samples: int = 1)
    :canonical: odisseo.initial_condition.sample_position_on_circle
 
    .. autodoc2-docstring:: odisseo.initial_condition.sample_position_on_circle
 
-.. py:function:: inclined_position(position: jax.numpy.ndarray, inclination: float)
+.. py:function:: inclined_position(position: jax.numpy.ndarray, inclination: jax.numpy.ndarray)
    :canonical: odisseo.initial_condition.inclined_position
 
    .. autodoc2-docstring:: odisseo.initial_condition.inclined_position
 
-.. py:function:: inclined_circular_velocity(position: jax.numpy.ndarray, v_c: float, inclination: float)
+.. py:function:: inclined_circular_velocity(position: jax.numpy.ndarray, v_c: jax.numpy.ndarray, inclination: jax.numpy.ndarray)
    :canonical: odisseo.initial_condition.inclined_circular_velocity
 
    .. autodoc2-docstring:: odisseo.initial_condition.inclined_circular_velocity

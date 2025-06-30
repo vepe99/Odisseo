@@ -13,15 +13,15 @@ Submodules
    :titlesonly:
    :maxdepth: 1
 
-   odisseo.units
-   odisseo.time_integration
    odisseo.visualization
+   odisseo.integrators
    odisseo.dynamics
    odisseo.initial_condition
    odisseo.option_classes
    odisseo.potentials
+   odisseo.time_integration
+   odisseo.units
    odisseo.utils
-   odisseo.integrators
 
 Package Contents
 ----------------

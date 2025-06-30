@@ -65,11 +65,10 @@ notebooks/gradient_test/grad_NFW_Potential.ipynb
 apidocs/odisseo/odisseo.dynamics
 apidocs/odisseo/odisseo.integrators  
 apidocs/odisseo/odisseo.potentials
-apidocs/odisseo/odisseo.time_integration
-apidocs/odisseo/odisseo.utils
 apidocs/odisseo/odisseo.initial_condition  
 apidocs/odisseo/odisseo.option_classes           
 apidocs/odisseo/odisseo.units         
+apidocs/odisseo/odisseo.utils
 apidocs/odisseo/odisseo.visualization
 
 ```

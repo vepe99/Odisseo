@@ -19,6 +19,9 @@ Functions
    * - :py:obj:`energy_angular_momentum_plot <odisseo.visualization.energy_angular_momentum_plot>`
      - .. autodoc2-docstring:: odisseo.visualization.energy_angular_momentum_plot
           :summary:
+   * - :py:obj:`plot_last_snapshot <odisseo.visualization.plot_last_snapshot>`
+     - .. autodoc2-docstring:: odisseo.visualization.plot_last_snapshot
+          :summary:
    * - :py:obj:`plot_orbit <odisseo.visualization.plot_orbit>`
      - .. autodoc2-docstring:: odisseo.visualization.plot_orbit
           :summary:
@@ -42,6 +45,11 @@ API
    :canonical: odisseo.visualization.energy_angular_momentum_plot
 
    .. autodoc2-docstring:: odisseo.visualization.energy_angular_momentum_plot
+
+.. py:function:: plot_last_snapshot(snapshots, code_units, rp, plotting_units_length, filename=None)
+   :canonical: odisseo.visualization.plot_last_snapshot
+
+   .. autodoc2-docstring:: odisseo.visualization.plot_last_snapshot
 
 .. py:function:: plot_orbit(snapshots, ax_lim, code_units, plotting_units_length, config, filename=None)
    :canonical: odisseo.visualization.plot_orbit
