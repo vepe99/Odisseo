@@ -329,6 +329,7 @@ def PowerSphericalPotentialwCutoff(state: jnp.ndarray,
     """
     Compute acceleration of all particles due to a power spherical potential with cutoff.
     taken from galax: https://github.com/GalacticDynamics/galax/blob/main/src/galax/potential/_src/builtin/powerlawcutoff.py#L35
+    
     Args:
         state (jnp.ndarray): Array of shape (N_particles, 2, 3) representing the positions and velocities of the particles.
         config (NamedTuple): Configuration parameters.

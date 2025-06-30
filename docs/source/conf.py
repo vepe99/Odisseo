@@ -25,7 +25,7 @@ extensions = [
 
     # automatic API documentation
     'autodoc2',
-    'sphinx.ext.autosummary',
+    # 'sphinx.ext.autosummary',
     'sphinx.ext.autodoc',
     'sphinxcontrib.apidoc',
 

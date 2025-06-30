@@ -29,7 +29,7 @@ Note that if `JAX` is not yet installed, only the CPU version of `JAX` will be i
 as a dependency. For a GPU-compatible installation of `JAX`, please refer to the
 [JAX installation guide](https://jax.readthedocs.io/en/latest/installation.html).
 
-:::{tip} Get started with this [simple example](notebooks/Plummer.ipynb).
+:::{tip} Get started with this [simple example](notebooks/2body.ipynb).
 :::
 
 ## Showcase
@@ -76,4 +76,3 @@ apidocs/odisseo/odisseo
 - [x] Implement key `external_potential` for distrupted dwarf galaxies scenarios (Navarro-Frank-White halo, Myamoto-Nagai disk)
 - [x] Multi gpu parallalization
 - [ ] Implement adaptive time stepping
-- [ ] 

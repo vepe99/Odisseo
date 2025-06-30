@@ -139,10 +139,13 @@ def Angular_momentum(state: jnp.ndarray,
 def halo_to_sun(Xhalo: jnp.ndarray) -> jnp.ndarray:
     """
     Conversion from simulation frame to cartesian frame centred at Sun
+
     Args:
       Xhalo: 3d position (x [kpc], y [kpc], z [kpc]) in simulation frame
+
     Returns:
       3d position (x_s [kpc], y_s [kpc], z_s [kpc]) in Sun frame
+      
     Examples
     --------
     >>> halo_to_sun(jnp.array([1.0, 2.0, 3.0]))
