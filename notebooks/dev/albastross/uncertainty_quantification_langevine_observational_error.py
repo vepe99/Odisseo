@@ -209,7 +209,7 @@ def compute_minima(key, chains_index, target_stream_clean=target_stream_clean, n
         return - percintile_based_mmd(sim_norm, target_norm, ) 
     
     n_sim_grid_search = 10
-    t_end_values = jnp.log10(jnp.linspace(params.t_end * (1/4), params.t_end * (8/4), n_sim_grid_search+2))  # Logarithmic values in the range
+    t_end_values = jnp.log10(jnp.linspace(params.t_end * (1/4), params.t_end * (8/4), n_sim_grid_search))  # Logarithmic values in the range
     M_plummer_values = jnp.log10(jnp.linspace(params.Plummer_params.Mtot * (1/4), params.Plummer_params.Mtot * (8/4), n_sim_grid_search))  # Logarithmic values in the range
     # a_plummer_values = jnp.log10(jnp.linspace(params.Plummer_params.a * (1/4), params.Plummer_params.a * (8/4), n_sim_grid_search))  # Logarithmic values in the range
     M_NFW_values = jnp.log10(jnp.linspace(params.NFW_params.Mvir * (1/4), params.NFW_params.Mvir * (8/4), n_sim_grid_search))  # Logarithmic values in the range
@@ -270,7 +270,7 @@ def compute_minima(key, chains_index, target_stream_clean=target_stream_clean, n
         param_arrays = jnp.stack([params_dict[key] for key in params_dict.keys()], axis=1)
         params_arrays_keys = (param_arrays, keys)
         
-        return jax.lax.map(single_simulation, xs=params_arrays_keys, batch_size=100)
+        return jax.lax.map(single_simulation, xs=params_arrays_keys, batch_size=500)
         # return jax.vmap(single_simulation, )(params_arrays_keys)
 
     # Run the vectorized computation
@@ -306,7 +306,7 @@ def compute_minima(key, chains_index, target_stream_clean=target_stream_clean, n
                 print(f"Iteration {i}, max lnlikelihood {str(arr.max())}")
         return params, trajectory, loglike, keys
 
-    lr = 5e-5
+    lr = 1e-5
     learning_rates = {
         't_end': lr,  # Learning rate for t_end
         'M_plummer': lr,  # Learning rate for M_plummer
