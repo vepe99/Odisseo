@@ -202,6 +202,7 @@ def diffrax_solver(state: jnp.ndarray,
     def g(t, y, args):
         """
         Vector field for the transform of velocities
+        args is the mass
         """
         state = jnp.zeros((config.N_particles, 2, 3))
         state = state.at[:, 0].set(y)
@@ -222,6 +223,8 @@ def diffrax_solver(state: jnp.ndarray,
 
     if add_external_acceleration:
         external_acc_func = combined_external_acceleration_vmpa_switch
+    else:
+        external_acc_func = lambda state, config, params: jnp.zeros_like(state[:, 0])
 
     if config.diffrax_solver == DOPRI5:
         solver = Dopri5()
@@ -241,22 +244,39 @@ def diffrax_solver(state: jnp.ndarray,
         solver = LeapfrogMidpoint()
         term = ODETerm(vector_field)
     
-    
-    t0 = 0.0
-    dt0 = dt
-    t1 = dt #in the fixed number of timesteps case we want to integrate only one step
-    y0 = jnp.array([state[:, 0, 0], state[:, 0, 1], state[:, 0, 2], state[:, 1, 0], state[:, 1, 1], state[:, 1, 2]])
-    args = mass
-    sol = diffeqsolve(
-        terms = term,
-        solver = solver,
-        t0 = t0,
-        t1 = t1,
-        dt0 = dt0,
-        y0 = y0,
-        args=args,)
-    pos = jnp.stack((sol.ys[0][0], sol.ys[0][1], sol.ys[0][2]), axis=1)
-    vel = jnp.stack((sol.ys[0][3], sol.ys[0][4], sol.ys[0][5]), axis=1)
+    if config.diffrax_solver != SEMIIMPLICITEULER:
+        t0 = 0.0
+        dt0 = dt
+        t1 = dt #in the fixed number of timesteps case we want to integrate only one step
+        y0 = jnp.array([state[:, 0, 0], state[:, 0, 1], state[:, 0, 2], state[:, 1, 0], state[:, 1, 1], state[:, 1, 2]])
+        args = mass
+        sol = diffeqsolve(
+            terms = term,
+            solver = solver,
+            t0 = t0,
+            t1 = t1,
+            dt0 = dt0,
+            y0 = y0,
+            args=args,)
+        pos = jnp.stack((sol.ys[0][0], sol.ys[0][1], sol.ys[0][2]), axis=1)
+        vel = jnp.stack((sol.ys[0][3], sol.ys[0][4], sol.ys[0][5]), axis=1)
+
+    else:
+        t0 = 0.0
+        dt0 = dt
+        t1 = dt #in the fixed number of timesteps case we want to integrate only one step
+        y0 = jnp.array([state[:, 0, 0], state[:, 0, 1], state[:, 0, 2]]), jnp.array([state[:, 1, 0], state[:, 1, 1], state[:, 1, 2]])
+        args = mass
+        sol = diffeqsolve(
+            terms = term,
+            solver = solver,
+            t0 = t0,
+            t1 = t1,
+            dt0 = dt0,
+            y0 = y0,
+            args=args,)
+        pos = jnp.stack((sol.ys[0][0], sol.ys[0][1], sol.ys[0][2]), axis=1)
+        vel = jnp.stack((sol.ys[1][0], sol.ys[1][1], sol.ys[1][2]), axis=1)
 
     return jnp.stack((pos, vel), axis=1) 
 
