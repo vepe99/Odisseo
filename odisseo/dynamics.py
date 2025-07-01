@@ -1,4 +1,4 @@
-from typing import Optional, Tuple, Callable, Union, List, NamedTuple
+from beartype.typing import Optional, Tuple, Callable, Union, List, NamedTuple
 from functools import partial
 from jaxtyping import jaxtyped
 from beartype import beartype as typechecker
@@ -220,11 +220,11 @@ def direct_acc_for_loop(state: jnp.ndarray,
 
     positions =  state[:, 0]
     if return_potential:
-        initial_pot = jnp.array([0.], dtype=jnp.float64)
+        initial_pot = jnp.array([0.], )
         _, pot = jax.lax.scan(compute_acc, initial_pot, positions)
         return pot
     else:
-        initial_acc = jnp.zeros_like(positions[0], dtype=jnp.float64)
+        initial_acc = jnp.zeros_like(positions[0],)
         _, acc = jax.lax.scan(compute_acc, initial_acc, positions)
         return acc
 

@@ -1,4 +1,4 @@
-from typing import Optional, Tuple, Callable, Union, List, NamedTuple
+from beartype.typing import Optional, Tuple, Callable, Union, List, NamedTuple
 from functools import partial
 from jaxtyping import jaxtyped, PRNGKeyArray
 from beartype import beartype as typechecker
