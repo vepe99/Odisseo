@@ -3,7 +3,7 @@ import jax.numpy as jnp
 from odisseo import potentials
 from odisseo.option_classes import (
     SimulationConfig, SimulationParams, 
-    NFW_POTENTIAL, POINT_MASS, MN_POTENTIAL, 
+    NFW_POTENTIAL, POINT_MASS, MN_POTENTIAL, PSP_POTENTIAL, LOGARITHMIC_POTENTIAL,
     NFWParams, PointMassParams, MNParams, PSPParams, LogarithmicParams
 )
 
@@ -43,22 +43,22 @@ def state():
 @pytest.fixture
 def config():
     return SimulationConfig(N_particles=3, 
-                            external_accelerations=(NFW_POTENTIAL, POINT_MASS, MN_POTENTIAL))
+                            external_accelerations=(NFW_POTENTIAL, 
+                                                    POINT_MASS, 
+                                                    MN_POTENTIAL,
+                                                    PSP_POTENTIAL, 
+                                                    LOGARITHMIC_POTENTIAL, ))
 
 
 @pytest.fixture
 def params():
     return SimulationParams(
         G=DummyParams.G,
-        NFW_params=NFWParams(Mvir=DummyParams.NFW_params.Mvir, r_s=DummyParams.NFW_params.r_s),
-        PointMass_params=PointMassParams(M=DummyParams.PointMass_params.M),
-        MN_params=MNParams(
-            M=DummyParams.MN_params.M, a=DummyParams.MN_params.a, b=DummyParams.MN_params.b
-        ),
+        NFW_params=NFWParams(),
+        PointMass_params=PointMassParams(), 
+        MN_params=MNParams(),
         PSP_params=PSPParams(),
-        #     M=DummyParams.PSP_params.M, alpha=DummyParams.PSP_params.alpha, r_c=DummyParams.PSP_params.r_c
-        # ),
-        Logarithmic_params=LogarithmicParams(v0=DummyParams.Logarithmic_Params.v0, q=DummyParams.Logarithmic_Params.q),
+        Logarithmic_params=LogarithmicParams(),
     )
 
 
@@ -78,14 +78,16 @@ def test_potential_is_negative(state, config, params, potential_func):
 
 def test_combined_potential_is_sum_of_individuals(state, config, params):
     """Test that combined external potential equals sum of individual potentials."""
-    total_acc, total_pot = potentials.combined_external_acceleration(state, config, params, return_potential=True)
+    total_acc, total_pot = potentials.combined_external_acceleration_vmpa_switch(state, config, params, return_potential=True)
 
     acc1, pot1 = potentials.NFW(state, config, params, return_potential=True)
     acc2, pot2 = potentials.point_mass(state, config, params, return_potential=True)
     acc3, pot3 = potentials.MyamotoNagai(state, config, params, return_potential=True)
+    acc4, pot4 = potentials.PowerSphericalPotentialwCutoff(state, config, params, return_potential=True)
+    acc5, pot5 = potentials.logarithmic_potential(state, config, params, return_potential=True)
 
-    acc_sum = acc1 + acc2 + acc3
-    pot_sum = pot1 + pot2 + pot3
+    acc_sum = acc1 + acc2 + acc3 + acc4 + acc5
+    pot_sum = pot1 + pot2 + pot3 + pot4 + pot5
 
     assert jnp.allclose(total_acc, acc_sum, rtol=1e-5), "Total acceleration does not match sum of components."
     assert jnp.allclose(total_pot, pot_sum, rtol=1e-5), "Total potential does not match sum of components."
