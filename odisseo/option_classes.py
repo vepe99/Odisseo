@@ -112,7 +112,7 @@ class SimulationParams(NamedTuple):
 
     PSP_params: PSPParams = PSPParams()
 
-    Logarithmic_Params: LogarithmicParams = LogarithmicParams()
+    Logarithmic_params: LogarithmicParams = LogarithmicParams()
         
 class SimulationConfig(NamedTuple):
     """

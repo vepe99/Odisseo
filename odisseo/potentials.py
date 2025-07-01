@@ -422,7 +422,7 @@ def PowerSphericalPotentialwCutoff(state: jnp.ndarray,
 
     acc = acceleration(pos)
     if return_potential:
-        pot = jax.vmap(potential)(pos)
+        pot = -jax.vmap(potential)(pos)
         return acc, pot
     else:
         return acc
@@ -449,12 +449,12 @@ def logarithmic_potential(state: jnp.ndarray,
     """
     r = jnp.sqrt(state[:, 0, 0]**2 + state[:, 0, 1]**2)
     z = state[:, 0, 2]
-    v2_0 = params.Logarithmic_Params.v0**2
-    q2 = params.Logarithmic_Params.q**2
+    v2_0 = params.Logarithmic_params.v0**2
+    q2 = params.Logarithmic_params.q**2
     
     @jit
     def potential(state):
-        return v2_0/2 * jnp.log(r**2 + (z**2/q2))
+        return - v2_0/2 * jnp.log(r**2 + (z**2/q2))
 
     @jit
     def acceleration(state):
