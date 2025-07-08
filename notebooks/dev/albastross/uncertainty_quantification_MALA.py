@@ -427,30 +427,89 @@ def compute_minima(key, target_stream_clean=target_stream_clean, noise_std=noise
         # Return the log-posterior
         return log_likelihood + log_prior
 
-    def inference_loop(rng_key, kernel, initial_state, num_samples):
+    # def inference_loop(rng_key, kernel, initial_state, num_samples):
 
-        @jax.jit
-        def one_step(state, rng_key):
-            state, _ = kernel(rng_key, state)
-            return state, state
+    #     @jax.jit
+    #     def one_step(state, rng_key):
+    #         state, _ = kernel(rng_key, state)
+    #         return state, state
 
-        keys = jax.random.split(rng_key, num_samples)
-        _, states = jax.lax.scan(one_step, initial_state, keys)
+    #     keys = jax.random.split(rng_key, num_samples)
+    #     _, states = jax.lax.scan(one_step, initial_state, keys)
 
-        return states
+    #     return states
     
-    step_size = 10
-    mala = blackjax.mala(logdensity, step_size)
-    # initial_states = jax.pmap(mala.init, in_axes=(0))(params_MLE_multiple)
-    initial_states = jax.lax.map(mala.init, params_MLE_multiple, batch_size=2)
-    inference_loop_multiple_chains = jax.pmap(inference_loop, in_axes=(0, None, 0, None), static_broadcasted_argnums=(1, 3))
-    rng_key = jax.random.PRNGKey(0)
-    rng_key, sample_key = jax.random.split(rng_key)
-    sample_keys = jax.random.split(sample_key, num_chains)
+    # step_size = 10
+    # mala = blackjax.mala(logdensity, step_size)
+    # # initial_states = jax.pmap(mala.init, in_axes=(0))(params_MLE_multiple)
+    # initial_states = jax.lax.map(mala.init, params_MLE_multiple, batch_size=2)
+    # inference_loop_multiple_chains = jax.pmap(inference_loop, in_axes=(0, None, 0, None), static_broadcasted_argnums=(1, 3))
+    # rng_key = jax.random.PRNGKey(0)
+    # rng_key, sample_key = jax.random.split(rng_key)
+    # sample_keys = jax.random.split(sample_key, num_chains)
 
-    pmap_states = inference_loop_multiple_chains(
-        sample_keys, mala.step, initial_states, num_langevine_samples
-    )
+    # pmap_states = inference_loop_multiple_chains(
+    #     sample_keys, mala.step, initial_states, num_langevine_samples
+    # )
+
+    import blackjax
+
+    def run_mclmc(logdensity_fn, num_steps, initial_position, key, desired_energy_variance= 5e-4):
+        init_key, tune_key, run_key = jax.random.split(key, 3)
+
+        # create an initial state for the sampler
+        initial_state = blackjax.mcmc.mclmc.init(
+            position=initial_position, logdensity_fn=logdensity_fn, rng_key=init_key
+        )
+
+        # build the kernel
+        kernel = lambda inverse_mass_matrix : blackjax.mcmc.mclmc.build_kernel(
+            logdensity_fn=logdensity_fn,
+            integrator=blackjax.mcmc.integrators.isokinetic_mclachlan,
+            inverse_mass_matrix=inverse_mass_matrix,
+        )
+
+        # find values for L and step_size
+        (
+            blackjax_state_after_tuning,
+            blackjax_mclmc_sampler_params,
+            _
+        ) = blackjax.mclmc_find_L_and_step_size(
+            mclmc_kernel=kernel,
+            num_steps=num_steps,
+            state=initial_state,
+            rng_key=tune_key,
+            diagonal_preconditioning=False,
+            desired_energy_var=desired_energy_variance
+        )
+
+        # use the quick wrapper to build a new kernel with the tuned parameters
+
+        sampling_alg = jax.jit( blackjax.mclmc(
+            logdensity_fn,
+            L=blackjax_mclmc_sampler_params.L,
+            step_size=blackjax_mclmc_sampler_params.step_size,
+        ))
+
+        # run the sampler
+        _, samples = blackjax.util.run_inference_algorithm(
+            rng_key=run_key,
+            initial_state=blackjax_state_after_tuning,
+            inference_algorithm=sampling_alg,
+            num_steps=num_steps,
+            progress_bar=True,
+        )
+
+        return samples, blackjax_state_after_tuning, blackjax_mclmc_sampler_params, run_key
+
+    params_MLE = {'t_end': jnp.array([t_end_max, ]),
+                'M_NFW': jnp.array([Mvir_max, ])}  
+    
+    samples, initial_state, params, chain_key = run_mclmc(
+        logdensity,
+        num_steps=1_000,
+        initial_position=params_MLE,
+        key=random.PRNGKey(42))
     
     with open('mala_chains_2.pkl', 'wb') as f:
         pickle.dump(pmap_states.position, f)

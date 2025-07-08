@@ -373,7 +373,7 @@ def compute_minima(key, chains_index, target_stream_clean=target_stream_clean, n
             rng_key, _ = jax.random.split(rng_key)
         return samples
     
-    lr = 1e-6
+    lr = 5e-8
     step_size = {
         't_end': lr,  # Step size for t_end
         'M_plummer': lr,  # Step size for M_plummer
@@ -385,27 +385,18 @@ def compute_minima(key, chains_index, target_stream_clean=target_stream_clean, n
     }
 
     argsort_loglike_traj = jnp.argsort(jnp.asarray(loglike_traj), descending=True)
-
-    # params_MLE_0 = jnp.array([traj[argsort_loglike_traj[0]]['M_plummer'],
-    #                           # traj[argsort_loglike_traj[0]]['a_plummer'],
-    #                           traj[argsort_loglike_traj[0]]['t_end'],
-    #                           traj[argsort_loglike_traj[0]]['M_NFW'],
-    #                           # traj[argsort_loglike_traj[0]]['rs_NFW'],
-    #                           traj[argsort_loglike_traj[0]]['M_MN'],
-    #                           # traj[argsort_loglike_traj[0]]['a_MN'],
-    #                           ])
     params_MLE_0 = {key: value for key, value in traj[argsort_loglike_traj[0]].items()}
     
     chain = langevin_sampler(params_MLE_0, 
                              num_samples=num_langevine_samples, 
                              step_size=step_size, 
                              rng_key=key_langevine)
-    with open(f"langevine_chain_observatoinal_error_{chains_index}_{lr}.pkl", "wb") as f:
+    with open(f"./langevine_observational_error/langevine_chain_observatoinal_error_{chains_index}_{lr}.pkl", "wb") as f:
         pickle.dump(chain, f)
 
 if __name__ == "__main__":
     for i in tqdm(range(10)):
         key = random.PRNGKey(i)
-        compute_minima(key, chains_index=i, nsteps=100, num_langevine_samples=50_000)
+        compute_minima(key, chains_index=i, nsteps=100, num_langevine_samples=10_000)
 
 
