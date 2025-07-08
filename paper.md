@@ -25,31 +25,33 @@ bibliography: paper.bib
 ---
 
 # Background
+N-body simulations, which model the interactions within a system of particles, are a fundamental tool in computational physics with widespread applications [e.g. planetary science, stellar cluster dynamics, cosmology, molecular dynaimcs]. While Odisseo (Optimized Differentiable Integrator for Stellar Systems Evolution of Orbit) can be used in any context where an N-body simulation is useful, a key motivating application in galactic astrophysics is the study of stellar streams. Stellar streams are the fossilized remnants of dwarf galaxies and globular clusters that have been tidally disrupted by the gravitational potential of their host galaxy. These structures, observed as coherent filaments of stars in the Milky Way and other nearby galaxies, are powerful probes of astrophysics. Their morphology and kinematics encode detailed information about the host galaxy's gravitational field, making them ideal for mapping its shape. Furthermore, studying the properties of streams and their progenitors is key to unraveling the hierarchical assembly history of galaxies.
 
-Stellar streams are the fossilized remnants of dwarf galaxies and globular clusters that have been tidally disrupted by the gravitational potential of their host galaxy. These structures, observed as coherent filaments of stars in the Milky Way and other nearby galaxies, are powerful probes of astrophysics. Their morphology and kinematics encode detailed information about the host galaxy's gravitational field, making them ideal for mapping its shape. Furthermore, studying the properties of streams and their progenitors is key to unraveling the hierarchical assembly history of galaxies.
+For decades, the standard workflow has involved running computationally expensive simulations, comparing their projected outputs to observational data via summary statistics, and then using statistical methods like MCMC to explore the vast parameter spaces. While successful, this approaches loses information by compressing rich datasets into simple statistics, and struggles with the high-dimensional parameter spaces required by increasingly complex models. 
 
-The primary theoretical tool for studying stream dynamics is the N-body simulation, which models the gravitational interactions of a system of particles. For decades, the standard workflow has involved running computationally expensive simulations, comparing their projected outputs to observational data via summary statistics, and then using statistical methods like MCMC to explore the vast parameter spaces. While successful, this approaches loses information by compressing rich datasets into simple statistics, and struggles with the high-dimensional parameter spaces required by increasingly complex models. 
 
 # Statement of Need
 
-Inspired by the work of [`alvey:2024`] and [`nibauer:2024`] on stellar stream differentiable simulators, with Odisseo (Optimized Differentiable Integrator for Stellar Systems Evolution of Orbit) we intend to offer a general purpose, highly modular, full N-body package that can be use for detail inference pipeline by taking advantage of the full information present in the phase-space. To fully exploit the wealth of information in upcoming astronomical surveys, the field requires new tools that can overcome the limitations of traditional methods. As demonstrated by recent developments, a promising path forward lies in leveraging differentiable programming and modern simulation-based inference (SBI) techniques [`@holzschuh:2024`].
+Inspired by the work of [`@alvey:2024`] and [`@nibauer:2024`] on stellar stream differentiable simulators, with Odisseo we intend to offer a general purpose, highly modular, full N-body package that can be use for detail inference pipeline by taking advantage of the full information present in the phase-space. As demonstrated by recent developments, a promising path for inverse modelling techinques lies in leveraging differentiable programming and modern simulation-based inference (SBI) techniques [`@holzschuh:2024`].
 
 By providing a fully differentiable N-body simulator built on JAX, Odisseo directly addresses the key bottlenecks of the previous paradigm. Its differentiability allows for the direct use of simulation gradients to guide parameter inference, enabling a move from inefficient parameter searches to highly efficient, gradient-informed methods. 
 This approach offers two major advantages. First, it allows for direct optimization via gradient descent, making it possible to jointly and efficiently infer parameters of both the progenitor system and the host galaxy's potential. Second, it is a key enabler for advanced statistical methods like gradient-enhanced SBI, which combine the power of Bayesian inference with the efficiency of gradients to tackle otherwise intractable, high-dimensional problems. 
+
+Odisseo is designed with community-driven development in mind, providing a robust and accessible foundation that can be extended with new physics models and numerical methods.
 
 # Odisseo Overview
 
 Odisseo is a Python package written in a purely functional style to integrate seamlessly with the JAX ecosystem. Its design philosophy is to provide a simple, flexible, and powerful tool for inference-focused N-body simulations. Key features include:
 
-*   **Differentiable N-body**: The core of the package is a differentiable N-body code. The final state of the simulation is differentiable with respect to its initial parameters, including initial particle positions, velocities, and progenitor mass.
+*   **End-to-End Differentiable**: The entire simulation pipeline is differentiable. The final state of the particles is differentiable with respect to the initial parameters, including initial conditions, total time of integration, particle masses, and parameters of the external potential.
 
-*   **Modularity**: The modularity of the code allows to swap each component, allowing for quick prototyping and model testing. 
+*   **Modularity and Extensibility**: The code is highly modular. The functional design allows for individual components —such as integrators, external potentials, or initial condition generators— to be easily swapped or extended by the user. This facilitates rapid prototyping and model testing.
 
-*   **JAX Native**: The code is built entirely on JAX, enabling end-to-end JIT compilation for high performance, automatic vectorization (`vmap`) for trivially parallelizing computations, and automatic differentiation (`grad`) for gradient calculations.
+*   **JAX Native and Cross-Platform**: Built entirely on JAX [`@jax:2018`], Odisseo enables end-to-end JIT compilation for high performance, automatic vectorization (`jax.vmap`) for trivial parallelization, and automatic differentiation (`jax.grad`). This ensures high performance across diverse hardware, including CPUs, GPUs, and TPUs.
 
-*   **External Gravitational Potentials**: Odisseo allows for the inclusion of arbitrary external potentials to represent the host galaxy. This is essential for realistically modeling the tidal disruption of satellite systems in a Milky Way-like environment.
+*   **External Potentials**: Odisseo allows for the inclusion of arbitrary external potentials. This is essential for realistically modeling the tidal disruption of satellite systems in a Milky Way-like environment. It can be trivially generalized to physical settings where external potential are important (e.g. molecular dynamics)
 
-* **Unit Conversion**: The conversion between physical and simulation units is handled with a simple `CodeUnits` class that wrapps around `astropy` functionality [`astropy:2022`].
+*   **Unit Conversion**: The conversion between physical and simulation units is handled with a simple `CodeUnits` class that wrapps around `astropy` functionality [`@astropy:2022`].
 
 *   **Gradient-Informed Inference**: The package is explicitly designed for parameter inference. By defining a differentiable loss function that compares simulation outputs to data, users can leverage the computed gradients in optimizers for gradient descent, use them to augment the learning process in SBI frameworks, or enhance the output of already existing posterior results with differentiable posterior predictive checks. 
 
