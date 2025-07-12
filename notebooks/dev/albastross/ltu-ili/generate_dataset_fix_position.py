@@ -26,7 +26,7 @@ code_time = 3 * u.Gyr
 code_units = CodeUnits(code_length, code_mass, G=1, unit_time = code_time )  
 
 
-config = SimulationConfig(N_particles = 5_000,
+config = SimulationConfig(N_particles = 1_000,
                           return_snapshots = False, 
                           num_timesteps = 1000, 
                           external_accelerations=(NFW_POTENTIAL, MN_POTENTIAL, PSP_POTENTIAL), 
@@ -112,9 +112,9 @@ def vmapped_run_simulation(rng_key, params_values):
 
 
 start_time = time.time()
-batch_size = 50
-num_chunks = 100_725
-name_str = 52_725
+batch_size = 3_500
+num_chunks = 1_151_724
+name_str = 101_724
 for i in range(name_str, num_chunks, batch_size):
     rng_key = random.PRNGKey(i)
     parameter_value = jax.random.uniform(rng_key, 
