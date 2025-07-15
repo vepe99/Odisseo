@@ -421,12 +421,12 @@ API
 
       .. autodoc2-docstring:: odisseo.option_classes.SimulationParams.PSP_params
 
-   .. py:attribute:: Logarithmic_Params
-      :canonical: odisseo.option_classes.SimulationParams.Logarithmic_Params
+   .. py:attribute:: Logarithmic_params
+      :canonical: odisseo.option_classes.SimulationParams.Logarithmic_params
       :type: odisseo.option_classes.LogarithmicParams
       :value: 'LogarithmicParams(...)'
 
-      .. autodoc2-docstring:: odisseo.option_classes.SimulationParams.Logarithmic_Params
+      .. autodoc2-docstring:: odisseo.option_classes.SimulationParams.Logarithmic_params
 
 .. py:class:: SimulationConfig
    :canonical: odisseo.option_classes.SimulationConfig

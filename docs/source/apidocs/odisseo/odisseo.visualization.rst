@@ -37,6 +37,35 @@ Functions
    * - :py:obj:`create_projection_gif <odisseo.visualization.create_projection_gif>`
      - .. autodoc2-docstring:: odisseo.visualization.create_projection_gif
           :summary:
+   * - :py:obj:`build_spiral_stars <odisseo.visualization.build_spiral_stars>`
+     - .. autodoc2-docstring:: odisseo.visualization.build_spiral_stars
+          :summary:
+   * - :py:obj:`build_spiral_arms <odisseo.visualization.build_spiral_arms>`
+     - .. autodoc2-docstring:: odisseo.visualization.build_spiral_arms
+          :summary:
+   * - :py:obj:`spherical_coords <odisseo.visualization.spherical_coords>`
+     - .. autodoc2-docstring:: odisseo.visualization.spherical_coords
+          :summary:
+   * - :py:obj:`build_core_stars <odisseo.visualization.build_core_stars>`
+     - .. autodoc2-docstring:: odisseo.visualization.build_core_stars
+          :summary:
+   * - :py:obj:`haze <odisseo.visualization.haze>`
+     - .. autodoc2-docstring:: odisseo.visualization.haze
+          :summary:
+
+Data
+~~~~
+
+.. list-table::
+   :class: autosummary longtable
+   :align: left
+
+   * - :py:obj:`SCALE <odisseo.visualization.SCALE>`
+     - .. autodoc2-docstring:: odisseo.visualization.SCALE
+          :summary:
+   * - :py:obj:`arms_info <odisseo.visualization.arms_info>`
+     - .. autodoc2-docstring:: odisseo.visualization.arms_info
+          :summary:
 
 API
 ~~~
@@ -75,3 +104,40 @@ API
    :canonical: odisseo.visualization.create_projection_gif
 
    .. autodoc2-docstring:: odisseo.visualization.create_projection_gif
+
+.. py:data:: SCALE
+   :canonical: odisseo.visualization.SCALE
+   :value: 26
+
+   .. autodoc2-docstring:: odisseo.visualization.SCALE
+
+.. py:function:: build_spiral_stars(b, r, rot_fac, fuz_fac)
+   :canonical: odisseo.visualization.build_spiral_stars
+
+   .. autodoc2-docstring:: odisseo.visualization.build_spiral_stars
+
+.. py:data:: arms_info
+   :canonical: odisseo.visualization.arms_info
+   :value: [(), (), (), (), (), (), (), ()]
+
+   .. autodoc2-docstring:: odisseo.visualization.arms_info
+
+.. py:function:: build_spiral_arms(b, arms_info)
+   :canonical: odisseo.visualization.build_spiral_arms
+
+   .. autodoc2-docstring:: odisseo.visualization.build_spiral_arms
+
+.. py:function:: spherical_coords(num_pts, radius)
+   :canonical: odisseo.visualization.spherical_coords
+
+   .. autodoc2-docstring:: odisseo.visualization.spherical_coords
+
+.. py:function:: build_core_stars(scale_factor)
+   :canonical: odisseo.visualization.build_core_stars
+
+   .. autodoc2-docstring:: odisseo.visualization.build_core_stars
+
+.. py:function:: haze(scale_factor, r_mult, z_mult, density)
+   :canonical: odisseo.visualization.haze
+
+   .. autodoc2-docstring:: odisseo.visualization.haze

@@ -38,7 +38,7 @@ Functions
 API
 ~~~
 
-.. py:function:: single_body_acc(particle_i: jax.numpy.ndarray, particle_j: jax.numpy.ndarray, mass_i: jax.numpy.ndarray, mass_j: jax.numpy.ndarray, config: odisseo.option_classes.SimulationConfig, params: odisseo.option_classes.SimulationParams) -> typing.Tuple[jax.numpy.ndarray, jax.numpy.ndarray]
+.. py:function:: single_body_acc(particle_i: jax.numpy.ndarray, particle_j: jax.numpy.ndarray, mass_i: jax.numpy.ndarray, mass_j: jax.numpy.ndarray, config: odisseo.option_classes.SimulationConfig, params: odisseo.option_classes.SimulationParams) -> beartype.typing.Tuple[jax.numpy.ndarray, jax.numpy.ndarray]
    :canonical: odisseo.dynamics.single_body_acc
 
    .. autodoc2-docstring:: odisseo.dynamics.single_body_acc
@@ -53,17 +53,17 @@ API
 
    .. autodoc2-docstring:: odisseo.dynamics.direct_acc_laxmap
 
-.. py:function:: direct_acc_matrix(state: jax.numpy.ndarray, mass: jax.numpy.ndarray, config: odisseo.option_classes.SimulationConfig, params: odisseo.option_classes.SimulationParams, return_potential: bool = False) -> typing.Union[jax.numpy.ndarray, typing.Tuple[jax.numpy.ndarray, jax.numpy.ndarray]]
+.. py:function:: direct_acc_matrix(state: jax.numpy.ndarray, mass: jax.numpy.ndarray, config: odisseo.option_classes.SimulationConfig, params: odisseo.option_classes.SimulationParams, return_potential: bool = False) -> beartype.typing.Union[jax.numpy.ndarray, beartype.typing.Tuple[jax.numpy.ndarray, jax.numpy.ndarray]]
    :canonical: odisseo.dynamics.direct_acc_matrix
 
    .. autodoc2-docstring:: odisseo.dynamics.direct_acc_matrix
 
-.. py:function:: direct_acc_for_loop(state: jax.numpy.ndarray, mass: jax.numpy.ndarray, config: odisseo.option_classes.SimulationConfig, params: odisseo.option_classes.SimulationParams, return_potential: bool = False) -> typing.Union[jax.numpy.ndarray, typing.Tuple[jax.numpy.ndarray, jax.numpy.ndarray]]
+.. py:function:: direct_acc_for_loop(state: jax.numpy.ndarray, mass: jax.numpy.ndarray, config: odisseo.option_classes.SimulationConfig, params: odisseo.option_classes.SimulationParams, return_potential: bool = False) -> beartype.typing.Union[jax.numpy.ndarray, beartype.typing.Tuple[jax.numpy.ndarray, jax.numpy.ndarray]]
    :canonical: odisseo.dynamics.direct_acc_for_loop
 
    .. autodoc2-docstring:: odisseo.dynamics.direct_acc_for_loop
 
-.. py:function:: direct_acc_sharding(state: jax.numpy.ndarray, mass: jax.numpy.ndarray, config: odisseo.option_classes.SimulationConfig, params: odisseo.option_classes.SimulationParams, return_potential: bool = False) -> typing.Union[jax.numpy.ndarray, typing.Tuple[jax.numpy.ndarray, jax.numpy.ndarray]]
+.. py:function:: direct_acc_sharding(state: jax.numpy.ndarray, mass: jax.numpy.ndarray, config: odisseo.option_classes.SimulationConfig, params: odisseo.option_classes.SimulationParams, return_potential: bool = False) -> beartype.typing.Union[jax.numpy.ndarray, beartype.typing.Tuple[jax.numpy.ndarray, jax.numpy.ndarray]]
    :canonical: odisseo.dynamics.direct_acc_sharding
 
    .. autodoc2-docstring:: odisseo.dynamics.direct_acc_sharding

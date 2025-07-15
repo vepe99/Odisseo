@@ -19,9 +19,6 @@ Functions
    * - :py:obj:`Plummer_sphere <odisseo.initial_condition.Plummer_sphere>`
      - .. autodoc2-docstring:: odisseo.initial_condition.Plummer_sphere
           :summary:
-   * - :py:obj:`Plummer_sphere_multiprocess <odisseo.initial_condition.Plummer_sphere_multiprocess>`
-     - .. autodoc2-docstring:: odisseo.initial_condition.Plummer_sphere_multiprocess
-          :summary:
    * - :py:obj:`ic_two_body <odisseo.initial_condition.ic_two_body>`
      - .. autodoc2-docstring:: odisseo.initial_condition.ic_two_body
           :summary:
@@ -41,17 +38,12 @@ Functions
 API
 ~~~
 
-.. py:function:: Plummer_sphere(key: jaxtyping.PRNGKeyArray, config: odisseo.option_classes.SimulationConfig, params: odisseo.option_classes.SimulationParams) -> typing.Tuple
+.. py:function:: Plummer_sphere(key: jaxtyping.PRNGKeyArray, config: odisseo.option_classes.SimulationConfig, params: odisseo.option_classes.SimulationParams) -> beartype.typing.Tuple
    :canonical: odisseo.initial_condition.Plummer_sphere
 
    .. autodoc2-docstring:: odisseo.initial_condition.Plummer_sphere
 
-.. py:function:: Plummer_sphere_multiprocess(mass, config, params)
-   :canonical: odisseo.initial_condition.Plummer_sphere_multiprocess
-
-   .. autodoc2-docstring:: odisseo.initial_condition.Plummer_sphere_multiprocess
-
-.. py:function:: ic_two_body(mass1: typing.Union[float, jax.numpy.ndarray], mass2: typing.Union[float, jax.numpy.ndarray], rp: typing.Union[float, jax.numpy.ndarray], e: typing.Union[float, jax.numpy.ndarray], params: odisseo.option_classes.SimulationParams) -> typing.Tuple
+.. py:function:: ic_two_body(mass1: beartype.typing.Union[float, jax.numpy.ndarray], mass2: beartype.typing.Union[float, jax.numpy.ndarray], rp: beartype.typing.Union[float, jax.numpy.ndarray], e: beartype.typing.Union[float, jax.numpy.ndarray], params: odisseo.option_classes.SimulationParams) -> beartype.typing.Tuple
    :canonical: odisseo.initial_condition.ic_two_body
 
    .. autodoc2-docstring:: odisseo.initial_condition.ic_two_body
