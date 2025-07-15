@@ -1,8 +1,8 @@
 import os
 from math import pi
 
-# os.environ["CUDA_VISIBLE_DEVICES"] = "5, 4, 3, 1"  # Use only the first GPUos.environ["CUDA_VISIBLE_DEVICES"] = "5, 4, 3, 1"  # Use only the first GPU
-os.environ["CUDA_VISIBLE_DEVICES"] = "4"  # Use only the first GPU
+os.environ["CUDA_VISIBLE_DEVICES"] = "7, 6"  # Use only the first GPUos.environ["CUDA_VISIBLE_DEVICES"] = "5, 4, 3, 1"  # Use only the first GPU
+# os.environ["CUDA_VISIBLE_DEVICES"] = "4"  # Use only the first GPU
 
 from tqdm import tqdm
 from typing import Optional, Tuple, Callable, Union, List
@@ -24,7 +24,7 @@ from astropy import constants as c
 import odisseo
 from odisseo import construct_initial_state
 from odisseo.integrators import leapfrog
-from odisseo.dynamics import direct_acc, DIRECT_ACC, DIRECT_ACC_MATRIX
+from odisseo.dynamics import direct_acc, DIRECT_ACC, DIRECT_ACC_MATRIX, DIRECT_ACC_LAXMAP
 from odisseo.option_classes import SimulationConfig, SimulationParams, NFWParams, PlummerParams, NFW_POTENTIAL
 from odisseo.initial_condition import Plummer_sphere, ic_two_body
 from odisseo.utils import center_of_mass
@@ -44,21 +44,26 @@ plt.rcParams.update({
 })
 
 code_length = 10.0 * u.kpc
-code_mass = 1e8 * u.Msun
+code_mass = 1e4 * u.Msun
 G = 1 
-code_units = CodeUnits(code_length, code_mass, G=G)
+code_units = CodeUnits(code_length, code_mass, G=G, unit_time=(3 * u.Gyr))
 
 runtime_list_direct_acc = []
-N_particles_list = [100, 1_000, 10_000, 100_000, ]
+N_particles_list = [1_000, 10_000, 100_000, 200_000, 500_000 ]
+print("N devices:", len(jax.devices()))
+print("saving to:", f'./kartick_test_data/h100/100_time_step/multi_gpu_{len(jax.devices())}_laxmap.npy')
 print(N_particles_list)
+
+batch_size = 10_000 * len(jax.devices())  # Adjust batch size based on the number of devices
 
 for N_particles in tqdm(N_particles_list):
 
     config = SimulationConfig(N_particles=N_particles, 
                           return_snapshots=False, 
-                          num_timesteps=1, 
+                          num_timesteps=100, 
                           external_accelerations=(NFW_POTENTIAL,  ), 
-                          acceleration_scheme=DIRECT_ACC_MATRIX,
+                          acceleration_scheme=DIRECT_ACC_LAXMAP,
+                          batch_size=batch_size,
                           softening=(0.1 * u.kpc).to(code_units.code_length).value) #default values
 
     params = SimulationParams(t_end = (10 * u.Gyr).to(code_units.code_time).value,  
@@ -85,7 +90,7 @@ for N_particles in tqdm(N_particles_list):
     mass = jax.device_put(mass, NamedSharding(mesh, PartitionSpec("i")))
     
     times = []
-    for i in range(5):
+    for i in range(3):
         start_time = time.time()
         snapshots = jax.block_until_ready( time_integration(initial_state, mass, config, params) )
         end_time = time.time()
@@ -101,4 +106,4 @@ for N_particles in tqdm(N_particles_list):
     mean_runtime = np.mean(times)
     std_runtime = np.std(times)
     runtime_list_direct_acc.append((mean_runtime, std_runtime))
-    np.save(f'./kartick_test_data/multi_gpu_{len(jax.devices())}.npy', np.array(runtime_list_direct_acc))
+    np.save(f'./kartick_test_data/h100/100_time_step/multi_gpu_{len(jax.devices())}_laxmap_{batch_size}.npy', np.array(runtime_list_direct_acc))
