@@ -59,6 +59,13 @@ notebooks/gradient_test/grad_NFW_Potential.ipynb
 ```
 
 ```{toctree}
+:caption: GD1 stream
+:maxdepth: 1
+
+notebooks/GD1.ipynb
+```
+
+```{toctree}
 :maxdepth: 2
 :caption: API 
 
