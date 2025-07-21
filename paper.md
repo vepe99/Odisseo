@@ -32,7 +32,7 @@ The standard workflow has involved running computationally expensive simulations
 
 # Statement of Need
 
-Inspired by the work of [`@alvey:2024`] and [`@nibauer:2024`] on stellar stream differentiable simulators, with Odisseo we intend to offer a general purpose, highly modular, full N-body simulator package that can be use for detail inference pipeline by taking advantage of the full information present in the phase-space. The main goal is to explore the joint posterior distribution of progenitor and external potential parameters in the context of galactic dynamics. As demonstrated by recent developments, a promising path for inverse modelling techinques lies in leveraging differentiable programming and modern simulation-based inference (SBI) techniques [`@holzschuh:2024`].
+Inspired by the work of [@alvey:2024] and [@nibauer:2024] on stellar stream differentiable simulators, with Odisseo we intend to offer a general purpose, highly modular, full N-body simulator package that can be use for detail inference pipeline by taking advantage of the full information present in the phase-space. The main goal is to explore the joint posterior distribution of progenitor and external potential parameters in the context of galactic dynamics. As demonstrated by recent developments, a promising path for inverse modelling techinques lies in leveraging differentiable programming and modern simulation-based inference (SBI) techniques [@holzschuh:2024].
 
 By providing a fully differentiable N-body simulator built on JAX, Odisseo directly addresses the key bottlenecks of the standard inference pipeline (MCMC). Its differentiability allows for the direct use of simulation gradients to guide parameter inference, enabling a move from inefficient parameter searches to highly efficient, gradient-informed methods. 
 
@@ -46,26 +46,24 @@ Odisseo is a Python package written in a purely functional style to integrate se
 
 *   **Modularity and Extensibility**: The code is highly modular. The functional design allows for individual components —such as integrators, external potentials, or initial condition generators— to be easily swapped or extended by the user. This facilitates rapid prototyping and model testing.
 
-*   **JAX Native and Cross-Platform**: Built entirely on JAX [`@jax:2018`], Odisseo enables end-to-end JIT compilation for high performance, automatic vectorization (`jax.vmap`) for trivial parallelization, and automatic differentiation (`jax.grad`). This ensures high performance across diverse hardware, including CPUs, GPUs, and TPUs.
+*   **JAX Native and Cross-Platform**: Built entirely on JAX [@jax:2018], Odisseo enables end-to-end JIT compilation for high performance, automatic vectorization (`jax.vmap`) for trivial parallelization, and automatic differentiation (`jax.grad`). This ensures high performance across diverse hardware, including CPUs, GPUs, and TPUs.
 
 *   **External Potentials**: Odisseo allows for the inclusion of arbitrary external potentials. This is essential for realistically modeling the tidal disruption of satellite systems in a Milky Way-like environment. It can be trivially generalized to physical settings where external potential are important (e.g. molecular dynamics)
 
-*   **Unit Conversion**: The conversion between physical and simulation units is handled with a simple `CodeUnits` class that wrapps around `astropy` functionality [`@astropy:2022`].
+*   **Unit Conversion**: The conversion between physical and simulation units is handled with a simple `CodeUnits` class that wrapps around `astropy` functionality [@astropy:2022].
 
 
 # Running a simulation
 
 To run a simulation we need 4 main components :
-* **configuration**: changing them would require recompiling the simulation for `jax.jit`, because it would causes changes in shapes of the arrays.
-* **parameters**: physical paramters with respect to we can take the `jax.grad` of a scalar function.
-* **initial_conditions**: the initial state of the simulation, it contains the `positions` and `velocity` of all the particles. The `masses` are a separate array with the same shape of `initial_conditions`.
-* **time_integration**: main function that evolves the particles state.
+*   **configuration**: changing them would require recompiling the simulation for `jax.jit`, because it would causes changes in shapes of the arrays.
+*   **parameters**: physical paramters with respect to we can take the `jax.grad` of a scalar function.
+*   **initial_conditions**: the initial state of the simulation, it contains the `positions` and `velocity` of all the particles. The `masses` are a separate array with the same shape of `initial_conditions`.
+*   **time_integration**: main function that evolves the particles state.
 
 In the following use case we show how to evolve a Plummer sphere in a Milky-Way like potential to replicate a stellar stream with known progenitor position and velocity
 
-<div style="background-color: #f6f8fa; border: 1px solid #d0d7de; border-radius: 6px; padding: 16px; margin: 16px 0;">
-<div style="background-color: #f1f3f4; padding: 8px 12px; margin: -16px -16px 16px -16px; border-bottom: 1px solid #d0d7de; border-radius: 6px 6px 0 0; font-weight: 600; color: #24292f;">
-📓 Example: Running a GD-1 Stream Simulation
+<div style="background-color: #f8f8f8; border: 1px solid #e1e4e8; border-radius: 6px; padding: 16px; margin: 16px 0; font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;">
 </div>
 
 ```python
@@ -138,6 +136,8 @@ initial_state_stream = construct_initial_state(positions = positions, velocities
 final_state = time_integration(primitive_state =initial_state_stream, mass = mass, config = config, params = params)
 ```
 
+</div>
+
 
 # Acknowledgements
 
@@ -146,4 +146,3 @@ We acknowledge [funding source] for their support of this project. We also thank
 # References
 
 
-</div>
