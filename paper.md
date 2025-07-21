@@ -32,7 +32,7 @@ The standard workflow has involved running computationally expensive simulations
 
 # Statement of Need
 
-Inspired by the work of [`@alvey:2024`] and [`@nibauer:2024`] on stellar stream differentiable simulators, with Odisseo we intend to offer a general purpose, highly modular, full N-body package that can be use for detail inference pipeline by taking advantage of the full information present in the phase-space. The main goal is to explore the joint posterior distribution of progenitor and external potential parameters in the context of galactic dynamics. As demonstrated by recent developments, a promising path for inverse modelling techinques lies in leveraging differentiable programming and modern simulation-based inference (SBI) techniques [`@holzschuh:2024`].
+Inspired by the work of [`@alvey:2024`] and [`@nibauer:2024`] on stellar stream differentiable simulators, with Odisseo we intend to offer a general purpose, highly modular, full N-body simulator package that can be use for detail inference pipeline by taking advantage of the full information present in the phase-space. The main goal is to explore the joint posterior distribution of progenitor and external potential parameters in the context of galactic dynamics. As demonstrated by recent developments, a promising path for inverse modelling techinques lies in leveraging differentiable programming and modern simulation-based inference (SBI) techniques [`@holzschuh:2024`].
 
 By providing a fully differentiable N-body simulator built on JAX, Odisseo directly addresses the key bottlenecks of the standard inference pipeline (MCMC). Its differentiability allows for the direct use of simulation gradients to guide parameter inference, enabling a move from inefficient parameter searches to highly efficient, gradient-informed methods. 
 
@@ -62,6 +62,11 @@ To run a simulation we need 4 main components :
 * **time_integration**: main function that evolves the particles state.
 
 In the following use case we show how to evolve a Plummer sphere in a Milky-Way like potential to replicate a stellar stream with known progenitor position and velocity
+
+<div style="background-color: #f6f8fa; border: 1px solid #d0d7de; border-radius: 6px; padding: 16px; margin: 16px 0;">
+<div style="background-color: #f1f3f4; padding: 8px 12px; margin: -16px -16px 16px -16px; border-bottom: 1px solid #d0d7de; border-radius: 6px 6px 0 0; font-weight: 600; color: #24292f;">
+📓 Example: Running a GD-1 Stream Simulation
+</div>
 
 ```python
 from odisseo import construct_initial_state
@@ -139,3 +144,6 @@ final_state = time_integration(primitive_state =initial_state_stream, mass = mas
 We acknowledge [funding source] for their support of this project. We also thank [names of contributors] for their helpful feedback and contributions.
 
 # References
+
+
+</div>
