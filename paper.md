@@ -12,14 +12,17 @@ tags:
 authors:
   - name: Giuseppe Viterbo
     orcid: 0009-0001-1864-8476
-    affiliation: "1"
+    affiliation: "1, 2"
   - name: Tobias Buck
     orcid: 0000-0003-2027-399X
-    affilitation: "1"
+    affilitation: "1, 2"
 
 affiliations:
- - name: "IWR, Heidelberg University"
+ - name: "Interdisciplinary Center for Scientific Computing (IWR), University of Heidelberg, Im Neuenheimer
+          Feld 205, D-69120 Heidelberg, Germany"
    index: 1
+ - name: "Universität Heidelberg, Zentrum für Astronomie, Institut für Theoretische Astrophysik, Albert-Ueberle-Straße 2, D-69120   Heidelberg, Germany"
+   index: 2
 date: 21 July 2025
 bibliography: paper.bib
 ---
