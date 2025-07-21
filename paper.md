@@ -20,30 +20,29 @@ authors:
 affiliations:
  - name: "IWR, Heidelberg University"
    index: 1
-date: 01 July 2025
+date: 21 July 2025
 bibliography: paper.bib
 ---
 
 # Background
 N-body simulations, which model the interactions within a system of particles, are a fundamental tool in computational physics with widespread applications [e.g. planetary science, stellar cluster dynamics, cosmology, molecular dynaimcs]. While Odisseo (Optimized Differentiable Integrator for Stellar Systems Evolution of Orbit) can be used in any context where an N-body simulation is useful, a key motivating application in galactic astrophysics is the study of stellar streams. Stellar streams are the fossilized remnants of dwarf galaxies and globular clusters that have been tidally disrupted by the gravitational potential of their host galaxy. These structures, observed as coherent filaments of stars in the Milky Way and other nearby galaxies, are powerful probes of astrophysics. Their morphology and kinematics encode detailed information about the host galaxy's gravitational field, making them ideal for mapping its shape. Furthermore, studying the properties of streams and their progenitors is key to unraveling the hierarchical assembly history of galaxies.
 
-The standard workflow has involved running computationally expensive simulations, comparing their projected outputs to observational data via summary statistics, and then using statistical methods like MCMC to explore the vast parameter spaces. While successful, this approaches loses information by compressing rich datasets into simple statistics, and struggles with the high-dimensional parameter spaces required by increasingly complex models. With Odisseo we aim to explore how the new paradigm of differentiable simulations and automatic-differentition can be adopted to challenge many mody problems. 
+The standard workflow has involved running computationally expensive simulations, comparing their projected outputs to observational data via summary statistics, and then using statistical methods like MCMC to explore the vast parameter spaces. While successful, this approaches loses information by compressing rich datasets into simple statistics, and struggles with the high-dimensional parameter spaces required by increasingly complex models. With Odisseo we aim to explore how the new paradigm of differentiable simulations and automatic-differentition can be adopted to challenge many body problems. 
 
 
 # Statement of Need
 
-Inspired by the work of [`@alvey:2024`] and [`@nibauer:2024`] on stellar stream differentiable simulators, with Odisseo we intend to offer a general purpose, highly modular, full N-body package that can be use for detail inference pipeline by taking advantage of the full information present in the phase-space. As demonstrated by recent developments, a promising path for inverse modelling techinques lies in leveraging differentiable programming and modern simulation-based inference (SBI) techniques [`@holzschuh:2024`].
+Inspired by the work of [`@alvey:2024`] and [`@nibauer:2024`] on stellar stream differentiable simulators, with Odisseo we intend to offer a general purpose, highly modular, full N-body package that can be use for detail inference pipeline by taking advantage of the full information present in the phase-space. The main goal is to explore the joint posterior distribution of progenitor and external potential parameters in the context of galactic dynamics. As demonstrated by recent developments, a promising path for inverse modelling techinques lies in leveraging differentiable programming and modern simulation-based inference (SBI) techniques [`@holzschuh:2024`].
 
 By providing a fully differentiable N-body simulator built on JAX, Odisseo directly addresses the key bottlenecks of the standard inference pipeline (MCMC). Its differentiability allows for the direct use of simulation gradients to guide parameter inference, enabling a move from inefficient parameter searches to highly efficient, gradient-informed methods. 
-This approach offers two major advantages. First, it allows for direct optimization via gradient descent, making it possible to jointly and efficiently infer parameters of both the progenitor system and the host galaxy's potential. Second, it is a key enabler for advanced statistical methods like gradient-enhanced SBI, which combine the Neural Density Estimator with a .
 
-Odisseo is designed with community-driven development in mind, providing a robust and accessible foundation that can be extended with new physics models and numerical methods.
+Odisseo is designed with open-source, community-driven development in mind, providing a robust and accessible foundation that can be extended with new physics models and numerical methods.
 
 # Odisseo Overview
 
 Odisseo is a Python package written in a purely functional style to integrate seamlessly with the JAX ecosystem. Its design philosophy is to provide a simple, flexible, and powerful tool for inference-focused N-body simulations. Key features include:
 
-*   **End-to-End Differentiable**: The entire simulation pipeline is differentiable. The final state of the particles is differentiable with respect to the initial parameters, including initial conditions, total time of integration, particle masses, and parameters of the external potential.
+*   **End-to-End Differentiable**: The entire simulation pipeline is differentiable. The final state of the particles is differentiable with respect to the initial parameters, including initial conditions, total time of integration, particle masses, and parameters of the external potentials.
 
 *   **Modularity and Extensibility**: The code is highly modular. The functional design allows for individual components —such as integrators, external potentials, or initial condition generators— to be easily swapped or extended by the user. This facilitates rapid prototyping and model testing.
 
@@ -52,8 +51,6 @@ Odisseo is a Python package written in a purely functional style to integrate se
 *   **External Potentials**: Odisseo allows for the inclusion of arbitrary external potentials. This is essential for realistically modeling the tidal disruption of satellite systems in a Milky Way-like environment. It can be trivially generalized to physical settings where external potential are important (e.g. molecular dynamics)
 
 *   **Unit Conversion**: The conversion between physical and simulation units is handled with a simple `CodeUnits` class that wrapps around `astropy` functionality [`@astropy:2022`].
-
-*   **Gradient-Informed Inference**: The package is explicitly designed for parameter inference. By defining a differentiable loss function that compares simulation outputs to data, users can leverage the computed gradients in optimizers for gradient descent, use them to augment the learning process in SBI frameworks, or enhance the output of already existing posterior results with differentiable posterior predictive checks. 
 
 
 # Running a simulation
@@ -89,12 +86,12 @@ config = SimulationConfig(N_particles=int(1_000),
                           num_timesteps=1000, 
                           external_accelerations=(NFW_POTENTIAL, MN_POTENTIAL, PSP_POTENTIAL ), 
                           acceleration_scheme=DIRECT_ACC_MATRIX,
-                          softening=(0.1 * u.pc).to(code_units.code_length).value)                                #default values
+                          softening=(0.1 * u.pc).to(code_units.code_length).value)                                 #default values
 
 params = SimulationParams(t_end = (10 * u.Gyr).to(code_units.code_time).value,  
                           Plummer_params= PlummerParams(Mtot=(1e8 * u.Msun).to(code_units.code_mass).value,        #Plummer sphere parameters
                                                         a=(1 * u.kpc).to(code_units.code_length).value),
-                          NFW_params= NFWParams(Mvir=(4.3683325e11 * u.Msun).to(code_units.code_mass).value,        #Navarro-Frank-White halo model parameters
+                          NFW_params= NFWParams(Mvir=(4.3683325e11 * u.Msun).to(code_units.code_mass).value,       #Navarro-Frank-White halo model parameters
                                                r_s= (16.0 * u.kpc).to(code_units.code_length).value,),      
                           MN_params= MNParams(M = (68_193_902_782.346756 * u.Msun).to(code_units.code_mass).value,  #Miamoto-Nagai disk model parameters
                                               a = (3.0 * u.kpc).to(code_units.code_length).value,
@@ -105,6 +102,7 @@ params = SimulationParams(t_end = (10 * u.Gyr).to(code_units.code_time).value,
                           G=G, ) 
 
 # Create the TARGET stream for the GD-1 stream
+# random key generation 
 key = random.PRNGKey(43)
 #set up the particles in the initial state
 positions, velocities, mass = Plummer_sphere(key=key, params=params, config=config)
