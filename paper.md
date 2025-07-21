@@ -12,10 +12,10 @@ tags:
 authors:
   - name: Giuseppe Viterbo
     orcid: 0009-0001-1864-8476
-    affiliation: "1, 2"
+    affiliation: "1,2"
   - name: Tobias Buck
     orcid: 0000-0003-2027-399X
-    affilitation: "1, 2"
+    affiliation: "1,2"
 
 affiliations:
  - name: "Interdisciplinary Center for Scientific Computing (IWR), University of Heidelberg, Im Neuenheimer
