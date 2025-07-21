@@ -61,14 +61,15 @@ Four main components are needed to run a simulation :
 
 *   **parameters**: it contains the physical parameters with respect to we can differentiate through the time stepping.
 
-*   **initial_conditions**: the initial state of the simulation, it contains the `positions` and `velocity` of all the particles. The `masses` are a separate array with the same length of `initial_conditions`.
+*   **initial conditions**: the initial state of the simulation, it contains the `positions` and `velocities` of all the particles. The `masses` are a separate array with the same length of `initial conditions`.
 
-*   **time_integration**: the main function that perform the evolution of the particles state.
+*   **time integration**: the main function that perform the evolution of the particles state.
 
 Examples on how to set up different problems are presented in the [documentation](https://odisseo.readthedocs.io/en/latest/).
 
 # Acknowledgements
 
-We acknowledge [funding source] for their support of this project. We also thank [names of contributors] for their helpful feedback and contributions.
+This project was made possible by funding from the Carl Zeiss Stiftung.
+
 
 # References
