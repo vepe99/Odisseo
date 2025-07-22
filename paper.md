@@ -38,7 +38,7 @@ The standard workflow has involved running computationally expensive simulations
 
 # Statement of Need
 
-Inspired by the work of [@alvey:2024] and [@nibauer:2024] on stellar stream differentiable simulators, with Odisseo we intend to offer a general purpose, highly modular, full N-body simulator package that can be used for detail inference pipeline by taking advantage of the full information present in the phase-space. The main goal is to explore the joint posterior distribution of progenitor and external potential parameters in the context of galactic dynamics. As demonstrated by recent developments, a promising path for inverse modeling techniques lies in leveraging differentiable programming and modern simulation-based inference (SBI) techniques [@holzschuh:2024].
+Inspired by the work of [@alvey:2024] and [@nibauer:2024] on stellar stream differentiable simulators, with Odisseo we intend to offer a general purpose, highly modular, direct N-body simulator package that can be used for detail inference pipeline by taking advantage of the full information present in the phase-space. The main goal is to explore the joint posterior distribution of progenitor and external potential parameters in the context of galactic dynamics. As demonstrated by recent developments, a promising path for inverse modeling techniques lies in leveraging differentiable programming and modern simulation-based inference (SBI) techniques [@holzschuh:2024].
 
 By providing a fully differentiable N-body simulator built on JAX [@jax:2018], Odisseo directly addresses the key bottlenecks of the standard inference pipeline (MCMC). Its differentiability allows for the direct use of simulation gradients to guide parameter inference, enabling a move from inefficient parameter searches to highly efficient, gradient-informed methods. 
 
@@ -52,9 +52,11 @@ Odisseo is a Python package written in a purely functional style to integrate se
 
 *   **Modularity and Extensibility**: The code is highly modular. The functional design allows for individual components —such as integrators, external potentials, or initial condition generators— to be easily swapped or extended by the user. This facilitates rapid prototyping and model testing.
 
-*   **JAX Native and Cross-Platform**: Built entirely on JAX, Odisseo enables end-to-end JIT compilation for high performance, automatic vectorization (`jax.vmap`) for trivial parallelization, and automatic differentiation (`jax.grad`). This ensures high performance across diverse hardware, including CPUs, GPUs, and TPUs.
+*   **JAX Native and Cross-Platform**: Built entirely on JAX, Odisseo enables end-to-end Just In Time (JIT) compilation for high performance (`jax.jit`), automatic vectorization (`jax.vmap`) for trivial parallelization, and automatic differentiation (`jax.grad`). This ensures high performance across diverse hardware, including CPUs, GPUs, and TPUs.
 
-*   **External Potentials**: Odisseo allows for the inclusion of arbitrary external potentials. This is essential for realistically modeling the tidal disruption of satellite systems in a Milky Way-like environment. It can be trivially generalized to physical settings where external potentials are important (e.g. molecular dynamics)
+*   **External Potentials**: Odisseo allows for the inclusion of arbitrary external potentials. This is essential for realistically modeling the tidal disruption of satellite systems in a Milky Way-like environment. It can be trivially generalized to physical settings where external potentials are important (e.g. molecular dynamics).
+
+*  **Direct acceleration**: The pairwise particle forces are exact, down to a softening length that is used to avoid numerical errors.  
 
 *   **Unit Conversion**: The conversion between physical and simulation units is handled with a simple `CodeUnits` class that wraps around `astropy` functionality [@astropy:2022].
 
