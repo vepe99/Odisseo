@@ -29,8 +29,6 @@ Note that if `JAX` is not yet installed, only the CPU version of `JAX` will be i
 as a dependency. For a GPU-compatible installation of `JAX`, please refer to the
 [JAX installation guide](https://jax.readthedocs.io/en/latest/installation.html).
 
-:::{tip} Get started with this [simple example](notebooks/Plummer_in_NFWpotential.ipynb).
-:::
 
 ## Showcase
 
@@ -78,7 +76,7 @@ apidocs/odisseo/odisseo
 - [x] Implement simple `initial_conditions` (two body, self gravitating Plummer sphere )
 - [x] Implement units conversion
 - [x] Implement gradient trought the `time_integration` 
-- [ ] Implement diffrax backend for integrators
+- [x] Implement diffrax backend for integrators
 - [ ] Implement sphere sky projection
 - [x] Implement key `external_potential` for distrupted dwarf galaxies scenarios (Navarro-Frank-White halo, Myamoto-Nagai disk)
 - [x] Multi gpu parallalization
