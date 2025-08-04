@@ -49,10 +49,7 @@ energy_angular_momentum_plot(snapshots,
 ```
 An example of the previous function is shown below:
 
-<iframe src="./notebooks/visualization/image/E_L_Plummer_in_MNpotential.pdf" width="100%" height="600px">
-    <p>Your browser does not support PDFs. 
-    <a href="./notebooks/visualization/image/E_L_Plummer_in_MNpotential.pdf">Download the PDF</a>.</p>
-</iframe>
+<img src="./notebooks/visualization/image/E_L_Plummer_in_MNpotential.png" alt="Energy and Angular Momentum Conservation" width="100%">
 
 
 
