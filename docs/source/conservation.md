@@ -31,7 +31,7 @@ code_mass = 1e8 * u.Msun
 G = 1 
 code_units = CodeUnits(code_length, code_mass, G=G)
 
- config = SimulationConfig(N_particles=10_000, 
+config = SimulationConfig(N_particles=10_000, 
                           return_snapshots=True,                        #THE SNAPSHOTS NEEDS TO BE RETURNED 
                           num_snapshots=100,                            #THE NUMBER OF SNAPSHOTS THAT IS USED 
                           num_timesteps=1_000, 

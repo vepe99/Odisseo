@@ -10,6 +10,9 @@ Odisseo documentation
 
 self
 conservation.md
+units.md
+parallelism.md
+gradient.md
 ```
 
 `odisseo` differentiable direct Nbody written in `JAX`.
