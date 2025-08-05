@@ -8,7 +8,7 @@ In Odisseo the set-up of the simulation is splitted in two parts:
 - Configuration: set the functions that are called by the simulation. Since it controlls also the shapes of the `jnp.arrays`, changing the configuration triggers `jax.jit` recompilation. 
 
 
-# Configuration:
+## Configuration:
 
 The simulation configuration are set by the `odisseo.option_classes.SimulationConfig` class. The main configuration that can be set are:
 - `N_particles` [int]: set the *number of particles* in the simulation. It sets the first dimension of `state` and `mass` array.
@@ -17,7 +17,7 @@ The simulation configuration are set by the `odisseo.option_classes.SimulationCo
 - `fixed_timestep` [bool]: set if the simulation will run with fixed size time steps (*True*) or adopt an adaptive time step (*False*, not yet implemented !)
 - `num_timesteps` [int]: the number of time steps to be used. 
 - `softening` [float]: the value of the *softening length* defined as:
-$$\Phi(\mathbf{r}) = -\frac{G m}{\sqrt{|\mathbf{r}|^2 + \epsilon^2}}$$. It is used to avoid numerical issue due to finite time stepping and close encouters between particles leading to the unphysically large accelerations.
+$\Phi(\mathbf{r}) = -\frac{G m}{\sqrt{|\mathbf{r}|^2 + \epsilon^2}}$. It is used to avoid numerical issue due to finite time stepping and close encouters between particles leading to the unphysically large accelerations.
 - `integrator` [int]: set which explicit numerical integrator scheme to evolve the `state`. The available numerical scheme are:
     - LEAPFROG: second-order sympletic integrator (also know as Velocity Verlet). 
     - RK4: fourth-order Runghe-Kutta integrator.
@@ -29,6 +29,18 @@ $$\Phi(\mathbf{r}) = -\frac{G m}{\sqrt{|\mathbf{r}|^2 + \epsilon^2}}$$. It is us
     - REVERSIBLEHEUN 
     - LEAPFROGMIDPOINT 
 - `acceleation_scheme` [int]: set the strategy to calculate the pairwise distance between particles. This is usually the bottle-neck of direct N-body simulations, both in terms of computational time and memory requirment. The implemented strategy are:
-    - DIRECT_ACC:
-    - DIRECT_ACC_LAXMAP:
-    - DIRECT_ACC_MATRIX:
+    - DIRECT_ACC: calculate the pair-wise distance matrix using a double `jax.vmap` on the particles `state`.
+    - DIRECT_ACC_LAXMAP: calculate the pair-wise distance matrix using `jax.lax.map` and `jax.vmap`. The batch size is set by `batch_size` configuration (see below). It can also be set to use a double `jax.lax.map` by setting the configuration `double_map = True`. This strategies are generally the slowest but also the most memory efficient. 
+    - DIRECT_ACC_MATRIX: calculate the pair-wise distance matrix using array broadcasting operation. This is the fastest strategy.
+- `batch_size` [int]: set the batch size of the `jax.lax.map` in the pair-wise distance calculation. It is used if and only if `acceleation_scheme = DIRECT_ACC_LAXMAP`.
+- `double_map` [bool]: set if a double `jax.lax.map` (*True*), or a `jax.lax.map` and `jax.vmap` are used to calculate the pair-wise distance. It is used if and only if `acceleation_scheme = DIRECT_ACC_LAXMAP`.
+- `external_accelerations` [tuple]: set the external potential functions, hence the external acceleration, that will be used during the simulation. The value of the parameters of this analytic function are part of the `odisseo.option_classes.SimulationParams` and are described in the `Parameters` section below. The implemented external acceleration:
+    - NFW_POTENTIAL: Navarro-Frank-White halo potential. It is characterized by two parameters: the virial Mass `Mvir` and the scale radius `r_s`.
+    - POINT_MASS: Point Mass potential. It is characterized by one parameter: the mass `M`. 
+    - MN_POTENTIAL: Miamoto-Nagai disk potential. It is characterized by three parameters:
+    the mass `M`, the scale length `a` and the scale height `b`.
+    - PSP_POTENTIAL: Power Spherical Potential Cutoff bulge potential. It is characterized by three parameters: the mass `M`, the inner power `alpha` and the cut-off radius `r_c`.
+- `num_checkpoints` [int]: set the number of checkpoints to be used by the `checkpointed_while_loop` in the `odisseo.time_integration._time_integration_fixed_steps_snapshot` function. For more information check the related function in the `equinox` module at the following [link](https://github.com/patrick-kidger/equinox/blob/main/equinox/internal/_loop/checkpointed.py).
+- `progress_bar` [bool]: set if a progress bar is shown (*True*) or not (*False*) during the integration.
+
+## Parameters:
