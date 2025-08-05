@@ -33,8 +33,32 @@ as a dependency. For a GPU-compatible installation of `JAX`, please refer to the
 [JAX installation guide](https://jax.readthedocs.io/en/latest/installation.html).
 
 
-## Fondamentals
-The core of Odisseo's pipeline and how to run a simulation is described in detail in [Running a simulation](./first_simulation.md). Particular importance is put in the choise of the [simulation units](./units.md) and what [checks](./conservation.md) can be run to see if the simulation underwent numerical errors as a post-process strategy. Lastly, some distribution strategy are shown in [Distributed simulations](./parallelism.md) to take full advantage of multi-devices machines.
+::::{grid} 1 2 2 3
+:gutter: 1 1 1 2
+
+:::{grid-item-card} {octicon}`∇;1.5em;sd-mr-1` Differentiable N-body code
+
+Written in `JAX`, `Odisseo` is fully differentiable - a simulation can be differentiated with respect to any input parameter - and just-in-time compiled for fast execution on CPU, GPU, or TPU. 
+
++++
+[Learn more »](./first_simulation.md)
+:::
+
+:::{grid-item-card} {octicon}`shield-check;1.5em;sd-mr-1` Well-considered Numerical Methods
+
+Particular importance is put in the choise of the [simulation units](./units.md) and what [checks](./conservation.md) can be run to see if the simulation underwent numerical errors as a post-process strategy. 
+
++++
+[Learn more »](./units.md)
+:::
+
+:::{grid-item-card} {octicon}`zap;1.5em;sd-mr-1` Easily parallelized 
+
+Distribution strategy are easily implemented to take full advantage of multi-devices machines.
+
++++
+[Learn more »](./parallelism.md)
+:::
 
 ## Notebooks for Getting Started
 
