@@ -7,9 +7,9 @@ Simulating gravitational systems often involves quantities spanning many orders 
 Odisseo makes no assumptions about your choice of units. Instead, it provides a flexible system for defining simulation units and converting between physical and code units.
 
 ## ⚠️ Why Unit Conversion Matters
-    1. Numerical stability: Large or small values (e.g., 10⁻¹⁰ pc or 10¹⁰ $$M_\odot$$) can cause floating-point precision errors or instabilities during integration.
-    2. Physical meaning: Without clearly defined units, interpreting simulation results becomes error-prone.
-    3. Modularity: Whether you're simulating a Milky Way analog or a dwarf galaxy, consistent unit handling makes your setup portable and interpretable.
+1. Numerical stability: Large or small values (e.g., 10⁻¹⁰ pc or 10¹⁰ $$M_\odot$$) can cause floating-point precision errors or instabilities during integration.
+2. Physical meaning: Without clearly defined units, interpreting simulation results becomes error-prone.
+3. Modularity: Whether you're simulating a Milky Way analog or a dwarf galaxy, consistent unit handling makes your setup portable and interpretable.
 
 
 ## Specify Simulation Units Explicitly
