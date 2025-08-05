@@ -80,4 +80,4 @@ ax.legend()
 
 An example of the previous function is shown below:
 
-<img src="../visualization/image/5_snapshots.png" alt="5_snapshots" width="100%">
+<img src="../../notebooks/visualization/image/5_snapshots.png" alt="5_snapshots" width="100%">
