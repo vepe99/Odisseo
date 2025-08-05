@@ -36,7 +36,7 @@ as a dependency. For a GPU-compatible installation of `JAX`, please refer to the
 ::::{grid} 1 2 2 3
 :gutter: 1 1 1 2
 
-:::{grid-item-card} {octicon}`∇;1.5em;sd-mr-1` Differentiable N-body code
+:::{grid-item-card} ∇ Differentiable N-body code
 
 Written in `JAX`, `Odisseo` is fully differentiable - a simulation can be differentiated with respect to any input parameter - and just-in-time compiled for fast execution on CPU, GPU, or TPU. 
 
