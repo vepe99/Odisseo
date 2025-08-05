@@ -20,7 +20,7 @@ parallelism.md
 ::::{grid} 1 2 2 3
 :gutter: 1 1 1 2
 
-:::{grid-item-card} $\Nabla$ Differentiable N-body code
+:::{grid-item-card} $\nabla$ Differentiable N-body code
 
 Written in `JAX`, `Odisseo` is fully differentiable - a simulation can be differentiated with respect to any input parameter - and just-in-time compiled for fast execution on CPU, GPU, or TPU. 
 
@@ -44,6 +44,7 @@ Distribution strategy are easily implemented to take full advantage of multi-dev
 [Learn more »](./parallelism.md)
 :::
 
+::::
 
 # Installation
 
