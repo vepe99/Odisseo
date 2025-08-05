@@ -5,7 +5,7 @@ Sanity Check
 
 Accurate long-term simulations in N-body dynamics hinge on the precise computation of forces and the integration of particle trajectories. One of the most fundamental validation steps in any N-body code is verifying the conservation of physical quantities—most importantly, total energy and angular momentum.
 
-## Why Check for Conservation?
+## ⚠️ Why Check for Conservation?
 In a system governed by Newtonian gravity or other *time-independent* conservative forces, total energy and angular momentum should be conserved over time. These quantities serve as diagnostic tools for numerical accuracy and physical consistency:
 
 - Total Energy conservation: in an isolated system the forces are conservative, the total mechanical energy (kinetic + potential) must remain constant.
