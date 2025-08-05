@@ -44,3 +44,30 @@ $\Phi(\mathbf{r}) = -\frac{G m}{\sqrt{|\mathbf{r}|^2 + \epsilon^2}}$. It is used
 - `progress_bar` [bool]: set if a progress bar is shown (*True*) or not (*False*) during the integration.
 
 ## Parameters:
+The simulation parameters are set by the odisseo.option_classes.SimulationParams class. These parameters define the physical characteristics of the system and can be used for differentiation (e.g., computing gradients with respect to parameters). Changing parameters does not trigger JAX recompilation, so they are efficient to update between runs.
+The main parameters that can be set are:
+
+- `G` [float]: the gravitational constant used in the simulation. It is suggested to use the `odisseo.units.CodeUnits` class to return the value of `G` in the code units.
+- `t_end` [float]: the final simulation time, in code units. The total duration of the simulation will run from `t=0` to `t=t_end`.
+- `Plummer Potential` [PlummerParams]: set the parameters for the `odisseo.initial_condition.Plummer` function to generate a self gravitating Plummer sphere (model for dwarf galaxies and Globular Clusters). The parameters that needs to be set are:
+    -`a` [float]: scale length of the Plummer sphere.
+    -`Mtot` [float]: total mass of the Plummer sphere.
+
+`External Potential Parameters`
+Depending on the choice of external potential(s) in the configuration, the corresponding parameter set will be used. Each potential has its own NamedTuple class:
+- `NFW Potential` [NFWParams]:
+    - `Mvir` [float]: virial mass of the halo.
+    - `r_s` [float]: scale radius of the halo.
+- `Point Mass `[PointMassParams]:
+    - `M` [float]: mass of the point mass.
+- `Miyamoto-Nagai Potential` [MNParams]:
+    -`M` [float]: mass of the disk.
+    -`a` [float]: scale length.
+    -`b` [float]: scale height.
+- `Power Spherical Potential with Cutoff` [PSPParams]:
+    -`M` [float]: mass of the bulge.
+    -`alpha` [float]: inner slope of the density profile.
+    -`r_c` [float]: cutoff radius of the bulge.
+
+> **📌 Important**: All parameter values must be explicitly converted to code units before being passed to the simulation. This ensures consistency and correctness during integration. For more information on how to define and convert physical quantities, see the Units Conversion section.
+
