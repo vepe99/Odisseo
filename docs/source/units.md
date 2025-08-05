@@ -7,7 +7,7 @@ Simulating gravitational systems often involves quantities spanning many orders 
 Odisseo makes no assumptions about your choice of units. Instead, it provides a flexible system for defining simulation units and converting between physical and code units.
 
 ## ⚠️ Why Unit Conversion Matters
-1. Numerical stability: Large or small values (e.g., 10⁻¹⁰ pc or 10¹⁰ $$M_\odot$$) can cause floating-point precision errors or instabilities during integration.
+1. Numerical stability: Large or small values (e.g., 10⁻¹⁰ pc or 10¹⁰ $M_\odot$) can cause floating-point precision errors or instabilities during integration.
 2. Physical meaning: Without clearly defined units, interpreting simulation results becomes error-prone.
 3. Modularity: Whether you're simulating a Milky Way analog or a dwarf galaxy, consistent unit handling makes your setup portable and interpretable.
 
@@ -15,7 +15,7 @@ Odisseo makes no assumptions about your choice of units. Instead, it provides a 
 ## Specify Simulation Units Explicitly
 When setting up a simulation in Odisseo, you must define your base units:
 A unit of length (e.g., 1 kpc)
-A unit of mass (e.g., 1e4 $$M_\odot$$)
+A unit of mass (e.g., 1e4 $M_\odot$)
 Optionally a unit of time (e.g., 1 Myr)
 or a gravitational constant G in physical units (e.g., astropy.constants.G)
 The CodeUnits class will derive all other code units—such as time, velocity, and force—from your input, using Astropy units conversion in the backhand.
