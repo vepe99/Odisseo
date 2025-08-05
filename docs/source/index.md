@@ -33,7 +33,8 @@ as a dependency. For a GPU-compatible installation of `JAX`, please refer to the
 [JAX installation guide](https://jax.readthedocs.io/en/latest/installation.html).
 
 
-## Showcase
+## Fondamentals
+The core of Odisseo's pipeline and how to run a simulation is described in detail in [Running a simulation](./first_simulation.md). Particular importance is put in the choise of the [simulation units](./units.md) and what [checks](./conservation.md) can be run to see if the simulation underwent numerical errors as a post-process strategy. Lastly, some distribution strategy are shown in [Distributed simulations](./parallelism.md) to take full advantage of multi-devices machines.
 
 ## Notebooks for Getting Started
 
