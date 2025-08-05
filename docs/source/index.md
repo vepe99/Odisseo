@@ -17,26 +17,10 @@ parallelism.md
 
 `odisseo` differentiable direct Nbody written in `JAX`.
 
-
-## Installation
-
-`odisseo` can be installed via by cloning the repo and then via `pip`
-
-```bash
-git clone https://github.com/vepe99/Odisseo.git
-cd Odisseo
-pip install .
-```
-
-Note that if `JAX` is not yet installed, only the CPU version of `JAX` will be installed
-as a dependency. For a GPU-compatible installation of `JAX`, please refer to the
-[JAX installation guide](https://jax.readthedocs.io/en/latest/installation.html).
-
-
 ::::{grid} 1 2 2 3
 :gutter: 1 1 1 2
 
-:::{grid-item-card} ∇ Differentiable N-body code
+:::{grid-item-card} $\Nabla$ Differentiable N-body code
 
 Written in `JAX`, `Odisseo` is fully differentiable - a simulation can be differentiated with respect to any input parameter - and just-in-time compiled for fast execution on CPU, GPU, or TPU. 
 
@@ -60,7 +44,24 @@ Distribution strategy are easily implemented to take full advantage of multi-dev
 [Learn more »](./parallelism.md)
 :::
 
-## Notebooks for Getting Started
+
+# Installation
+
+`odisseo` can be installed via by cloning the repo and then via `pip`
+
+```bash
+git clone https://github.com/vepe99/Odisseo.git
+cd Odisseo
+pip install .
+```
+
+Note that if `JAX` is not yet installed, only the CPU version of `JAX` will be installed
+as a dependency. For a GPU-compatible installation of `JAX`, please refer to the
+[JAX installation guide](https://jax.readthedocs.io/en/latest/installation.html).
+
+
+
+# Notebooks for Getting Started
 
 ```{toctree}
 :caption: Self gravitating system
@@ -99,7 +100,7 @@ apidocs/odisseo/odisseo
 
 ```
 
-## Roadmap
+# Roadmap
 
 - [x] Implement simple `initial_conditions` (two body, self gravitating Plummer sphere )
 - [x] Implement units conversion
