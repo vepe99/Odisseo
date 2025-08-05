@@ -9,10 +9,10 @@ Odisseo documentation
 :caption: Introduction
 
 self
+first_simulation.md
 conservation.md
 units.md
 parallelism.md
-gradient.md
 ```
 
 `odisseo` differentiable direct Nbody written in `JAX`.

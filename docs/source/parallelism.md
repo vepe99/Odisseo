@@ -1,5 +1,5 @@
-Parallelism
-==================
+Distributed simulations
+=======================
 
 Odisseo leverages JAX’s native support for data-parallel computation to scale N-body simulations efficiently across one or more GPUs. This is particularly useful when:
  - Running many simulations in parallel 
