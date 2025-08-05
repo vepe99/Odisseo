@@ -2,8 +2,9 @@ Distributed simulations
 =======================
 
 Odisseo leverages JAX’s native support for data-parallel computation to scale N-body simulations efficiently across one or more GPUs. This is particularly useful when:
- - Running many simulations in parallel 
- - Accelerating a single large simulation across multiple devices
+ - [Running many simulations in parallel on a single device](#parallel-simulation-on-a-single-device).
+ - [Running many simulations in parallel on a multiple devices](#parallel-simulations-on-multiple-devices).
+ - [Accelerating a single large simulation across multiple devices](#parallelizing-a-single-simulation-on-multiple-devices).
 JAX encourages a "computation follows data" strategy: once your data is on a device (e.g., a GPU), JAX will execute the corresponding operations on that same device automatically.
 
 ## Selecting devices
