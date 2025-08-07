@@ -1,46 +1,26 @@
-:py:mod:`odisseo`
-=================
-
-.. py:module:: odisseo
-
-.. autodoc2-docstring:: odisseo
-   :allowtitles:
+odisseo package
+===============
 
 Submodules
 ----------
 
 .. toctree::
-   :titlesonly:
-   :maxdepth: 1
+   :maxdepth: 4
 
-   odisseo.visualization
-   odisseo.integrators
    odisseo.dynamics
    odisseo.initial_condition
+   odisseo.integrators
    odisseo.option_classes
    odisseo.potentials
    odisseo.time_integration
    odisseo.units
    odisseo.utils
+   odisseo.visualization
 
-Package Contents
-----------------
+Module contents
+---------------
 
-Functions
-~~~~~~~~~
-
-.. list-table::
-   :class: autosummary longtable
-   :align: left
-
-   * - :py:obj:`construct_initial_state <odisseo.construct_initial_state>`
-     - .. autodoc2-docstring:: odisseo.construct_initial_state
-          :summary:
-
-API
-~~~
-
-.. py:function:: construct_initial_state(position, velocity)
-   :canonical: odisseo.construct_initial_state
-
-   .. autodoc2-docstring:: odisseo.construct_initial_state
+.. automodule:: odisseo
+   :members:
+   :show-inheritance:
+   :undoc-members:

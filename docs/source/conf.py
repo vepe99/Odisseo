@@ -25,9 +25,9 @@ extensions = [
 
     # automatic API documentation
     'autodoc2',
-    # 'sphinx.ext.autosummary',
-    # 'sphinx.ext.autodoc',
-    # 'sphinxcontrib.apidoc',
+    'sphinx.ext.autosummary',
+    'sphinx.ext.autodoc',
+    'sphinxcontrib.apidoc',
 
     # enable google style docstrings
     'sphinx.ext.napoleon', 
@@ -46,7 +46,9 @@ extensions = [
     'sphinx.ext.extlinks',
 ]
 
-
+apidoc_module_dir = '../../odisseo'
+apidoc_output_dir = 'apidocs/odisseo'
+apidoc_separate_modules = True
 
 autodoc2_packages = [
     "../../odisseo",
@@ -76,8 +78,10 @@ myst_enable_extensions = [
 autodoc_default_flags = ['members']
 autosummary_generate = True
 
-napoleon_google_docstring = True
-napoleon_numpy_docstring = True
+# napoleon_google_docstring = True
+# napoleon_numpy_docstring = True
+napoleon_use_rtype = False
+
 
 
 # templates_path = ['_templates']
