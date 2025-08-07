@@ -1,11 +1,17 @@
-odisseo package
-===============
+:py:mod:`odisseo`
+=================
+
+.. py:module:: odisseo
+
+.. autodoc2-docstring:: odisseo
+   :allowtitles:
 
 Submodules
 ----------
 
 .. toctree::
-   :maxdepth: 4
+   :titlesonly:
+   :maxdepth: 1
 
    odisseo.dynamics
    odisseo.initial_condition
