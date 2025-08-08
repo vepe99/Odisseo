@@ -65,7 +65,7 @@ class PointMassParams(NamedTuple):
     
 class MNParams(NamedTuple):
     """
-    NamedTuple containing the parameters for the Myamoto Nagai profile
+    NamedTuple containing the parameters for the Miyamoto-Nagai profile
     
     """
 

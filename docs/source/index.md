@@ -30,7 +30,7 @@ Written in `JAX`, `Odisseo` is fully differentiable - a simulation can be differ
 
 :::{grid-item-card} {octicon}`shield-check;1.5em;sd-mr-1` Well-considered Numerical Methods
 
-Particular importance is put in the choise of the [simulation units](./units.md) and what [checks](./conservation.md) can be run to see if the simulation underwent numerical errors as a post-process strategy. 
+Particular importance is put in the choice of the [simulation units](./units.md) and what [checks](./conservation.md) can be run to see if the simulation underwent numerical errors as a post-processing strategy. 
 
 +++
 [Learn more »](./units.md)
@@ -38,7 +38,7 @@ Particular importance is put in the choise of the [simulation units](./units.md)
 
 :::{grid-item-card} {octicon}`zap;1.5em;sd-mr-1` Easily parallelized 
 
-Distribution strategy are easily implemented to take full advantage of multi-devices machines.
+Distribution strategies are easily implemented to take full advantage of multi-device machines.
 
 +++
 [Learn more »](./parallelism.md)
@@ -48,7 +48,7 @@ Distribution strategy are easily implemented to take full advantage of multi-dev
 
 # Installation
 
-`odisseo` can be installed via by cloning the repo and then via `pip`
+`odisseo` can be installed by cloning the repo and then via `pip`
 
 ```bash
 git clone https://github.com/vepe99/Odisseo.git
@@ -105,9 +105,9 @@ apidocs/odisseo/odisseo
 
 - [x] Implement simple `initial_conditions` (two body, self gravitating Plummer sphere )
 - [x] Implement units conversion
-- [x] Implement gradient trought the `time_integration` 
+- [x] Implement gradient through the `time_integration` 
 - [x] Implement diffrax backend for integrators
 - [ ] Implement sphere sky projection
-- [x] Implement key `external_potential` for distrupted dwarf galaxies scenarios (Navarro-Frank-White halo, Myamoto-Nagai disk)
-- [x] Multi gpu parallalization
+- [x] Implement key `external_potential` for disrupted dwarf galaxies scenarios (Navarro-Frank-White halo, Miyamoto-Nagai disk)
+- [x] Multi gpu parallelization
 - [ ] Implement adaptive time stepping

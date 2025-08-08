@@ -11,7 +11,7 @@ In a system governed by Newtonian gravity or other *time-independent* conservati
 - Total Energy conservation: in an isolated system the forces are conservative, the total mechanical energy (kinetic + potential) must remain constant.
 - Angular Momentum conservation: for systems with rotational symmetry (e.g., central potentials or disk galaxies), angular momentum must be conserved.
 
-In order to access the conservation of quantities, in Odisseo the function `energy_angular_momentum_plot` is implemented to check the relative error (a minimal example is shown below) across the time steps as a post-process operation.
+In order to access the conservation of quantities, in Odisseo the function `energy_angular_momentum_plot` is implemented to check the relative error (a minimal example is shown below) across the time steps as a post-processing operation.
 
 $$
 \delta E = \frac{|E(t) - E(0)|}{|E(0)|}, \quad 
@@ -32,8 +32,8 @@ G = 1
 code_units = CodeUnits(code_length, code_mass, G=G)
 
 config = SimulationConfig(N_particles=10_000, 
-                          return_snapshots=True,                        #THE SNAPSHOTS NEEDS TO BE RETURNED 
-                          num_snapshots=100,                            #THE NUMBER OF SNAPSHOTS THAT IS USED 
+                          return_snapshots=True,                        #THE SNAPSHOTS NEED TO BE RETURNED 
+                          num_snapshots=100,                            #THE NUMBER OF SNAPSHOTS THAT ARE USED 
                           num_timesteps=1_000, 
                           external_accelerations=(MN_POTENTIAL,  ), 
                           acceleration_scheme=DIRECT_ACC,

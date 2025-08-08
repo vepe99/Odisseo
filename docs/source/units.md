@@ -14,11 +14,10 @@ Odisseo makes no assumptions about your choice of units. Instead, it provides a 
 
 ## Specify Simulation Units Explicitly
 When setting up a simulation in Odisseo, you must define your base units:
-A unit of length (e.g., 1 kpc)
-A unit of mass (e.g., 1e4 $M_\odot$)
-Optionally a unit of time (e.g., 1 Myr)
-or a gravitational constant G in physical units (e.g., astropy.constants.G)
-The CodeUnits class will derive all other code units—such as time, velocity, and force—from your input, using Astropy units conversion in the backhand.
+- Unit of length (e.g., 1 kpc)
+- Unit of mass (e.g., 1e4 $M_\odot$)
+- Optionally unit of time (e.g., 1 Myr), or a gravitational constant G in physical units (e.g., astropy.constants.G)
+The CodeUnits class will derive all other code units—such as time, velocity, and force—from your input, using Astropy units conversion in the backhend.
 
 > **📌 Important**: Every physical quantity you pass into the simulation (e.g., positions, masses, velocities) **must be explicitly converted into code units** using your `CodeUnits` instance.
 
@@ -33,7 +32,7 @@ from odisseo.units import CodeUnits                                         #Cod
 
 code_length = 10 * u.kpc                                                    #length simulation unit
 code_mass = 1e4 * u.Msun                                                    #mass  simulation unit  
-G = 1                                                                       #G here is just a place holder when time unit are passed 
+G = 1                                                                       #G here is just a place holder when time units are passed 
 code_time = 3 * u.Gyr                                                       #time simulation unit
 code_units = CodeUnits(code_length, code_mass, G=1, unit_time = code_time ) #G and all the derived units are handled internally in the code_units object
 

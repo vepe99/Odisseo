@@ -144,7 +144,7 @@ def diffrax_solver(state: jnp.ndarray,
                     dt: Scalar,
                     config: SimulationConfig,
                     params: SimulationParams,) -> jnp.ndarray:
-    """Diffrax backhand
+    """Diffrax backhend
 
     Args:
         state (jax.numpy.ndarray): The state of the particles, where the first column represents positions and the second column represents velocities.

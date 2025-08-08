@@ -3,30 +3,30 @@ Distributed simulations
 
 Odisseo leverages JAX’s native support for data-parallel computation to scale N-body simulations efficiently across one or more GPUs. This is particularly useful when:
  - [Running many simulations in parallel on a single device](#parallel-simulations-on-a-single-device).
- - [Running many simulations in parallel on a multiple devices](#parallel-simulations-on-multiple-devices).
+ - [Running many simulations in parallel on multiple devices](#parallel-simulations-on-multiple-devices).
  - [Accelerating a single large simulation across multiple devices](#parallelizing-a-single-simulation-on-multiple-devices).
 JAX encourages a "computation follows data" strategy: once your data is on a device (e.g., a GPU), JAX will execute the corresponding operations on that same device automatically.
 
 ## Selecting devices
-When a GPU is available, `jax` will pre-allocate memory and natively use it. If multiple GPUs are availables, memory will be pre-allocated on all them, but the data is put only on the first `GpuDevice(id=0)`. 
+When a GPU is available, `jax` will pre-allocate memory and natively use it. If multiple GPUs are available, memory will be pre-allocated on all of them, but the data is put only on the first `GpuDevice(id=0)`. 
 
 ### GPU
 For GPU selection the `autocvd` package is suggested:
 
 ```python
 from autocvd import autocvd
-autocvd(num_gpus = 2)                       #automatically choses two free GPU
+autocvd(num_gpus = 2)                       #automatically chooses two free GPU
 ```
 
-or alternatevly 
+or alternatively 
 
 ```python
 import os
-os.environ["CUDA_VISIBLE_DEVICES"] = "0, 1"  # Use only the first 2 GPU
+os.environ["CUDA_VISIBLE_DEVICES"] = "0, 1"  # Use only the first 2 GPUs
 ```
 
 ### CPU
-For CPU it suggested to adopt the built in `jax` function as follow:
+For CPU it suggested to adopt the built in `jax` function as follows:
 
 ```python
 import jax
@@ -36,7 +36,7 @@ jax.config.update('jax_num_cpu_devices', 2)
 
 ## Parallel simulations on a single device
 When running on a single device, it is suggested to use the `jax.vmap` function.
-A minimal example is presented below for a 7 parameters problem:
+A minimal example is presented below for a 7-parameters problem:
 
 ```python 
 from autocvd import autocvd
@@ -89,7 +89,7 @@ def run_simulation(rng_key,
     vel_com_final = jnp.array([[109.5,-254.5,-90.3]]) * (u.km/u.s).to(code_units.code_velocity)
     mass_com = jnp.array([params.Plummer_params.Mtot]) 
     
-    #we construmt the initial state of the com 
+    #we construct the initial state of the com 
     initial_state_com = construct_initial_state(pos_com_final, vel_com_final,)
     #we run the simulation backwards in time for the center of mass
     final_state_com = time_integration(initial_state_com, mass_com, config=config_com, params=params_com)
@@ -113,9 +113,9 @@ def run_simulation(rng_key,
 @jit
 def vmapped_run_simulation(rng_key, params_values):
     params_samples = SimulationParams(t_end = params_values[0],
-                          Plummer_params = PlummerParams(Mtot=params_values[1],)
-                          NFW_params = NFWParams(Mvir=params_values[2] ,)
-                          MN_params = MNParams(M = params_values[3] ,)
+                          Plummer_params = PlummerParams(Mtot=params_values[1],),
+                          NFW_params = NFWParams(Mvir=params_values[2] ,),
+                          MN_params = MNParams(M = params_values[3] ,),
                           G = code_units.G, )
     return run_simulation(rng_key, params_samples)
 
@@ -131,7 +131,7 @@ simulations = jax.vmap(vmapped_run_simulation)(params_values,  key) #SHAPE(N_SIM
 ```
 
 ## Parallel simulations on multiple devices
-When running multiple independend simulations in parallel the input parameters are sharded into the available devices.
+When running multiple independent simulations in parallel the input parameters are sharded into the available devices.
 A minimal example is presented below for the same 4 parameters problem as before, the set up of the simulation is equivalent:
 
 ```python
@@ -159,7 +159,7 @@ simulations = jax.vmap(vmapped_run_simulation)(params_values,  key) #SHAPE(N_SIM
 ```
 
 ## Parallelizing a single simulation on multiple devices
-In the case of very large number of particles, a simulation can benefit by sharding the `initial_conditions` (positions and velocities) and `masses` across multiple GPUs to speed up the computation. The sharding can help to reduce the RAM requirement, and speed up the computational time, but for very few `N_particles` the time will be dominated by the comunication time between devices. In order to achieve this the two arrays must be sharded as shown in the following example (the set up is similar to the previous example):
+In the case of very large number of particles, a simulation can benefit by sharding the `initial_conditions` (positions and velocities) and `masses` across multiple GPUs to speed up the computation. The sharding can help to reduce the RAM requirement, and speed up the computational time, but for very few `N_particles` the time will be dominated by the communication time between devices. In order to achieve this the two arrays must be sharded as shown in the following example (the set up is similar to the previous example):
 
 ```python
 from autocvd import autocvd
@@ -178,7 +178,7 @@ params = SimulationParams(t_end = (3 * u.Gyr).to(code_units.code_time).value,
                                                r_s= (16.0 * u.kpc).to(code_units.code_length).value,),                      
                           G=code_units.G, ) 
 
-config = SimulationConfig(N_particles = 1_000_000, #PARALLELIZIZATION IS USEFUL WHEN THE N_particels IS LARGE, 
+config = SimulationConfig(N_particles = 1_000_000, #PARALLELIZATION IS USEFUL WHEN THE N_particles IS LARGE, 
                           return_snapshots = False, 
                           num_timesteps = 1000, 
                           external_accelerations=(NFW_POTENTIAL, MN_POTENTIAL, PSP_POTENTIAL), 
@@ -194,7 +194,7 @@ mesh = Mesh(np.array(jax.devices()), ("i",))                                    
 initial_state = jax.device_put(initial_state, NamedSharding(mesh, PartitionSpec("i")))  #PUT THE initial_state  ON THE GPUs
 mass = jax.device_put(mass, NamedSharding(mesh, PartitionSpec("i")))                    #PUT THE mass ON THE GPUs
 
-simulation = time_integration(initial_state_stream, mass, config=config, params=params) #RUN DIRECTLY THE time_integration function
+simulation = time_integration(initial_state, mass, config=config, params=params) #RUN DIRECTLY THE time_integration function
 ```
 
 Below a benchmark of this sharding scheme. It can be appreciated that for very large `N_particles` an almost linear scaling is achieved with respect to the number of GPUs.
