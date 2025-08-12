@@ -35,7 +35,7 @@ $\Phi(\mathbf{r}) = -\frac{G m}{\sqrt{|\mathbf{r}|^2 + \epsilon^2}}$. It is used
     - `SEMIIMPLICITEULER` 
     - `REVERSIBLEHEUN` 
     - `LEAPFROGMIDPOINT` 
-- `Runge-acceleration_scheme` [int]: set the strategy used to calculate the pairwise distance between particles. This is usually the bottleneck of direct N-body simulations, both in terms of computational time and memory requirement. The implemented strategies are:
+- `acceleration_scheme` [int]: set the strategy used to calculate the pairwise distance between particles. This is usually the bottleneck of direct N-body simulations, both in terms of computational time and memory requirement. The implemented strategies are:
     - `DIRECT_ACC`: calculate the pair-wise distance matrix using a double `jax.vmap` on the particles `state`.
     - `DIRECT_ACC_LAXMAP`: calculate the pair-wise distance matrix using `jax.lax.map` and `jax.vmap`. The batch size is set by `batch_size` configuration (see below). It can also be set to use a double `jax.lax.map` by setting the configuration `double_map = True`. This strategies are generally the slowest but also the most memory efficient. 
     - `DIRECT_ACC_MATRIX`: calculate the pair-wise distance matrix using array broadcasting operation. This is the fastest strategy.
