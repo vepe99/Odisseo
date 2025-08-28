@@ -149,5 +149,17 @@ for i in range(name_str, num_chunks, batch_size):
         name_str += 1
         print('chunk', name_str-1)
 
+stream_true = run_simulation(0, params_true,)
+params_true_array = jnp.array([params_true.t_end,
+                               params_true.Plummer_params.Mtot,
+                               params_true.Plummer_params.a,
+                               params_true.NFW_params.Mvir,
+                               params_true.NFW_params.r_s,
+                               params_true.MN_params.M,
+                               params_true.MN_params.a])
+np.savez_compressed(f"/export/data/vgiusepp/odisseo_data/data_fix_position/true.npz",
+                    x = stream_true,
+                    theta = params_true_array )
+
 end_time = time.time()
 print("Time taken to sample in seconds:", end_time - start_time)
