@@ -114,6 +114,49 @@ def vmapped_run_simulation(rng_key, params_values):
     return run_simulation(rng_key, params_samples, position_velocity=position_velocity)
 
 
+def sample_mixed_prior(rng_key, batch_size, params_true):
+    """
+    Sample with improved priors for masses/scales but uniform for position/velocity
+    """
+    keys = jax.random.split(rng_key, 13)
+    
+    # 1. Time evolution - uniform as before
+    t_end = jax.random.uniform(keys[0], (batch_size,), minval=0.5, maxval=5.0)
+    
+    # 2. Plummer mass - log-uniform (better for masses)
+    log_M_plummer = jax.random.uniform(keys[1], (batch_size,), 
+                                       minval=jnp.log10(10**3.0), 
+                                       maxval=jnp.log10(10**4.5))
+    M_plummer = 10**log_M_plummer
+    
+    # 3-7. Physical parameters - log-normal around true values
+    # For log-normal: sample from normal, then transform
+    log_a_plummer = jax.random.normal(keys[2], (batch_size,)) * 0.5 + jnp.log(params_true.Plummer_params.a)
+    a_plummer = jnp.exp(log_a_plummer)
+    
+    log_M_NFW = jax.random.normal(keys[3], (batch_size,)) * 0.3 + jnp.log(params_true.NFW_params.Mvir)
+    M_NFW = jnp.exp(log_M_NFW)
+    
+    log_r_s_NFW = jax.random.normal(keys[4], (batch_size,)) * 0.4 + jnp.log(params_true.NFW_params.r_s)
+    r_s_NFW = jnp.exp(log_r_s_NFW)
+    
+    log_M_MN = jax.random.normal(keys[5], (batch_size,)) * 0.2 + jnp.log(params_true.MN_params.M)
+    M_MN = jnp.exp(log_M_MN)
+    
+    log_a_MN = jax.random.normal(keys[6], (batch_size,)) * 0.3 + jnp.log(params_true.MN_params.a)
+    a_MN = jnp.exp(log_a_MN)
+
+    
+    # 8-13. Position and velocity - UNIFORM as in your original code
+    x_pos = jax.random.uniform(keys[7], (batch_size,), minval=10.0, maxval=14.0)
+    y_pos = jax.random.uniform(keys[8], (batch_size,), minval=0.1, maxval=2.5)
+    z_pos = jax.random.uniform(keys[9], (batch_size,), minval=6.0, maxval=8.0)
+    vx = jax.random.uniform(keys[10], (batch_size,), minval=90.0, maxval=115.0)
+    vy = jax.random.uniform(keys[11], (batch_size,), minval=-280.0, maxval=-230.0)
+    vz = jax.random.uniform(keys[12], (batch_size,), minval=-120.0, maxval=-80.0)
+    
+    return jnp.stack([t_end, M_plummer, a_plummer, M_NFW, r_s_NFW, 
+                      M_MN, a_MN, x_pos, y_pos, z_pos, vx, vy, vz], axis=1)
 #11500
 start_time = time.time()
 batch_size = 500
@@ -121,35 +164,8 @@ num_chunks = 115000
 name_str = 0
 for i in range(name_str, num_chunks, batch_size):
     rng_key = random.PRNGKey(i)
-    parameter_value = jax.random.uniform(rng_key, 
-                                         shape=(batch_size, 13), 
-                                         minval=jnp.array([0.5, # t_end in Gyr
-                                                           10**3.0, # Plummer mass
-                                                           params_true.Plummer_params.a*(1/4),
-                                                           params_true.NFW_params.Mvir*(1/4),
-                                                           params_true.NFW_params.r_s*(1/4), 
-                                                           params_true.MN_params.M*(1/4), 
-                                                           params_true.MN_params.a*(1/4), 
-                                                           10.0, #x
-                                                           0.1, #y
-                                                           6.0, #z
-                                                           90.0, #vx
-                                                           -280.0, #vy
-                                                           -120.0]), #vz
-                                                           
-                                         maxval=jnp.array([5, # t_end in Gyr
-                                                           10**4.5, #Plummer mass
-                                                           params_true.Plummer_params.a*(8/4),
-                                                           params_true.NFW_params.Mvir*(8/4), 
-                                                           params_true.NFW_params.r_s*(8/4), 
-                                                           params_true.MN_params.M*(8/4), 
-                                                           params_true.MN_params.a*(8/4),
-                                                           14.0, #x
-                                                           2.5,  #y
-                                                           8.0,  #z
-                                                           115.0, #vx
-                                                           -230.0, #vy
-                                                           -80.0])) #vz
+    # Use mixed prior (improved for masses, uniform for positions/velocities)
+    parameter_value = sample_mixed_prior(rng_key, batch_size, params_true)
     
     parameter_value_code_units = jnp.array([parameter_value[:, 0] * u.Gyr.to(code_units.code_time),
                                             parameter_value[:, 1] * u.Msun.to(code_units.code_mass),

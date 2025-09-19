@@ -151,4 +151,6 @@ class SimulationConfig(NamedTuple):
 
     progress_bar: bool = False
 
+    gradient_horizon: int = 0
+
     

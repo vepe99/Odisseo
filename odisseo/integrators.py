@@ -17,6 +17,7 @@ from odisseo.option_classes import DOPRI5, TSIT5, SEMIIMPLICITEULER, REVERSIBLEH
 from diffrax import diffeqsolve, ODETerm, SaveAt
 from diffrax import Tsit5, Dopri5
 from diffrax import SemiImplicitEuler, ReversibleHeun, LeapfrogMidpoint
+import diffrax
 
 
 @jaxtyped(typechecker=typechecker)
@@ -244,19 +245,30 @@ def diffrax_solver(state: jnp.ndarray,
     if config.diffrax_solver != SEMIIMPLICITEULER:
         t0 = 0.0
         dt0 = dt
-        t1 = dt #in the fixed number of timesteps case we want to integrate only one step
+        # t1 = dt #in the fixed number of timesteps case we want to integrate only one step
+        t1 = jnp.where(config.fixed_timestep, dt, params.t_end)
         y0 = jnp.array([state[:, 0, 0], state[:, 0, 1], state[:, 0, 2], state[:, 1, 0], state[:, 1, 1], state[:, 1, 2]])
         args = mass
+        if config.return_snapshots:
+            saveat = SaveAt(ts=jnp.linspace(0, t1, config.num_snapshots, endpoint=True), t1=False) #we put t1=False to avoid duplication of the last snapshot
+        else:
+            saveat = SaveAt(t1=True)
         sol = diffeqsolve(
             terms = term,
             solver = solver,
             t0 = t0,
             t1 = t1,
             dt0 = dt0,
+            saveat = saveat,
             y0 = y0,
             args=args,)
-        pos = jnp.stack((sol.ys[0][0], sol.ys[0][1], sol.ys[0][2]), axis=1)
-        vel = jnp.stack((sol.ys[0][3], sol.ys[0][4], sol.ys[0][5]), axis=1)
+        if config.return_snapshots:
+            pos = jnp.stack((sol.ys[:,0,:], sol.ys[:,1,:], sol.ys[:,2,:]), axis=2)
+            vel = jnp.stack((sol.ys[:,3,:], sol.ys[:,4,:], sol.ys[:,5,:]), axis=2)
+            return jnp.stack((pos, vel), axis=2)
+        else:
+            pos = jnp.stack((sol.ys[0][0], sol.ys[0][1], sol.ys[0][2]), axis=1)
+            vel = jnp.stack((sol.ys[0][3], sol.ys[0][4], sol.ys[0][5]), axis=1)
 
     else:
         t0 = 0.0
@@ -270,8 +282,11 @@ def diffrax_solver(state: jnp.ndarray,
             t0 = t0,
             t1 = t1,
             dt0 = dt0,
+            saveat = saveat,  
             y0 = y0,
+            adjoint = diffrax.RecursiveCheckpointAdjoint(),
             args=args,)
+        
         pos = jnp.stack((sol.ys[0][0], sol.ys[0][1], sol.ys[0][2]), axis=1)
         vel = jnp.stack((sol.ys[1][0], sol.ys[1][1], sol.ys[1][2]), axis=1)
 
