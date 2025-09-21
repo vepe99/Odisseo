@@ -1,5 +1,4 @@
 import matplotlib.pyplot as plt
-plt.style.use('dark_background')
 import math
 from random import randint, uniform, random
 
