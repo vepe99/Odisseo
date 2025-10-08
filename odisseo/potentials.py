@@ -7,6 +7,7 @@ import jax
 import jax.numpy as jnp
 from jax import vmap, jit, lax
 from jax import random
+import jax.scipy.special as jsp
 
 from odisseo.option_classes import SimulationConfig, SimulationParams
 from odisseo.option_classes import NFW_POTENTIAL, POINT_MASS, MN_POTENTIAL, PSP_POTENTIAL
@@ -362,67 +363,27 @@ def PowerSphericalPotentialwCutoff(state: jnp.ndarray,
         a = alpha/2
         s2 = (r/r_c)**2
         GM = params.G * M
-        pot_value =  GM * ((a - 1.5) * _safe_gamma_inc(1.5 - 1, s2) / (r * jax.scipy.special.gamma(2.5 - a)) 
-                    + _safe_gamma_inc(1 - a, s2) / (r_c * jax.scipy.special.gamma(1.5 - a)))   
-        return jnp.squeeze(pot_value)
+        # pot_value =  - GM * (
+        #     (a - 1.5) * _safe_gamma_inc(1.5 - 1, s2) / (r * jax.scipy.special.gamma(2.5 - a)) 
+        #             + _safe_gamma_inc(1 - a, s2) / (r_c * jax.scipy.special.gamma(1.5 - a)))   
+        # return jnp.squeeze(pot_value)
+
+        den = jsp.gamma(1.5 -a)
+        L1 = _safe_gamma_inc(1.5 - a, s2)
+        L2 = _safe_gamma_inc(1 - a, s2)
+        pot = -GM / den * ( L1 / r + (jsp.gamma(1 - a) - L2) / r_c )
+        return jnp.squeeze(pot)
+
     
     @jit 
     def acceleration(pos):
         return -jax.vmap(jax.grad((potential)))(pos)
     
-    # def _mass(R,):
-    #     out = (
-    #         2.0
-    #         * jnp.pi
-    #         * R ** (3.0 - alpha)
-    #         / (1.5 - alpha / 2.0)
-    #         * jax.scipy.special.hyp1f1(
-    #             1.5 - alpha / 2.0,
-    #             2.5 - alpha / 2.0,
-    #             -((R / r_c) ** 2.0),
-    #         )
-    #     )
-    #     return out
-    
-    # @jit
-    # def acceleration(pos):
-    #     r = jnp.linalg.norm(pos, axis=1)
-         
-    #     return - params.G * _mass(r)[:, None] * pos / (r**3)[:, None]
-    
-
-    # @jax.jit
-    # def gamma_low(x: float, y: float) -> float:
-    #     """
-    #     Compiled version of the incomplete gamma function from below (integral from 0 to y)
-    #     Args:
-    #     x: input value
-    #     y: upper integration limit
-    #     Returns:
-    #     Incomplete gamma function from below evaludated at x
-    #     Examples
-    #     --------
-    #     >>> gamma_low(2., 10.)
-    #     """
-    #     return jnp.exp(jax.scipy.special.gammaln(x)) * (1.0 - jax.scipy.special.gammainc(x, y))
-
-    # def acceleration(pos):
-    #     rad = jnp.linalg.norm(pos, axis=1)
-    #     g = jnp.exp(jax.scipy.special.gammaln(1.5 - (alpha / 2)))
-    #     dimensionless_prefactor = (
-    #         8.**2 
-    #         * (g - gamma_low(1.5 - (alpha /2 ), (rad / r_c)**2) )
-    #         ) / ( rad**2 * (g - gamma_low(1.5 - (alpha /2), (8.0/ r_c)**2))
-    #     )
-    #     direction = (1/rad)[:, None ] * state[:, 0]
-    #     ftot = (0.000001045940172532453 * 220**2 / 8.) * 1
-    #     return - 0.05 * ftot * dimensionless_prefactor[:, None] * direction
 
     # compute the acceleration
-
     acc = acceleration(pos)
     if return_potential:
-        pot = -jax.vmap(potential)(pos)
+        pot = jax.vmap(potential)(pos)
         return acc, pot
     else:
         return acc

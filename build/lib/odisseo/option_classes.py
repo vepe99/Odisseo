@@ -26,6 +26,7 @@ DIRECT_ACC_LAXMAP = 1
 DIRECT_ACC_MATRIX = 2
 DIRECT_ACC_FOR_LOOP = 3
 DIRECT_ACC_SHARDING = 4
+NO_SELF_GRAVITY = 5
 
 #external potential 
 NFW_POTENTIAL = 0
@@ -112,7 +113,7 @@ class SimulationParams(NamedTuple):
 
     PSP_params: PSPParams = PSPParams()
 
-    Logarithmic_Params: LogarithmicParams = LogarithmicParams()
+    Logarithmic_params: LogarithmicParams = LogarithmicParams()
         
 class SimulationConfig(NamedTuple):
     """
@@ -149,5 +150,8 @@ class SimulationConfig(NamedTuple):
 
     num_checkpoints: int = 100
 
+    progress_bar: bool = False
+
+    gradient_horizon: int = 0
 
     

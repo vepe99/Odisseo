@@ -1,4 +1,4 @@
-from typing import Optional, Tuple, Callable, Union, List, NamedTuple
+from beartype.typing import Optional, Tuple, Callable, Union, List, NamedTuple
 from functools import partial
 from jaxtyping import jaxtyped
 from beartype import beartype as typechecker
@@ -16,7 +16,7 @@ from jax.experimental.shard_map import shard_map
 import equinox as eqx
 
 from odisseo.option_classes import SimulationConfig, SimulationParams
-from odisseo.option_classes import DIRECT_ACC, DIRECT_ACC_LAXMAP, DIRECT_ACC_MATRIX, DIRECT_ACC_FOR_LOOP, DIRECT_ACC_SHARDING
+from odisseo.option_classes import DIRECT_ACC, DIRECT_ACC_LAXMAP, DIRECT_ACC_MATRIX, DIRECT_ACC_FOR_LOOP, DIRECT_ACC_SHARDING, NO_SELF_GRAVITY
 
 
 
@@ -163,7 +163,7 @@ def direct_acc_matrix(state: jnp.ndarray,
     eye = jax.lax.stop_gradient(jnp.eye(config.N_particles))
 
     # Compute squared distances with softening plus avoid self interaction
-    r2_safe = jnp.sum(dpos**2, axis=-1) + config.softening**2 + eye # Shape: (N, N)
+    r2_safe = jnp.sum(dpos**2, axis=-1) + config.softening**2  # Shape: (N, N)
 
     # Compute 1/r^3 safely
     inv_r3 = r2_safe**-1.5 * (1.0 - eye)  # Diagonal is zero
@@ -220,11 +220,11 @@ def direct_acc_for_loop(state: jnp.ndarray,
 
     positions =  state[:, 0]
     if return_potential:
-        initial_pot = jnp.array([0.], dtype=jnp.float64)
+        initial_pot = jnp.array([0.], )
         _, pot = jax.lax.scan(compute_acc, initial_pot, positions)
         return pot
     else:
-        initial_acc = jnp.zeros_like(positions[0], dtype=jnp.float64)
+        initial_acc = jnp.zeros_like(positions[0],)
         _, acc = jax.lax.scan(compute_acc, initial_acc, positions)
         return acc
 
@@ -285,11 +285,34 @@ def direct_acc_sharding(state: jnp.ndarray,
         return jax.device_put(jnp.sum(-params.G * jnp.sum((mass[:, None] * dpos) * inv_r3[:, :, None], axis=1), axis=0), devices[0])
 
 
+@jaxtyped(typechecker=typechecker)
+@partial(jax.jit, static_argnames=['config', 'return_potential'])
+def no_self_gravity(state: jnp.ndarray, 
+                    mass: jnp.ndarray, 
+                    config: SimulationConfig, 
+                    params: SimulationParams, 
+                    return_potential=False):
+    """
+    Remove the self interaction between particles.
 
+    Args:
+        state: Array of shape (N, 2, 3) containing the positions and velocities of the particles.
+        mass: Array of shape (N,) containing the masses of the particles.
+        config: Configuration object containing the number of particles (N_particles) and softening parameter.
+        params: Parameters object containing the gravitational constant (G).
+        return_potential: If True, also return the potential energy. Defaults to False.
 
-
-                
+    Returns:
+        Array of shape (N, 3) containing the accelerations of the particles.
+        Array of shape (N,) containing the potential energy of the particles, if return_potential is True.
+    
+    """
         
+    if return_potential:
+        return jnp.zeros((config.N_particles, 3)), jnp.zeros((config.N_particles,))
+    else:
+        return jnp.zeros((config.N_particles, 3))
+
 
 
 

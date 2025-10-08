@@ -71,10 +71,16 @@ def time_integration(primitive_state: jnp.ndarray,
         if config.return_snapshots:
             return _time_integration_fixed_steps_snapshot(primitive_state, mass, config, params)
         else:
-            return _time_integration_fixed_steps(primitive_state, mass, config, params)
+            if config.gradient_horizon > 0:
+                return _time_integration_fixed_steps_gradient_horizon(primitive_state, mass, config, params)
+            else:
+                return _time_integration_fixed_steps(primitive_state, mass, config, params)
     
     else:
-        raise NotImplementedError("Adaptive time stepping not implemented yet")
+        if config.return_snapshots:
+            return _time_integration_adapative_steps_snapshot(primitive_state, mass, config, params)
+        else:
+            return _time_integration_adapative_steps(primitive_state, mass, config, params)
 
 @jaxtyped(typechecker=typechecker)
 @partial(jax.jit, static_argnames=['config'])
@@ -100,19 +106,140 @@ def _time_integration_fixed_steps(primitive_state: jnp.ndarray,
     dt = params.t_end / config.num_timesteps
     
     def update_step(_, state):
+
+        if config.progress_bar:
+            jax.debug.callback(_show_progress, _, params.t_end)
         
         if config.integrator == LEAPFROG:
             return leapfrog(state, mass, dt, config, params)
         elif config.integrator == RK4:
             return RungeKutta4(state, mass, dt, config, params)
         elif config.integrator == DIFFRAX_BACKEND:
-            state = diffrax_solver(state, mass, dt, config, params)
+            return diffrax_solver(state, mass, dt, config, params)
             
 
     # use lax fori_loop to unroll the loop
     state = jax.lax.fori_loop(0, config.num_timesteps, update_step, primitive_state)
 
     return state  
+    
+@jaxtyped(typechecker=typechecker)
+@partial(jax.jit, static_argnames=['config'])
+def _time_integration_adapative_steps(primitive_state: jnp.ndarray,
+                                mass: jnp.ndarray,
+                                config: SimulationConfig,
+                                params: SimulationParams, ):
+
+    """ Adaptive time stepping integration of the primitave state of the system.
+    Return the final state of the system after the time integration.
+
+    Args:
+        primitive_state: The primitive state array.
+        config: The simulation configuration.
+        params: The simulation parameters.
+        helper_data: The helper data.
+
+    Returns:
+        Depending on the configuration (return_snapshots, num_snapshots) either the final state of the fluid
+        after the time integration of snapshots of the time evolution
+    """
+
+    dt = params.t_end / config.num_timesteps
+
+    state = diffrax_solver(primitive_state, mass, dt, config, params)
+    
+    return state 
+
+@jaxtyped(typechecker=typechecker)
+@partial(jax.jit, static_argnames=['config'])
+def _time_integration_adapative_steps_snapshot(primitive_state: jnp.ndarray,
+                                mass: jnp.ndarray,
+                                config: SimulationConfig,
+                                params: SimulationParams, ):
+
+    """ Adaptive time stepping integration of the primitave state of the system.
+    Return the final state of the system after the time integration.
+
+    Args:
+        primitive_state: The primitive state array.
+        config: The simulation configuration.
+        params: The simulation parameters.
+        helper_data: The helper data.
+
+    Returns:
+        Depending on the configuration (return_snapshots, num_snapshots) either the final state of the fluid
+        after the time integration of snapshots of the time evolution
+    """
+
+    dt = params.t_end / config.num_timesteps
+
+
+    states = diffrax_solver(primitive_state, mass, dt, config, params)
+    times = jnp.linspace(0, params.t_end, config.num_snapshots, endpoint=True)
+    total_energy = jax.vmap(lambda state: jnp.sum(E_tot(state, mass, config, params)))(states)
+    angular_momentum = jax.vmap(lambda state: jnp.sum(Angular_momentum(state, mass), axis=0))(states)
+
+    snapshot_data = SnapshotData(times = times, 
+                                states = states, 
+                                total_energy = total_energy, 
+                                angular_momentum = angular_momentum,)
+                                
+    
+    return snapshot_data 
+
+
+@jaxtyped(typechecker=typechecker)
+@partial(jax.jit, static_argnames=['config'])
+def _time_integration_fixed_steps_gradient_horizon(primitive_state: jnp.ndarray,
+                                                    mass: jnp.ndarray,
+                                                    config: SimulationConfig,
+                                                    params: SimulationParams, ):
+
+    """ Fixed time stepping integration of the primitave state of the system.
+    Return the final state of the system after the time integration.
+
+    Args:
+        primitive_state: The primitive state array.
+        config: The simulation configuration.
+        params: The simulation parameters.
+        helper_data: The helper data.
+
+    Returns:
+        Depending on the configuration (return_snapshots, num_snapshots) either the final state of the fluid
+        after the time integration of snapshots of the time evolution
+    """
+
+    dt = params.t_end / config.num_timesteps
+    cutoff_gradient_horizon = config.num_timesteps - config.gradient_horizon
+    
+    def update_step(i, state):
+
+        if config.progress_bar:
+            jax.debug.callback(_show_progress, i, params.t_end)
+        
+        if config.integrator == LEAPFROG:
+            # return leapfrog(state, mass, dt, config, params)
+            integrator = leapfrog
+        elif config.integrator == RK4:
+            # return RungeKutta4(state, mass, dt, config, params)
+            integrator = RungeKutta4
+        elif config.integrator == DIFFRAX_BACKEND:
+            # return diffrax_solver(state, mass, dt, config, params)
+            integrator = diffrax_solver
+
+        state = jax.lax.cond(i < cutoff_gradient_horizon,
+                             lambda state: jax.lax.stop_gradient(integrator(state, mass, dt, config, params)),
+                             lambda state: integrator(state, mass, dt, config, params),
+                             operand = state)
+        return state
+            
+
+    # use lax fori_loop to unroll the loop
+    state = jax.lax.fori_loop(0, config.num_timesteps, update_step, primitive_state)
+
+    return state  
+
+
 
 @jaxtyped(typechecker=typechecker)
 @partial(jax.jit, static_argnames=['config'])
@@ -133,10 +260,6 @@ def _time_integration_fixed_steps_snapshot(primitive_state: jnp.ndarray,
         Depending on the configuration (return_snapshots, num_snapshots) either the final state of the fluid
         after the time integration of snapshots of the time evolution
     """  
-    num_snapshots = config.num_snapshots
-    num_timesteps = config.num_timesteps
-
-    snapshot_times = jnp.linspace(0.0, params.t_end, num_snapshots)
 
 
     if config.return_snapshots:
@@ -168,14 +291,14 @@ def _time_integration_fixed_steps_snapshot(primitive_state: jnp.ndarray,
                                                        angular_momentum = angular_momentum,
                                                        current_checkpoint = current_checkpoint)
                 return snapshot_data
-            
+
             def dont_update_snapshot_data(snapshot_data):
                 return snapshot_data
 
-            snapshot_data = jax.lax.cond(jnp.logical_and(current_checkpoint < num_snapshots, abs(time) >= abs(snapshot_times[current_checkpoint])), 
-                                         update_snapshot_data, 
-                                         dont_update_snapshot_data, 
-                                         snapshot_data)
+            snapshot_data = jax.lax.cond(abs(time) >= abs(snapshot_data.current_checkpoint * params.t_end / config.num_snapshots), update_snapshot_data, dont_update_snapshot_data, snapshot_data)
+
+
+
 
             num_iterations = snapshot_data.num_iterations + 1
             snapshot_data = snapshot_data._replace(num_iterations = num_iterations)
@@ -184,7 +307,7 @@ def _time_integration_fixed_steps_snapshot(primitive_state: jnp.ndarray,
             time, state = carry
 
         dt = params.t_end / config.num_timesteps
-        
+
         # Update the state using the chosen integrator
         if config.integrator == LEAPFROG:
             state = leapfrog(state, mass, dt, config, params)
@@ -195,7 +318,10 @@ def _time_integration_fixed_steps_snapshot(primitive_state: jnp.ndarray,
 
         # Update the time
         time += dt
-        
+
+        if config.progress_bar:
+            jax.debug.callback(_show_progress, time, params.t_end)
+
 
         if config.return_snapshots:
             carry = (time, state, snapshot_data)
@@ -203,22 +329,22 @@ def _time_integration_fixed_steps_snapshot(primitive_state: jnp.ndarray,
             carry = (time, state)
 
         return carry
-    
+
     def condition(carry):
         if config.return_snapshots:
             t, _, _ = carry
         else:
             t, _ = carry
-        return abs(t) <= abs(params.t_end)
-    
+        return abs(t) < abs(params.t_end)
+
     if config.return_snapshots:
         carry = (0.0, primitive_state, snapshot_data)
     else:
         carry = (0.0, primitive_state)
-    
+
     start = timer()
 
-    
+
     if config.differentation_mode == FORWARDS:
         carry = jax.lax.while_loop(condition, update_step, carry)
     elif config.differentation_mode == BACKWARDS:
@@ -236,3 +362,25 @@ def _time_integration_fixed_steps_snapshot(primitive_state: jnp.ndarray,
         _, state = carry
         return state
     
+
+# Print progress
+def _show_progress(
+        iteration,
+        total,
+        prefix = '',
+        suffix = '',
+        decimals = 1,
+        length = 100,
+        fill = '█',
+        printEnd = "\r"
+    ) -> None:
+    """
+    Progress bar.
+    """
+    percent = ("{0:." + str(decimals) + "f}").format(100 * (iteration / float(total)))
+    filledLength = int(length * iteration // total)
+    bar = fill * filledLength + '-' * (length - filledLength)
+    print(f'\r{prefix} |{bar}| {percent}% {suffix}', end = printEnd)
+    # Print New Line on Complete
+    if iteration == total: 
+        print()

@@ -16,7 +16,7 @@ from jax.experimental.shard_map import shard_map
 import equinox as eqx
 
 from odisseo.option_classes import SimulationConfig, SimulationParams
-from odisseo.option_classes import DIRECT_ACC, DIRECT_ACC_LAXMAP, DIRECT_ACC_MATRIX, DIRECT_ACC_FOR_LOOP, DIRECT_ACC_SHARDING
+from odisseo.option_classes import DIRECT_ACC, DIRECT_ACC_LAXMAP, DIRECT_ACC_MATRIX, DIRECT_ACC_FOR_LOOP, DIRECT_ACC_SHARDING, NO_SELF_GRAVITY
 
 
 
@@ -285,11 +285,34 @@ def direct_acc_sharding(state: jnp.ndarray,
         return jax.device_put(jnp.sum(-params.G * jnp.sum((mass[:, None] * dpos) * inv_r3[:, :, None], axis=1), axis=0), devices[0])
 
 
+@jaxtyped(typechecker=typechecker)
+@partial(jax.jit, static_argnames=['config', 'return_potential'])
+def no_self_gravity(state: jnp.ndarray, 
+                    mass: jnp.ndarray, 
+                    config: SimulationConfig, 
+                    params: SimulationParams, 
+                    return_potential=False):
+    """
+    Remove the self interaction between particles.
 
+    Args:
+        state: Array of shape (N, 2, 3) containing the positions and velocities of the particles.
+        mass: Array of shape (N,) containing the masses of the particles.
+        config: Configuration object containing the number of particles (N_particles) and softening parameter.
+        params: Parameters object containing the gravitational constant (G).
+        return_potential: If True, also return the potential energy. Defaults to False.
 
-
-                
+    Returns:
+        Array of shape (N, 3) containing the accelerations of the particles.
+        Array of shape (N,) containing the potential energy of the particles, if return_potential is True.
+    
+    """
         
+    if return_potential:
+        return jnp.zeros((config.N_particles, 3)), jnp.zeros((config.N_particles,))
+    else:
+        return jnp.zeros((config.N_particles, 3))
+
 
 
 
