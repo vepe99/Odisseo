@@ -18,6 +18,7 @@ from astropy import units as u
 from odisseo import construct_initial_state
 from odisseo.dynamics import  DIRECT_ACC_MATRIX
 from odisseo.option_classes import SimulationConfig, SimulationParams, MNParams, NFWParams, PlummerParams, PSPParams, MN_POTENTIAL, NFW_POTENTIAL, PSP_POTENTIAL
+from odisseo.option_classes import TSIT5, DIFFRAX_BACKEND
 from odisseo.initial_condition import Plummer_sphere
 from odisseo.time_integration import time_integration
 from odisseo.units import CodeUnits
@@ -34,7 +35,10 @@ config = SimulationConfig(N_particles = 1_000,
                           num_timesteps = 1000, 
                           external_accelerations=(NFW_POTENTIAL, MN_POTENTIAL, PSP_POTENTIAL), 
                           acceleration_scheme = DIRECT_ACC_MATRIX,
-                          softening = (0.1 * u.pc).to(code_units.code_length).value,) #default values
+                          softening = (0.1 * u.pc).to(code_units.code_length).value,
+                          fixed_timestep=False,
+                          integrator=DIFFRAX_BACKEND,
+                          diffrax_solver=TSIT5) #default values
 
 
 @jit
@@ -117,9 +121,9 @@ def vmapped_run_simulation(rng_key, params_values):
 
 #11500
 start_time = time.time()
-batch_size = 3500
-num_chunks = 325_000
-name_str = 195999
+batch_size = 500
+num_chunks = 202_500
+name_str = 200_000
 for i in tqdm(range(name_str, num_chunks, batch_size)):
     rng_key = random.PRNGKey(i)
     parameter_value = jax.random.uniform(rng_key, 
@@ -168,7 +172,7 @@ for i in tqdm(range(name_str, num_chunks, batch_size)):
     
     stream_samples = jax.vmap(vmapped_run_simulation, )(random.split(rng_key, batch_size)[:, 0], parameter_value_code_units)
     for j in range(batch_size):
-        np.savez_compressed(f"/export/data/vgiusepp/odisseo_data/data_varying_position_uniform_prior/file_{name_str:06d}.npz",
+        np.savez_compressed(f"/export/data/vgiusepp/odisseo_data/data_varying_position_uniform_prior_TSIT5/file_{name_str:06d}.npz",
                             x = stream_samples[j],
                             theta = parameter_value[j],)
         name_str += 1
