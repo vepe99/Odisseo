@@ -118,11 +118,9 @@ print("Simulated GD1")
 # LET'S TRY OPTIMIZING IT
 
 params_sim = params
-config_com = config_com._replace(diffrax_adjoint_method=FORWARDMODE,
-)
 
-@partial(jit, static_argnames=['return_residual'])
-def run_simulation( y, return_residual=True):
+@jit
+def run_simulation(y, args):
 
     Mvir, M_MN, r_s, a = y
     Mvir = 10**Mvir
@@ -264,29 +262,27 @@ def run_simulation( y, return_residual=True):
     # Use only backward for now (as in your original code)
     chi2 = chi2_backward + chi2_forward
 
-    if return_residual:
-        return jnp.concatenate([residuals_backward**2, residuals_forward**2], axis=0).flatten()
-    else:
-        return chi2
+    return chi2
 
-print("beginning least square optimization")
+print("beginning gradient descend optimization")
 
 from optimistix import least_squares
 import optimistix
+from optax import adamw
 
-
-res = optimistix.least_squares(
+res = optimistix.minimise(
     fn=run_simulation,
-    solver=optimistix.LevenbergMarquardt(rtol=1e-5, atol=1e-5),
+    solver = optimistix.OptaxMinimiser(optim = adamw(learning_rate=1e-3,),  rtol=1e-5, atol=1e-5),
+    # solver = optimistix.GradientDescent(learning_rate=1e-6, rtol=1e-5, atol=1e-5),
     y0=jnp.array([jnp.log10(params.NFW_params.Mvir * 2 * code_units.code_mass.to(u.Msun)), 
-                  jnp.log10(params.MN_params.M * 0.5 * code_units.code_mass.to(u.Msun)),
+                  jnp.log10(params.MN_params.M * 2 * code_units.code_mass.to(u.Msun)),
                   jnp.log10(params.NFW_params.r_s * 2 * code_units.code_length.to(u.kpc)),
                   jnp.log10(params.MN_params.a * 2 * code_units.code_length.to(u.kpc))]),
     )
 
 #remember to put FORWARD MODE for the adjoint method when calculating the hessian
 config_com = config_com._replace(diffrax_adjoint_method=FORWARDMODE,)
-hessian = jax.jacfwd(jax.jacfwd(run_simulation))(res.value, False)
+hessian = jax.jacfwd(jax.jacfwd(run_simulation))(res.value)
 
 fisher_info = - hessian
 covariance = jnp.linalg.inv(fisher_info)
@@ -303,4 +299,4 @@ c.add_truth(Truth(location = {"$M_{vir}$": jnp.log10(params.NFW_params.Mvir * co
 c.add_marker(location = {"$M_{vir}$": np.array(res.value[0]), "$M_{MN}$": np.array(res.value[1]),
                          "$r_s$": np.array(res.value[2]), "$a$": np.array(res.value[3])}, name="MLE",  color='black')
 fig = c.plotter.plot()
-fig.savefig("Fisher_contour_least_square.png", dpi=300)
+fig.savefig("Fisher_contour_gradient_descend.png", dpi=300)

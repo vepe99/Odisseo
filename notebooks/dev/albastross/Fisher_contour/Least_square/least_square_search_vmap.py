@@ -118,9 +118,11 @@ print("Simulated GD1")
 # LET'S TRY OPTIMIZING IT
 
 params_sim = params
+config_com = config_com._replace(diffrax_adjoint_method=FORWARDMODE,
+)
 
-@jit
-def run_simulation( y, args):
+@partial(jit, static_argnames=['return_residual'])
+def run_simulation( y, return_residual=True):
 
     Mvir, M_MN, r_s, a = y
     Mvir = 10**Mvir
@@ -262,7 +264,10 @@ def run_simulation( y, args):
     # Use only backward for now (as in your original code)
     chi2 = chi2_backward + chi2_forward
 
-    return chi2
+    if return_residual:
+        return jnp.concatenate([residuals_backward**2, residuals_forward**2], axis=0).flatten()
+    else:
+        return chi2
 
 print("beginning least square optimization")
 
@@ -286,10 +291,10 @@ y0_batched = jnp.array([
      jnp.log10(params.MN_params.a * 2 * code_units.code_length.to(u.kpc))],
     
     # Variation 2: different swaps
-    [jnp.log10(params.NFW_params.Mvir * 2 * code_units.code_mass.to(u.Msun)), 
-     jnp.log10(params.MN_params.M * 2 * code_units.code_mass.to(u.Msun)),
-     jnp.log10(params.NFW_params.r_s * 2 * code_units.code_length.to(u.kpc)),
-     jnp.log10(params.MN_params.a * 2 * code_units.code_length.to(u.kpc))],
+    # [jnp.log10(params.NFW_params.Mvir * 0.5 * code_units.code_mass.to(u.Msun)), 
+    #  jnp.log10(params.MN_params.M * 0.5 * code_units.code_mass.to(u.Msun)),
+    #  jnp.log10(params.NFW_params.r_s * 0.5 * code_units.code_length.to(u.kpc)),
+    #  jnp.log10(params.MN_params.a * 0.5 * code_units.code_length.to(u.kpc))],
     
     # Variation 3: more swaps
     [jnp.log10(params.NFW_params.Mvir * 0.5 * code_units.code_mass.to(u.Msun)), 
@@ -311,24 +316,26 @@ values = jax.vmap(minimization_vmap)(y0_batched)
 
 #remember to put FORWARD MODE for the adjoint method when calculating the hessian
 config_com = config_com._replace(diffrax_adjoint_method=FORWARDMODE,)
-hessians = jax.vmap(jax.jacfwd(jax.jacfwd(run_simulation)))(values)
+hessians = jax.vmap(lambda v: jax.jacfwd(jax.jacfwd(run_simulation))(v, False))(values)
+
 
 fisher_info = - hessians
 covariance = jax.vmap(jnp.linalg.inv)(fisher_info)
 
 from chainconsumer import Chain, ChainConsumer, Truth
 
+colors = ['red', 'blue', 'green', 'purple']
 c = ChainConsumer()
 for i in range(values.shape[0]):
-    chain = Chain.from_covariance(mean=values[i], covariance=covariance[i], columns=["$M_{vir}$", "$M_{MN}$", "$r_s$", "$a$"], name=f'Trial {i}')
+    chain = Chain.from_covariance(mean=values[i], covariance=covariance[i], columns=["$M_{vir}$", "$M_{MN}$", "$r_s$", "$a$"], color=colors[i], name=f'Trial {i+1}')
     c.add_chain(chain)
     c.add_marker(location = {"$M_{vir}$": np.array(values[i][0]), "$M_{MN}$": np.array(values[i][1]),
-                             "$r_s$": np.array(values[i][2]), "$a$": np.array(values[i][3])}, name=f"MLE Trial {i}",  color='black', marker='x')
+                             "$r_s$": np.array(values[i][2]), "$a$": np.array(values[i][3])}, name=f"MLE Trial {i+1}",  color=colors[i], marker='x')
 
 c.add_truth(Truth(location = {"$M_{vir}$": jnp.log10(params.NFW_params.Mvir * code_units.code_mass.to(u.Msun)), 
                               "$M_{MN}$": jnp.log10(params.MN_params.M * code_units.code_mass.to(u.Msun)),
                               "$r_s$": jnp.log10(params.NFW_params.r_s * code_units.code_length.to(u.kpc)),
-                              "$a$": jnp.log10(params.MN_params.a * code_units.code_length.to(u.kpc))}, color='red', name="True value"))
+                              "$a$": jnp.log10(params.MN_params.a * code_units.code_length.to(u.kpc))}, color='black', name="True value"))
 
 fig = c.plotter.plot()
-fig.savefig("Fisher_contour_gradient_descend_vmap.png", dpi=300)
+fig.savefig("Fisher_contour_least_square_vmap.png", dpi=300)
