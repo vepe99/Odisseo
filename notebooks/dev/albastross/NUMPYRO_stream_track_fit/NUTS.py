@@ -129,7 +129,6 @@ _obs = np.load(true_GD1_observation_path)
 stream_data = jnp.array(_obs['x']).reshape(1000, 6)  # will be used only to compute target densities
 true_theta = jnp.array(_obs['theta'])
 
-
 @jit
 def run_simulation(params):
 
@@ -392,6 +391,7 @@ from numpyro.infer.initialization import init_to_value, init_to_median
 from numpyro.handlers import reparam
 from jax import random
 
+stream_data = stream_data[(stream_data[:, 1] > -100) & (stream_data[:, 1] < 25)]  # Filter data within phi1 range
 # --- NUMPYRO MODEL ---
 def numpyro_stream_model():
     """
@@ -400,17 +400,17 @@ def numpyro_stream_model():
       - this is a simple, effective reparameterization to improve NUTS geometry.
     """
     # Priors in log-space (you can widen/narrow the stddev as you prefer)
-    log_M_NFW = numpyro.sample("log_M_NFW", dist.LogUniform(jnp.log(4.3683325e11 * 0.5), jnp.log(4.3683325e11 * 2.0)))
-    log_M_MN = numpyro.sample("log_M_MN", dist.LogUniform(jnp.log(68_193_902_782.346756 * 0.5), jnp.log(68_193_902_782.346756 * 2.0)))
-    log_r_s = numpyro.sample("log_r_s", dist.LogUniform(jnp.log(16.0 * 0.5), jnp.log(16.0 * 2.0)))
-    log_a_MN = numpyro.sample("log_a_MN", dist.LogUniform(jnp.log(3.0 * 0.5), jnp.log(3.0 * 2.0)))
+    M_NFW = numpyro.sample("log_M_NFW", dist.Uniform(4.3683325e11 * 0.5, 4.3683325e11 * 2.0))
+    M_MN = numpyro.sample("log_M_MN", dist.Uniform(68_193_902_782.346756 * 0.5, 68_193_902_782.346756 * 2.0))
+    r_s = numpyro.sample("log_r_s", dist.Uniform(16.0 * 0.5, 16.0 * 2.0))
+    a_MN = numpyro.sample("log_a_MN", dist.Uniform(3.0 * 0.5, 3.0 * 2.0))
 
 
     # Deterministic (expose transformed parameters for diagnostics/traces)
-    M_NFW = numpyro.deterministic("M_NFW", jnp.exp(log_M_NFW))
-    M_MN  = numpyro.deterministic("M_MN",  jnp.exp(log_M_MN))
-    r_s   = numpyro.deterministic("r_s",   jnp.exp(log_r_s))
-    a_MN  = numpyro.deterministic("a_MN",  jnp.exp(log_a_MN))
+    # M_NFW = numpyro.deterministic("M_NFW", jnp.exp(log_M_NFW))
+    # M_MN  = numpyro.deterministic("M_MN",  jnp.exp(log_M_MN))
+    # r_s   = numpyro.deterministic("r_s",   jnp.exp(log_r_s))
+    # a_MN  = numpyro.deterministic("a_MN",  jnp.exp(log_a_MN))
 
     params_dict = {
         "M_NFW": M_NFW,
@@ -422,12 +422,16 @@ def numpyro_stream_model():
     # Run your (jitted) simulator and log-likelihood.
     # IMPORTANT: both functions are JAX-jittable and side-effect free (no Python side-effects).
     stream_coordinate_com = run_simulation(params_dict)   # returns shape (2, n_snapshots, ncols) as before
-    phi1_min, phi1_max = -90, 10
-    phi2_min, phi2_max = -8, 2
 
+    # Register the likelihood with NumPyro
+    # numpyro.factor adds an arbitrary log-probability term to the joint.
+    # numpyro.factor("sim_loglik", log_like)
+    phi1_min, phi1_max = -100, 25
+    phi2_min, phi2_max = -8, 2
+    coord_indices = jnp.array([2, 3, 4, 5])
     stream_coordinate_com_backward, stream_coordinate_com_forward = stream_coordinate_com[0], stream_coordinate_com[1]
     
-
+    
     # Create masks for valid time steps
     mask_window_backward = (stream_coordinate_com_backward[:, 0, 1] < phi1_max) & \
                           (stream_coordinate_com_backward[:, 0, 1] > phi1_min) & \
@@ -447,21 +451,78 @@ def numpyro_stream_model():
     mask_diff_forward = jnp.ediff1d(stream_coordinate_com_forward[:, 0, 1], to_begin=-1) < 0
     mask_diff_forward = jnp.cumprod(mask_diff_forward, dtype=bool)
 
+    mask_backward = mask_window_backward & mask_diff_backward
+    mask_forward = mask_window_forward & mask_diff_forward
 
-    # Combined time step masks
-    valid_time_backward = mask_window_backward & mask_diff_backward
-    valid_time_forward = mask_window_forward & mask_diff_forward
 
-    # Create masked coordinates for interpolation (only valid time steps)
-    phi1_backward_valid = jnp.where(valid_time_backward, 
-                                   stream_coordinate_com_backward[:, 0, 1], 
-                                   10000.)
+    # return {'stream_coordinate_com_backward': stream_coordinate_com_backward,
+    #         'stream_coordinate_com_forward': stream_coordinate_com_forward,
+    #         'mask_backward': mask_backward,
+    #         'mask_forward': mask_forward,
+    #         'phi1_backward_valid': phi1_backward_valid,
+    #         'phi1_forward_valid': phi1_forward_valid
+    # }
+
+    def coord_backward_fill(arr_phi1, arr_coord, mask):
+        arr_phi1_masked = jnp.where(mask, arr_phi1, 0.0)
+        filled = jnp.where(arr_phi1_masked == 0., jnp.max(arr_phi1_masked), arr_phi1_masked)
+        arr_coord_masked = jnp.where(mask, arr_coord, 0.0)
+        filled_coord = jnp.where(arr_coord_masked == 0., arr_coord_masked[jnp.argmax(filled)], arr_coord_masked)
+        return filled, filled_coord
+
+    def coord_forward_fill(arr_phi1, arr_coord, mask):
+        arr_phi1_masked = jnp.where(mask, arr_phi1, 0.0)
+        filled = jnp.where(arr_phi1_masked == 0., jnp.min(arr_phi1_masked), arr_phi1_masked)
+        arr_coord_masked = jnp.where(mask, arr_coord, 0.0)
+        filled_coord = jnp.where(arr_coord_masked == 0., arr_coord_masked[jnp.argmin(filled)], arr_coord_masked)
+        return filled, filled_coord
+
+    phi1_backward_valid, coord_backward_valid = jax.vmap(lambda coordinate: coord_backward_fill(stream_coordinate_com_backward[:, 0, 1], stream_coordinate_com_backward[:, 0, coordinate], mask_backward))(coordinate=coord_indices)
+    phi1_forward_valid, coord_forw_valid = jax.vmap(lambda coordinate: coord_forward_fill(stream_coordinate_com_forward[:, 0, 1], stream_coordinate_com_forward[:, 0, coordinate], mask_forward))(coordinate=coord_indices)
+
+
+    def interpolate_coord_backward(coord):
+        # Interpolator = interpax.Interpolator1D(
+        #     x=phi1_backward_valid[0],
+        #     f=coord,
+        #     method='cubic',
+        # )
+        # return Interpolator(stream_data[:, 1])  # Interpolate at data phi1 values
+        return jnp.interp(stream_data[:, 1], phi1_backward_valid[0], coord)
     
-    
-    phi1_forward_valid = jnp.where(valid_time_forward, 
-                                  stream_coordinate_com_forward[:, 0, 1], 
-                                  -10000.)
-    
+    def interpolate_coord_forward(coord):
+        # Interpolator = interpax.Interpolator1D(
+        #     x=phi1_forward_valid[0],
+        #     f=coord,
+        #     method='cubic',
+        # )
+        # return Interpolator(stream_data[:, 1])  # Interpolate at data phi1 values
+        return jnp.interp(stream_data[:, 1], phi1_forward_valid[0][::-1], coord[::-1])
+        
+
+    # Apply interpolation to all coordinates
+    interp_tracks_backward = jax.vmap(interpolate_coord_backward)(coord_backward_valid)  # Shape: (n_coords, n_data)
+    interp_tracks_forward = jax.vmap(interpolate_coord_forward)(coord_forw_valid)  # Shape: (n_coords, n_data)
+
+    # return {'stream_coordinate_com_backward': stream_coordinate_com_backward,
+    #         'stream_coordinate_com_forward': stream_coordinate_com_forward,
+    #         'mask_backward': mask_backward,
+    #         'mask_forward': mask_forward,
+    #         'phi1_backward_valid': phi1_backward_valid,
+    #         'phi1_forward_valid': phi1_forward_valid,
+    #         'coord_backward_valid': coord_backward_valid,
+    #         'coord_forw_valid': coord_forw_valid,
+    #         'interp_tracks_backward': interp_tracks_backward,
+    #         'interp_tracks_forward': interp_tracks_forward,
+    # }
+
+    # Calculate residuals for all coordinates
+    data_coords = stream_data[:, coord_indices].T  # Shape: (n_coords, n_data)
+    sigma = jnp.array([0.5, 10., 2., 2. ])
+    # sigma = jnp.array([0.15, 5., 0.1, 0.0001]) #from albatross
+
+    mask_correct_interpolation_backward = stream_data[:, 1] < 25
+    mask_correct_interpolation_forward = stream_data[:, 1] > - 100
 
     # Stream data masks - which data points to use for each direction
     mask_stream_backward = stream_data[:, 1] > stream_coordinate_com_backward[0, 0, 1]
@@ -470,43 +531,6 @@ def numpyro_stream_model():
     mask_evaluate_inside_track_backward = (stream_data[:, 1] < jnp.max(phi1_backward_valid)) & (stream_data[:, 1] < phi1_max)
     mask_evaluate_inside_track_forward = (stream_data[:, 1] > jnp.min(phi1_forward_valid)) & (stream_data[:, 1] > phi1_min)
 
-    def interpolate_coord_backward(coord_idx):
-
-        coord_backward_valid = jnp.where(valid_time_backward, 
-                                   stream_coordinate_com_backward[:, 0, coord_idx], 
-                                   -100000.0)
-
-        return jnp.interp(
-            jnp.where(mask_stream_backward & mask_evaluate_inside_track_backward, stream_data[:, 1], 100000.0), 
-            phi1_backward_valid, 
-            coord_backward_valid
-        )
-    
-    def interpolate_coord_forward(coord_idx):
-
-        coord_forward_valid = jnp.where(valid_time_forward, 
-                                   stream_coordinate_com_forward[:, 0, coord_idx], 
-                                   100000.0)
-
-        return jnp.interp(
-            -jnp.where(mask_stream_forward & mask_evaluate_inside_track_forward, stream_data[:, 1], -100000.0), 
-            -phi1_forward_valid, 
-            coord_forward_valid
-        )
-        
-    coord_indices=jnp.array([2, 3, 4, 5])
-
-    # Apply interpolation to all coordinates
-    interp_tracks_backward = jax.vmap(interpolate_coord_backward)(coord_indices)  # Shape: (n_coords, n_data)
-    interp_tracks_forward = jax.vmap(interpolate_coord_forward)(coord_indices)  # Shape: (n_coords, n_data)
-
-    # Calculate residuals for all coordinates
-    data_coords = stream_data[:, coord_indices].T  # Shape: (n_coords, n_data)
-    sigma = jnp.array([0.5, 10., 2., 2. ])
-
-    
-    mask_correct_interpolation_backward = phi1_backward_valid < 8
-    mask_correct_interpolation_forward = phi1_forward_valid > - 88
 
     with numpyro.plate("N", data_coords.shape[1]):
         masked_dist_backward = dist.Normal(interp_tracks_backward, sigma[:, None], ).mask(mask_stream_backward & mask_evaluate_inside_track_backward & mask_correct_interpolation_backward)
@@ -519,7 +543,7 @@ rng_key = random.PRNGKey(42)
 
 # NUTS kernel: try dense_mass=True for complex geometry; set target_accept higher if needed
 kernel = NUTS(numpyro_stream_model, target_accept_prob=0.9, dense_mass=True,  max_tree_depth=3)  # try True if needed
-mcmc = MCMC(kernel, num_warmup=1000, num_samples=5000, num_chains=20, progress_bar=False, chain_method='vectorized', jit_model_args=True)
+mcmc = MCMC(kernel, num_warmup=1000, num_samples=5000, num_chains=10, progress_bar=False, chain_method='vectorized', jit_model_args=True)
 
 # (Optional) choose a good init strategy:
 # - init_to_median() is a reasonable generic choice if the prior is informative
