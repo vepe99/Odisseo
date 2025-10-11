@@ -77,6 +77,71 @@ def Plummer_sphere(key: PRNGKeyArray,
 
     # return jnp.array(positions), jnp.array(velocities), params.Plummer_params.Mtot/config.N_particles*jnp.ones(config.N_particles)
     return jnp.array(positions), jnp.array(velocities), 1/config.N_particles*jnp.ones(config.N_particles)
+
+@jaxtyped(typechecker=typechecker)
+@partial(jax.jit, static_argnames=['config'])
+def Plummer_sphere_reparam(noise: jnp.ndarray,
+                          config: SimulationConfig,
+                          params: SimulationParams) -> Tuple:
+    """
+    Reparameterized Plummer sphere generation.
+    
+    Args:
+        noise (jnp.ndarray): Pre-sampled uniform random numbers of shape (N_particles, 6)
+                           where each column corresponds to:
+                           [0]: radial sampling
+                           [1]: position azimuthal angle  
+                           [2]: position polar angle
+                           [3]: velocity magnitude sampling
+                           [4]: velocity azimuthal angle
+                           [5]: velocity polar angle
+        config (SimulationConfig): Configuration containing N_particles
+        params (SimulationParams): Parameters containing Plummer_params, G
+    
+    Returns:
+        tuple: Same as original Plummer_sphere function
+    """
+    
+    # Extract the 6 noise components (each should be uniform [0,1])
+    noise_r = noise[:, 0]
+    noise_phi = noise[:, 1] 
+    noise_sin_i = noise[:, 2]
+    noise_u = noise[:, 3]
+    noise_phi_v = noise[:, 4]
+    noise_sin_i_v = noise[:, 5]
+    
+    # Position sampling (deterministic transformations of noise)
+    r = jnp.sqrt(params.Plummer_params.a**2 / (noise_r**(-2/3) - 1))
+    phi = noise_phi * 2 * jnp.pi  # Scale [0,1] to [0, 2π]
+    sin_i = 2 * noise_sin_i - 1  # Scale [0,1] to [-1, 1]
+    
+    positions = jnp.array([r*jnp.cos(jnp.arcsin(sin_i))*jnp.cos(phi), 
+                           r*jnp.cos(jnp.arcsin(sin_i))*jnp.sin(phi), 
+                           r*sin_i]).T
+    
+    potential = -params.G * params.Plummer_params.Mtot / jnp.sqrt(jnp.linalg.norm(positions, axis=1)**2 + params.Plummer_params.a**2)
+    velocities_escape = jnp.sqrt(-2*potential)
+
+    def G(q):
+        """Same as your original G function"""
+        return 1/(jnp.pi*7/512) * (q*jnp.sqrt(1 - q**2)*(-384*q**8 + 1488*q**6 - 2104*q**4 + 1210*q**2 - 105) + 105*jnp.asin(q))/3840
+    
+    # Inverse fitting (unchanged)
+    q = jnp.linspace(0, 1, 500)
+    y = G(q)
+    
+    samples = jnp.interp(noise_u, y, q)  # Use noise_u instead of random sampling
+    velocities_modulus = samples * velocities_escape
+
+    # Velocity direction sampling
+    phi_v = noise_phi_v * 2 * jnp.pi  # Scale [0,1] to [0, 2π]
+    sin_i_v = 2 * noise_sin_i_v - 1  # Scale [0,1] to [-1, 1]
+    
+    velocities = velocities_modulus[:, None]*jnp.array([jnp.cos(jnp.arcsin(sin_i_v))*jnp.cos(phi_v), 
+                                                jnp.cos(jnp.arcsin(sin_i_v))*jnp.sin(phi_v), 
+                                                sin_i_v]).T
+
+    return jnp.array(positions), jnp.array(velocities), 1/config.N_particles*jnp.ones(config.N_particles)
      
  
   

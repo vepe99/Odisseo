@@ -1,4 +1,4 @@
-from typing import Optional, Tuple, Callable, Union, List, NamedTuple
+from beartype.typing import Optional, Tuple, Callable, Union, List, NamedTuple
 from functools import partial
 from jaxtyping import jaxtyped, PRNGKeyArray
 from beartype import beartype as typechecker
@@ -17,8 +17,9 @@ def Plummer_sphere(key: PRNGKeyArray,
                     config: SimulationConfig,
                     params: SimulationParams) -> Tuple:
     """
-    Create initial conditions for a Plummer sphere. The sampling of velocities is done by inverse fitting 
-    the cumulative distribution function of the Plummer sphere.
+    Create initial conditions for a Plummer sphere. The sampling of velocities 
+    is done by inverse fitting the cumulative distribution function of the 
+    Plummer sphere.
 
     Args:
         key (jax.random.PRNGKey): Random key.
@@ -32,16 +33,14 @@ def Plummer_sphere(key: PRNGKeyArray,
             masses (jnp.array): Array of shape (N_particles,) representing the masses of the particles.
     """
     
-    Plummer_Mtot = params.Plummer_params.Mtot
     key_r, key_phi, key_sin_i, key_u, key_phi_v, key_sin_i_v= random.split(key, 6)
     r = jnp.sqrt( params.Plummer_params.a**2 / (random.uniform(key=key_r, shape=(config.N_particles,))**(-2/3) -1  )   )
     phi = random.uniform(key=key_phi, shape=(config.N_particles,), minval=0, maxval=2*jnp.pi) 
     sin_i = random.uniform(key=key_sin_i, shape=(config.N_particles,), minval=-1, maxval=1)
-    
     positions = jnp.array([r*jnp.cos(jnp.arcsin(sin_i))*jnp.cos(phi), 
                            r*jnp.cos(jnp.arcsin(sin_i))*jnp.sin(phi), 
                            r*sin_i]).T
-    potential = - params.G * Plummer_Mtot / jnp.sqrt( jnp.linalg.norm(positions, axis=1)**2 + params.Plummer_params.a**2)
+    potential = - params.G * params.Plummer_params.Mtot / jnp.sqrt( jnp.linalg.norm(positions, axis=1)**2 + params.Plummer_params.a**2)
     velocities_escape = jnp.sqrt(-2*potential )
 
 
@@ -61,7 +60,7 @@ def Plummer_sphere(key: PRNGKeyArray,
         return 1/(jnp.pi*7/512) * (q*jnp.sqrt(1 - q**2)*(-384*q**8 + 1488*q**6 - 2104*q**4 + 1210*q**2 - 105) + 105*jnp.asin(q))/3840
     
     # Invere fitting
-    q = jnp.linspace(0, 1, 100_000)
+    q = jnp.linspace(0, 1, 500)
     y = G(q)
 
     u = random.uniform(key=key_u, shape=(config.N_particles,))
@@ -71,49 +70,81 @@ def Plummer_sphere(key: PRNGKeyArray,
     # Generate random angles for the velocity
     phi_v = random.uniform(key=key_phi_v, shape=(config.N_particles,), minval=0, maxval=2*jnp.pi) 
     sin_i_v = random.uniform(key=key_sin_i_v, shape=(config.N_particles,), minval=-1, maxval=1)
-    velocities = jnp.array([velocities_modulus*jnp.cos(jnp.arcsin(sin_i_v))*jnp.cos(phi_v), velocities_modulus*jnp.cos(jnp.arcsin(sin_i_v))*jnp.sin(phi_v), velocities_modulus*sin_i_v]).T
+    velocities = velocities_modulus[:, None]*jnp.array([jnp.cos(jnp.arcsin(sin_i_v))*jnp.cos(phi_v), 
+                                                jnp.cos(jnp.arcsin(sin_i_v))*jnp.sin(phi_v), 
+                                                sin_i_v]).T
 
 
-    return jnp.array(positions), jnp.array(velocities), Plummer_Mtot/config.N_particles*jnp.ones(config.N_particles)
+    # return jnp.array(positions), jnp.array(velocities), params.Plummer_params.Mtot/config.N_particles*jnp.ones(config.N_particles)
+    return jnp.array(positions), jnp.array(velocities), 1/config.N_particles*jnp.ones(config.N_particles)
+
+@jaxtyped(typechecker=typechecker)
+@partial(jax.jit, static_argnames=['config'])
+def Plummer_sphere_reparam(noise: jnp.ndarray,
+                          config: SimulationConfig,
+                          params: SimulationParams) -> Tuple:
+    """
+    Reparameterized Plummer sphere generation.
+    
+    Args:
+        noise (jnp.ndarray): Pre-sampled uniform random numbers of shape (N_particles, 6)
+                           where each column corresponds to:
+                           [0]: radial sampling
+                           [1]: position azimuthal angle  
+                           [2]: position polar angle
+                           [3]: velocity magnitude sampling
+                           [4]: velocity azimuthal angle
+                           [5]: velocity polar angle
+        config (SimulationConfig): Configuration containing N_particles
+        params (SimulationParams): Parameters containing Plummer_params, G
+    
+    Returns:
+        tuple: Same as original Plummer_sphere function
+    """
+    
+    # Extract the 6 noise components (each should be uniform [0,1])
+    noise_r = noise[:, 0]
+    noise_phi = noise[:, 1] 
+    noise_sin_i = noise[:, 2]
+    noise_u = noise[:, 3]
+    noise_phi_v = noise[:, 4]
+    noise_sin_i_v = noise[:, 5]
+    
+    # Position sampling (deterministic transformations of noise)
+    r = jnp.sqrt(params.Plummer_params.a**2 / (noise_r**(-2/3) - 1))
+    phi = noise_phi * 2 * jnp.pi  # Scale [0,1] to [0, 2π]
+    sin_i = 2 * noise_sin_i - 1  # Scale [0,1] to [-1, 1]
+    
+    positions = jnp.array([r*jnp.cos(jnp.arcsin(sin_i))*jnp.cos(phi), 
+                           r*jnp.cos(jnp.arcsin(sin_i))*jnp.sin(phi), 
+                           r*sin_i]).T
+    
+    potential = -params.G * params.Plummer_params.Mtot / jnp.sqrt(jnp.linalg.norm(positions, axis=1)**2 + params.Plummer_params.a**2)
+    velocities_escape = jnp.sqrt(-2*potential)
+
+    def G(q):
+        """Same as your original G function"""
+        return 1/(jnp.pi*7/512) * (q*jnp.sqrt(1 - q**2)*(-384*q**8 + 1488*q**6 - 2104*q**4 + 1210*q**2 - 105) + 105*jnp.asin(q))/3840
+    
+    # Inverse fitting (unchanged)
+    q = jnp.linspace(0, 1, 500)
+    y = G(q)
+    
+    samples = jnp.interp(noise_u, y, q)  # Use noise_u instead of random sampling
+    velocities_modulus = samples * velocities_escape
+
+    # Velocity direction sampling
+    phi_v = noise_phi_v * 2 * jnp.pi  # Scale [0,1] to [0, 2π]
+    sin_i_v = 2 * noise_sin_i_v - 1  # Scale [0,1] to [-1, 1]
+    
+    velocities = velocities_modulus[:, None]*jnp.array([jnp.cos(jnp.arcsin(sin_i_v))*jnp.cos(phi_v), 
+                                                jnp.cos(jnp.arcsin(sin_i_v))*jnp.sin(phi_v), 
+                                                sin_i_v]).T
+
+    return jnp.array(positions), jnp.array(velocities), 1/config.N_particles*jnp.ones(config.N_particles)
      
  
   
-def Plummer_sphere_multiprocess(mass, config, params):
-    """
-    Generate initial conditions for a Plummer sphere using rejection sampling.
-    The calculation is done using numpy.
-
-    Args:
-        mass (float): The total mass of the Plummer sphere.
-        config (NamedTuple): Configuration NamedTuple containing the number of particles (N_particles).
-        params (NamedTuple): Parameters NamedTuple containing:
-    
-    Returns:
-        tuple: A tuple containing:
-            positions (jnp.array): Array of shape (N_particles, 3) representing the positions of the particles.
-            velocities (jnp.array): Array of shape (N_particles, 3) representing the velocities of the particles.
-            masses (jnp.array): Array of shape (N_particles,) representing the masses of the particles.
-    """
-    Plummer_Mtot = params.Plummer_params.Mtot
-    r = np.sqrt( params.Plummer_params.a / (np.random.uniform(size=config.N_particles)**(-3/2) -1))
-    phi = np.random.uniform(size=config.N_particles, low=0, high=2*np.pi) 
-    sin_i = np.random.uniform(size=config.N_particles, low=-1, high=1)
-    
-    positions = np.array([r*np.cos(np.arcsin(sin_i))*np.cos(phi), 
-                          r*np.cos(np.arcsin(sin_i))*np.sin(phi), 
-                          r*sin_i]).T
-    potential = - params.G * Plummer_Mtot / (r**2 + params.Plummer_params.a**2)
-
-    def generate_velocity_Plummer(potential_i, rejection_samples=1000):
-            velocity_i = np.random.uniform(size=(rejection_samples, 3), low=-np.sqrt(-2*potential_i), high=np.sqrt(-2*potential_i))
-            escape_velocity_mask = np.sum(velocity_i**2, axis=1) <= - 2*potential_i
-            isotropic_velocity_mask = np.random.uniform(size=rejection_samples) <= ((0.5 * np.sum(velocity_i**2, axis=1) + potential_i ) / potential_i)**(7/2)
-            return velocity_i[(escape_velocity_mask)&(isotropic_velocity_mask)][0]
-    
-    with Pool(processes=1) as pool:
-        velocities = pool.map(generate_velocity_Plummer, potential)
-    return jnp.array(positions), jnp.array(velocities), 1/config.N_particles*jnp.ones(config.N_particles)
-
 @partial(jax.jit)
 def ic_two_body(mass1: Union[float, jnp.ndarray],
                 mass2: Union[float, jnp.ndarray],

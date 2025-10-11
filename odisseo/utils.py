@@ -3,10 +3,10 @@ from functools import partial
 import jax
 from jax import jit
 import jax.numpy as jnp
-from odisseo.dynamics import direct_acc, direct_acc_laxmap, direct_acc_matrix, direct_acc_for_loop, direct_acc_sharding
+from odisseo.dynamics import direct_acc, direct_acc_laxmap, direct_acc_matrix, direct_acc_for_loop, direct_acc_sharding, no_self_gravity
 from odisseo.potentials import combined_external_acceleration, combined_external_acceleration_vmpa_switch
 from odisseo.option_classes import SimulationConfig, SimulationParams
-from odisseo.option_classes import DIRECT_ACC, DIRECT_ACC_LAXMAP, DIRECT_ACC_MATRIX, DIRECT_ACC_FOR_LOOP, DIRECT_ACC_SHARDING
+from odisseo.option_classes import DIRECT_ACC, DIRECT_ACC_LAXMAP, DIRECT_ACC_MATRIX, DIRECT_ACC_FOR_LOOP, DIRECT_ACC_SHARDING, NO_SELF_GRAVITY
 from odisseo.units import CodeUnits
 
 from astropy import units as u
@@ -80,9 +80,11 @@ def E_pot(state: jnp.ndarray,
     elif config.acceleration_scheme == DIRECT_ACC_MATRIX:
         _, pot = direct_acc_matrix(state, mass, config, params, return_potential=True)
     elif config.acceleration_scheme == DIRECT_ACC_FOR_LOOP:
-        pot = direct_acc_for_loop(state, mass, config, params, return_potential=True)
+        _, pot = direct_acc_for_loop(state, mass, config, params, return_potential=True)
     elif config.acceleration_scheme == DIRECT_ACC_SHARDING:
-        pot = direct_acc_sharding(state, mass, config, params, return_potential=True)
+        _, pot = direct_acc_sharding(state, mass, config, params, return_potential=True)
+    elif config.acceleration_scheme == NO_SELF_GRAVITY:
+        _, pot = no_self_gravity(state, mass, config, params, return_potential=True)
     
     self_Epot = pot*mass
 

@@ -1,0 +1,334 @@
+import os
+# os.environ['CUDA_VISIBLE_DEVICES'] = '2' 
+from autocvd import autocvd
+autocvd(num_gpus = 1)
+
+import jax 
+import jax.numpy as jnp
+from jax import jit, random
+import equinox as eqx
+from jax.sharding import Mesh, PartitionSpec, NamedSharding
+
+# jax.config.update("jax_enable_x64", True)
+import matplotlib.pyplot as plt
+
+from functools import partial
+
+import numpy as np
+from astropy import units as u
+from astropy import constants as c
+
+import odisseo
+from odisseo import construct_initial_state
+from odisseo.integrators import leapfrog
+from odisseo.dynamics import direct_acc, DIRECT_ACC, DIRECT_ACC_LAXMAP, DIRECT_ACC_FOR_LOOP, DIRECT_ACC_MATRIX, NO_SELF_GRAVITY
+from odisseo.option_classes import SimulationConfig, SimulationParams, MNParams, NFWParams, PlummerParams, PSPParams, MN_POTENTIAL, NFW_POTENTIAL, PSP_POTENTIAL, DIFFRAX_BACKEND, LEAPFROG
+from odisseo.option_classes import SEMIIMPLICITEULER, TSIT5
+from odisseo.option_classes import RECURSIVECHECKPOINTADJOING, FORWARDMODE
+from odisseo.initial_condition import Plummer_sphere, Plummer_sphere_reparam
+from odisseo.utils import center_of_mass
+from odisseo.time_integration import time_integration
+from odisseo.units import CodeUnits
+from odisseo.visualization import create_3d_gif, create_projection_gif, energy_angular_momentum_plot
+from odisseo.potentials import MyamotoNagai, NFW
+
+from odisseo.utils import halo_to_gd1_velocity_vmap, halo_to_gd1_vmap, projection_on_GD1
+from jax.test_util import check_grads
+
+plt.rcParams.update({
+    'font.size': 20,
+    'axes.labelsize': 20,
+    'xtick.labelsize': 13,
+    'ytick.labelsize': 13,
+    'legend.fontsize': 15,
+})
+
+plt.style.use('default')
+
+
+code_length = 10 * u.kpc
+code_mass = 1e4 * u.Msun
+G = 1
+code_time = 3 * u.Gyr
+code_units = CodeUnits(code_length, code_mass, G=1, unit_time = code_time )  
+
+
+config = SimulationConfig(N_particles = 1000, 
+                          return_snapshots = True, 
+                          num_snapshots = 1000, 
+                          num_timesteps = 1000, 
+                          external_accelerations=(NFW_POTENTIAL, MN_POTENTIAL, PSP_POTENTIAL), 
+                          acceleration_scheme = DIRECT_ACC_MATRIX,
+                          softening = (0.1 * u.pc).to(code_units.code_length).value,
+                          integrator = DIFFRAX_BACKEND,
+                          differentation_mode=TSIT5,
+                          fixed_timestep=False,
+                          ) #default values
+
+params = SimulationParams(t_end = (3 * u.Gyr).to(code_units.code_time).value,  
+                          Plummer_params= PlummerParams(Mtot=(10**4.5 * u.Msun).to(code_units.code_mass).value,
+                                                        a=(8 * u.pc).to(code_units.code_length).value),
+                           MN_params= MNParams(M = (68_193_902_782.346756 * u.Msun).to(code_units.code_mass).value,
+                                              a = (3.0 * u.kpc).to(code_units.code_length).value,
+                                              b = (0.280 * u.kpc).to(code_units.code_length).value),
+                          NFW_params= NFWParams(Mvir=(4.3683325e11 * u.Msun).to(code_units.code_mass).value,
+                                               r_s= (16.0 * u.kpc).to(code_units.code_length).value,),      
+                          PSP_params= PSPParams(M = 4501365375.06545 * u.Msun.to(code_units.code_mass),
+                                                alpha = 1.8, 
+                                                r_c = (1.9*u.kpc).to(code_units.code_length).value),                    
+                          G=code_units.G, ) 
+
+
+key = random.PRNGKey(1)
+
+#set up the particles in the initial state
+positions, velocities, mass = Plummer_sphere(key=key, params=params, config=config)
+
+#the center of mass needs to be integrated backwards in time first 
+config_com = config._replace(N_particles=1,)
+params_com = params._replace(t_end=-params.t_end,)
+
+#this is the final position of the cluster, we need to integrate backwards in time 
+pos_com_final = jnp.array([[11.8, 0.79, 6.4]]) * u.kpc.to(code_units.code_length)
+vel_com_final = jnp.array([[109.5,-254.5,-90.3]]) * (u.km/u.s).to(code_units.code_velocity)
+
+
+mass_com = jnp.array([params_com.Plummer_params.Mtot])
+final_state_com = construct_initial_state(pos_com_final, vel_com_final)
+
+snapshots_com = time_integration(final_state_com, mass_com, config_com, params_com)
+pos_com, vel_com = snapshots_com.states[-1, :, 0], snapshots_com.states[-1, :, 1]
+
+
+# Add the center of mass position and velocity to the Plummer sphere particles
+positions = positions + pos_com
+velocities = velocities + vel_com
+
+#initialize the initial state
+initial_state_stream = construct_initial_state(positions, velocities)
+
+#run the simulation
+snapshots = time_integration(initial_state_stream, mass, config, params)
+
+final_state = snapshots.states[-1]
+stream_data = projection_on_GD1(final_state, code_units=code_units,)
+print("Simulated GD1")
+
+
+# LET'S TRY OPTIMIZING IT
+
+params_sim = params
+
+@jit
+def run_simulation( y, args):
+
+    Mvir, M_MN, r_s, a = y
+    Mvir = 10**Mvir
+    M_MN = 10**M_MN
+    r_s = 10**r_s
+    a = 10**a
+
+    phi1_min, phi1_max = -100, 25
+    phi2_min, phi2_max = -8, 2
+
+    coord_indices = jnp.array([2, 3, 4, 5])
+
+
+    #Final position and velocity of the center of mass
+    pos_com_final = jnp.array([[11.8, 0.79, 6.4]]) * u.kpc.to(code_units.code_length)
+    vel_com_final = jnp.array([[109.5,-254.5,-90.3]]) * (u.km/u.s).to(code_units.code_velocity)
+    
+    #we construmt the initial state of the com 
+    initial_state_com = construct_initial_state(pos_com_final, vel_com_final,)
+
+    #function that integrates the com backwards and forwards in time and then the stream, and projects it on the sky
+    @jit
+    def assign_params_integrate_projection(t_end):
+        
+
+        new_params = params_sim._replace(
+                    NFW_params=params_sim.NFW_params._replace(
+                        Mvir=Mvir * u.Msun.to(code_units.code_mass), 
+                        r_s=r_s * u.kpc.to(code_units.code_length)
+                    ),
+                    MN_params=params_sim.MN_params._replace(
+                        M=M_MN * u.Msun.to(code_units.code_mass),
+                        a=a * u.kpc.to(code_units.code_length)
+                    ),
+                     t_end = t_end,)
+        snapshots = time_integration(initial_state_com, mass, config=config_com, params=new_params)
+        stream_coordinate = jax.vmap(projection_on_GD1, in_axes=(0, None))(snapshots.states, code_units)
+        return stream_coordinate
+
+    t_end_mag = 0.2 * u.Gyr.to(code_units.code_time)
+    t_end_array = jnp.array([-t_end_mag, t_end_mag])  # backward, forward
+    
+
+    # vmap over both parameters
+    stream_coordinate_com = jax.vmap(assign_params_integrate_projection)(t_end_array)
+    stream_coordinate_com_backward, stream_coordinate_com_forward = stream_coordinate_com[0], stream_coordinate_com[1]
+
+
+    # Create masks for valid time steps
+    mask_window_backward = (stream_coordinate_com_backward[:, 0, 1] < phi1_max) & \
+                          (stream_coordinate_com_backward[:, 0, 1] > phi1_min) & \
+                          (stream_coordinate_com_backward[:, 0, 2] < phi2_max) & \
+                          (stream_coordinate_com_backward[:, 0, 2] > phi2_min)
+    
+    mask_diff_backward = jnp.ediff1d(stream_coordinate_com_backward[:, 0, 1], to_begin=1) > 0
+    # New mask - True until first False appears
+    mask_diff_backward = jnp.cumprod(mask_diff_backward, dtype=bool)
+
+
+    mask_window_forward = (stream_coordinate_com_forward[:, 0, 1] < phi1_max) & \
+                         (stream_coordinate_com_forward[:, 0, 1] > phi1_min) & \
+                         (stream_coordinate_com_forward[:, 0, 2] < phi2_max) & \
+                         (stream_coordinate_com_forward[:, 0, 2] > phi2_min)
+    
+    mask_diff_forward = jnp.ediff1d(stream_coordinate_com_forward[:, 0, 1], to_begin=-1) < 0
+    mask_diff_forward = jnp.cumprod(mask_diff_forward, dtype=bool)
+
+
+    # Combined time step masks
+    valid_time_backward = mask_window_backward & mask_diff_backward
+    valid_time_forward = mask_window_forward & mask_diff_forward
+
+    # Create masked coordinates for interpolation (only valid time steps)
+    phi1_backward_valid = jnp.where(valid_time_backward, 
+                                   stream_coordinate_com_backward[:, 0, 1], 
+                                   10000.)
+    
+    
+    phi1_forward_valid = jnp.where(valid_time_forward, 
+                                  stream_coordinate_com_forward[:, 0, 1], 
+                                  -10000.)
+    
+
+    # Stream data masks - which data points to use for each direction
+    mask_stream_backward = stream_data[:, 1] > stream_coordinate_com_backward[0, 0, 1]
+    mask_stream_forward = stream_data[:, 1] < stream_coordinate_com_forward[0, 0, 1]
+
+    mask_evaluate_inside_track_backward = (stream_data[:, 1] < jnp.max(phi1_backward_valid)) & (stream_data[:, 1] < phi1_max)
+    mask_evaluate_inside_track_forward = (stream_data[:, 1] > jnp.min(phi1_forward_valid)) & (stream_data[:, 1] > phi1_min)
+
+    def interpolate_coord_backward(coord_idx):
+
+        coord_backward_valid = jnp.where(valid_time_backward, 
+                                   stream_coordinate_com_backward[:, 0, coord_idx], 
+                                   -100000.0)
+
+        return jnp.interp(
+            jnp.where(mask_stream_backward & mask_evaluate_inside_track_backward, stream_data[:, 1], 100000.0), 
+            phi1_backward_valid, 
+            coord_backward_valid
+        )
+    
+    def interpolate_coord_forward(coord_idx):
+
+        coord_forward_valid = jnp.where(valid_time_forward, 
+                                   stream_coordinate_com_forward[:, 0, coord_idx], 
+                                   100000.0)
+
+        return jnp.interp(
+            -jnp.where(mask_stream_forward & mask_evaluate_inside_track_forward, stream_data[:, 1], -100000.0), 
+            -phi1_forward_valid, 
+            coord_forward_valid
+        )
+        
+
+    # Apply interpolation to all coordinates
+    interp_tracks_backward = jax.vmap(interpolate_coord_backward)(coord_indices)  # Shape: (n_coords, n_data)
+    interp_tracks_forward = jax.vmap(interpolate_coord_forward)(coord_indices)  # Shape: (n_coords, n_data)
+
+    # Calculate residuals for all coordinates
+    data_coords = stream_data[:, coord_indices].T  # Shape: (n_coords, n_data)
+    sigma = jnp.array([0.5, 10., 2., 2. ])
+
+    
+    mask_correct_interpolation_backward = phi1_backward_valid < 20
+    mask_correct_interpolation_forward = phi1_forward_valid > - 95
+
+    # Calculate chi2 using only the appropriate data points for each direction
+    residuals_backward = jnp.where(mask_stream_backward & mask_evaluate_inside_track_backward & mask_correct_interpolation_backward, 
+                                  (data_coords - interp_tracks_backward)/sigma[:, None],
+                                  0.0)
+    residuals_forward = jnp.where(mask_stream_forward & mask_evaluate_inside_track_forward & mask_correct_interpolation_forward, 
+                                 (data_coords - interp_tracks_forward)/sigma[:, None],
+                                 0.0)
+    
+    chi2_backward = jnp.sum(residuals_backward**2) 
+    chi2_forward = jnp.sum(residuals_forward**2) 
+    
+    # Use only backward for now (as in your original code)
+    chi2 = chi2_backward + chi2_forward
+
+    return chi2
+
+print("beginning least square optimization")
+
+from optimistix import least_squares
+import optimistix
+
+
+# Shape will be (4, 4)
+
+y0_batched = jnp.array([
+    # Original array
+    [jnp.log10(params.NFW_params.Mvir * 2 * code_units.code_mass.to(u.Msun)), 
+     jnp.log10(params.MN_params.M * 0.5 * code_units.code_mass.to(u.Msun)),
+     jnp.log10(params.NFW_params.r_s * 2 * code_units.code_length.to(u.kpc)),
+     jnp.log10(params.MN_params.a * 2 * code_units.code_length.to(u.kpc))],
+    
+    # Variation 1: swap some factors
+    [jnp.log10(params.NFW_params.Mvir * 0.5 * code_units.code_mass.to(u.Msun)), 
+     jnp.log10(params.MN_params.M * 2 * code_units.code_mass.to(u.Msun)),
+     jnp.log10(params.NFW_params.r_s * 0.5 * code_units.code_length.to(u.kpc)),
+     jnp.log10(params.MN_params.a * 2 * code_units.code_length.to(u.kpc))],
+    
+    # Variation 2: different swaps
+    [jnp.log10(params.NFW_params.Mvir * 2 * code_units.code_mass.to(u.Msun)), 
+     jnp.log10(params.MN_params.M * 2 * code_units.code_mass.to(u.Msun)),
+     jnp.log10(params.NFW_params.r_s * 2 * code_units.code_length.to(u.kpc)),
+     jnp.log10(params.MN_params.a * 2 * code_units.code_length.to(u.kpc))],
+    
+    # Variation 3: more swaps
+    [jnp.log10(params.NFW_params.Mvir * 0.5 * code_units.code_mass.to(u.Msun)), 
+     jnp.log10(params.MN_params.M * 0.5 * code_units.code_mass.to(u.Msun)),
+     jnp.log10(params.NFW_params.r_s * 2 * code_units.code_length.to(u.kpc)),
+     jnp.log10(params.MN_params.a * 0.5 * code_units.code_length.to(u.kpc))],
+])
+
+# Shape will be (4, 4)
+def minimization_vmap(y0):
+    return least_squares(
+        fn=run_simulation,
+        solver=optimistix.LevenbergMarquardt(rtol=1e-5, atol=1e-5),
+        y0=y0,
+    ).value
+
+values = jax.vmap(minimization_vmap)(y0_batched)
+
+
+#remember to put FORWARD MODE for the adjoint method when calculating the hessian
+config_com = config_com._replace(diffrax_adjoint_method=FORWARDMODE,)
+hessians = jax.vmap(jax.jacfwd(jax.jacfwd(run_simulation)))(values)
+
+fisher_info = - hessians
+covariance = jax.vmap(jnp.linalg.inv)(fisher_info)
+
+from chainconsumer import Chain, ChainConsumer, Truth
+
+c = ChainConsumer()
+for i in range(values.shape[0]):
+    chain = Chain.from_covariance(mean=values[i], covariance=covariance[i], columns=["$M_{vir}$", "$M_{MN}$", "$r_s$", "$a$"], name=f'Trial {i}')
+    c.add_chain(chain)
+    c.add_marker(location = {"$M_{vir}$": np.array(values[i][0]), "$M_{MN}$": np.array(values[i][1]),
+                             "$r_s$": np.array(values[i][2]), "$a$": np.array(values[i][3])}, name=f"MLE Trial {i}",  color='black', marker='x')
+
+c.add_truth(Truth(location = {"$M_{vir}$": jnp.log10(params.NFW_params.Mvir * code_units.code_mass.to(u.Msun)), 
+                              "$M_{MN}$": jnp.log10(params.MN_params.M * code_units.code_mass.to(u.Msun)),
+                              "$r_s$": jnp.log10(params.NFW_params.r_s * code_units.code_length.to(u.kpc)),
+                              "$a$": jnp.log10(params.MN_params.a * code_units.code_length.to(u.kpc))}, color='red', name="True value"))
+
+fig = c.plotter.plot()
+fig.savefig("Fisher_contour_gradient_descend_vmap.png", dpi=300)

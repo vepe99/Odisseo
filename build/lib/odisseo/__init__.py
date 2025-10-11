@@ -18,6 +18,15 @@ Odisseo package.
 """
 
 def construct_initial_state(position, velocity):
+    """Constructs the initial state for the simulation.
+
+    Args:
+        position (jnp.ndarray): Initial positions of the bodies.
+        velocity (jnp.ndarray): Initial velocities of the bodies.
+
+    Returns:
+        jnp.ndarray: The initial state containing positions and velocities.
+    """
     state = jnp.zeros((position.shape[0], 2, position.shape[1]))
     state = state.at[:, 0, :].set(position)
     state = state.at[:, 1, :].set(velocity)

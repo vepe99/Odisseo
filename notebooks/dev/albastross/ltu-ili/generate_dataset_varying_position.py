@@ -1,7 +1,7 @@
 from autocvd import autocvd
 autocvd(num_gpus = 1)
 # import os
-# os.environ['CUDA_VISIBLE_DEVICES'] = '0'  # Set to the 0 for tmux 6
+# os.environ['CUDA_VISIBLE_DEVICES'] = '5'  # Set to the 0 for tmux 6
 
 import time
 
@@ -38,15 +38,16 @@ config = SimulationConfig(N_particles = 1_000,
 
 @jit
 def run_simulation(rng_key, 
-                   params):
+                   params, 
+                   position_velocity):
     
     #the center of mass needs to be integrated backwards in time first 
     config_com = config._replace(N_particles=1,)
     params_com = params._replace(t_end=-params.t_end,)
 
     #this is the final position of the cluster, we need to integrate backwards in time 
-    pos_com_final = jnp.array([[11.8, 0.79, 6.4]]) * u.kpc.to(code_units.code_length)
-    vel_com_final = jnp.array([[109.5,-254.5,-90.3]]) * (u.km/u.s).to(code_units.code_velocity)
+    pos_com_final = jnp.array([[position_velocity[0], position_velocity[1], position_velocity[2]]]) * u.kpc.to(code_units.code_length)
+    vel_com_final = jnp.array([[position_velocity[3], position_velocity[4], position_velocity[5]]]) * (u.km/u.s).to(code_units.code_velocity)
     mass_com = jnp.array([params.Plummer_params.Mtot]) 
     
     #we construmt the initial state of the com 
@@ -109,14 +110,15 @@ def vmapped_run_simulation(rng_key, params_values):
                                                 alpha = 1.8, 
                                                 r_c = r_c_PSP_units),
                           G = code_units.G, )
-    return run_simulation(rng_key, params_samples)
+    position_velocity = params_values[7:]
+    return run_simulation(rng_key, params_samples, position_velocity=position_velocity)
 
 
-
+#11500
 start_time = time.time()
-batch_size = 3500
-num_chunks = 1_150_000
-name_str = 100_000
+batch_size = 500
+num_chunks = 115000
+name_str = 0
 for i in range(name_str, num_chunks, batch_size):
     rng_key = random.PRNGKey(i)
     parameter_value = jax.random.uniform(rng_key, 
@@ -165,7 +167,7 @@ for i in range(name_str, num_chunks, batch_size):
     
     stream_samples = jax.vmap(vmapped_run_simulation, )(random.split(rng_key, batch_size)[:, 0], parameter_value_code_units)
     for j in range(batch_size):
-        np.savez_compressed(f"/export/data/vgiusepp/odisseo_data/data_varying_position/file_{name_str:06d}.npz",
+        np.savez_compressed(f"/export/data/vgiusepp/odisseo_data/data_varying_position_newprior/file_{name_str:06d}.npz",
                             x = stream_samples[j],
                             theta = parameter_value[j],)
         name_str += 1
