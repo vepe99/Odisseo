@@ -45,14 +45,109 @@ plt.rcParams.update({
 
 plt.style.use('default')
 
-import interpax
+#projection @jax.jit
+def halo_to_sun(Xhalo: jnp.ndarray) -> jnp.ndarray:
+    """
+    Conversion from simulation frame to cartesian frame centred at Sun
+    Args:
+      Xhalo: 3d position (x [kpc], y [kpc], z [kpc]) in simulation frame
+    Returns:
+      3d position (x_s [kpc], y_s [kpc], z_s [kpc]) in Sun frame
+    Examples
 
+    --------
+    >>> halo_to_sun(jnp.array([1.0, 2.0, 3.0]))
+    """
+    sunx = 8.0
+    xsun = sunx - Xhalo[0]
+    ysun = Xhalo[1]
+    zsun = Xhalo[2]
+    return jnp.array([xsun, ysun, zsun])
+
+
+@jax.jit
+def sun_to_gal(Xsun: jnp.ndarray) -> jnp.ndarray:
+    """
+    Conversion from sun cartesian frame to galactic co-ordinates
+    Args:
+      Xsun: 3d position (x_s [kpc], y_s [kpc], z_s [kpc]) in Sun frame
+    Returns:
+      3d position (r [kpc], b [rad], l [rad]) in galactic frame
+    Examples
+    --------
+    >>> sun_to_gal(jnp.array([1.0, 2.0, 3.0]))
+    """
+    r = jnp.linalg.norm(Xsun)
+    b = jnp.arcsin(Xsun[2] / r)
+    l = jnp.arctan2(Xsun[1], Xsun[0])
+    return jnp.array([r, b, l])
+
+
+@jax.jit
+def gal_to_equat(Xgal: jnp.ndarray) -> jnp.ndarray:
+    """
+    Conversion from galactic co-ordinates to equatorial co-ordinates
+    Args:
+      Xgal: 3d position (r [kpc], b [rad], l [rad]) in galactic frame
+    Returns:
+      3d position (r [kpc], alpha [rad], delta [rad]) in equatorial frame
+    Examples
+    --------
+    >>> gal_to_equat(jnp.array([1.0, 2.0, 3.0]))
+    """
+    dNGPdeg = 27.12825118085622
+    lNGPdeg = 122.9319185680026
+    aNGPdeg = 192.85948
+    dNGP = dNGPdeg * jnp.pi / 180.0
+    lNGP = lNGPdeg * jnp.pi / 180.0
+    aNGP = aNGPdeg * jnp.pi / 180.0
+    r = Xgal[0]
+    b = Xgal[1]
+    l = Xgal[2]
+    sb = jnp.sin(b)
+    cb = jnp.cos(b)
+    sl = jnp.sin(lNGP - l)
+    cl = jnp.cos(lNGP - l)
+    cs = cb * sl
+    cc = jnp.cos(dNGP) * sb - jnp.sin(dNGP) * cb * cl
+    alpha = jnp.arctan(cs / cc) + aNGP
+    delta = jnp.arcsin(jnp.sin(dNGP) * sb + jnp.cos(dNGP) * cb * cl)
+    return jnp.array([r, alpha, delta])
+
+def transform_velocity(transform_fn, X, V):
+    """
+    Generic velocity transformation through coordinate mapping.
+
+    Args:
+      transform_fn: function R^3 → R^3 mapping positions to new coordinates
+      X: position vector in original coordinates (3,)
+      V: velocity vector in original coordinates (3,)
+
+    Returns:
+      velocity vector in transformed coordinates (3,)
+    """
+    J = jax.jacobian(transform_fn)(X)  # (3,3) Jacobian
+    return J @ V
+
+def halo_to_equatorial(Xhalo):
+    Xsun = halo_to_sun(Xhalo)
+    Xgal = sun_to_gal(Xsun)
+    Xeq  = gal_to_equat(Xgal)
+    return Xeq
+
+
+#vamp functions
+halo_to_equatorial_batch = jax.vmap(halo_to_equatorial, in_axes=(0))
+transform_velocity_batch = jax.vmap(transform_velocity, in_axes=(None, 0, 0))
+
+
+    
 
 code_length = 10 * u.kpc
 code_mass = 1e4 * u.Msun
 G = 1
 code_time = 3 * u.Gyr
-code_units = CodeUnits(code_length, code_mass, G=1, unit_time = code_time )  
+code_units = CodeUnits(code_length, code_mass, G=1,) #unit_time = code_time )  
 
 
 config = SimulationConfig(N_particles = 1000, 
@@ -113,24 +208,32 @@ initial_state_stream = construct_initial_state(positions, velocities)
 snapshots = time_integration(initial_state_stream, mass, config, params)
 
 final_state = snapshots.states[-1]
-stream_data = projection_on_GD1(final_state, code_units=code_units,)
+GD1_coord = projection_on_GD1(final_state, code_units=code_units,)
+pos_final = final_state[:, 0] * code_units.code_length.to(u.kpc)
+vel_final = final_state[:, 1] * code_units.code_velocity.to(u.kpc / u.Myr)
+equat_coords = halo_to_equatorial_batch(pos_final)
+equat_vels = transform_velocity_batch(halo_to_equatorial, pos_final, vel_final)
+stream_data = jnp.array([GD1_coord[:, 0], #r
+                         GD1_coord[:, 1], #phi1
+                         GD1_coord[:, 2], #phi2
+                         equat_vels[:, 1] * 2.0626480624709636e8 / 1e6 * jnp.cos(equat_coords[:, 2]), #v_alpha
+                         equat_vels[:, 2] * 2.0626480624709636e8 / 1e6, #v_delta
+                         equat_vels[:, 0] * (u.kpc/u.Myr).to(u.km/u.s), #v_r                          
+                         ]).T
 print("Simulated GD1")
 
 
 # LET'S TRY OPTIMIZING IT
 
 params_sim = params
-config_com = config_com._replace(diffrax_adjoint_method=FORWARDMODE,
+config_com = config_com._replace(diffrax_adjoint_method=FORWARDMODE
 )
 
 
-# phi1_min, phi1_max = -100, 25
-# phi2_min, phi2_max = -8, 2
 
-
-stream_data = stream_data[(stream_data[:, 1] > -95) & (stream_data[:, 1] < 20)]  # Filter data within phi1 range
+stream_data = stream_data[(stream_data[:, 1] > -90) & (stream_data[:, 1] < 10)]  # Filter data within phi1 range
 @partial(jit, static_argnames=['return_residual'])
-def run_simulation( y, return_residual=True):
+def run_simulation(y, return_residual=True):
 
     Mvir, M_MN, r_s, a, b, = y
     Mvir = 10**Mvir
@@ -139,7 +242,7 @@ def run_simulation( y, return_residual=True):
     a = 10**a
     b = 10**b
 
-    phi1_min, phi1_max = -100, 25
+    phi1_min, phi1_max = -150, 60
     phi2_min, phi2_max = -8, 2
 
     coord_indices = jnp.array([2, 3, 4, 5])
@@ -159,7 +262,7 @@ def run_simulation( y, return_residual=True):
 
         new_params = params_sim._replace(
                     NFW_params=params_sim.NFW_params._replace(
-                        Mvir=Mvir * u.Msun.to(code_units.code_mass), 
+                        Mvir= Mvir * u.Msun.to(code_units.code_mass), 
                         r_s=r_s * u.kpc.to(code_units.code_length)
                     ),
                     MN_params=params_sim.MN_params._replace(
@@ -169,16 +272,28 @@ def run_simulation( y, return_residual=True):
                     ),
                      t_end = t_end,)
         snapshots = time_integration(initial_state_com, mass, config=config_com, params=new_params)
-        stream_coordinate = jax.vmap(projection_on_GD1, in_axes=(0, None))(snapshots.states, code_units)
+        stream_coordinate_GD1 = jax.vmap(projection_on_GD1, in_axes=(0, None))(snapshots.states, code_units)
+        pos_stream = snapshots.states[:, 0, 0] * code_units.code_length.to(u.kpc)
+        vel_stream = snapshots.states[:, 0, 1] * code_units.code_velocity.to(u.kpc / u.Myr)
+        equat_coords_stream = halo_to_equatorial_batch(pos_stream)
+        equat_vels_stream = transform_velocity_batch(halo_to_equatorial, pos_stream, vel_stream)
+        stream_coordinate = jnp.concatenate([stream_coordinate_GD1[:, :, 0].reshape(1000, 1, 1), #r
+                                            stream_coordinate_GD1[:, :, 1].reshape(1000, 1, 1), #phi1
+                                            stream_coordinate_GD1[:, :, 2].reshape(1000, 1, 1), #phi2
+                                            equat_vels_stream[:, 1].reshape(1000, 1, 1) * 2.0626480624709636e8 / 1e6 * jnp.cos(equat_coords_stream[:, 2].reshape(1000, 1, 1)), #v_alpha
+                                            equat_vels_stream[:, 2].reshape(1000, 1, 1) * 2.0626480624709636e8 / 1e6, #v_delta
+                                            equat_vels_stream[:, 0].reshape(1000, 1, 1) * (u.kpc/u.Myr).to(u.km/u.s), #v_r                          
+                                     ], axis=2)
         return stream_coordinate
 
-    t_end_mag = 0.5 * u.Gyr.to(code_units.code_time)
+    t_end_mag = 0.2 * u.Gyr.to(code_units.code_time)
     t_end_array = jnp.array([-t_end_mag, t_end_mag])  # backward, forward
     
 
     # vmap over both parameters
     stream_coordinate_com = jax.vmap(assign_params_integrate_projection)(t_end_array)
     stream_coordinate_com_backward, stream_coordinate_com_forward = stream_coordinate_com[0], stream_coordinate_com[1]
+
 
 
     # Create masks for valid time steps
@@ -204,13 +319,6 @@ def run_simulation( y, return_residual=True):
     mask_forward = mask_window_forward & mask_diff_forward
 
 
-    # return {'stream_coordinate_com_backward': stream_coordinate_com_backward,
-    #         'stream_coordinate_com_forward': stream_coordinate_com_forward,
-    #         'mask_backward': mask_backward,
-    #         'mask_forward': mask_forward,
-    #         'phi1_backward_valid': phi1_backward_valid,
-    #         'phi1_forward_valid': phi1_forward_valid
-    # }
 
     def coord_backward_fill(arr_phi1, arr_coord, mask):
         arr_phi1_masked = jnp.where(mask, arr_phi1, 0.0)
@@ -253,25 +361,15 @@ def run_simulation( y, return_residual=True):
     interp_tracks_backward = jax.vmap(interpolate_coord_backward)(coord_backward_valid)  # Shape: (n_coords, n_data)
     interp_tracks_forward = jax.vmap(interpolate_coord_forward)(coord_forw_valid)  # Shape: (n_coords, n_data)
 
-    # return {'stream_coordinate_com_backward': stream_coordinate_com_backward,
-    #         'stream_coordinate_com_forward': stream_coordinate_com_forward,
-    #         'mask_backward': mask_backward,
-    #         'mask_forward': mask_forward,
-    #         'phi1_backward_valid': phi1_backward_valid,
-    #         'phi1_forward_valid': phi1_forward_valid,
-    #         'coord_backward_valid': coord_backward_valid,
-    #         'coord_forw_valid': coord_forw_valid,
-    #         'interp_tracks_backward': interp_tracks_backward,
-    #         'interp_tracks_forward': interp_tracks_forward,
-    # }
+    
 
     # Calculate residuals for all coordinates
     data_coords = stream_data[:, coord_indices].T  # Shape: (n_coords, n_data)
-    sigma = jnp.array([0.5, 10., 2., 2. ])
+    sigma = jnp.array([0.5, 2, 2, 10 ])
     # sigma = jnp.array([0.15, 5., 0.1, 0.0001]) #from albatross
 
-    mask_correct_interpolation_backward = stream_data[:, 1] < 20
-    mask_correct_interpolation_forward = stream_data[:, 1] > - 95
+    mask_correct_interpolation_backward = stream_data[:, 1] <= 60
+    mask_correct_interpolation_forward = stream_data[:, 1] >= - 150
 
     # Stream data masks - which data points to use for each direction
     mask_stream_backward = stream_data[:, 1] > stream_coordinate_com_backward[0, 0, 1]
@@ -283,13 +381,19 @@ def run_simulation( y, return_residual=True):
     # Calculate chi2 using only the appropriate data points for each direction
     residuals_backward = jnp.where(mask_stream_backward & mask_evaluate_inside_track_backward & mask_correct_interpolation_backward, 
                                   (data_coords - interp_tracks_backward)/sigma[:, None],
-                                   1.)
+                                   0.)
     residuals_forward = jnp.where(mask_stream_forward & mask_evaluate_inside_track_forward & mask_correct_interpolation_forward, 
                                  (data_coords - interp_tracks_forward)/sigma[:, None],
-                                  1.)
+                                  0.)
     residuals = jnp.where(mask_stream_backward,
                          residuals_backward,
                          residuals_forward)
+    # residuals = jnp.where(mask_stream_backward & mask_evaluate_inside_track_backward & mask_correct_interpolation_backward,
+    #                       (data_coords - interp_tracks_backward)/sigma[:, None],
+    #                         (data_coords - interp_tracks_forward)/sigma[:, None],)
+    # phi1_for_residuals = jnp.where(mask_stream_backward,
+    
+
     # Masks for valid residuals
     mask_backward_full = mask_stream_backward & mask_evaluate_inside_track_backward & mask_correct_interpolation_backward
     mask_forward_full = mask_stream_forward & mask_evaluate_inside_track_forward & mask_correct_interpolation_forward
@@ -371,14 +475,16 @@ def sample_initial_conditions(key, n_samples, params, code_units):
     
     return y0_batched
 
-n_samples = 1100
+
+
+n_samples = 1000
 y0_batched = sample_initial_conditions(key, n_samples, params, code_units)
 
 # Shape will be (4, 4)
 def minimization_vmap(y0):
     return least_squares(
         fn=run_simulation,
-        solver=optimistix.LevenbergMarquardt(rtol=1e-10, atol=1e-10),
+        solver=optimistix.LevenbergMarquardt(rtol=1e-14, atol=1e-14),
         y0=y0,
     ).value
 
@@ -397,7 +503,7 @@ hessians = jax.jacfwd(jax.jacfwd(run_simulation))(values[MLE_index], False)
 fisher_info = hessians
 
 #The covariance matrix is the inverse of the Fisher information matrix
-covariance = 2*jnp.linalg.inv(fisher_info)
+covariance = jnp.linalg.inv(fisher_info)
 
 
 from chainconsumer import Chain, ChainConsumer, Truth, PlotConfig
@@ -429,11 +535,12 @@ c.add_truth(Truth(location = {"$M_{vir}^{NFW} [M_\odot]$": jnp.log10(params.NFW_
 
 c.set_plot_config(
 PlotConfig(
-    max_ticks=4,
-    label_font_size=20,
-    tick_font_size=15,
+    max_ticks=3,
+    label_font_size=30,
+    tick_font_size=24,
     summary_font_size=20,
 
 ))
 fig = c.plotter.plot()
-fig.savefig("Fisher_contours_least_square_paper.png", dpi=300, bbox_inches='tight')
+fig.savefig("Fisher_contour_least_square_AllParameters_final.png", 
+            dpi=300,)
