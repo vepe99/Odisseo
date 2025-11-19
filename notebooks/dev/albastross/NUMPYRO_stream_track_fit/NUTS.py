@@ -400,17 +400,17 @@ def numpyro_stream_model():
       - this is a simple, effective reparameterization to improve NUTS geometry.
     """
     # Priors in log-space (you can widen/narrow the stddev as you prefer)
-    M_NFW = numpyro.sample("log_M_NFW", dist.Uniform(4.3683325e11 * 0.5, 4.3683325e11 * 2.0))
-    M_MN = numpyro.sample("log_M_MN", dist.Uniform(68_193_902_782.346756 * 0.5, 68_193_902_782.346756 * 2.0))
-    r_s = numpyro.sample("log_r_s", dist.Uniform(16.0 * 0.5, 16.0 * 2.0))
-    a_MN = numpyro.sample("log_a_MN", dist.Uniform(3.0 * 0.5, 3.0 * 2.0))
+    log_M_NFW = numpyro.sample("log_M_NFW", dist.Uniform(jnp.log10(4.3683325e11 * 0.5), jnp.log10(4.3683325e11 * 2.0)))
+    log_M_MN = numpyro.sample("log_M_MN", dist.Uniform(jnp.log10(68_193_902_782.346756 * 0.5), jnp.log10(68_193_902_782.346756 * 2.0)))
+    log_r_s = numpyro.sample("log_r_s", dist.Uniform(jnp.log10(16.0 * 0.5), jnp.log10(16.0 * 2.0)))
+    log_a_MN = numpyro.sample("log_a_MN", dist.Uniform(jnp.log10(3.0 * 0.5), jnp.log10(3.0 * 2.0)))
 
 
     # Deterministic (expose transformed parameters for diagnostics/traces)
-    # M_NFW = numpyro.deterministic("M_NFW", jnp.exp(log_M_NFW))
-    # M_MN  = numpyro.deterministic("M_MN",  jnp.exp(log_M_MN))
-    # r_s   = numpyro.deterministic("r_s",   jnp.exp(log_r_s))
-    # a_MN  = numpyro.deterministic("a_MN",  jnp.exp(log_a_MN))
+    M_NFW = numpyro.deterministic("M_NFW", 10**(log_M_NFW))
+    M_MN  = numpyro.deterministic("M_MN",  10**(log_M_MN))
+    r_s   = numpyro.deterministic("r_s",   10**(log_r_s))
+    a_MN  = numpyro.deterministic("a_MN",  10**(log_a_MN))
 
     params_dict = {
         "M_NFW": M_NFW,
@@ -543,7 +543,7 @@ rng_key = random.PRNGKey(42)
 
 # NUTS kernel: try dense_mass=True for complex geometry; set target_accept higher if needed
 kernel = NUTS(numpyro_stream_model, target_accept_prob=0.9, dense_mass=True,  max_tree_depth=3)  # try True if needed
-mcmc = MCMC(kernel, num_warmup=1000, num_samples=5000, num_chains=10, progress_bar=False, chain_method='vectorized', jit_model_args=True)
+mcmc = MCMC(kernel, num_warmup=1000, num_samples=2500, num_chains=10, progress_bar=False, chain_method='vectorized', jit_model_args=True)
 
 # (Optional) choose a good init strategy:
 # - init_to_median() is a reasonable generic choice if the prior is informative

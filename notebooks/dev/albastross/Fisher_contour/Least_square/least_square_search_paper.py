@@ -543,4 +543,4 @@ PlotConfig(
 ))
 fig = c.plotter.plot()
 fig.savefig("Fisher_contour_least_square_AllParameters_final.png", 
-            dpi=300,)
+            dpi=300, bbox_inches='tight')
