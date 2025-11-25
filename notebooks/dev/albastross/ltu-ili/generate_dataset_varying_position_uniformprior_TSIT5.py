@@ -121,9 +121,9 @@ def vmapped_run_simulation(rng_key, params_values):
 
 #11500
 start_time = time.time()
-batch_size = 500
+batch_size = 3_500
 num_chunks = 202_500
-name_str = 200_000
+name_str = 0
 for i in tqdm(range(name_str, num_chunks, batch_size)):
     rng_key = random.PRNGKey(i)
     parameter_value = jax.random.uniform(rng_key, 

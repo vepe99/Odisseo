@@ -1,7 +1,7 @@
 # import os
 # os.environ['CUDA_VISIBLE_DEVICES'] = '7' 
 from autocvd import autocvd
-autocvd(num_gpus = 1)
+autocvd(num_gpus = 2)
 import pandas as pd
 from equinox import filter_jit
 
@@ -46,6 +46,104 @@ plt.rcParams.update({
 })
 
 plt.style.use('default')
+
+
+
+@jax.jit
+def halo_to_sun(Xhalo: jnp.ndarray) -> jnp.ndarray:
+    """
+    Conversion from simulation frame to cartesian frame centred at Sun
+    Args:
+      Xhalo: 3d position (x [kpc], y [kpc], z [kpc]) in simulation frame
+    Returns:
+      3d position (x_s [kpc], y_s [kpc], z_s [kpc]) in Sun frame
+    Examples
+    --------
+    >>> halo_to_sun(jnp.array([1.0, 2.0, 3.0]))
+    """
+    sunx = 8.0
+    xsun = sunx - Xhalo[0]
+    ysun = Xhalo[1]
+    zsun = Xhalo[2]
+    return jnp.array([xsun, ysun, zsun])
+
+
+@jax.jit
+def sun_to_gal(Xsun: jnp.ndarray) -> jnp.ndarray:
+    """
+    Conversion from sun cartesian frame to galactic co-ordinates
+    Args:
+      Xsun: 3d position (x_s [kpc], y_s [kpc], z_s [kpc]) in Sun frame
+    Returns:
+      3d position (r [kpc], b [rad], l [rad]) in galactic frame
+    Examples
+    --------
+    >>> sun_to_gal(jnp.array([1.0, 2.0, 3.0]))
+    """
+    r = jnp.linalg.norm(Xsun)
+    b = jnp.arcsin(Xsun[2] / r)
+    l = jnp.arctan2(Xsun[1], Xsun[0])
+    return jnp.array([r, b, l])
+
+
+@jax.jit
+def gal_to_equat(Xgal: jnp.ndarray) -> jnp.ndarray:
+    """
+    Conversion from galactic co-ordinates to equatorial co-ordinates
+    Args:
+      Xgal: 3d position (r [kpc], b [rad], l [rad]) in galactic frame
+    Returns:
+      3d position (r [kpc], alpha [rad], delta [rad]) in equatorial frame
+    Examples
+    --------
+    >>> gal_to_equat(jnp.array([1.0, 2.0, 3.0]))
+    """
+    dNGPdeg = 27.12825118085622
+    lNGPdeg = 122.9319185680026
+    aNGPdeg = 192.85948
+    dNGP = dNGPdeg * jnp.pi / 180.0
+    lNGP = lNGPdeg * jnp.pi / 180.0
+    aNGP = aNGPdeg * jnp.pi / 180.0
+    r = Xgal[0]
+    b = Xgal[1]
+    l = Xgal[2]
+    sb = jnp.sin(b)
+    cb = jnp.cos(b)
+    sl = jnp.sin(lNGP - l)
+    cl = jnp.cos(lNGP - l)
+    cs = cb * sl
+    cc = jnp.cos(dNGP) * sb - jnp.sin(dNGP) * cb * cl
+    alpha = jnp.arctan(cs / cc) + aNGP
+    delta = jnp.arcsin(jnp.sin(dNGP) * sb + jnp.cos(dNGP) * cb * cl)
+    return jnp.array([r, alpha, delta])
+
+
+def transform_velocity(transform_fn, X, V):
+    """
+    Generic velocity transformation through coordinate mapping.
+
+    Args:
+      transform_fn: function R^3 → R^3 mapping positions to new coordinates
+      X: position vector in original coordinates (3,)
+      V: velocity vector in original coordinates (3,)
+
+    Returns:
+      velocity vector in transformed coordinates (3,)
+    """
+    J = jax.jacobian(transform_fn)(X)  # (3,3) Jacobian
+    return J @ V
+
+def halo_to_equatorial(Xhalo):
+    Xsun = halo_to_sun(Xhalo)
+    Xgal = sun_to_gal(Xsun)
+    Xeq  = gal_to_equat(Xgal)
+    return Xeq
+
+
+#vamp functions
+halo_to_equatorial_batch = jax.vmap(halo_to_equatorial, in_axes=(0))
+transform_velocity_batch = jax.vmap(transform_velocity, in_axes=(None, 0, 0))
+
 
 
 code_length = 10 * u.kpc
@@ -112,8 +210,17 @@ initial_state_stream = construct_initial_state(positions, velocities)
 #run the simulation
 snapshots = time_integration(initial_state_stream, mass, config, params)
 
-final_state = snapshots.states[-1]
-stream_data = projection_on_GD1(final_state, code_units=code_units,)
+
+stream_target = snapshots.states[-1]
+print('shape stream target before projection', stream_target.shape)
+
+# stream_target = projection_on_GD1(stream_target, code_units=code_units,)
+pos_stream_target = stream_target[:,0]
+vel_stream_target = stream_target[:,1]
+pos_eq_stream_target = halo_to_equatorial_batch(pos_stream_target)
+vel_eq_stream_target = transform_velocity_batch(halo_to_equatorial, pos_stream_target, vel_stream_target)
+stream_target = jnp.concatenate([pos_eq_stream_target, vel_eq_stream_target], axis=1)
+print('shape simulated target', stream_target.shape)
 print("Simulated GD1")
 
 
@@ -124,22 +231,15 @@ config_com = config_com._replace(return_snapshots=False,)
 
 config =  config._replace(return_snapshots=False,)
 config_com = config_com._replace(return_snapshots=False,)
-stream_target = stream_data
-
-@jit
-def rbf_kernel(x, y, sigma):
-    """RBF kernel optimized for 6D astronomical data"""
-    return jnp.exp(-jnp.sum((x - y)**2) / (2 * sigma**2))
-
 
 @filter_jit
 def run_simulation( y, args):
 
-    t_end, M_Plummer, Mvir, r_s = y
-    t_end = 10**t_end
-    M_plummer = 10**M_Plummer
-    Mvir = 10**Mvir
-    r_s = 10**r_s
+    M_Plummer, Mvir, r_s, t_end= y
+    # t_end = 10**t_end
+    # M_Plummer = 10**M_Plummer
+    # Mvir = 10**Mvir
+    # r_s = 10**r_s
 
     #Creation of the Plummer sphere requires a key 
     key = random.PRNGKey(0)
@@ -151,7 +251,7 @@ def run_simulation( y, args):
                     r_s=r_s * u.kpc.to(code_units.code_length),
                 ),
                 Plummer_params=params.Plummer_params._replace(
-                    Mtot=M_plummer * u.Msun.to(code_units.code_mass)
+                    Mtot=M_Plummer * u.Msun.to(code_units.code_mass)
                 ),
                 t_end=t_end * u.Gyr.to(code_units.code_time),
                 )
@@ -182,10 +282,16 @@ def run_simulation( y, args):
     #initialize the initial state
     initial_state_stream = construct_initial_state(positions, velocities, )
     #run the simulation
-    final_state = time_integration(initial_state_stream, mass, config=config, params=new_params)
+    stream = time_integration(initial_state_stream, mass, config=config, params=new_params)
+
+    pos_stream = stream[:, 0]
+    vel_stream = stream[:, 1]
+    pos_eq_stream = halo_to_equatorial_batch(pos_stream)
+    vel_eq_stream = transform_velocity_batch(halo_to_equatorial, pos_stream, vel_stream)
+    stream = jnp.concatenate([pos_eq_stream, vel_eq_stream], axis=1)
 
     #projection on the GD1 stream
-    stream = projection_on_GD1(final_state, code_units=code_units,)
+    # stream = projection_on_GD1(final_state, code_units=code_units,)
     #add gaussian noise to the stream
     # noise_std = jnp.array([0.25, 0.001, 0.15, 5., 0.1, 0.0])
     # stream = stream + jax.random.normal(key=jax.random.key(0), shape=stream.shape) * noise_std
@@ -193,53 +299,102 @@ def run_simulation( y, args):
 
 
      # Normalize to standard ranges for each dimension
-    bounds = jnp.array([
-        [6, 20],        # R [kpc]
-        [-120, 70],     # phi1 [deg]  
-        [-8, 2],        # phi2 [deg]
-        [-250, 250],    # vR [km/s]
-        [-2., 1.0],     # v1_cosphi2 [mas/yr]
-        [-0.10, 0.10]   # v2 [mas/yr]
-    ])
+    # bounds = jnp.array([
+    #     [6, 20],        # R [kpc]
+    #     [-120, 70],     # phi1 [deg]  
+    #     [-8, 2],        # phi2 [deg]
+    #     [-250, 250],    # vR [km/s]
+    #     [-2., 1.0],     # v1_cosphi2 [mas/yr]
+    #     [-0.10, 0.10]   # v2 [mas/yr]
+    # ])
         
-    def normalize_stream(stream):
-        # Normalize each dimension to [0,1]
-        return (stream - bounds[:, 0]) / (bounds[:, 1] - bounds[:, 0])
+    # def normalize_stream(stream):
+    #     # Normalize each dimension to [0,1]
+    #     return (stream - bounds[:, 0]) / (bounds[:, 1] - bounds[:, 0])
     
-    sim_norm = normalize_stream(stream)
-    target_norm = normalize_stream(stream_target)
+    # sim_norm = normalize_stream(stream)
+    # target_norm = normalize_stream(stream_target)
     
-    # Adaptive bandwidth for 6D data
-    n_sim, n_target = len(stream), len(stream_target)
+    # # Adaptive bandwidth for 6D data
+    # n_sim, n_target = len(stream), len(stream_target)
 
 
-    @jit 
-    def compute_mmd(sim_norm, target_norm, sigmas):
-        xx = jnp.mean(jax.vmap(lambda xi: jax.vmap(lambda xj: rbf_kernel(xi, xj, sigmas))(sim_norm))(sim_norm))
-        yy = jnp.mean(jax.vmap(lambda yi: jax.vmap(lambda yj: rbf_kernel(yi, yj, sigmas))(target_norm))(target_norm))
-        xy = jnp.mean(jax.vmap(lambda xi: jax.vmap(lambda yj: rbf_kernel(xi, yj, sigmas))(target_norm))(sim_norm))
-        return xx + yy - 2 * xy
+    # @jit 
+    # def compute_mmd(sim_norm, target_norm, sigmas):
+    #     xx = jnp.mean(jax.vmap(lambda xi: jax.vmap(lambda xj: rbf_kernel(xi, xj, sigmas))(sim_norm))(sim_norm))
+    #     yy = jnp.mean(jax.vmap(lambda yi: jax.vmap(lambda yj: rbf_kernel(yi, yj, sigmas))(target_norm))(target_norm))
+    #     xy = jnp.mean(jax.vmap(lambda xi: jax.vmap(lambda yj: rbf_kernel(xi, yj, sigmas))(target_norm))(sim_norm))
+    #     return xx + yy - 2 * xy
 
-    distances = jax.vmap(lambda x: jax.vmap(lambda y: jnp.linalg.norm(x - y))(target_norm))(sim_norm)
-    distance_flat = distances.flatten()
+    # distances = jax.vmap(lambda x: jax.vmap(lambda y: jnp.linalg.norm(x - y))(target_norm))(sim_norm)
+    # distance_flat = distances.flatten()
 
-    # # Use percentiles as natural scales
-    sigmas = jnp.array([
-        # jnp.percentile(distance_flat, 10),   # Fine scale
-        # jnp.percentile(distance_flat, 25),   # Small scale  
-        # jnp.percentile(distance_flat, 50),   # Medium scale (median)
-        jnp.percentile(distance_flat, 75),   # Large scale
-        jnp.percentile(distance_flat, 90),   # Very large scale
-    ])
+    # # # Use percentiles as natural scales
+    # sigmas = jnp.array([
+    #     # jnp.percentile(distance_flat, 10),   # Fine scale
+    #     # jnp.percentile(distance_flat, 25),   # Small scale  
+    #     # jnp.percentile(distance_flat, 50),   # Medium scale (median)
+    #     jnp.percentile(distance_flat, 75),   # Large scale
+    #     jnp.percentile(distance_flat, 90),   # Very large scale
+    # ])
 
-    # Adaptive weights based on scale separation
-    # scale_weights = jnp.array([0.15, 0.2, 0.3, 0.25, 0.1])
-    scale_weights = jnp.ones_like(sigmas)  # Equal weights for simplicity
+    # # Adaptive weights based on scale separation
+    # # scale_weights = jnp.array([0.15, 0.2, 0.3, 0.25, 0.1])
+    # scale_weights = jnp.ones_like(sigmas)  # Equal weights for simplicity
 
-    # Compute MMD with multiple kernels
-    mmd_total = jnp.sum(scale_weights * jax.vmap(lambda sigma: compute_mmd(sim_norm, target_norm, sigma))(sigmas))
+    # # Compute MMD with multiple kernels
+    # mmd_total = jnp.sum(scale_weights * jax.vmap(lambda sigma: compute_mmd(sim_norm, target_norm, sigma))(sigmas))
     
-    return mmd_total / len(sigmas)
+    # return mmd_total / len(sigmas)
+    # we calculate the loss as the negative log likelihood of the stream
+    
+    #add gaussian noise to the stream
+    # noise_std = jnp.array([0.25, 0.001, 0.15, 5., 0.1, 0.0001])
+    noise_std = jnp.zeros(6)  # no observational errors
+
+   
+    @jax.jit
+    def log_multivariate_normal(x, mean, cov):
+        """
+        Log PDF of a multivariate Gaussian with full covariance.
+
+        Parameters
+        ----------
+        x : (D,)
+        mean : (D,)
+        cov : (D, D)  # covariance matrix (must be symmetric positive definite)
+        """
+        D = x.shape[0]
+        L = jnp.linalg.cholesky(cov)
+        diff = x - mean
+        solve = jax.scipy.linalg.solve_triangular(L, diff, lower=True)
+        mahal = jnp.sum(solve**2)
+        log_det = 2.0 * jnp.sum(jnp.log(jnp.diag(L)))
+        norm_const = -0.5 * (D * jnp.log(2 * jnp.pi) + log_det)
+        return norm_const - 0.5 * mahal
+
+
+    @jax.jit
+    def stream_likelihood_fullcov(model_stream, obs_stream, obs_errors, smooth_sigma, ):
+        """
+        Log-likelihood of observed stars given simulated stream (full covariance version).
+        """
+        cov = smooth_sigma
+
+        def obs_log_prob(obs):
+            def model_log_prob(model_point):
+                return log_multivariate_normal(obs, model_point, cov)
+            log_probs = jax.vmap(model_log_prob)(model_stream)
+            return jax.scipy.special.logsumexp(log_probs) - jnp.log(model_stream.shape[0])
+
+        logL_values = jax.vmap(obs_log_prob)(obs_stream)
+        return jnp.sum(logL_values)
+    
+    stream_cov = 0.1*jnp.cov(stream_target.T)
+    return - stream_likelihood_fullcov(model_stream=stream,
+                             obs_stream=stream_target,
+                             obs_errors=noise_std,
+                             smooth_sigma=stream_cov)
 
 print("beginning gradient descent")
 
@@ -303,27 +458,79 @@ def sample_initial_conditions(key, n_samples, params, code_units):
     
     # Stack into (n_samples, 5) array
     y0_batched = jnp.stack(samples, axis=1)
-    y0_batched = jnp.log10(y0_batched)
+    # y0_batched = jnp.log10(y0_batched)
     
     return y0_batched
 
 
-y0_batched = sample_initial_conditions(random.PRNGKey(0), 1200, params, code_units)
+y0_batched = sample_initial_conditions(random.PRNGKey(0), 200, params, code_units)
 
 # Shape will be (4, 4)
+# def minimization_vmap(y0):
+#     return minimise(
+#         fn=run_simulation,
+#         solver = BestSoFarMinimiser(optimistix.OptaxMinimiser(optim = adamw(learning_rate=1e-2,),  rtol=1e-3, atol=1e-4, )),
+#         y0=y0,
+#         max_steps=50
+#     ).value
+
+import jax
+import jax.numpy as jnp
+import optax
+
+# Your loss wrapper
+def loss_fn(y):
+    return run_simulation(y, None)
+
+value_and_grad_loss = jax.value_and_grad(loss_fn)
+
+# Create optimizer
+optimizer = optax.adam(learning_rate=1e-3)   # or adam, rmsprop, lion, etc.
+
+@jax.jit
+def gd_optax_steps(y0, num_steps=30):
+    # Initialize optimizer state
+    opt_state = optimizer.init(y0)
+
+    # Carry: params, opt_state, best_params, best_loss
+    init_best_loss = jnp.inf
+    carry0 = (y0, opt_state, y0, init_best_loss)
+
+    def body_fun(i, carry):
+        y, opt_state, best_y, best_loss = carry
+
+        loss, grad = value_and_grad_loss(y)
+        updates, opt_state = optimizer.update(grad, opt_state, y)
+        y_next = optax.apply_updates(y, updates)
+
+        improved = loss < best_loss
+        best_y = jnp.where(improved, y_next, best_y)
+        best_loss = jnp.where(improved, loss, best_loss)
+
+        return (y_next, opt_state, best_y, best_loss)
+
+    _, _, best_y, _ = jax.lax.fori_loop(0, num_steps, body_fun, carry0)
+    return best_y
+
+
 def minimization_vmap(y0):
-    return minimise(
-        fn=run_simulation,
-        solver = BestSoFarMinimiser(optimistix.OptaxMinimiser(optim = adamw(learning_rate=1e-3,),  rtol=1e-3, atol=1e-4, )),
-        # solver = BestSoFarMinimiser(optimistix.LBFGS(rtol=1e-8, atol=1e-8)),
-        y0=y0,
-        max_steps=100
-    ).value
+    return gd_optax_steps(y0, num_steps=20)
+
+from jax.sharding import Mesh, PartitionSpec, NamedSharding
+mesh = Mesh(np.array(jax.devices()), ("i",))
+y0_batched = jax.lax.with_sharding_constraint(y0_batched, NamedSharding(mesh, PartitionSpec("i")))
+
 
 print(y0_batched.shape)
+print('/////')
+print('y0: ')
+print(y0_batched)
+print('/////')
 # values = jax.vmap(minimization_vmap)(y0_batched)
-values = jax.lax.map(minimization_vmap, y0_batched, batch_size=150)
-values = 10**values
+values = jax.lax.map(minimization_vmap, y0_batched, batch_size=100)
+print('values: \n', values)
+# values = 10**values
+
 
 np.savez("gradient_descent_optimistix_results.npz", values=np.array(values))
 
