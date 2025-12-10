@@ -1,7 +1,7 @@
 # import os
 # os.environ['CUDA_VISIBLE_DEVICES'] = '7' 
 from autocvd import autocvd
-autocvd(num_gpus = 2)
+autocvd(num_gpus = 5)
 import pandas as pd
 from equinox import filter_jit
 
@@ -236,10 +236,10 @@ config_com = config_com._replace(return_snapshots=False,)
 def run_simulation( y, args):
 
     M_Plummer, Mvir, r_s, t_end= y
-    # t_end = 10**t_end
-    # M_Plummer = 10**M_Plummer
-    # Mvir = 10**Mvir
-    # r_s = 10**r_s
+    t_end = 10**t_end
+    M_Plummer = 10**M_Plummer
+    Mvir = 10**Mvir
+    r_s = 10**r_s
 
     #Creation of the Plummer sphere requires a key 
     key = random.PRNGKey(0)
@@ -458,12 +458,12 @@ def sample_initial_conditions(key, n_samples, params, code_units):
     
     # Stack into (n_samples, 5) array
     y0_batched = jnp.stack(samples, axis=1)
-    # y0_batched = jnp.log10(y0_batched)
+    y0_batched = jnp.log10(y0_batched)
     
     return y0_batched
 
 
-y0_batched = sample_initial_conditions(random.PRNGKey(0), 200, params, code_units)
+y0_batched = sample_initial_conditions(random.PRNGKey(0), 500, params, code_units)
 
 # Shape will be (4, 4)
 # def minimization_vmap(y0):
