@@ -12,8 +12,8 @@ import jax.scipy.special as jsp
 from odisseo.option_classes import SimulationConfig, SimulationParams
 from odisseo.option_classes import NFW_POTENTIAL, POINT_MASS, MN_POTENTIAL, PSP_POTENTIAL
 
-@jaxtyped(typechecker=typechecker)
 @partial(jax.jit, static_argnames=['config', 'return_potential'])
+@jaxtyped(typechecker=typechecker)
 def combined_external_acceleration(state: jnp.ndarray, 
                                    config: SimulationConfig,
                                    params: SimulationParams,
@@ -55,8 +55,8 @@ def combined_external_acceleration(state: jnp.ndarray,
             total_external_acceleration = total_external_acceleration + NFW(state, config, params)
         return total_external_acceleration
 
+@partial(jax.jit, static_argnames=['config', 'return_potential'])   
 @jaxtyped(typechecker=typechecker)
-@partial(jax.jit, static_argnames=['config', 'return_potential'])    
 def combined_external_acceleration_vmpa_switch(state: jnp.ndarray, 
                                                 config: SimulationConfig,
                                                 params: SimulationParams,
@@ -104,8 +104,8 @@ def combined_external_acceleration_vmpa_switch(state: jnp.ndarray,
         total_external_acceleration = jnp.sum(external_acc, axis=0)
         return total_external_acceleration
 
-@jaxtyped(typechecker=typechecker)
 @partial(jax.jit, static_argnames=['config', 'return_potential'])
+@jaxtyped(typechecker=typechecker)
 def NFW(state: jnp.ndarray, 
         config: SimulationConfig,
         params: SimulationParams,
@@ -207,8 +207,8 @@ def NFW(state: jnp.ndarray,
     
 
 
-@jaxtyped(typechecker=typechecker)
 @partial(jax.jit, static_argnames=['config', 'return_potential'])
+@jaxtyped(typechecker=typechecker)
 def point_mass(state: jnp.ndarray, 
         config: SimulationConfig,
         params: SimulationParams,
@@ -246,8 +246,8 @@ def point_mass(state: jnp.ndarray,
     else:
         return acc
     
-@jaxtyped(typechecker=typechecker)
 @partial(jax.jit, static_argnames=['config', 'return_potential'])
+@jaxtyped(typechecker=typechecker)
 def MyamotoNagai(state: jnp.ndarray, 
         config: SimulationConfig,
         params: SimulationParams,
@@ -321,8 +321,9 @@ def MyamotoNagai(state: jnp.ndarray,
     else:
         return acc
     
-@jaxtyped(typechecker=typechecker)
+
 @partial(jax.jit, static_argnames=['config', 'return_potential'])
+@jaxtyped(typechecker=typechecker)
 def PowerSphericalPotentialwCutoff(state: jnp.ndarray, 
         config: SimulationConfig,
         params: SimulationParams,
@@ -388,8 +389,8 @@ def PowerSphericalPotentialwCutoff(state: jnp.ndarray,
     else:
         return acc
  
-@jaxtyped(typechecker=typechecker)
 @partial(jax.jit, static_argnames=['config', 'return_potential'])  
+@jaxtyped(typechecker=typechecker)
 def logarithmic_potential(state: jnp.ndarray,
                           config: SimulationConfig,
                           params: SimulationParams,

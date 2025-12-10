@@ -45,8 +45,8 @@ class SnapshotData(NamedTuple):
     current_checkpoint: int = 0
 
 
-@jaxtyped(typechecker=typechecker)
 @partial(jax.jit, static_argnames=['config',])
+@jaxtyped(typechecker=typechecker)
 def time_integration(primitive_state: jnp.ndarray,
                      mass: jnp.ndarray,
                      config: SimulationConfig,
@@ -82,8 +82,8 @@ def time_integration(primitive_state: jnp.ndarray,
         else:
             return _time_integration_adapative_steps(primitive_state, mass, config, params)
 
-@jaxtyped(typechecker=typechecker)
 @partial(jax.jit, static_argnames=['config'])
+@jaxtyped(typechecker=typechecker)
 def _time_integration_fixed_steps(primitive_state: jnp.ndarray,
                                 mass: jnp.ndarray,
                                 config: SimulationConfig,
@@ -123,8 +123,8 @@ def _time_integration_fixed_steps(primitive_state: jnp.ndarray,
 
     return state  
     
-@jaxtyped(typechecker=typechecker)
 @partial(jax.jit, static_argnames=['config'])
+@jaxtyped(typechecker=typechecker)
 def _time_integration_adapative_steps(primitive_state: jnp.ndarray,
                                 mass: jnp.ndarray,
                                 config: SimulationConfig,
@@ -150,8 +150,8 @@ def _time_integration_adapative_steps(primitive_state: jnp.ndarray,
     
     return state 
 
-@jaxtyped(typechecker=typechecker)
 @partial(jax.jit, static_argnames=['config'])
+@jaxtyped(typechecker=typechecker)
 def _time_integration_adapative_steps_snapshot(primitive_state: jnp.ndarray,
                                 mass: jnp.ndarray,
                                 config: SimulationConfig,
@@ -188,8 +188,8 @@ def _time_integration_adapative_steps_snapshot(primitive_state: jnp.ndarray,
     return snapshot_data 
 
 
-@jaxtyped(typechecker=typechecker)
 @partial(jax.jit, static_argnames=['config'])
+@jaxtyped(typechecker=typechecker)
 def _time_integration_fixed_steps_gradient_horizon(primitive_state: jnp.ndarray,
                                                     mass: jnp.ndarray,
                                                     config: SimulationConfig,
@@ -241,8 +241,8 @@ def _time_integration_fixed_steps_gradient_horizon(primitive_state: jnp.ndarray,
 
 
 
-@jaxtyped(typechecker=typechecker)
 @partial(jax.jit, static_argnames=['config'])
+@jaxtyped(typechecker=typechecker)
 def _time_integration_fixed_steps_snapshot(primitive_state: jnp.ndarray,
                      mass: jnp.ndarray,
                      config: SimulationConfig,
