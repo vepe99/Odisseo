@@ -79,8 +79,8 @@ def Plummer_sphere(key: PRNGKeyArray,
     # return jnp.array(positions), jnp.array(velocities), params.Plummer_params.Mtot/config.N_particles*jnp.ones(config.N_particles)
     return jnp.array(positions), jnp.array(velocities), 1/config.N_particles*jnp.ones(config.N_particles)
 
-@jaxtyped(typechecker=typechecker)
 @partial(jax.jit, static_argnames=['config'])
+@jaxtyped(typechecker=typechecker)
 def Plummer_sphere_reparam(noise: jnp.ndarray,
                           config: SimulationConfig,
                           params: SimulationParams) -> Tuple:
@@ -203,8 +203,8 @@ def ic_two_body(mass1: Union[float, jnp.ndarray],
 
     return pos, vel, mass
     
-@jaxtyped(typechecker=typechecker)
 @partial(jax.jit, static_argnames=['num_samples'])
+@jaxtyped(typechecker=typechecker)
 def sample_position_on_sphere(key: PRNGKeyArray,
                               r_p: float,
                               num_samples: int = 1):
@@ -235,8 +235,8 @@ def sample_position_on_sphere(key: PRNGKeyArray,
 
     return jnp.stack([x, y, z], axis=-1)
 
-@jaxtyped(typechecker=typechecker)
 @partial(jax.jit, static_argnames=['num_samples'])
+@jaxtyped(typechecker=typechecker)
 def sample_position_on_circle(key: PRNGKeyArray,
                              r_p: float,
                              num_samples: int =1):
@@ -266,8 +266,8 @@ def sample_position_on_circle(key: PRNGKeyArray,
 
     return jnp.stack([x, y, z], axis=-1)
 
-@jaxtyped(typechecker=typechecker)
 @partial(jax.jit,)
+@jaxtyped(typechecker=typechecker)
 def inclined_position(position: jnp.ndarray,
                      inclination: jnp.ndarray):
     """
@@ -295,8 +295,8 @@ def inclined_position(position: jnp.ndarray,
 
     return rotated_position.T
 
-@jaxtyped(typechecker=typechecker)
 @partial(jax.jit,)
+@jaxtyped(typechecker=typechecker)
 def inclined_circular_velocity(position: jnp.ndarray, 
                                v_c: jnp.ndarray, 
                                inclination: jnp.ndarray):
