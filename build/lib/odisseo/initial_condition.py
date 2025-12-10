@@ -11,8 +11,9 @@ from multiprocessing import Pool
 
 from odisseo.option_classes import SimulationConfig, SimulationParams
 
-@jaxtyped(typechecker=typechecker)
+
 @partial(jax.jit, static_argnames=['config'])
+@jaxtyped(typechecker=typechecker)
 def Plummer_sphere(key: PRNGKeyArray,
                     config: SimulationConfig,
                     params: SimulationParams) -> Tuple:

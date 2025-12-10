@@ -19,6 +19,11 @@ TSIT5 = 1
 SEMIIMPLICITEULER = 2
 REVERSIBLEHEUN = 3
 LEAPFROGMIDPOINT = 4
+DOPRI8 = 5
+
+#diffrax adjoint methods
+RECURSIVECHECKPOINTADJOING = 0
+FORWARDMODE = 1
 
 #acceleartion schemes
 DIRECT_ACC = 0
@@ -147,6 +152,8 @@ class SimulationConfig(NamedTuple):
     external_accelerations: tuple = ()
 
     differentation_mode: int = BACKWARDS
+
+    diffrax_adjoint_method: int = RECURSIVECHECKPOINTADJOING
 
     num_checkpoints: int = 100
 

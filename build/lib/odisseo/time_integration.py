@@ -278,6 +278,7 @@ def _time_integration_fixed_steps_snapshot(primitive_state: jnp.ndarray,
 
         if config.return_snapshots:
             time, state, snapshot_data = carry
+            
 
             def update_snapshot_data(snapshot_data):
                 times = snapshot_data.times.at[snapshot_data.current_checkpoint].set(time)
@@ -290,15 +291,13 @@ def _time_integration_fixed_steps_snapshot(primitive_state: jnp.ndarray,
                                                        total_energy = total_energy, 
                                                        angular_momentum = angular_momentum,
                                                        current_checkpoint = current_checkpoint)
+                
                 return snapshot_data
 
             def dont_update_snapshot_data(snapshot_data):
                 return snapshot_data
 
             snapshot_data = jax.lax.cond(abs(time) >= abs(snapshot_data.current_checkpoint * params.t_end / config.num_snapshots), update_snapshot_data, dont_update_snapshot_data, snapshot_data)
-
-
-
 
             num_iterations = snapshot_data.num_iterations + 1
             snapshot_data = snapshot_data._replace(num_iterations = num_iterations)

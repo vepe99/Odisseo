@@ -12,10 +12,11 @@ from odisseo.dynamics import direct_acc, direct_acc_laxmap, direct_acc_matrix, d
 
 from odisseo.option_classes import DIRECT_ACC, DIRECT_ACC_LAXMAP, DIRECT_ACC_MATRIX, DIRECT_ACC_FOR_LOOP, DIRECT_ACC_SHARDING, NO_SELF_GRAVITY
 from odisseo.option_classes import SimulationConfig, SimulationParams
-from odisseo.option_classes import DOPRI5, TSIT5, SEMIIMPLICITEULER, REVERSIBLEHEUN, LEAPFROGMIDPOINT
+from odisseo.option_classes import DOPRI5, TSIT5, DOPRI8, SEMIIMPLICITEULER, REVERSIBLEHEUN, LEAPFROGMIDPOINT
+from odisseo.option_classes import RECURSIVECHECKPOINTADJOING, FORWARDMODE
 
 from diffrax import diffeqsolve, ODETerm, SaveAt
-from diffrax import Tsit5, Dopri5
+from diffrax import Tsit5, Dopri5, Dopri8
 from diffrax import SemiImplicitEuler, ReversibleHeun, LeapfrogMidpoint
 import diffrax
 
@@ -251,6 +252,9 @@ def diffrax_solver(state: jnp.ndarray,
     elif config.diffrax_solver == TSIT5:
         solver = Tsit5()
         term = ODETerm(vector_field)
+    elif config.diffrax_solver == DOPRI8:   
+        solver = Dopri8()
+        term = ODETerm(vector_field)
 
     # Symplectic methods
     elif config.diffrax_solver == SEMIIMPLICITEULER:
@@ -262,6 +266,13 @@ def diffrax_solver(state: jnp.ndarray,
     elif config.diffrax_solver == LEAPFROGMIDPOINT:
         solver = LeapfrogMidpoint()
         term = ODETerm(vector_field)
+
+    #adjoint method
+    if config.diffrax_adjoint_method == RECURSIVECHECKPOINTADJOING:
+        adjoint = diffrax.RecursiveCheckpointAdjoint()
+    elif config.diffrax_adjoint_method == FORWARDMODE:
+        adjoint = diffrax.ForwardMode()
+    
     
     if config.diffrax_solver != SEMIIMPLICITEULER:
         t0 = 0.0
@@ -271,7 +282,10 @@ def diffrax_solver(state: jnp.ndarray,
         y0 = jnp.array([state[:, 0, 0], state[:, 0, 1], state[:, 0, 2], state[:, 1, 0], state[:, 1, 1], state[:, 1, 2]])
         args = mass
         if config.return_snapshots:
-            saveat = SaveAt(ts=jnp.linspace(0, t1, config.num_snapshots, endpoint=True), t1=False) #we put t1=False to avoid duplication of the last snapshot
+            if not config.fixed_timestep:
+                saveat = SaveAt(ts=jnp.linspace(0, t1, config.num_snapshots, endpoint=True), t1=False) #we put t1=False to avoid duplication of the last snapshot
+            else: 
+                saveat = SaveAt(t1=True)
         else:
             saveat = SaveAt(t1=True)
         sol = diffeqsolve(
@@ -281,7 +295,9 @@ def diffrax_solver(state: jnp.ndarray,
             t1 = t1,
             dt0 = dt0,
             saveat = saveat,
+            adjoint = adjoint,
             y0 = y0,
+            max_steps = 100_000,
             args=args,)
         if config.return_snapshots:
             pos = jnp.stack((sol.ys[:,0,:], sol.ys[:,1,:], sol.ys[:,2,:]), axis=2)
