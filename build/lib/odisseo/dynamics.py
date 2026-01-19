@@ -20,8 +20,8 @@ from odisseo.option_classes import DIRECT_ACC, DIRECT_ACC_LAXMAP, DIRECT_ACC_MAT
 
 
 
-@jaxtyped(typechecker=typechecker)
 @partial(jax.jit, static_argnames=['config'])
+@jaxtyped(typechecker=typechecker)
 def single_body_acc(particle_i: jnp.ndarray, 
                     particle_j: jnp.ndarray, 
                     mass_i: jnp.ndarray, 
@@ -56,8 +56,8 @@ def single_body_acc(particle_i: jnp.ndarray,
     return jax.lax.cond(condtion, same_position, different_position)
     
     
-@jaxtyped(typechecker=typechecker)
 @partial(jax.jit, static_argnames=['config', 'return_potential'])
+@jaxtyped(typechecker=typechecker)
 def direct_acc(state: jnp.ndarray, 
                mass: jnp.ndarray, 
                config: SimulationConfig, 
@@ -90,8 +90,8 @@ def direct_acc(state: jnp.ndarray,
     return vmap(net_force_on_body)(state, mass)
 
 
-@jaxtyped(typechecker=typechecker)
 @partial(jax.jit, static_argnames=['config', 'return_potential'])
+@jaxtyped(typechecker=typechecker)
 def direct_acc_laxmap(state: jnp.ndarray,
                        mass: jnp.ndarray,
                        config: SimulationConfig,
@@ -134,8 +134,8 @@ def direct_acc_laxmap(state: jnp.ndarray,
     return jax.lax.map(net_force_on_body, (state, mass), batch_size=config.batch_size)
 
 
-@jaxtyped(typechecker=typechecker)
 @eqx.filter_jit(donate='all')
+@jaxtyped(typechecker=typechecker)
 def direct_acc_matrix(state: jnp.ndarray, 
                       mass: jnp.ndarray, 
                       config: SimulationConfig, 
@@ -179,8 +179,8 @@ def direct_acc_matrix(state: jnp.ndarray,
     else:
         return acc
     
-@jaxtyped(typechecker=typechecker)
 @partial(jax.jit, static_argnames=['config', 'return_potential'])
+@jaxtyped(typechecker=typechecker)
 def direct_acc_for_loop(state: jnp.ndarray, 
                       mass: jnp.ndarray, 
                       config: SimulationConfig, 
@@ -228,8 +228,8 @@ def direct_acc_for_loop(state: jnp.ndarray,
         _, acc = jax.lax.scan(compute_acc, initial_acc, positions)
         return acc
 
-@jaxtyped(typechecker=typechecker)
 @eqx.filter_jit(donate='all')
+@jaxtyped(typechecker=typechecker)
 def direct_acc_sharding(state: jnp.ndarray, 
                       mass: jnp.ndarray, 
                       config: SimulationConfig, 
@@ -285,8 +285,8 @@ def direct_acc_sharding(state: jnp.ndarray,
         return jax.device_put(jnp.sum(-params.G * jnp.sum((mass[:, None] * dpos) * inv_r3[:, :, None], axis=1), axis=0), devices[0])
 
 
-@jaxtyped(typechecker=typechecker)
 @partial(jax.jit, static_argnames=['config', 'return_potential'])
+@jaxtyped(typechecker=typechecker)
 def no_self_gravity(state: jnp.ndarray, 
                     mass: jnp.ndarray, 
                     config: SimulationConfig, 

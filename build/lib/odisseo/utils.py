@@ -15,8 +15,8 @@ from astropy import constants as c
 from jaxtyping import jaxtyped
 from beartype import beartype as typechecker
 
-@jaxtyped(typechecker=typechecker)
 @partial(jax.jit, )    
+@jaxtyped(typechecker=typechecker)
 def center_of_mass(state: jnp.ndarray, 
                    mass: jnp.ndarray) -> jnp.ndarray:
     """
@@ -36,8 +36,8 @@ def center_of_mass(state: jnp.ndarray,
 ###### Calculation of conserved quontities ######
 
 
-@jaxtyped(typechecker=typechecker)
 @jit
+@jaxtyped(typechecker=typechecker)
 def E_kin(state: jnp.ndarray, 
           mass: jnp.ndarray) -> jnp.ndarray:
     """
@@ -53,8 +53,8 @@ def E_kin(state: jnp.ndarray,
     return 0.5 * (jnp.sum(state[:, 1]**2, axis=1) * mass)
     
 
-@jaxtyped(typechecker=typechecker)
 @partial(jax.jit, static_argnames=['config'])
+@jaxtyped(typechecker=typechecker)
 def E_pot(state: jnp.ndarray,
         mass: jnp.ndarray,
         config: SimulationConfig,
@@ -95,8 +95,8 @@ def E_pot(state: jnp.ndarray,
         
     return self_Epot + external_Epot
 
-@jaxtyped(typechecker=typechecker)
 @partial(jax.jit, static_argnames=['config'])
+@jaxtyped(typechecker=typechecker)
 def E_tot(state: jnp.ndarray,
         mass: jnp.ndarray,
         config: SimulationConfig,
@@ -117,8 +117,8 @@ def E_tot(state: jnp.ndarray,
     
     return E_kin(state, mass) + E_pot(state, mass, config, params)
 
-@jaxtyped(typechecker=typechecker)
 @partial(jax.jit, )
+@jaxtyped(typechecker=typechecker)
 def Angular_momentum(state: jnp.ndarray, 
                      mass: jnp.ndarray) -> jnp.ndarray:
     """

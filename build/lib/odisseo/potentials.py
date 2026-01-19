@@ -8,12 +8,13 @@ import jax.numpy as jnp
 from jax import vmap, jit, lax
 from jax import random
 import jax.scipy.special as jsp
+import numpy as np
 
 from odisseo.option_classes import SimulationConfig, SimulationParams
-from odisseo.option_classes import NFW_POTENTIAL, POINT_MASS, MN_POTENTIAL, PSP_POTENTIAL
+from odisseo.option_classes import NFW_POTENTIAL, POINT_MASS, MN_POTENTIAL, PSP_POTENTIAL, TRIAXIAL_NFW_POTENTIAL
 
-@jaxtyped(typechecker=typechecker)
 @partial(jax.jit, static_argnames=['config', 'return_potential'])
+@jaxtyped(typechecker=typechecker)
 def combined_external_acceleration(state: jnp.ndarray, 
                                    config: SimulationConfig,
                                    params: SimulationParams,
@@ -55,8 +56,8 @@ def combined_external_acceleration(state: jnp.ndarray,
             total_external_acceleration = total_external_acceleration + NFW(state, config, params)
         return total_external_acceleration
 
+@partial(jax.jit, static_argnames=['config', 'return_potential'])   
 @jaxtyped(typechecker=typechecker)
-@partial(jax.jit, static_argnames=['config', 'return_potential'])    
 def combined_external_acceleration_vmpa_switch(state: jnp.ndarray, 
                                                 config: SimulationConfig,
                                                 params: SimulationParams,
@@ -87,7 +88,8 @@ def combined_external_acceleration_vmpa_switch(state: jnp.ndarray,
                           lambda state: point_mass(state, config=config, params=params, return_potential=True),
                           lambda state: MyamotoNagai(state, config=config, params=params, return_potential=True),
                           lambda state: PowerSphericalPotentialwCutoff(state, config=config, params=params, return_potential=True), 
-                          lambda state: logarithmic_potential(state, config=config, params=params, return_potential=True)]
+                          lambda state: logarithmic_potential(state, config=config, params=params, return_potential=True),
+                          lambda state: TriaxialNFW(state, config=config, params=params, return_potential=True)]  
         vmap_function = vmap(lambda i, state: lax.switch(i, POTENTIAL_LIST, state))
         external_acc, external_pot = vmap_function(jnp.array(config.external_accelerations), state_tobe_vmap)
         total_external_acceleration = jnp.sum(external_acc, axis=0)
@@ -98,14 +100,15 @@ def combined_external_acceleration_vmpa_switch(state: jnp.ndarray,
                           lambda state: point_mass(state, config=config, params=params, return_potential=False),
                           lambda state: MyamotoNagai(state, config=config, params=params, return_potential=False),
                           lambda state: PowerSphericalPotentialwCutoff(state, config=config, params=params, return_potential=False),
-                          lambda state: logarithmic_potential(state, config=config, params=params, return_potential=False)]
+                          lambda state: logarithmic_potential(state, config=config, params=params, return_potential=False),
+                          lambda state: TriaxialNFW(state, config=config, params=params, return_potential=False)]  
         vmap_function = vmap(lambda i, state: lax.switch(i, POTENTIAL_LIST, state))
         external_acc = vmap_function(jnp.array(config.external_accelerations), state_tobe_vmap)
         total_external_acceleration = jnp.sum(external_acc, axis=0)
         return total_external_acceleration
 
-@jaxtyped(typechecker=typechecker)
 @partial(jax.jit, static_argnames=['config', 'return_potential'])
+@jaxtyped(typechecker=typechecker)
 def NFW(state: jnp.ndarray, 
         config: SimulationConfig,
         params: SimulationParams,
@@ -207,8 +210,8 @@ def NFW(state: jnp.ndarray,
     
 
 
-@jaxtyped(typechecker=typechecker)
 @partial(jax.jit, static_argnames=['config', 'return_potential'])
+@jaxtyped(typechecker=typechecker)
 def point_mass(state: jnp.ndarray, 
         config: SimulationConfig,
         params: SimulationParams,
@@ -246,8 +249,8 @@ def point_mass(state: jnp.ndarray,
     else:
         return acc
     
-@jaxtyped(typechecker=typechecker)
 @partial(jax.jit, static_argnames=['config', 'return_potential'])
+@jaxtyped(typechecker=typechecker)
 def MyamotoNagai(state: jnp.ndarray, 
         config: SimulationConfig,
         params: SimulationParams,
@@ -321,8 +324,9 @@ def MyamotoNagai(state: jnp.ndarray,
     else:
         return acc
     
-@jaxtyped(typechecker=typechecker)
+
 @partial(jax.jit, static_argnames=['config', 'return_potential'])
+@jaxtyped(typechecker=typechecker)
 def PowerSphericalPotentialwCutoff(state: jnp.ndarray, 
         config: SimulationConfig,
         params: SimulationParams,
@@ -388,8 +392,8 @@ def PowerSphericalPotentialwCutoff(state: jnp.ndarray,
     else:
         return acc
  
-@jaxtyped(typechecker=typechecker)
 @partial(jax.jit, static_argnames=['config', 'return_potential'])  
+@jaxtyped(typechecker=typechecker)
 def logarithmic_potential(state: jnp.ndarray,
                           config: SimulationConfig,
                           params: SimulationParams,
@@ -429,6 +433,91 @@ def logarithmic_potential(state: jnp.ndarray,
     
     if return_potential:
         pot = potential(state)
+        return acc, pot
+    else:
+        return acc
+    
+
+@partial(jax.jit, static_argnames=['config', 'return_potential'])
+@jaxtyped(typechecker=typechecker)
+def TriaxialNFW(state: jnp.ndarray, 
+                config: SimulationConfig,
+                params: SimulationParams,
+                return_potential=False):
+    """
+    Compute acceleration of all particles due to a Triaxial NFW profile.
+    
+    The density is given by:
+        rho(xi) = rho_0 / (xi/r_s) / (1 + xi/r_s)^2
+    where:
+        xi^2 = x^2 + y^2/q1^2 + z^2/q2^2
+
+    Args:
+        state (jnp.ndarray): Array of shape (N_particles, 2, 3) representing the positions and velocities of the particles.
+        config (NamedTuple): Configuration parameters.
+        params (NamedTuple): Simulation parameters.
+        return_potential (bool, optional): If True, also returns the potential energy. Defaults to False.
+    Returns:
+        Tuple[jnp.ndarray, jnp.ndarray]: 
+            - Acceleration (jnp.ndarray): Acceleration of all particles due to Triaxial NFW external potential.
+            - Potential (jnp.ndarray): Potential energy of all particles. Returned only if return_potential is True.
+    """
+    params_TNFW = params.TriaxialNFW_params
+    M = params_TNFW.M
+    r_s = params_TNFW.r_s
+    q1 = params_TNFW.q1  # y-axis flattening
+    q2 = params_TNFW.q2  # z-axis flattening
+    
+    # Gauss-Legendre quadrature (order 50)
+    integration_order = 50
+    x_, w_ = np.polynomial.legendre.leggauss(integration_order)
+    x, w = jnp.asarray(x_, dtype=float), jnp.asarray(w_, dtype=float)
+    # Change interval from [-1, 1] to [0, 1]
+    x_gl = 0.5 * (x_gl + 1)
+    w_gl = 0.5 * w_gl
+    
+    # Central density: rho_0 = M / (4 * pi * r_s^3)
+    rho0 = M / (4 * jnp.pi * r_s**3)
+    
+    q1sq = q1**2
+    q2sq = q2**2
+    
+    @jit
+    def ellipsoid_surface(pos, s2):
+        """Compute xi^2 on the ellipsoid surface."""
+        # xi^2(tau) = x^2/(1+tau) + y^2/(q1^2+tau) + z^2/(q2^2+tau)
+        # with tau = 1/s^2 - 1, this becomes:
+        return s2 * (
+            pos[0]**2 
+            + pos[1]**2 / (1 + (q1sq - 1) * s2)
+            + pos[2]**2 / (1 + (q2sq - 1) * s2)
+        )
+    
+    @jit
+    def potential_single(pos):
+        """Compute potential for a single particle."""
+        def integrand(s):
+            s2 = s**2
+            xi = jnp.sqrt(ellipsoid_surface(pos, s2)) / r_s
+            delta_psi_factor = 2.0 / (1.0 + xi)
+            denom = jnp.sqrt(((q1sq - 1) * s2 + 1) * ((q2sq - 1) * s2 + 1))
+            return delta_psi_factor / denom
+        
+        # Gauss-Legendre integration
+        integral = jnp.sum(w_gl * vmap(integrand)(x_gl))
+        
+        return -2.0 * jnp.pi * params.G * rho0 * r_s**2 * q1 * q2 * integral
+    
+    @jit
+    def acceleration_single(pos):
+        """Compute acceleration for a single particle via gradient of potential."""
+        return -jax.grad(potential_single)(pos)
+    
+    pos = state[:, 0]
+    acc = vmap(acceleration_single)(pos)
+    
+    if return_potential:
+        pot = vmap(potential_single)(pos)
         return acc, pot
     else:
         return acc

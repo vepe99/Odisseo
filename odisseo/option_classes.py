@@ -39,6 +39,7 @@ POINT_MASS = 1
 MN_POTENTIAL = 2
 PSP_POTENTIAL = 3
 LOGARITHMIC_POTENTIAL = 4
+TRIAXIAL_NFW_POTENTIAL = 5
 
 class PlummerParams(NamedTuple):
     """
@@ -98,6 +99,13 @@ class LogarithmicParams(NamedTuple):
     
     q: float = 0.9 #flattening parameter
 
+class TriaxialNFWParams(NamedTuple):
+    Mvir: float = 1.62*1e11      # Total mass
+    r_s: float = 15.3    # Scale radius
+    q1: float = 1.0  # y-axis flattening (q1=1 is spherical)
+    q2: float = 1.0  # z-axis flattening (q2=1 is spherical)
+
+
 
 class SimulationParams(NamedTuple):
     """
@@ -119,6 +127,8 @@ class SimulationParams(NamedTuple):
     PSP_params: PSPParams = PSPParams()
 
     Logarithmic_params: LogarithmicParams = LogarithmicParams()
+
+    TriaxialNFW_params: TriaxialNFWParams = TriaxialNFWParams()
         
 class SimulationConfig(NamedTuple):
     """

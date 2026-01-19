@@ -21,8 +21,8 @@ from diffrax import SemiImplicitEuler, ReversibleHeun, LeapfrogMidpoint
 import diffrax
 
 
-@jaxtyped(typechecker=typechecker)
 @partial(jax.jit, static_argnames=['config'])
+@jaxtyped(typechecker=typechecker)
 def leapfrog(state: jnp.ndarray,
              mass: jnp.ndarray,
              dt: Scalar,
@@ -77,8 +77,8 @@ def leapfrog(state: jnp.ndarray,
     
     return state
 
-@jaxtyped(typechecker=typechecker)
 @partial(jax.jit, static_argnames=['config'])
+@jaxtyped(typechecker=typechecker)
 def RungeKutta4(state: jnp.ndarray,
              mass: jnp.ndarray,
              dt: Scalar,
@@ -151,8 +151,8 @@ def RungeKutta4(state: jnp.ndarray,
     return state
 
 
-@jaxtyped(typechecker=typechecker)
 @partial(jax.jit, static_argnames=['config'])
+@jaxtyped(typechecker=typechecker)
 def diffrax_solver(state: jnp.ndarray,
                     mass: jnp.ndarray,
                     dt: Scalar,
