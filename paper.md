@@ -76,11 +76,11 @@ Examples on how to set up different problems are presented in the [documentation
 
 # Research Impact Statement
 
-`Odisseo` has already demonstrated concrete research impact through peer-reviewed articles and active use in astrophysical research. The presentation paper was accepted at the Differentiable Systems and Scientific Machine Learning (DiffSciML) workshop at EurIPS2025 (Copenhagen)[@viterboOdisseo:2025]. Moreover, the code was used to generate a realistic, simulation-based training set for the analysis of the GD-1 stellar stream, for an astrophysical article currently under review at Astronomy & Astrophysics ([@viterboGD1:2025]).
+`Odisseo` has already demonstrated concrete research impact through peer-reviewed articles and active use in astrophysical research. The presentation paper was accepted at the Differentiable Systems and Scientific Machine Learning (DiffSciML) workshop at EurIPS2025 (Copenhagen)[@viterboOdisseo:2025]. Moreover, the code was used to generate a realistic, simulation-based training set for the analysis of the GD-1 stellar stream, for an astrophysical article currently under review at Astronomy & Astrophysics [@viterboGD1:2025].
 
 # AI usage disclosure
 
-Generative AI was used to generate documentation and part of the code. The quality and correcteness of AI was assess by mock examples that compares to established dynamical code such as `Gala` [@APW_Gala:2017], `Galpy`[Bovy:2015] and Galax [Starkman:2024].
+Generative AI was used to generate documentation and part of the code. The quality and correcteness of AI was assess by mock examples that compares to established dynamical code such as `Gala` [@APW_Gala:2017], `Galpy`[@Bovy:2015] and Galax [@Starkman:2024].
 
 # Acknowledgements
 
