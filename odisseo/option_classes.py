@@ -40,8 +40,8 @@ MN_POTENTIAL = 2
 PSP_POTENTIAL = 3
 LOGARITHMIC_POTENTIAL = 4
 TRIAXIAL_NFW_POTENTIAL = 5
-THIN_DOUBLE_EXPONENTIAL_DISK = 6
-THICK_DOUBLE_EXPONENTIAL_DISK = 7
+THIN_MN3_DISK = 6
+THICK_MN3_DISK = 7
 
 class PlummerParams(NamedTuple):
     """
@@ -107,29 +107,28 @@ class TriaxialNFWParams(NamedTuple):
     q1: float = 1.0  # y-axis flattening (q1=1 is spherical)
     q2: float = 1.0  # z-axis flattening (q2=1 is spherical)
 
-class ThinDoubleExponentialDiskParams(NamedTuple):
+
+class ThinMN3DiskParams(NamedTuple):
     """
-    NamedTuple containing the parameters for the thin double exponential disk potential
+    NamedTuple containing the parameters for the thin Miyamoto-Nagai 3 disk potential
     """
 
-    Sigma: float = 1e9  #M☉/kpc^2
+    M: float = 1e10  #M☉
 
     hr: float = 3.0  #kpc
 
     hz: float = 0.3  #kpc
 
-class ThickDoubleExponentialDiskParams(NamedTuple):
+class ThickMN3DiskParams(NamedTuple):
     """
-    NamedTuple containing the parameters for the thick double exponential disk potential
+    NamedTuple containing the parameters for the thick Miyamoto-Nagai 3 disk potential
     """
 
-    Sigma: float = 5e8  #M☉/kpc^2
+    M: float = 5e9  #M☉
 
     hr: float = 3.0  #kpc
 
     hz: float = 1.0  #kpc
-
-
 
 class SimulationParams(NamedTuple):
     """
@@ -154,9 +153,13 @@ class SimulationParams(NamedTuple):
 
     TriaxialNFW_params: TriaxialNFWParams = TriaxialNFWParams()
 
-    Thin_DoubleExpDisk_params: ThinDoubleExponentialDiskParams = ThinDoubleExponentialDiskParams()
+    # Thin_DoubleExpDisk_params: ThinDoubleExponentialDiskParams = ThinDoubleExponentialDiskParams()
     
-    Thick_DoubleExpDisk_params: ThickDoubleExponentialDiskParams = ThickDoubleExponentialDiskParams()
+    # Thick_DoubleExpDisk_params: ThickDoubleExponentialDiskParams = ThickDoubleExponentialDiskParams()
+
+    ThinMN3Disk_params: ThinMN3DiskParams = ThinMN3DiskParams()
+
+    ThickMN3Disk_params: ThickMN3DiskParams = ThickMN3DiskParams()
         
 class SimulationConfig(NamedTuple):
     """
@@ -199,6 +202,7 @@ class SimulationConfig(NamedTuple):
 
     gradient_horizon: int = 0
 
-    de_n: int = 10000  #number of steps for double exponential disk potential integration
+    sech2_z: bool = False  #whether to use sech^2 (True) or exponential vertical profile (False, default) for MN3 disk potential
 
-    de_h: float = 0.001
+    MN3_positive_density: bool = True  #whether to enforce positive density everywhere for MN3 disk potential
+
