@@ -8,53 +8,12 @@ import jax.numpy as jnp
 from jax import vmap, jit, lax
 from jax import random
 import jax.scipy.special as jsp
+from scipy.special import j0, j1, jv
 import numpy as np
+import scipy
 
 from odisseo.option_classes import SimulationConfig, SimulationParams
-from odisseo.option_classes import NFW_POTENTIAL, POINT_MASS, MN_POTENTIAL, PSP_POTENTIAL, TRIAXIAL_NFW_POTENTIAL
 
-@partial(jax.jit, static_argnames=['config', 'return_potential'])
-@jaxtyped(typechecker=typechecker)
-def combined_external_acceleration(state: jnp.ndarray, 
-                                   config: SimulationConfig,
-                                   params: SimulationParams,
-                                   return_potential=False):
-    """
-    Compute the total acceleration of all particles due to all external potentials. Sequential way 
-    
-    Args:
-        state (jnp.ndarray): Array of shape (N_particles,2,3) representing the positions and velocities of the particles. 
-        config (NamedTuple): Configuration parameters.
-        params (NamedTuple): Simulation parameters.
-        return_potential (bool): If True, also returns the total potential energy of all external potentials.
-    
-    Returns:
-        jnp.ndarray: Total acceleration of all particles due to all external potentials if return_potential is False.
-        Tuple: Total acceleration and total potential energy of all particles due to all external potentials if return_potential is True.
-    """
-    total_external_acceleration = jnp.zeros_like(state[:, 0])
-    total_external_potential = jnp.zeros_like(config.N_particles)
-    if return_potential:
-        if NFW_POTENTIAL in config.external_accelerations:
-            acc_NFW, pot_NFW = NFW(state, config, params, return_potential=True)
-            total_external_acceleration = total_external_acceleration + acc_NFW
-            total_external_potential = total_external_potential +   pot_NFW
-            if POINT_MASS in config.external_accelerations:
-                acc_PM, pot_PM = point_mass(state, config, params, return_potential=True)
-                total_external_acceleration = total_external_acceleration + acc_PM
-                total_external_potential = total_external_potential + pot_PM
-                if MN_POTENTIAL in config.external_accelerations:
-                    acc_MN, pot_MN = MyamotoNagai(state, config, params, return_potential=True)
-                    total_external_acceleration = total_external_acceleration + acc_MN
-                    total_external_potential = total_external_potential + pot_MN
-                    return total_external_acceleration, total_external_potential
-                else:
-                    return total_external_acceleration, total_external_potential
-        return total_external_acceleration, total_external_potential
-    else:
-        if NFW_POTENTIAL in config.external_accelerations:
-            total_external_acceleration = total_external_acceleration + NFW(state, config, params)
-        return total_external_acceleration
 
 @partial(jax.jit, static_argnames=['config', 'return_potential'])   
 @jaxtyped(typechecker=typechecker)
@@ -89,7 +48,10 @@ def combined_external_acceleration_vmpa_switch(state: jnp.ndarray,
                           lambda state: MyamotoNagai(state, config=config, params=params, return_potential=True),
                           lambda state: PowerSphericalPotentialwCutoff(state, config=config, params=params, return_potential=True), 
                           lambda state: logarithmic_potential(state, config=config, params=params, return_potential=True),
-                          lambda state: TriaxialNFW(state, config=config, params=params, return_potential=True)]  
+                          lambda state: TriaxialNFW(state, config=config, params=params, return_potential=True),
+                        #   lambda state: Thin_DoubleExponentialDiskPotential(state, config=config, params=params, return_potential=True),
+                        #   lambda state: Thick_DoubleExponentialDiskPotential(state, config=config, params=params, return_potential=True),
+                          ]  
         vmap_function = vmap(lambda i, state: lax.switch(i, POTENTIAL_LIST, state))
         external_acc, external_pot = vmap_function(jnp.array(config.external_accelerations), state_tobe_vmap)
         total_external_acceleration = jnp.sum(external_acc, axis=0)
@@ -101,7 +63,10 @@ def combined_external_acceleration_vmpa_switch(state: jnp.ndarray,
                           lambda state: MyamotoNagai(state, config=config, params=params, return_potential=False),
                           lambda state: PowerSphericalPotentialwCutoff(state, config=config, params=params, return_potential=False),
                           lambda state: logarithmic_potential(state, config=config, params=params, return_potential=False),
-                          lambda state: TriaxialNFW(state, config=config, params=params, return_potential=False)]  
+                          lambda state: TriaxialNFW(state, config=config, params=params, return_potential=False),
+                        #   lambda state: Thin_DoubleExponentialDiskPotential(state, config=config, params=params, return_potential=False),
+                        #   lambda state: Thick_DoubleExponentialDiskPotential(state, config=config, params=params, return_potential=False),
+                          ]  
         vmap_function = vmap(lambda i, state: lax.switch(i, POTENTIAL_LIST, state))
         external_acc = vmap_function(jnp.array(config.external_accelerations), state_tobe_vmap)
         total_external_acceleration = jnp.sum(external_acc, axis=0)
@@ -519,6 +484,276 @@ def TriaxialNFW(state: jnp.ndarray,
     
     if return_potential:
         pot = vmap(potential_single)(pos)
+        return acc, pot
+    else:
+        return acc
+    
+
+
+
+@partial(jax.jit, static_argnames=['config', 'return_potential'])
+@jaxtyped(typechecker=typechecker)
+def Thin_DoubleExponentialDiskPotential(state: jnp.ndarray,
+                                        config: SimulationConfig,
+                                        params: SimulationParams,
+                                        return_potential=False):
+    """
+    Compute acceleration and potential of all particles due to a double exponential disk.
+
+    Inspired by: https://github.com/jobovy/galpy/blob/main/galpy/potential/DoubleExponentialDiskPotential.py#L24-L429
+
+    Args:
+        state (jnp.ndarray): (N_particles, 2, 3) positions and velocities.
+        config (NamedTuple): Configuration parameters (should include de_n, de_h).
+        params (NamedTuple): Simulation parameters (should include amp, hr, hz).
+        return_potential (bool): If True, also returns the potential.
+
+    Returns:
+        jnp.ndarray: Acceleration (N_particles, 3)
+        jnp.ndarray: Potential (N_particles,) if return_potential is True
+    """
+    # Physical parameters
+    params_ThinDoubleExpDisk = params.Thin_DoubleExpDisk_params
+    Sigma = params_ThinDoubleExpDisk.Sigma
+    hr = params_ThinDoubleExpDisk.hr
+    hz = params_ThinDoubleExpDisk.hz
+    amp = Sigma/(2*hz)
+
+    # Integration parameters
+    de_n = config.de_n
+    de_h = config.de_h
+
+    # Precompute zeros and weights (Ogata's Bessel integral formula)
+    j0_zeros = jnp.array([scipy.special.jn_zeros(0, de_n) / np.pi])
+    j1_zeros = jnp.array([scipy.special.jn_zeros(1, de_n) / np.pi])
+
+    def _de_psi(x):
+        return x * jnp.tan(jnp.pi * x / 2)
+
+    def _de_psiprime(x):
+        return jnp.tan(jnp.pi * x / 2) + (jnp.pi * x / 2) * (1 / jnp.cos(jnp.pi * x / 2))**2
+
+    j0_xs = jnp.pi / de_h * _de_psi(de_h * j0_zeros)
+    j0_weights = (
+        2.0
+        / (jnp.pi * j0_zeros * jnp.array([j1(jnp.pi * j0_zeros)]) ** 2.0)
+        * jnp.array([(j0_xs)])
+        * _de_psiprime(de_h * j0_zeros)
+    )
+    j1_xs = jnp.pi / de_h * _de_psi(de_h * j1_zeros)
+    j1_weights = (
+        2.0
+        / (jnp.pi * j1_zeros * jnp.array([jv(2, jnp.pi * j1_zeros)]) ** 2.0)
+        * jnp.array([j1(j1_xs)])
+        * _de_psiprime(de_h * j1_zeros)
+    )
+
+    alpha = 1.0 / hr
+    beta = 1.0 / hz
+
+    pos = state[:, 0]
+    x, y, z = pos[:, 0], pos[:, 1], pos[:, 2]
+    R = jnp.sqrt(x**2 + y**2)
+    absz = jnp.abs(z)
+
+    # Potential
+    def potential_single(R, z):
+        # Avoid division by zero
+        R = jnp.where(R == 0, 1e-12, R)
+        def fun(x):
+            denom = beta**2 - (x / R) ** 2
+            numer = (
+                beta * jnp.exp(-x / R * jnp.abs(z))
+                - x / R * jnp.exp(-beta * jnp.abs(z))
+            )
+            return (alpha**2 + (x / R) ** 2) ** -1.5 * numer / denom
+        # Vectorize over xs
+        integrand = fun(j0_xs)
+        s = -4.0 * jnp.pi * alpha / R * jnp.nansum(integrand * j0_weights)
+        return s
+
+    # Radial force
+    def Rforce_single(R, z):
+        R = jnp.where(R == 0, 1e-12, R)
+        def fun(x):
+            denom = beta**2 - (x / R) ** 2
+            numer = (
+                beta * jnp.exp(-x / R * jnp.abs(z))
+                - x / R * jnp.exp(-beta * jnp.abs(z))
+            )
+            return x * (alpha**2 + (x / R) ** 2) ** -1.5 * numer / denom
+        integrand = fun(j1_xs)
+        s = -4.0 * jnp.pi * alpha / R**2 * jnp.nansum(integrand * j1_weights)
+        return s
+
+    # Vertical force
+    def zforce_single(R, z):
+        R = jnp.where(R == 0, 1e-12, R)
+        def fun(x):
+            denom = beta**2 - (x / R) ** 2
+            numer = (
+                jnp.exp(-x / R * jnp.abs(z))
+                - jnp.exp(-beta * jnp.abs(z))
+            )
+            return (alpha**2 + (x / R) ** 2) ** -1.5 * x / R * numer / denom
+        integrand = fun(j0_xs)
+        s = -4.0 * jnp.pi * alpha * beta / R * jnp.nansum(integrand * j0_weights)
+        return jnp.where(z > 0, s, -s)
+
+    # Vectorize for all particles
+    potential_v = jax.vmap(potential_single)
+    Rforce_v = jax.vmap(Rforce_single)
+    zforce_v = jax.vmap(zforce_single)
+
+    pot = amp * potential_v(R, z)
+    fR = amp * Rforce_v(R, z)
+    fz = amp * zforce_v(R, z)
+
+    # Convert to Cartesian acceleration
+    with jax.ensure_compile_time_eval():
+        cosphi = jnp.where(R > 0, x / R, 1.0)
+        sinphi = jnp.where(R > 0, y / R, 0.0)
+    ax = fR * cosphi
+    ay = fR * sinphi
+    az = fz
+
+    acc = jnp.stack([ax, ay, az], axis=1)
+
+    if return_potential:
+        return acc, pot
+    else:
+        return acc
+    
+
+@partial(jax.jit, static_argnames=['config', 'return_potential'])
+@jaxtyped(typechecker=typechecker)
+def Thick_DoubleExponentialDiskPotential(state: jnp.ndarray,
+                                        config: SimulationConfig,
+                                        params: SimulationParams,
+                                        return_potential=False):
+    """
+    Compute acceleration and potential of all particles due to a double exponential disk.
+
+    Inspired by: https://github.com/jobovy/galpy/blob/main/galpy/potential/DoubleExponentialDiskPotential.py#L24-L429
+
+    Args:
+        state (jnp.ndarray): (N_particles, 2, 3) positions and velocities.
+        config (NamedTuple): Configuration parameters (should include de_n, de_h).
+        params (NamedTuple): Simulation parameters (should include amp, hr, hz).
+        return_potential (bool): If True, also returns the potential.
+
+    Returns:
+        jnp.ndarray: Acceleration (N_particles, 3)
+        jnp.ndarray: Potential (N_particles,) if return_potential is True
+    """
+    # Physical parameters
+    params_ThickDoubleExpDisk = params.Thick_DoubleExpDisk_params
+    Sigma = params_ThickDoubleExpDisk.Sigma
+    hr = params_ThickDoubleExpDisk.hr
+    hz = params_ThickDoubleExpDisk.hz
+    amp = Sigma/(2*hz)
+
+    # Integration parameters
+    de_n = config.de_n
+    de_h = config.de_h
+
+    # Precompute zeros and weights (Ogata's Bessel integral formula)
+    j0_zeros = jn_zeros(0, de_n) / jnp.pi
+    j1_zeros = jn_zeros(1, de_n) / jnp.pi
+
+    def _de_psi(x):
+        return x * jnp.tan(jnp.pi * x / 2)
+
+    def _de_psiprime(x):
+        return jnp.tan(jnp.pi * x / 2) + (jnp.pi * x / 2) * (1 / jnp.cos(jnp.pi * x / 2))**2
+
+    j0_xs = jnp.pi / de_h * _de_psi(de_h * j0_zeros)
+    j0_weights = (
+        2.0
+        / (jnp.pi * j0_zeros * jnp.array([j1(jnp.pi * j0_zeros)]) ** 2.0)
+        * jnp.array([(j0_xs)])
+        * _de_psiprime(de_h * j0_zeros)
+    )
+    j1_xs = jnp.pi / de_h * _de_psi(de_h * j1_zeros)
+    j1_weights = (
+        2.0
+        / (jnp.pi * j1_zeros * jnp.array([jv(2, jnp.pi * j1_zeros)])  ** 2.0)
+        * jnp.array([j1(j1_xs)])
+        * _de_psiprime(de_h * j1_zeros)
+    )
+
+    alpha = 1.0 / hr
+    beta = 1.0 / hz
+
+    pos = state[:, 0]
+    x, y, z = pos[:, 0], pos[:, 1], pos[:, 2]
+    R = jnp.sqrt(x**2 + y**2)
+    absz = jnp.abs(z)
+
+    # Potential
+    def potential_single(R, z):
+        # Avoid division by zero
+        R = jnp.where(R == 0, 1e-12, R)
+        def fun(x):
+            denom = beta**2 - (x / R) ** 2
+            numer = (
+                beta * jnp.exp(-x / R * jnp.abs(z))
+                - x / R * jnp.exp(-beta * jnp.abs(z))
+            )
+            return (alpha**2 + (x / R) ** 2) ** -1.5 * numer / denom
+        # Vectorize over xs
+        integrand = fun(j0_xs)
+        s = -4.0 * jnp.pi * alpha / R * jnp.nansum(integrand * j0_weights)
+        return s
+
+    # Radial force
+    def Rforce_single(R, z):
+        R = jnp.where(R == 0, 1e-12, R)
+        def fun(x):
+            denom = beta**2 - (x / R) ** 2
+            numer = (
+                beta * jnp.exp(-x / R * jnp.abs(z))
+                - x / R * jnp.exp(-beta * jnp.abs(z))
+            )
+            return x * (alpha**2 + (x / R) ** 2) ** -1.5 * numer / denom
+        integrand = fun(j1_xs)
+        s = -4.0 * jnp.pi * alpha / R**2 * jnp.nansum(integrand * j1_weights)
+        return s
+
+    # Vertical force
+    def zforce_single(R, z):
+        R = jnp.where(R == 0, 1e-12, R)
+        def fun(x):
+            denom = beta**2 - (x / R) ** 2
+            numer = (
+                jnp.exp(-x / R * jnp.abs(z))
+                - jnp.exp(-beta * jnp.abs(z))
+            )
+            return (alpha**2 + (x / R) ** 2) ** -1.5 * x / R * numer / denom
+        integrand = fun(j0_xs)
+        s = -4.0 * jnp.pi * alpha * beta / R * jnp.nansum(integrand * j0_weights)
+        return jnp.where(z > 0, s, -s)
+
+    # Vectorize for all particles
+    potential_v = jax.vmap(potential_single)
+    Rforce_v = jax.vmap(Rforce_single)
+    zforce_v = jax.vmap(zforce_single)
+
+    pot = amp * potential_v(R, z)
+    fR = amp * Rforce_v(R, z)
+    fz = amp * zforce_v(R, z)
+
+    # Convert to Cartesian acceleration
+    with jax.ensure_compile_time_eval():
+        cosphi = jnp.where(R > 0, x / R, 1.0)
+        sinphi = jnp.where(R > 0, y / R, 0.0)
+    ax = fR * cosphi
+    ay = fR * sinphi
+    az = fz
+
+    acc = jnp.stack([ax, ay, az], axis=1)
+
+    if return_potential:
         return acc, pot
     else:
         return acc

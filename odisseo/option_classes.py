@@ -40,6 +40,8 @@ MN_POTENTIAL = 2
 PSP_POTENTIAL = 3
 LOGARITHMIC_POTENTIAL = 4
 TRIAXIAL_NFW_POTENTIAL = 5
+THIN_DOUBLE_EXPONENTIAL_DISK = 6
+THICK_DOUBLE_EXPONENTIAL_DISK = 7
 
 class PlummerParams(NamedTuple):
     """
@@ -105,6 +107,28 @@ class TriaxialNFWParams(NamedTuple):
     q1: float = 1.0  # y-axis flattening (q1=1 is spherical)
     q2: float = 1.0  # z-axis flattening (q2=1 is spherical)
 
+class ThinDoubleExponentialDiskParams(NamedTuple):
+    """
+    NamedTuple containing the parameters for the thin double exponential disk potential
+    """
+
+    Sigma: float = 1e9  #M☉/kpc^2
+
+    hr: float = 3.0  #kpc
+
+    hz: float = 0.3  #kpc
+
+class ThickDoubleExponentialDiskParams(NamedTuple):
+    """
+    NamedTuple containing the parameters for the thick double exponential disk potential
+    """
+
+    Sigma: float = 5e8  #M☉/kpc^2
+
+    hr: float = 3.0  #kpc
+
+    hz: float = 1.0  #kpc
+
 
 
 class SimulationParams(NamedTuple):
@@ -129,6 +153,10 @@ class SimulationParams(NamedTuple):
     Logarithmic_params: LogarithmicParams = LogarithmicParams()
 
     TriaxialNFW_params: TriaxialNFWParams = TriaxialNFWParams()
+
+    Thin_DoubleExpDisk_params: ThinDoubleExponentialDiskParams = ThinDoubleExponentialDiskParams()
+    
+    Thick_DoubleExpDisk_params: ThickDoubleExponentialDiskParams = ThickDoubleExponentialDiskParams()
         
 class SimulationConfig(NamedTuple):
     """
@@ -171,4 +199,6 @@ class SimulationConfig(NamedTuple):
 
     gradient_horizon: int = 0
 
-    
+    de_n: int = 10000  #number of steps for double exponential disk potential integration
+
+    de_h: float = 0.001

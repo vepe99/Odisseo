@@ -7,7 +7,7 @@ import jax
 import jax.numpy as jnp
 from jax import vmap, jit
 from jax import random
-from odisseo.potentials import combined_external_acceleration, combined_external_acceleration_vmpa_switch
+from odisseo.potentials import combined_external_acceleration_vmpa_switch
 from odisseo.dynamics import direct_acc, direct_acc_laxmap, direct_acc_matrix, direct_acc_for_loop, direct_acc_sharding, no_self_gravity
 
 from odisseo.option_classes import DIRECT_ACC, DIRECT_ACC_LAXMAP, DIRECT_ACC_MATRIX, DIRECT_ACC_FOR_LOOP, DIRECT_ACC_SHARDING, NO_SELF_GRAVITY
