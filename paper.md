@@ -38,11 +38,15 @@ The standard workflow has involved running computationally expensive simulations
 
 # Statement of Need
 
-Inspired by the work of [@alvey:2024] and [@nibauer:2024] on stellar stream differentiable simulators, with Odisseo we intend to offer a general purpose, highly modular, direct N-body simulator package that can be used for detail inference pipeline by taking advantage of the full information present in the phase-space. The main goal is to explore the joint posterior distribution of progenitor and external potential parameters in the context of galactic dynamics. As demonstrated by recent developments, a promising path for inverse modeling techniques lies in leveraging differentiable programming and modern simulation-based inference (SBI) techniques [@holzschuh:2024].
+Inspired by the work on differentiable particle-spray method for steallr streams simulation, presented in [@alvey:2024] and [@nibauer:2024] simulators, with Odisseo we intend to offer a general purpose, highly modular, direct N-body simulator package that can be used for detail inference pipeline by taking advantage of the full information present in the phase-space. The main goal is to explore the joint posterior distribution of progenitor and external potential parameters in the context of galactic dynamics. As demonstrated by recent developments, a promising path for inverse modeling techniques lies in leveraging differentiable programming and modern simulation-based inference (SBI) techniques [@holzschuh:2024].
 
 By providing a fully differentiable N-body simulator built on JAX [@jax:2018], Odisseo directly addresses the key bottlenecks of the standard inference pipeline (MCMC). Its differentiability allows for the direct use of simulation gradients to guide parameter inference, enabling a move from inefficient parameter searches to highly efficient, gradient-informed methods.
 
 Odisseo is designed with open-source, community-driven development in mind, providing a robust and accessible foundation that can be extended with new physics models and numerical methods.
+
+# State of the field
+
+Many established direct N-body code are already available, such as `PeTar` [@wang_petar_2020], `NBODY6++GPUT` [@wang_nbody6gpu_2015], written in low-level language like C and C++, provide state-of-the-art accuracy and performance. In this context, `Odisseo` prioritize maintainability, readability, and accessibility for a community developments with his high-level Python codebase, facilitating fast prototyping of ideas and allowing for novel techiques in computational physics to be integrated easily, such as end-to-end automatic differentiability (see Sec. `Software Design`).
 
 # Software Design
 
@@ -80,7 +84,7 @@ Examples on how to set up different problems are presented in the [documentation
 
 # AI usage disclosure
 
-Generative AI was used to generate documentation and part of the code. The quality and correcteness of AI was assess by mock examples that compares to established dynamical code such as `Gala` [@APW_Gala:2017], `Galpy`[@Bovy:2015] and Galax [@Starkman:2024].
+Generative AI was used to generate documentation and part of the code. The quality and correcteness of AI was assess by mock examples that compares to established dynamical code such as `Gala` [@APW_Gala:2017], `Galpy`[@Bovy:2015] and `Galax` [@Starkman:2024].
 
 # Acknowledgements
 

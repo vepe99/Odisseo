@@ -174,3 +174,43 @@
   adsurl        = {https://ui.adsabs.harvard.edu/abs/2025arXiv251122468V},
   adsnote       = {Provided by the SAO/NASA Astrophysics Data System}
 }
+
+@article{wang_nbody6gpu_2015,
+  title      = {nbody6++gpu: ready for the gravitational million-body problem},
+  volume     = {450},
+  issn       = {1365-2966, 0035-8711},
+  url        = {http://academic.oup.com/mnras/article/450/4/4070/990854/nbody6gpu-ready-for-the-gravitational-millionbody},
+  doi        = {10.1093/mnras/stv817},
+  shorttitle = {nbody6++gpu},
+  abstract   = {Accurate direct N-body simulations help to obtain detailed information about the dynamical evolution of star clusters. They also enable comparisons with analytical models and {FokkerPlanck} or Monte Carlo methods. {NBODY}6 is a well-known direct N-body code for star clusters, and {NBODY}6++ is the extended version designed for large particle number simulations by supercomputers. We present {NBODY}6++{GPU}, an optimized version of {NBODY}6++ with hybrid parallelization methods ({MPI}, {GPU}, {OpenMP}, and {AVX}/{SSE}) to accelerate large direct N-body simulations, and in particular to solve the million-body problem. We discuss the new features of the {NBODY}6++{GPU} code, benchmarks, as well as the &#64257;rst results from a simulation of a realistic globular cluster initially containing a million particles. For million-body simulations, {NBODY}6++{GPU} is 4002000 times faster than {NBODY}6 with 320 {CPU} cores and 32 {NVIDIA} K20X {GPUs}. With this computing cluster speci&#64257;cation, the simulations of million-body globular clusters including 5 per cent primordial binaries require about an hour per half-mass crossing time.},
+  pages      = {4070--4080},
+  number     = {4},
+  journal    = {Monthly Notices of the Royal Astronomical Society},
+  author     = {Wang, Long and Spurzem, Rainer and Aarseth, Sverre and Nitadori, Keigo and Berczik, Peter and Kouwenhoven, M. B. N. and Naab, Thorsten},
+  urldate    = {2025-08-25},
+  date       = {2015-07-11},
+  year       = {2015},
+  langid     = {english},
+  file       = {PDF:/Users/giuseppeviterbo/Zotero/storage/A53TCBZE/Wang et al. - 2015 - nbody6++gpu ready for the gravitational million-body problem.pdf:application/pdf}
+}
+
+@article{wang_petar_2020,
+  title      = {{PeTar}: a high-performance N-body code for modeling massive collisional stellar systems},
+  volume     = {497},
+  issn       = {0035-8711, 1365-2966},
+  url        = {http://arxiv.org/abs/2006.16560},
+  doi        = {10.1093/mnras/staa1915},
+  shorttitle = {{PeTar}},
+  abstract   = {The numerical simulations of massive collisional stellar systems, such as globular clusters ({GCs}), are very time-consuming. Until now, only a few realistic million-body simulations of {GCs} with a small fraction of binaries (5\%) have been performed by using the {NBODY}6++{GPU} code. Such models took half a year computational time on a {GPU} based super-computer. In this work, we develop a new N-body code, {PeTar}, by combining the methods of Barnes-Hut tree, Hermite integrator and slow-down algorithmic regularization ({SDAR}). The code can accurately handle an arbitrary fraction of multiple systems (e.g. binaries, triples) while keeping a high performance by using the hybrid parallelization methods with {MPI}, {OpenMP}, {SIMD} instructions and {GPU}. A few benchmarks indicate that {PeTar} and {NBODY}6++{GPU} have a very good agreement on the long-term evolution of the global structure, binary orbits and escapers. On a highly configured {GPU} desktop computer, the performance of a million-body simulation with all stars in binaries by using {PeTar} is 11 times faster than that of {NBODY}6++{GPU}. Moreover, on the Cray {XC}50 supercomputer, {PeTar} well scales when number of cores increase. The ten million-body problem, which covers the region of ultra compact dwarfs and nuclearstar clusters, becomes possible to be solved.},
+  pages      = {536--555},
+  number     = {1},
+  journal    = {Monthly Notices of the Royal Astronomical Society},
+  author     = {Wang, Long and Iwasawa, Masaki and Nitadori, Keigo and Makino, Junichiro},
+  urldate    = {2025-08-25},
+  year       = {2020},
+  date       = {2020-09-01},
+  eprinttype = {arxiv},
+  eprint     = {2006.16560 [astro-ph]},
+  keywords   = {Astrophysics - Astrophysics of Galaxies, Astrophysics - Instrumentation and Methods for Astrophysics},
+  file       = {Full Text PDF:/Users/giuseppeviterbo/Zotero/storage/GJ6XZ9R4/Wang et al. - 2020 - PeTar a high-performance N-body code for modeling massive collisional stellar systems.pdf:application/pdf;Snapshot:/Users/giuseppeviterbo/Zotero/storage/VYIH5G8A/2006.html:text/html}
+}
