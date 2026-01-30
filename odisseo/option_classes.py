@@ -42,6 +42,7 @@ LOGARITHMIC_POTENTIAL = 4
 TRIAXIAL_NFW_POTENTIAL = 5
 THIN_MN3_DISK = 6
 THICK_MN3_DISK = 7
+TWO_POWER_TRIAXIAL = 8
 
 class PlummerParams(NamedTuple):
     """
@@ -130,6 +131,23 @@ class ThickMN3DiskParams(NamedTuple):
 
     hz: float = 1.0  #kpc
 
+class TwoPowerTriaxialParams(NamedTuple):
+    """
+    NamedTuple containing the parameters for the two power-law triaxial potential
+    """
+
+    rho: float = 0.015  #Density normalization in M☉/pc^3
+
+    a: float = 20.0  #Scale radius in kpc
+
+    b: float = 1.0  #Intermediate axis ratio
+
+    c: float = 1.0  #Minor axis ratio
+
+    alpha: float = 1.0  #Inner slope
+
+    beta: float = 3.0  #Outer slope
+
 class SimulationParams(NamedTuple):
     """
     NamedTuple containing the parameters for the simulation. This parameter do not require recompilation
@@ -153,13 +171,11 @@ class SimulationParams(NamedTuple):
 
     TriaxialNFW_params: TriaxialNFWParams = TriaxialNFWParams()
 
-    # Thin_DoubleExpDisk_params: ThinDoubleExponentialDiskParams = ThinDoubleExponentialDiskParams()
-    
-    # Thick_DoubleExpDisk_params: ThickDoubleExponentialDiskParams = ThickDoubleExponentialDiskParams()
-
     ThinMN3Disk_params: ThinMN3DiskParams = ThinMN3DiskParams()
 
     ThickMN3Disk_params: ThickMN3DiskParams = ThickMN3DiskParams()
+
+    TwoPowerTriaxial_params: TwoPowerTriaxialParams = TwoPowerTriaxialParams()
         
 class SimulationConfig(NamedTuple):
     """
@@ -205,4 +221,6 @@ class SimulationConfig(NamedTuple):
     sech2_z: bool = False  #whether to use sech^2 (True) or exponential vertical profile (False, default) for MN3 disk potential
 
     MN3_positive_density: bool = True  #whether to enforce positive density everywhere for MN3 disk potential
+
+    glorder: int = 50 #order of Gauss-Legendre quadrature for MN3 disk potential
 
