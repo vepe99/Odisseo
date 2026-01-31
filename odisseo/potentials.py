@@ -500,8 +500,9 @@ def TriaxialNFW(state: jnp.ndarray,
         
         # Gauss-Legendre integration
         integral = jnp.sum(w_gl * vmap(integrand)(x_gl))
+        pot_single = -2.0 * jnp.pi * params.G * rho0 * r_s**2 * q1 * q2 * integral
         
-        return -2.0 * jnp.pi * params.G * rho0 * r_s**2 * q1 * q2 * integral
+        return pot_single.squeeze()
     
     @jit
     def acceleration_single(pos):
@@ -527,7 +528,7 @@ def Thin_MN3DiskPotential(state: jnp.ndarray,
     """
     Compute acceleration and potential of all particles due to a thin disk approximated by 3 Miyamoto-Nagai potentials.
     Inspired by: https://gala.adrian.pw/en/latest/_modules/gala/potential/potential/builtin/core.html#MN3ExponentialDiskPotential.
-    Original paper: `Smith et al. (2015) <https://ui.adsabs.harvard.edu/abs/2015MNRAS.448.2934S/abstract>`
+    Original paper and values in : `Smith et al. (2015) <https://ui.adsabs.harvard.edu/abs/2015MNRAS.448.2934S/abstract>`
 
     Args:
         state (jnp.ndarray): (N_particles, 2, 3) positions and velocities.
@@ -571,7 +572,7 @@ def Thin_MN3DiskPotential(state: jnp.ndarray,
 
     K = jnp.where(MN3_positive_density, _K_pos_dens, _K_neg_dens)
     b_hR = jnp.where(sech2_z, -0.033 * hzR**3 + 0.262 * hzR**2 + 0.659 * hzR, -0.269 * hzR**3 + 1.08 * hzR**2 + 1.092 * hzR)
-    x = jnp.vander(jnp.array([b_hR]), N=5)[0]
+    x = jnp.vander(jnp.atleast_1d(b_hR), N=5)[0]
 
     param_vec = K @ x
 
@@ -610,7 +611,7 @@ def Thick_MN3DiskPotential(state: jnp.ndarray,
     """
     Compute acceleration and potential of all particles due to a thin disk approximated by 3 Miyamoto-Nagai potentials.
     Inspired by: https://gala.adrian.pw/en/latest/_modules/gala/potential/potential/builtin/core.html#MN3ExponentialDiskPotential.
-    Original paper: `Smith et al. (2015) <https://ui.adsabs.harvard.edu/abs/2015MNRAS.448.2934S/abstract>`
+    Original paper and values in : `Smith et al. (2015) <https://ui.adsabs.harvard.edu/abs/2015MNRAS.448.2934S/abstract>`
 
     Args:
         state (jnp.ndarray): (N_particles, 2, 3) positions and velocities.
@@ -654,7 +655,7 @@ def Thick_MN3DiskPotential(state: jnp.ndarray,
 
     K = jnp.where(MN3_positive_density, _K_pos_dens, _K_neg_dens)
     b_hR = jnp.where(sech2_z, -0.033 * hzR**3 + 0.262 * hzR**2 + 0.659 * hzR, -0.269 * hzR**3 + 1.08 * hzR**2 + 1.092 * hzR)
-    x = jnp.vander(jnp.array([b_hR]), N=5)[0]
+    x = jnp.vander(jnp.atleast_1d(b_hR), N=5)[0]
 
     param_vec = K @ x
 
@@ -800,7 +801,7 @@ def TwoPowerTriaxialPotential(state: jnp.ndarray,
                     )
                 )
             )
-        return jax.lax.cond(jnp.abs(twominusalpha) < 1e-10, branch, main)
+        return jax.lax.cond(jnp.abs(twominusalpha)[0] < 1e-10, branch, main)
 
     @jit
     def dens(m):
