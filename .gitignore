@@ -11,3 +11,6 @@ odisseo.egg-info/
 
 #pickle data
 *.pkl
+
+#Virtual environments
+.venv/
