@@ -224,3 +224,4 @@ class SimulationConfig(NamedTuple):
 
     glorder: int = 50 #order of Gauss-Legendre quadrature for MN3 disk potential
 
+    reflex_motion: bool = False

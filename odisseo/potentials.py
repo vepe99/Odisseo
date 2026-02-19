@@ -119,11 +119,15 @@ def NFW(state: jnp.ndarray,
     # else:
     #     return acc
 
+    if config.reflex_motion:
+        rel_pos = state[1:, 0] - state[0, 0]
+    else:
+        rel_pos = state[:, 0]
+
     params_NFW = params.NFW_params
     M = params_NFW.Mvir
     r_s = params_NFW.r_s
-
-    r = jnp.linalg.norm(state[:, 0], axis=1)
+    r = jnp.linalg.norm(rel_pos, axis=1)
 
     @jit
     def potential(r):
@@ -153,7 +157,7 @@ def NFW(state: jnp.ndarray,
     
     @jit 
     def acceleration(r):
-        return - params.G * mass_enclosed(r)[:, None] * state[:, 0] / (r**3)[:, None] 
+        return - params.G * mass_enclosed(r)[:, None] * rel_pos / (r**3)[:, None] 
     
     # @jit
     # def acceleration(r):
@@ -170,9 +174,13 @@ def NFW(state: jnp.ndarray,
     acc = acceleration(r)
 
     if return_potential:
-        pot = potential(r)
+        pot = potential(rel_pos)
+        if config.reflex_motion:
+            return jnp.concatenate([jnp.zeros((1, 3)), acc], axis=0), jnp.concatenate([jnp.zeros(1), pot]) # First particle is external potetnial itself, so no acceleration and zero potential
         return acc, pot
     else:
+        if config.reflex_motion:
+            return jnp.concatenate([jnp.zeros((1, 3)), acc], axis=0)
         return acc
     
     
@@ -199,22 +207,31 @@ def point_mass(state: jnp.ndarray,
     """
     params_point_mass = params.PointMass_params
     
-    r  = jnp.linalg.norm(state[:, 0], axis=1)
+    if config.reflex_motion:
+        rel_pos = state[1:, 0] - state[0, 0]
+    else:
+        rel_pos = state[:, 0]
+
+    r = jnp.linalg.norm(rel_pos, axis=1)
 
     @jit
-    def acceleration(state):
-        return - params.G * params_point_mass.M * state[:, 0] / (r**3)[:, None]
+    def acceleration(rel_pos):
+        return - params.G * params_point_mass.M * rel_pos / (r**3)[:, None]
     
     @jit
     def potential(r):
         return - params.G * params_point_mass.M / r
     
-    acc = acceleration(state)
+    acc = acceleration(rel_pos)
     
     if return_potential:
-        pot = potential(r)
+        pot = potential(rel_pos)
+        if config.reflex_motion:
+            return jnp.concatenate([jnp.zeros((1, 3)), acc], axis=0), jnp.concatenate([jnp.zeros(1), pot])
         return acc, pot
     else:
+        if config.reflex_motion:
+            return jnp.concatenate([jnp.zeros((1, 3)), acc], axis=0)
         return acc
     
 @partial(jax.jit, static_argnames=['config', 'return_potential'])
@@ -237,14 +254,19 @@ def MyamotoNagai(state: jnp.ndarray,
             - Potential (jnp.ndarray): Potential energy of all particles due to MyamotoNagai external potential. Returned only if return_potential is True.
     """
     params_MN = params.MN_params
+
+    if config.reflex_motion:
+        rel_pos = state[1:, 0] - state[0, 0]
+    else:
+        rel_pos = state[:, 0]
     
-    z2 = state[:, 0, 2]**2
+    z2 = rel_pos[:, 2]**2
     b = params_MN.b
     a = params_MN.a
     M = params_MN.M
 
     Dz = (a+(z2+b**2)**0.5)
-    D = jnp.linalg.norm(state[:, 0, :2], axis=1)**2 + Dz**2
+    D = jnp.linalg.norm(rel_pos[:, :2], axis=1)**2 + Dz**2
     K = - params.G * params_MN.M / D**(3/2)
 
     @jit
@@ -259,22 +281,26 @@ def MyamotoNagai(state: jnp.ndarray,
         return - params.G * params_MN.M / jnp.sqrt(D)
 
 
-    pos = state[:, 0]
-    acc = acceleration(pos)
+    acc = acceleration(rel_pos)
 
     if return_potential:
-        pot = potential(pos)
+        pot = potential(rel_pos)
+        if config.reflex_motion:
+            return jnp.concatenate([jnp.zeros((1, 3)), acc], axis=0), jnp.concatenate([jnp.zeros(1), pot])
         return acc, pot
     else:
+        if config.reflex_motion:
+            return jnp.concatenate([jnp.zeros((1, 3)), acc], axis=0)
         return acc
     
-@partial(jax.jit, static_argnames=['return_potential'])
+@partial(jax.jit, static_argnames=['config', 'return_potential'])
 @jaxtyped(typechecker=typechecker)
 def call_MyamotoNagai(state: jnp.ndarray, 
                         M: Union[float, jnp.ndarray],
                         a: Union[float, jnp.ndarray],
                         b: Union[float, jnp.ndarray],
                         params: SimulationParams,
+                        config: SimulationConfig,
                         return_potential=False):
     """
     Compute acceleration of all particles due to a MyamotoNagai disk profile. It is used as base function for MN3 approximation of douoble exponential disk.
@@ -291,10 +317,15 @@ def call_MyamotoNagai(state: jnp.ndarray,
             - Potential (jnp.ndarray): Potential energy of all particles due to MyamotoNagai external potential. Returned only if return_potential is True.
     """
     
-    z2 = state[:, 0, 2]**2
+    if config.reflex_motion:
+        rel_pos = state[1:, 0] - state[0, 0]
+    else:
+        rel_pos = state[:, 0]
+
+    z2 = rel_pos[:, 2]**2
 
     Dz = (a+(z2+b**2)**0.5)
-    D = jnp.linalg.norm(state[:, 0, :2], axis=1)**2 + Dz**2
+    D = jnp.linalg.norm(rel_pos[:, :2], axis=1)**2 + Dz**2
     K = - params.G * M / D**(3/2)
 
     @jit
@@ -309,13 +340,16 @@ def call_MyamotoNagai(state: jnp.ndarray,
         return - params.G * M / jnp.sqrt(D)
 
 
-    pos = state[:, 0]
-    acc = acceleration(pos)
+    acc = acceleration(rel_pos)
 
     if return_potential:
-        pot = potential(pos)
+        pot = potential(rel_pos)
+        if config.reflex_motion:
+            return jnp.concatenate([jnp.zeros((1, 3)), acc], axis=0), jnp.concatenate([jnp.zeros(1), pot])
         return acc, pot
     else:
+        if config.reflex_motion:
+            return jnp.concatenate([jnp.zeros((1, 3)), acc], axis=0)
         return acc
     
 
@@ -349,7 +383,10 @@ def PowerSphericalPotentialwCutoff(state: jnp.ndarray,
     alpha = params_PSP.alpha
     r_c = params_PSP.r_c
     
-    pos = state[:, 0]
+    if config.reflex_motion:
+        rel_pos = state[1:, 0] - state[0, 0]
+    else:
+        rel_pos = state[:, 0]
 
     @jit
     def rho(radius):
@@ -379,11 +416,16 @@ def PowerSphericalPotentialwCutoff(state: jnp.ndarray,
     
 
     # compute the acceleration
-    acc = acceleration(pos)
+    acc = acceleration(rel_pos)
+    
     if return_potential:
-        pot = jax.vmap(potential)(pos)
+        pot = jax.vmap(potential)(rel_pos)
+        if config.reflex_motion:
+            return jnp.concatenate([jnp.zeros((1, 3)), acc], axis=0), jnp.concatenate([jnp.zeros(1), pot])
         return acc, pot
     else:
+        if config.reflex_motion:
+            return jnp.concatenate([jnp.zeros((1, 3)), acc], axis=0)
         return acc
  
 @partial(jax.jit, static_argnames=['config', 'return_potential'])  
@@ -406,29 +448,39 @@ def logarithmic_potential(state: jnp.ndarray,
             - Acceleration (jnp.ndarray): Acceleration of all particles due to logarithmic external potential.
             - Potential (jnp.ndarray): Potential energy of all particles due to logarithmic external potential. Returned only if return_potential is True.
     """
-    r = jnp.sqrt(state[:, 0, 0]**2 + state[:, 0, 1]**2)
-    z = state[:, 0, 2]
+
+    if config.reflex_motion:
+        rel_pos = state[1:, 0] - state[0, 0]
+    else:
+        rel_pos = state[:, 0]
+
+    r = jnp.sqrt(rel_pos[:, 0]**2 + rel_pos[:, 1]**2)
+    z = rel_pos[:, 2]
     v2_0 = params.Logarithmic_params.v0**2
     q2 = params.Logarithmic_params.q**2
     
     @jit
-    def potential(state):
+    def potential(rel_pos):
         return - v2_0/2 * jnp.log(r**2 + (z**2/q2))
 
     @jit
-    def acceleration(state):
+    def acceleration(rel_pos):
         DEN = r**2 + (z**2/q2)
-        ax = - v2_0 * state[:, 0, 0] / DEN
-        ay = - v2_0 * state[:, 0, 1] / DEN
+        ax = - v2_0 * rel_pos[:, 0] / DEN
+        ay = - v2_0 * rel_pos[:, 1] / DEN
         az = - v2_0 * z * (1/q2) / DEN
         return jnp.stack([ax, ay, az], axis=1)
     
-    acc = acceleration(state)
+    acc = acceleration(rel_pos)
     
     if return_potential:
-        pot = potential(state)
+        pot = potential(rel_pos)
+        if config.reflex_motion:
+            return jnp.concatenate([jnp.zeros((1, 3)), acc], axis=0), jnp.concatenate([jnp.zeros(1), pot])
         return acc, pot
     else:
+        if config.reflex_motion:
+            return jnp.concatenate([jnp.zeros((1, 3)), acc], axis=0)
         return acc
     
 
@@ -476,6 +528,11 @@ def TriaxialNFW(state: jnp.ndarray,
     
     q1sq = q1**2
     q2sq = q2**2
+
+    if config.reflex_motion:
+        rel_pos = state[1:, 0] - state[0, 0]
+    else:
+        rel_pos = state[:, 0]
     
     @jit
     def ellipsoid_surface(pos, s2):
@@ -508,13 +565,16 @@ def TriaxialNFW(state: jnp.ndarray,
         """Compute acceleration for a single particle via gradient of potential."""
         return -jax.grad(potential_single)(pos)
     
-    pos = state[:, 0]
-    acc = vmap(acceleration_single)(pos)
-    
+    acc = vmap(acceleration_single)(rel_pos)
+
     if return_potential:
-        pot = vmap(potential_single)(pos)
+        pot = vmap(potential_single)(rel_pos)
+        if config.reflex_motion:
+            return jnp.concatenate([jnp.zeros((1, 3)), acc], axis=0), jnp.concatenate([jnp.zeros(1), pot])
         return acc, pot
     else:
+        if config.reflex_motion:
+            return jnp.concatenate([jnp.zeros((1, 3)), acc], axis=0)
         return acc
     
     
@@ -587,12 +647,12 @@ def Thin_MN3DiskPotential(state: jnp.ndarray,
         c_only[f"a{i + 1}"] = _as[i]
         c_only[f"b{i + 1}"] = _b
     
-    acc_total = jax.vmap(lambda m, a, b: call_MyamotoNagai(state, m, a, b, params, return_potential=False))(
+    acc_total = jax.vmap(lambda m, a, b: call_MyamotoNagai(state, m, a, b, config, params, return_potential=False))(
         _ms, _as, _b
     ).sum(axis=0)
 
     if return_potential:
-        pot_total = jax.vmap(lambda m, a, b: call_MyamotoNagai(state, m, a, b, params, return_potential=True))(
+        pot_total = jax.vmap(lambda m, a, b: call_MyamotoNagai(state, m, a, b, config, params, return_potential=True))(
             _ms, _as, _b
         )[1].sum(axis=0)
         return acc_total, pot_total
@@ -663,12 +723,12 @@ def Thick_MN3DiskPotential(state: jnp.ndarray,
     _b = b_hR * h_R
     _b = jnp.broadcast_to(_b, _ms.shape)
     
-    acc_total = jax.vmap(lambda m, a, b: call_MyamotoNagai(state, m, a, b, params, return_potential=False))(
+    acc_total = jax.vmap(lambda m, a, b: call_MyamotoNagai(state, m, a, b, config, params, return_potential=False))(
         _ms, _as, _b
     ).sum(axis=0)
 
     if return_potential:
-        pot_total = jax.vmap(lambda m, a, b: call_MyamotoNagai(state, m, a, b, params, return_potential=True))(
+        pot_total = jax.vmap(lambda m, a, b: call_MyamotoNagai(state, m, a, b, config, params, return_potential=True))(
             _ms, _as, _b
         )[1].sum(axis=0)
         return acc_total, pot_total
@@ -851,13 +911,21 @@ def TwoPowerTriaxialPotential(state: jnp.ndarray,
         # pot = 2.0 * jnp.pi * b * c * potential_integral(pos)             
         # pot = potential_integral(pos)  
         return acc, pot
+    
+    if config.reflex_motion:
+        rel_pos = state[1:, 0] - state[0, 0]
+    else:
+        rel_pos = state[:, 0]
 
-    pos = state[:, 0]
-    acc, pot = jax.vmap(acc_and_pot_single)(pos)
+    acc, pot = jax.vmap(acc_and_pot_single)(rel_pos)
 
     if return_potential:
+        if config.reflex_motion:
+            return jnp.concatenate([jnp.zeros((1, 3)), acc], axis=0), jnp.concatenate([jnp.zeros(1), pot])
         return acc, pot
     else:
+        if config.reflex_motion:
+            return jnp.concatenate([jnp.zeros((1, 3)), acc], axis=0)
         return acc
 
 
