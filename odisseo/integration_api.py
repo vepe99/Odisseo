@@ -75,6 +75,14 @@ def integrate(
             ),
             leaf_size=int(config.fmm_leaf_size),
             max_order=int(config.fmm_max_order),
+            fmm_preset=str(config.fmm_preset),
+            fmm_basis=str(config.fmm_basis),
+            fmm_theta=float(config.fmm_theta),
+            fmm_mac_type=str(config.fmm_mac_type),
+            fmm_farfield_mode=str(config.fmm_farfield_mode),
+            fmm_nearfield_mode=str(config.fmm_nearfield_mode),
+            fmm_nearfield_edge_chunk_size=int(config.fmm_nearfield_edge_chunk_size),
+            fmm_tree_leaf_target=int(config.fmm_tree_leaf_target),
             return_history=bool(config.return_snapshots),
         )
 

@@ -40,6 +40,11 @@ Use `odisseo.integrate(...)` as the main entrypoint. Backend selection is done v
 - direct schemes (`DIRECT_ACC`, `DIRECT_ACC_LAXMAP`, `DIRECT_ACC_MATRIX`, ...)
 - `FMM_ACC` for the Jaccpot-FMM coupler workflow
 
+Key FMM tuning fields in `SimulationConfig`:
+- `fmm_refresh_every`, `fmm_leaf_size`, `fmm_max_order`
+- `fmm_preset`, `fmm_basis`, `fmm_theta`, `fmm_mac_type`
+- `fmm_farfield_mode`, `fmm_nearfield_mode`, `fmm_nearfield_edge_chunk_size`, `fmm_tree_leaf_target`
+
 Example:
 
 ```python
