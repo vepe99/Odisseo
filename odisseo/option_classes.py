@@ -32,6 +32,7 @@ DIRECT_ACC_MATRIX = 2
 DIRECT_ACC_FOR_LOOP = 3
 DIRECT_ACC_SHARDING = 4
 NO_SELF_GRAVITY = 5
+FMM_ACC = 6
 
 #external potential 
 NFW_POTENTIAL = 0
@@ -201,6 +202,22 @@ class SimulationConfig(NamedTuple):
     diffrax_solver: int = DOPRI5
     
     acceleration_scheme: int = DIRECT_ACC
+
+    # Jaccpot-FMM backend tuning (used by integrate API).
+    fmm_refresh_every: int = 1
+    fmm_leaf_size: int = 16
+    fmm_max_order: int = 4
+    fmm_refresh_after_position_update: bool = False
+
+    # Jaccpot solver tuning knobs exposed to ODISSEO.
+    fmm_preset: str = "fast"
+    fmm_basis: str = "solidfmm"
+    fmm_theta: float = 0.6
+    fmm_mac_type: str = "dehnen"
+    fmm_farfield_mode: str = "auto"
+    fmm_nearfield_mode: str = "auto"
+    fmm_nearfield_edge_chunk_size: int = 256
+    fmm_tree_leaf_target: int = 32
 
     batch_size: int = 10_000
 
