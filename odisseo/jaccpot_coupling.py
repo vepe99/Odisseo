@@ -186,6 +186,8 @@ def integrate_leapfrog_jaccpot_active(
     fmm_nearfield_mode: str = "auto",
     fmm_nearfield_edge_chunk_size: int = 256,
     fmm_tree_leaf_target: int = 32,
+    fmm_jit_tree: Optional[bool] = True,
+    fmm_jit_traversal: Optional[bool] = True,
     return_history: bool = False,
 ) -> jnp.ndarray:
     """Integrate with Jaccpot FMM using optional active-particle substeps.
@@ -204,6 +206,7 @@ def integrate_leapfrog_jaccpot_active(
         FastMultipoleMethod,
         NearFieldConfig,
         OdisseoFMMCoupler,
+        RuntimePolicyConfig,
         TreeConfig,
     )
 
@@ -235,6 +238,12 @@ def integrate_leapfrog_jaccpot_active(
             nearfield=NearFieldConfig(
                 mode=str(fmm_nearfield_mode),
                 edge_chunk_size=int(fmm_nearfield_edge_chunk_size),
+            ),
+            runtime=RuntimePolicyConfig(
+                jit_tree=None if fmm_jit_tree is None else bool(fmm_jit_tree),
+                jit_traversal=(
+                    None if fmm_jit_traversal is None else bool(fmm_jit_traversal)
+                ),
             ),
             mac_type=str(fmm_mac_type),
         ),
@@ -427,3 +436,68 @@ def integrate_leapfrog_jaccpot_active(
     if return_history:
         return jnp.stack(history, axis=0)
     return state_curr
+
+
+def build_jitted_leapfrog_jaccpot_active(
+    config: SimulationConfig,
+    params: SimulationParams,
+    *,
+    num_steps: int,
+    dt: Optional[float] = None,
+    active_indices_fn: Optional[
+        Callable[[int, jnp.ndarray, jnp.ndarray], jnp.ndarray]
+    ] = None,
+    active_indices_schedule: Optional[jnp.ndarray] = None,
+    active_mask_schedule: Optional[jnp.ndarray] = None,
+    refresh_every: int = 1,
+    refresh_after_position_update: bool = False,
+    leaf_size: int = 16,
+    max_order: int = 4,
+    fmm_preset: str = "fast",
+    fmm_basis: str = "solidfmm",
+    fmm_theta: float = 0.6,
+    fmm_mac_type: str = "dehnen",
+    fmm_farfield_mode: str = "auto",
+    fmm_nearfield_mode: str = "auto",
+    fmm_nearfield_edge_chunk_size: int = 256,
+    fmm_tree_leaf_target: int = 32,
+    fmm_jit_tree: Optional[bool] = True,
+    fmm_jit_traversal: Optional[bool] = True,
+    return_history: bool = False,
+):
+    """Return a reusable JIT-compiled FMM integrator callable.
+
+    The returned function accepts `(state, mass)` arrays and executes the
+    selected FMM integration configuration on a compiled path.
+    """
+
+    @partial(jax.jit, donate_argnames=("state",))
+    def _compiled(state: jnp.ndarray, mass: jnp.ndarray) -> jnp.ndarray:
+        return integrate_leapfrog_jaccpot_active(
+            state,
+            mass,
+            config,
+            params,
+            num_steps=num_steps,
+            dt=dt,
+            active_indices_fn=active_indices_fn,
+            active_indices_schedule=active_indices_schedule,
+            active_mask_schedule=active_mask_schedule,
+            refresh_every=refresh_every,
+            refresh_after_position_update=refresh_after_position_update,
+            leaf_size=leaf_size,
+            max_order=max_order,
+            fmm_preset=fmm_preset,
+            fmm_basis=fmm_basis,
+            fmm_theta=fmm_theta,
+            fmm_mac_type=fmm_mac_type,
+            fmm_farfield_mode=fmm_farfield_mode,
+            fmm_nearfield_mode=fmm_nearfield_mode,
+            fmm_nearfield_edge_chunk_size=fmm_nearfield_edge_chunk_size,
+            fmm_tree_leaf_target=fmm_tree_leaf_target,
+            fmm_jit_tree=fmm_jit_tree,
+            fmm_jit_traversal=fmm_jit_traversal,
+            return_history=return_history,
+        )
+
+    return _compiled
