@@ -471,7 +471,7 @@ def build_jitted_leapfrog_jaccpot_active(
     selected FMM integration configuration on a compiled path.
     """
 
-    @partial(jax.jit, donate_argnames=("state",))
+    @jax.jit
     def _compiled(state: jnp.ndarray, mass: jnp.ndarray) -> jnp.ndarray:
         return integrate_leapfrog_jaccpot_active(
             state,
