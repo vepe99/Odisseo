@@ -34,3 +34,5 @@ def construct_initial_state(position, velocity):
     return state
 
     
+
+from odisseo.jaccpot_coupling import integrate_leapfrog_jaccpot_active

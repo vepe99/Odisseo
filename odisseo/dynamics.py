@@ -45,14 +45,20 @@ def single_body_acc(particle_i: jnp.ndarray,
 
     r_ij = jax.lax.stop_gradient(particle_i[0, :] - particle_j[0, :])
     condtion = jnp.all(r_ij == 0.0)
+    dtype = r_ij.dtype
+    g_const = jnp.asarray(params.G, dtype=dtype)
+    softening_sq = jnp.asarray(config.softening, dtype=dtype) ** 2
 
     def same_position():
-        return jnp.zeros(3), 0.0
+        return jnp.zeros((3,), dtype=dtype), jnp.asarray(0.0, dtype=dtype)
+
     def different_position():
         r_mag = jnp.linalg.norm(r_ij)
-        acc = - params.G * mass_j * (r_ij/(r_mag**2 + config.softening**2)**(3/2))
-        pot = - params.G * mass_j / (r_mag**2 + config.softening**2)**(1/2)
+        denom = (r_mag**2 + softening_sq) ** (jnp.asarray(1.5, dtype=dtype))
+        acc = -g_const * mass_j * (r_ij / denom)
+        pot = -g_const * mass_j / jnp.sqrt(r_mag**2 + softening_sq)
         return acc, pot
+
     return jax.lax.cond(condtion, same_position, different_position)
     
     
@@ -312,9 +318,3 @@ def no_self_gravity(state: jnp.ndarray,
         return jnp.zeros((config.N_particles, 3)), jnp.zeros((config.N_particles,))
     else:
         return jnp.zeros((config.N_particles, 3))
-
-
-
-
-
-
