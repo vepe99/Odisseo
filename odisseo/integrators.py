@@ -57,6 +57,7 @@ def leapfrog(state: jnp.ndarray,
     elif config.acceleration_scheme == NO_SELF_GRAVITY:
         acc_func = no_self_gravity
 
+
     add_external_acceleration = len(config.external_accelerations) > 0
     
     acc = acc_func(state, mass, config, params)
@@ -112,6 +113,7 @@ def RungeKutta4(state: jnp.ndarray,
     
     elif config.acceleration_scheme == NO_SELF_GRAVITY:
         acc_func = no_self_gravity
+
 
     add_external_acceleration = len(config.external_accelerations) > 0
 
@@ -238,6 +240,7 @@ def diffrax_solver(state: jnp.ndarray,
     
     elif config.acceleration_scheme == NO_SELF_GRAVITY:
         acc_func = no_self_gravity
+
         
     add_external_acceleration = len(config.external_accelerations) > 0
 
