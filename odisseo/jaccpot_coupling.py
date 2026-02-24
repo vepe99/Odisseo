@@ -178,6 +178,14 @@ def integrate_leapfrog_jaccpot_active(
     refresh_after_position_update: bool = False,
     leaf_size: int = 16,
     max_order: int = 4,
+    fmm_preset: str = "fast",
+    fmm_basis: str = "solidfmm",
+    fmm_theta: float = 0.6,
+    fmm_mac_type: str = "dehnen",
+    fmm_farfield_mode: str = "auto",
+    fmm_nearfield_mode: str = "auto",
+    fmm_nearfield_edge_chunk_size: int = 256,
+    fmm_tree_leaf_target: int = 32,
     return_history: bool = False,
 ) -> jnp.ndarray:
     """Integrate with Jaccpot FMM using optional active-particle substeps.
@@ -190,7 +198,14 @@ def integrate_leapfrog_jaccpot_active(
     - Between refreshes, self-gravity is evaluated with fixed sources, then
       state updates are vectorized in JAX.
     """
-    from jaccpot import FastMultipoleMethod, OdisseoFMMCoupler
+    from jaccpot import (
+        FMMAdvancedConfig,
+        FarFieldConfig,
+        FastMultipoleMethod,
+        NearFieldConfig,
+        OdisseoFMMCoupler,
+        TreeConfig,
+    )
 
     if int(num_steps) <= 0:
         raise ValueError("num_steps must be positive")
@@ -208,11 +223,21 @@ def integrate_leapfrog_jaccpot_active(
     dt_arr = jnp.asarray(dt_val, dtype=state_curr.dtype)
 
     solver = FastMultipoleMethod(
-        preset="fast",
-        basis="solidfmm",
+        preset=str(fmm_preset),
+        basis=str(fmm_basis),
+        theta=float(fmm_theta),
         G=float(params.G),
         softening=float(config.softening),
         working_dtype=state_curr.dtype,
+        advanced=FMMAdvancedConfig(
+            tree=TreeConfig(leaf_target=int(fmm_tree_leaf_target)),
+            farfield=FarFieldConfig(mode=str(fmm_farfield_mode)),
+            nearfield=NearFieldConfig(
+                mode=str(fmm_nearfield_mode),
+                edge_chunk_size=int(fmm_nearfield_edge_chunk_size),
+            ),
+            mac_type=str(fmm_mac_type),
+        ),
     )
     coupler = OdisseoFMMCoupler(
         solver=solver,

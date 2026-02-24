@@ -44,6 +44,14 @@ def test_integrate_dispatches_to_fmm_coupler(monkeypatch):
         assert kwargs["refresh_every"] == 3
         assert kwargs["leaf_size"] == 24
         assert kwargs["max_order"] == 5
+        assert kwargs["fmm_preset"] == "accurate"
+        assert kwargs["fmm_basis"] == "cartesian"
+        assert kwargs["fmm_theta"] == 0.4
+        assert kwargs["fmm_mac_type"] == "bh"
+        assert kwargs["fmm_farfield_mode"] == "dense"
+        assert kwargs["fmm_nearfield_mode"] == "pairwise"
+        assert kwargs["fmm_nearfield_edge_chunk_size"] == 96
+        assert kwargs["fmm_tree_leaf_target"] == 20
         assert kwargs["return_history"] is False
         return jnp.zeros((4, 2, 3), dtype=jnp.float32)
 
@@ -60,6 +68,14 @@ def test_integrate_dispatches_to_fmm_coupler(monkeypatch):
         fmm_refresh_every=3,
         fmm_leaf_size=24,
         fmm_max_order=5,
+        fmm_preset="accurate",
+        fmm_basis="cartesian",
+        fmm_theta=0.4,
+        fmm_mac_type="bh",
+        fmm_farfield_mode="dense",
+        fmm_nearfield_mode="pairwise",
+        fmm_nearfield_edge_chunk_size=96,
+        fmm_tree_leaf_target=20,
     )
     params = SimulationParams(G=1.0, t_end=1.0)
 
