@@ -81,13 +81,30 @@ def direct_acc(state: jnp.ndarray,
 
     def net_force_on_body(particle_i, mass_i):
         
-        acc, potential = vmap(lambda particle_j, mass_j: single_body_acc(particle_i, particle_j, mass_i, mass_j, config, params))(state, mass)
+        acc, potential = vmap(lambda particle_j, mass_j: single_body_acc(particle_i, particle_j, mass_i, mass_j, config, params))(particle_states, particle_masses)
         if return_potential:
             return jnp.sum(acc, axis=0), jnp.sum(potential, )
         else:
             return jnp.sum(acc, axis=0)
 
-    return vmap(net_force_on_body)(state, mass)
+    if config.reflex_motion:
+        particle_states = state[1:, :, :]
+        particle_masses = mass[1:]
+    else:
+        particle_states = state
+        particle_masses = mass
+
+    result = vmap(net_force_on_body)(particle_states, particle_masses)
+    
+    if return_potential:
+        acc, pot = result
+        if config.reflex_motion:
+            return jnp.concatenate([jnp.zeros((1, 3)), acc], axis=0), jnp.concatenate([jnp.zeros(1), pot])
+        return acc, pot
+    else:
+        if config.reflex_motion:
+            return jnp.concatenate([jnp.zeros((1, 3)), result], axis=0)
+        return result
 
 
 @partial(jax.jit, static_argnames=['config', 'return_potential'])
@@ -122,16 +139,32 @@ def direct_acc_laxmap(state: jnp.ndarray,
             def single_body_acc_lax(state_and_mass_j):
                 particle_j, mass_j = state_and_mass_j
                 return single_body_acc(particle_i, particle_j, mass_i, mass_j, config, params)
-            acc, potential = jax.lax.map(single_body_acc_lax, (state, mass), batch_size=config.batch_size)
+            acc, potential = jax.lax.map(single_body_acc_lax, (particle_states, particle_masses), batch_size=config.batch_size)
         else:
-            acc, potential = vmap(lambda particle_j, mass_j: single_body_acc(particle_i, particle_j, mass_i, mass_j, config, params))(state, mass)
+            acc, potential = vmap(lambda particle_j, mass_j: single_body_acc(particle_i, particle_j, mass_i, mass_j, config, params))(particle_states, particle_masses)
 
         if return_potential:
             return jnp.sum(acc, axis=0), jnp.sum(potential, )
         else:
             return jnp.sum(acc, axis=0)
+    
+    if config.reflex_motion:
+        particle_states = state[1:, :, :]
+        particle_masses = mass[1:]
+    else:
+        particle_states = state
+        particle_masses = mass
 
-    return jax.lax.map(net_force_on_body, (state, mass), batch_size=config.batch_size)
+    result = jax.lax.map(net_force_on_body, (particle_states, particle_masses), batch_size=config.batch_size)
+    if return_potential:
+        acc, pot = result
+        if config.reflex_motion:
+            return jnp.concatenate([jnp.zeros((1, 3)), acc], axis=0), jnp.concatenate([jnp.zeros(1), pot])
+        return acc, pot
+    else:
+        if config.reflex_motion:
+            return jnp.concatenate([jnp.zeros((1, 3)), result], axis=0)
+        return result   
 
 
 @eqx.filter_jit(donate='all')
@@ -155,7 +188,15 @@ def direct_acc_matrix(state: jnp.ndarray,
         Array of shape (N, 3) containing the accelerations of the particles.
         Array of shape (N,) containing the potential energy of the particles, if return_potential is True.
     """
-    pos = state[:, 0, :]  # Extract positions (N, 3)
+
+    if config.reflex_motion:
+        particle_states = state[1:, :, :]
+        particle_masses = mass[1:]
+    else:
+        particle_states = state
+        particle_masses = mass
+
+    pos = particle_states[:, 0, :]  # Extract positions (N, 3)
 
     # Compute pairwise differences
     dpos = jax.lax.stop_gradient(pos[:, None, :] - pos[None, :, :])  # Shape: (N, N, 3)
@@ -169,14 +210,18 @@ def direct_acc_matrix(state: jnp.ndarray,
     inv_r3 = r2_safe**-1.5 * (1.0 - eye)  # Diagonal is zero
 
     # Compute acceleration
-    acc = - params.G * jnp.sum((mass[:, None] * dpos) * inv_r3[:, :, None], axis=1)
+    acc = - params.G * jnp.sum((particle_masses[:, None] * dpos) * inv_r3[:, :, None], axis=1)
 
     if return_potential:
         # Compute potential energy (only sum interactions once)
         inv_r = r2_safe**-0.5 * (1.0 - eye)  # Diagonal is zero
-        pot = -params.G * jnp.sum(mass[:, None] * inv_r, axis=1)
+        pot = -params.G * jnp.sum(particle_masses[:, None] * inv_r, axis=1)
+        if config.reflex_motion:
+            return jnp.concatenate([jnp.zeros((1, 3)), acc], axis=0), jnp.concatenate([jnp.zeros(1), pot])
         return acc, pot
     else:
+        if config.reflex_motion:
+            return jnp.concatenate([jnp.zeros((1, 3)), acc], axis=0)
         return acc
     
 @partial(jax.jit, static_argnames=['config', 'return_potential'])
@@ -211,21 +256,32 @@ def direct_acc_for_loop(state: jnp.ndarray,
         r2 = jnp.sum(r**2, axis=1) + config.softening**2
         if return_potential:
             inv_r = jnp.where(r2 == 0., 0., r2**(-1/2))
-            pot = jnp.sum(-params.G * mass * inv_r, keepdims=True)
+            pot = jnp.sum(-params.G * particle_masses * inv_r, keepdims=True)
             return pot, pot
         else:
             inv_r3 = jnp.where(r2 == 0., 0., r2**(-3/2))
-            acc = jnp.sum(-params.G * mass[:, None] * r * inv_r3[:, None], axis=0)
-            return acc, acc        
+            acc = jnp.sum(-params.G * particle_masses[:, None] * r * inv_r3[:, None], axis=0)
+            return acc, acc    
 
-    positions =  state[:, 0]
+    if config.reflex_motion:
+        particle_states = state[1:, :, :]
+        particle_masses = mass[1:]
+    else:
+        particle_states = state
+        particle_masses = mass   
+
+    positions =  particle_states[:, 0]
     if return_potential:
         initial_pot = jnp.array([0.], )
         _, pot = jax.lax.scan(compute_acc, initial_pot, positions)
+        if config.reflex_motion:
+            return jnp.concatenate([jnp.zeros(1), pot], axis=0)
         return pot
     else:
         initial_acc = jnp.zeros_like(positions[0],)
         _, acc = jax.lax.scan(compute_acc, initial_acc, positions)
+        if config.reflex_motion:
+            return jnp.concatenate([jnp.zeros((1, 3)), acc], axis=0)
         return acc
 
 @eqx.filter_jit(donate='all')
@@ -252,7 +308,14 @@ def direct_acc_sharding(state: jnp.ndarray,
         Array of shape (N,) containing the potential energy of the particles, if return_potential is True.
     """
     
-    pos = state[:, 0]
+    if config.reflex_motion:
+        particle_states = state[1:, :, :]
+        particle_masses = mass[1:]
+    else:
+        particle_states = state
+        particle_masses = mass   
+
+    pos = particle_states[:, 0]
     # Create a mesh from all devices
     devices = jax.devices()
     mesh = Mesh(devices, axis_names=('N_particles',))
@@ -279,10 +342,16 @@ def direct_acc_sharding(state: jnp.ndarray,
     r2_safe = jnp.sum(dpos**2, axis=-1) + config.softening**2 + eye # Shape: (N, N)
     if return_potential:
         inv_r = r2_safe**-0.5 * (1.0 - eye)
-        return jax.device_put(jnp.sum(-params.G * jnp.sum(mass[:, None] * inv_r, axis=1), axis=0), devices[0])
+        result = jax.device_put(jnp.sum(-params.G * jnp.sum(particle_masses[:, None] * inv_r, axis=1), axis=0), devices[0])
+        if config.reflex_motion:
+            return jnp.concatenate([jnp.zeros(1), result], axis=0)
+        return result
     else:
         inv_r3 = r2_safe**-1.5 * (1.0 - eye)
-        return jax.device_put(jnp.sum(-params.G * jnp.sum((mass[:, None] * dpos) * inv_r3[:, :, None], axis=1), axis=0), devices[0])
+        result = jax.device_put(jnp.sum(-params.G * jnp.sum((particle_masses[:, None] * dpos) * inv_r3[:, :, None], axis=1), axis=0), devices[0])
+        if config.reflex_motion:
+            return jnp.concatenate([jnp.zeros((1, 3)), result], axis=0)
+        return result
 
 
 @partial(jax.jit, static_argnames=['config', 'return_potential'])
