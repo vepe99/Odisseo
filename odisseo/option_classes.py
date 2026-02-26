@@ -1,4 +1,4 @@
-from typing import NamedTuple
+from typing import NamedTuple, Optional
 from astropy import units as u
 from astropy import constants as c
 from math import log
@@ -218,6 +218,9 @@ class SimulationConfig(NamedTuple):
     fmm_nearfield_mode: str = "auto"
     fmm_nearfield_edge_chunk_size: int = 256
     fmm_tree_leaf_target: int = 32
+    fmm_fixed_order: Optional[int] = None
+    fmm_jit_tree: Optional[bool] = None
+    fmm_jit_traversal: Optional[bool] = True
 
     batch_size: int = 10_000
 
@@ -240,4 +243,3 @@ class SimulationConfig(NamedTuple):
     MN3_positive_density: bool = True  #whether to enforce positive density everywhere for MN3 disk potential
 
     glorder: int = 50 #order of Gauss-Legendre quadrature for MN3 disk potential
-

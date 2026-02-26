@@ -10,6 +10,64 @@ from odisseo.option_classes import SimulationConfig, SimulationParams
 from odisseo.potentials import combined_external_acceleration_vmpa_switch
 
 
+def _build_fmm_solver(
+    *,
+    state_dtype,
+    config: SimulationConfig,
+    params: SimulationParams,
+    fmm_preset: str,
+    fmm_basis: str,
+    fmm_theta: float,
+    fmm_mac_type: str,
+    fmm_farfield_mode: str,
+    fmm_nearfield_mode: str,
+    fmm_nearfield_edge_chunk_size: int,
+    fmm_tree_leaf_target: int,
+    fmm_fixed_order: Optional[int],
+    leaf_size: int,
+    fmm_jit_tree: Optional[bool],
+    fmm_jit_traversal: Optional[bool],
+):
+    from jaccpot import (
+        FMMAdvancedConfig,
+        FarFieldConfig,
+        FastMultipoleMethod,
+        NearFieldConfig,
+        RuntimePolicyConfig,
+        TreeConfig,
+    )
+
+    return FastMultipoleMethod(
+        preset=str(fmm_preset),
+        basis=str(fmm_basis),
+        theta=float(fmm_theta),
+        G=float(params.G),
+        softening=float(config.softening),
+        working_dtype=state_dtype,
+        advanced=FMMAdvancedConfig(
+            tree=TreeConfig(leaf_target=int(fmm_tree_leaf_target)),
+            farfield=FarFieldConfig(mode=str(fmm_farfield_mode)),
+            nearfield=NearFieldConfig(
+                mode=str(fmm_nearfield_mode),
+                edge_chunk_size=int(fmm_nearfield_edge_chunk_size),
+            ),
+            runtime=RuntimePolicyConfig(
+                jit_tree=None if fmm_jit_tree is None else bool(fmm_jit_tree),
+                jit_traversal=(
+                    None if fmm_jit_traversal is None else bool(fmm_jit_traversal)
+                ),
+            ),
+            mac_type=str(fmm_mac_type),
+        ),
+        fixed_order=(
+            None if fmm_fixed_order is None else int(fmm_fixed_order)
+        ),
+        # Keep one global leaf-size contract per simulation: tree target and
+        # runtime leaf cap are tied to the same value.
+        fixed_max_leaf_size=int(leaf_size),
+    )
+
+
 def _scatter_masked_vectors(
     base: jnp.ndarray,
     indices: jnp.ndarray,
@@ -186,7 +244,8 @@ def integrate_leapfrog_jaccpot_active(
     fmm_nearfield_mode: str = "auto",
     fmm_nearfield_edge_chunk_size: int = 256,
     fmm_tree_leaf_target: int = 32,
-    fmm_jit_tree: Optional[bool] = True,
+    fmm_fixed_order: Optional[int] = None,
+    fmm_jit_tree: Optional[bool] = None,
     fmm_jit_traversal: Optional[bool] = True,
     return_history: bool = False,
 ) -> jnp.ndarray:
@@ -200,16 +259,6 @@ def integrate_leapfrog_jaccpot_active(
     - Between refreshes, self-gravity is evaluated with fixed sources, then
       state updates are vectorized in JAX.
     """
-    from jaccpot import (
-        FMMAdvancedConfig,
-        FarFieldConfig,
-        FastMultipoleMethod,
-        NearFieldConfig,
-        OdisseoFMMCoupler,
-        RuntimePolicyConfig,
-        TreeConfig,
-    )
-
     if int(num_steps) <= 0:
         raise ValueError("num_steps must be positive")
     if int(refresh_every) <= 0:
@@ -225,34 +274,37 @@ def integrate_leapfrog_jaccpot_active(
     dt_val = float(params.t_end) / float(num_steps) if dt is None else float(dt)
     dt_arr = jnp.asarray(dt_val, dtype=state_curr.dtype)
 
-    solver = FastMultipoleMethod(
-        preset=str(fmm_preset),
-        basis=str(fmm_basis),
-        theta=float(fmm_theta),
-        G=float(params.G),
-        softening=float(config.softening),
-        working_dtype=state_curr.dtype,
-        advanced=FMMAdvancedConfig(
-            tree=TreeConfig(leaf_target=int(fmm_tree_leaf_target)),
-            farfield=FarFieldConfig(mode=str(fmm_farfield_mode)),
-            nearfield=NearFieldConfig(
-                mode=str(fmm_nearfield_mode),
-                edge_chunk_size=int(fmm_nearfield_edge_chunk_size),
-            ),
-            runtime=RuntimePolicyConfig(
-                jit_tree=None if fmm_jit_tree is None else bool(fmm_jit_tree),
-                jit_traversal=(
-                    None if fmm_jit_traversal is None else bool(fmm_jit_traversal)
-                ),
-            ),
-            mac_type=str(fmm_mac_type),
-        ),
+    solver = _build_fmm_solver(
+        state_dtype=state_curr.dtype,
+        config=config,
+        params=params,
+        fmm_preset=fmm_preset,
+        fmm_basis=fmm_basis,
+        fmm_theta=fmm_theta,
+        fmm_mac_type=fmm_mac_type,
+        fmm_farfield_mode=fmm_farfield_mode,
+        fmm_nearfield_mode=fmm_nearfield_mode,
+        fmm_nearfield_edge_chunk_size=fmm_nearfield_edge_chunk_size,
+        fmm_tree_leaf_target=fmm_tree_leaf_target,
+        fmm_fixed_order=fmm_fixed_order,
+        leaf_size=leaf_size,
+        fmm_jit_tree=fmm_jit_tree,
+        fmm_jit_traversal=fmm_jit_traversal,
     )
-    coupler = OdisseoFMMCoupler(
-        solver=solver,
-        leaf_size=int(leaf_size),
-        max_order=int(max_order),
-    )
+    def _prepare_state(state_in: jnp.ndarray):
+        return solver.prepare_state(
+            state_in[:, 0, :],
+            mass_arr,
+            leaf_size=int(leaf_size),
+            max_order=int(max_order),
+        )
+
+    def _eval_prepared(prepared_state, active_indices=None):
+        return solver.evaluate_prepared_state(
+            prepared_state,
+            target_indices=active_indices,
+            return_potential=False,
+        )
 
     history = []
     add_external = len(config.external_accelerations) > 0
@@ -280,12 +332,8 @@ def integrate_leapfrog_jaccpot_active(
 
         step = 0
         while step < int(num_steps):
-            coupler.prepare(state_curr, mass_arr)
-            acc_self_full = coupler.accelerations(
-                state_curr,
-                active_indices=None,
-                rebuild_sources=False,
-            )
+            prepared_state = _prepare_state(state_curr)
+            acc_self_full = _eval_prepared(prepared_state, active_indices=None)
             seg_len = min(int(refresh_every), int(num_steps) - step)
             idx_seg = active_indices_schedule[step : step + seg_len]
             mask_seg = active_mask_schedule[step : step + seg_len]
@@ -311,12 +359,8 @@ def integrate_leapfrog_jaccpot_active(
     if active_indices_fn is None and not bool(refresh_after_position_update):
         step = 0
         while step < int(num_steps):
-            coupler.prepare(state_curr, mass_arr)
-            acc_self_full = coupler.accelerations(
-                state_curr,
-                active_indices=None,
-                rebuild_sources=False,
-            )
+            prepared_state = _prepare_state(state_curr)
+            acc_self_full = _eval_prepared(prepared_state, active_indices=None)
             seg_len = min(int(refresh_every), int(num_steps) - step)
             state_curr, seg_hist = _run_full_segment_scan(
                 state_curr,
@@ -336,18 +380,17 @@ def integrate_leapfrog_jaccpot_active(
         return state_curr
 
     # General fallback path for active-index callbacks and/or post-position refresh.
+    prepared_state = None
     for step in range(int(num_steps)):
         if step % int(refresh_every) == 0:
-            coupler.prepare(state_curr, mass_arr)
+            prepared_state = _prepare_state(state_curr)
 
         full_active = active_indices_fn is None
         if full_active:
             active_idx = None
-            acc_self = coupler.accelerations(
-                state_curr,
-                active_indices=None,
-                rebuild_sources=False,
-            )
+            if prepared_state is None:
+                prepared_state = _prepare_state(state_curr)
+            acc_self = _eval_prepared(prepared_state, active_indices=None)
             if add_external:
                 acc_ext = combined_external_acceleration_vmpa_switch(
                     state_curr,
@@ -369,11 +412,9 @@ def integrate_leapfrog_jaccpot_active(
                 active_indices_fn(step, state_curr, mass_arr),
                 dtype=jnp.int32,
             )
-            acc_self = coupler.accelerations(
-                state_curr,
-                active_indices=active_idx,
-                rebuild_sources=False,
-            )
+            if prepared_state is None:
+                prepared_state = _prepare_state(state_curr)
+            acc_self = _eval_prepared(prepared_state, active_indices=active_idx)
             if add_external:
                 acc_ext = combined_external_acceleration_vmpa_switch(
                     state_curr,
@@ -392,14 +433,12 @@ def integrate_leapfrog_jaccpot_active(
             state_pos = state_curr.at[active_idx, 0].set(pos_new_active)
 
         if bool(refresh_after_position_update):
-            coupler.prepare(state_pos, mass_arr)
+            prepared_state = _prepare_state(state_pos)
 
         if full_active:
-            acc_self_2 = coupler.accelerations(
-                state_pos,
-                active_indices=None,
-                rebuild_sources=False,
-            )
+            if prepared_state is None:
+                prepared_state = _prepare_state(state_pos)
+            acc_self_2 = _eval_prepared(prepared_state, active_indices=None)
             if add_external:
                 acc_ext_2 = combined_external_acceleration_vmpa_switch(
                     state_pos,
@@ -412,11 +451,9 @@ def integrate_leapfrog_jaccpot_active(
             vel_new = state_curr[:, 1] + 0.5 * (acc_1 + acc_2) * dt_arr
             state_curr = state_pos.at[:, 1].set(vel_new)
         else:
-            acc_self_2 = coupler.accelerations(
-                state_pos,
-                active_indices=active_idx,
-                rebuild_sources=False,
-            )
+            if prepared_state is None:
+                prepared_state = _prepare_state(state_pos)
+            acc_self_2 = _eval_prepared(prepared_state, active_indices=active_idx)
             if add_external:
                 acc_ext_2 = combined_external_acceleration_vmpa_switch(
                     state_pos,
@@ -436,6 +473,117 @@ def integrate_leapfrog_jaccpot_active(
     if return_history:
         return jnp.stack(history, axis=0)
     return state_curr
+
+
+def evaluate_acceleration_jaccpot(
+    state: jnp.ndarray,
+    mass: jnp.ndarray,
+    config: SimulationConfig,
+    params: SimulationParams,
+    *,
+    active_indices: Optional[jnp.ndarray] = None,
+    leaf_size: int = 16,
+    max_order: int = 4,
+    fmm_preset: str = "fast",
+    fmm_basis: str = "solidfmm",
+    fmm_theta: float = 0.6,
+    fmm_mac_type: str = "dehnen",
+    fmm_farfield_mode: str = "auto",
+    fmm_nearfield_mode: str = "auto",
+    fmm_nearfield_edge_chunk_size: int = 256,
+    fmm_tree_leaf_target: int = 32,
+    fmm_fixed_order: Optional[int] = None,
+    fmm_jit_tree: Optional[bool] = None,
+    fmm_jit_traversal: Optional[bool] = True,
+) -> jnp.ndarray:
+    """Evaluate one FMM acceleration call for an ODISSEO primitive state."""
+    state_arr = jnp.asarray(state)
+    mass_arr = jnp.asarray(mass)
+    solver = _build_fmm_solver(
+        state_dtype=state_arr.dtype,
+        config=config,
+        params=params,
+        fmm_preset=fmm_preset,
+        fmm_basis=fmm_basis,
+        fmm_theta=fmm_theta,
+        fmm_mac_type=fmm_mac_type,
+        fmm_farfield_mode=fmm_farfield_mode,
+        fmm_nearfield_mode=fmm_nearfield_mode,
+        fmm_nearfield_edge_chunk_size=fmm_nearfield_edge_chunk_size,
+        fmm_tree_leaf_target=fmm_tree_leaf_target,
+        fmm_fixed_order=fmm_fixed_order,
+        leaf_size=leaf_size,
+        fmm_jit_tree=fmm_jit_tree,
+        fmm_jit_traversal=fmm_jit_traversal,
+    )
+    prepared = solver.prepare_state(
+        state_arr[:, 0, :],
+        mass_arr,
+        leaf_size=int(leaf_size),
+        max_order=int(max_order),
+    )
+    return solver.evaluate_prepared_state(
+        prepared,
+        target_indices=active_indices,
+        return_potential=False,
+    )
+
+
+def build_jitted_jaccpot_acceleration(
+    config: SimulationConfig,
+    params: SimulationParams,
+    *,
+    active_indices: Optional[jnp.ndarray] = None,
+    leaf_size: int = 16,
+    max_order: int = 4,
+    fmm_preset: str = "fast",
+    fmm_basis: str = "solidfmm",
+    fmm_theta: float = 0.6,
+    fmm_mac_type: str = "dehnen",
+    fmm_farfield_mode: str = "auto",
+    fmm_nearfield_mode: str = "auto",
+    fmm_nearfield_edge_chunk_size: int = 256,
+    fmm_tree_leaf_target: int = 32,
+    fmm_fixed_order: Optional[int] = None,
+    fmm_jit_tree: Optional[bool] = None,
+    fmm_jit_traversal: Optional[bool] = True,
+    outer_jit: bool = False,
+):
+    """Return a reusable one-call FMM acceleration evaluator.
+
+    Notes
+    -----
+    By default this wrapper does not apply an additional outer ``jax.jit``.
+    The jaccpot runtime already uses internal compiled kernels, and outer-jitting
+    full tree build/evaluation can be substantially slower on current runtime
+    paths. Set ``outer_jit=True`` only for explicit experimentation.
+    """
+
+    def _eager(state: jnp.ndarray, mass: jnp.ndarray) -> jnp.ndarray:
+        return evaluate_acceleration_jaccpot(
+            state,
+            mass,
+            config,
+            params,
+            active_indices=active_indices,
+            leaf_size=leaf_size,
+            max_order=max_order,
+            fmm_preset=fmm_preset,
+            fmm_basis=fmm_basis,
+            fmm_theta=fmm_theta,
+            fmm_mac_type=fmm_mac_type,
+            fmm_farfield_mode=fmm_farfield_mode,
+            fmm_nearfield_mode=fmm_nearfield_mode,
+            fmm_nearfield_edge_chunk_size=fmm_nearfield_edge_chunk_size,
+            fmm_tree_leaf_target=fmm_tree_leaf_target,
+            fmm_fixed_order=fmm_fixed_order,
+            fmm_jit_tree=fmm_jit_tree,
+            fmm_jit_traversal=fmm_jit_traversal,
+        )
+
+    if bool(outer_jit):
+        return jax.jit(_eager)
+    return _eager
 
 
 def build_jitted_leapfrog_jaccpot_active(
@@ -461,18 +609,20 @@ def build_jitted_leapfrog_jaccpot_active(
     fmm_nearfield_mode: str = "auto",
     fmm_nearfield_edge_chunk_size: int = 256,
     fmm_tree_leaf_target: int = 32,
-    fmm_jit_tree: Optional[bool] = True,
+    fmm_fixed_order: Optional[int] = None,
+    fmm_jit_tree: Optional[bool] = None,
     fmm_jit_traversal: Optional[bool] = True,
     return_history: bool = False,
+    outer_jit: bool = False,
 ):
-    """Return a reusable JIT-compiled FMM integrator callable.
+    """Return a reusable FMM integrator callable.
 
     The returned function accepts `(state, mass)` arrays and executes the
-    selected FMM integration configuration on a compiled path.
+    selected FMM integration configuration on jaccpot's internal compiled path.
+    Set ``outer_jit=True`` to additionally wrap the full call in ``jax.jit``.
     """
 
-    @jax.jit
-    def _compiled(state: jnp.ndarray, mass: jnp.ndarray) -> jnp.ndarray:
+    def _eager(state: jnp.ndarray, mass: jnp.ndarray) -> jnp.ndarray:
         return integrate_leapfrog_jaccpot_active(
             state,
             mass,
@@ -495,9 +645,12 @@ def build_jitted_leapfrog_jaccpot_active(
             fmm_nearfield_mode=fmm_nearfield_mode,
             fmm_nearfield_edge_chunk_size=fmm_nearfield_edge_chunk_size,
             fmm_tree_leaf_target=fmm_tree_leaf_target,
+            fmm_fixed_order=fmm_fixed_order,
             fmm_jit_tree=fmm_jit_tree,
             fmm_jit_traversal=fmm_jit_traversal,
             return_history=return_history,
         )
 
-    return _compiled
+    if bool(outer_jit):
+        return jax.jit(_eager)
+    return _eager
