@@ -174,7 +174,7 @@ def NFW(state: jnp.ndarray,
     acc = acceleration(r)
 
     if return_potential:
-        pot = potential(rel_pos)
+        pot = potential(r)
         if config.reflex_motion:
             return jnp.concatenate([jnp.zeros((1, 3)), acc], axis=0), jnp.concatenate([jnp.zeros(1), pot]) # First particle is external potetnial itself, so no acceleration and zero potential
         return acc, pot
@@ -225,7 +225,7 @@ def point_mass(state: jnp.ndarray,
     acc = acceleration(rel_pos)
     
     if return_potential:
-        pot = potential(rel_pos)
+        pot = potential(r)
         if config.reflex_motion:
             return jnp.concatenate([jnp.zeros((1, 3)), acc], axis=0), jnp.concatenate([jnp.zeros(1), pot])
         return acc, pot
@@ -299,8 +299,8 @@ def call_MyamotoNagai(state: jnp.ndarray,
                         M: Union[float, jnp.ndarray],
                         a: Union[float, jnp.ndarray],
                         b: Union[float, jnp.ndarray],
-                        params: SimulationParams,
                         config: SimulationConfig,
+                        params: SimulationParams,
                         return_potential=False):
     """
     Compute acceleration of all particles due to a MyamotoNagai disk profile. It is used as base function for MN3 approximation of douoble exponential disk.
