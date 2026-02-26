@@ -37,6 +37,8 @@ def construct_initial_state(position, velocity):
 
 from odisseo.jaccpot_coupling import (
     build_jitted_leapfrog_jaccpot_active,
+    build_jitted_jaccpot_acceleration,
+    evaluate_acceleration_jaccpot,
     integrate_leapfrog_jaccpot_active,
 )
 

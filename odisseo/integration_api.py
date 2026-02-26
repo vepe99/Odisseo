@@ -83,6 +83,17 @@ def integrate(
             fmm_nearfield_mode=str(config.fmm_nearfield_mode),
             fmm_nearfield_edge_chunk_size=int(config.fmm_nearfield_edge_chunk_size),
             fmm_tree_leaf_target=int(config.fmm_tree_leaf_target),
+            fmm_fixed_order=(
+                None if config.fmm_fixed_order is None else int(config.fmm_fixed_order)
+            ),
+            fmm_jit_tree=(
+                None if config.fmm_jit_tree is None else bool(config.fmm_jit_tree)
+            ),
+            fmm_jit_traversal=(
+                None
+                if config.fmm_jit_traversal is None
+                else bool(config.fmm_jit_traversal)
+            ),
             return_history=bool(config.return_snapshots),
         )
 
