@@ -1,15 +1,14 @@
-print("Running reflex_motion_test.py")
+print("Running reflex motion test")
 
 from autocvd import autocvd
 autocvd(num_gpus = 1)
-print("GPU selected")
 
-import jax
+# import os
+# os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+
 import jax.numpy as jnp
 from jax import random
-print("JAX imports successful")
 
-# jax.config.update("jax_enable_x64", True)
 import matplotlib.pyplot as plt
 
 from astropy import units as u
@@ -22,8 +21,8 @@ from odisseo.initial_condition import Plummer_sphere
 from odisseo.time_integration import time_integration
 from odisseo.units import CodeUnits
 from odisseo.visualization import energy_angular_momentum_plot
-print("Imports successful")
 
+print("Imports successful")
 
 plt.rcParams.update({
     'font.size': 20,
@@ -45,11 +44,11 @@ config = SimulationConfig(N_particles=100,
                           return_snapshots = True, 
                           num_snapshots = 10, 
                           fixed_timestep=False,
-                          num_timesteps=100,
+                          num_timesteps=10000,
                           softening = (0.1 * u.pc).to(code_units.code_length).value,
                           integrator=DIFFRAX_BACKEND,
                           acceleration_scheme=DIRECT_ACC_MATRIX,
-                          external_accelerations=(NFW_POTENTIAL), 
+                          external_accelerations=(NFW_POTENTIAL,), 
                           reflex_motion = True)
 
 params = SimulationParams(t_end = (4 * u.Gyr).to(code_units.code_time).value,
@@ -73,7 +72,7 @@ final_state_com = construct_initial_state(pos_com_final, vel_com_final) # state 
 
 # Add the Milky Way as particle in index 0
 final_state_com = jnp.concatenate([jnp.zeros((1, 2, 3)), final_state_com], axis=0)
-mass_com = jnp.concatenate([0, mass_com], axis=0) # Set its mass to zero, as its effect is included as an external potential
+mass_com = jnp.concatenate([jnp.zeros(1), mass_com], axis=0) # Set its mass to zero, as its effect is included as an external potential
 print("Setup successful")
 
 #evolution in time
@@ -86,33 +85,26 @@ pos_com, vel_com = snapshots_com.states[-1, :, 0], snapshots_com.states[-1, :, 1
 ##### CoM orbit plot####
 fig = plt.figure(figsize=(15, 10), tight_layout=True)
 ax = fig.add_subplot(111, projection='3d')
+ax.scatter(snapshots_com.states[-1, 1, 0, 0]* code_units.code_length.to(u.kpc), 
+           snapshots_com.states[-1, 1, 0, 1]* code_units.code_length.to(u.kpc), 
+           snapshots_com.states[-1, 1, 0, 2]* code_units.code_length.to(u.kpc),c='r', label='Initial position Particle')
+ax.scatter(snapshots_com.states[0, 1, 0, 0]* code_units.code_length.to(u.kpc), 
+           snapshots_com.states[0, 1, 0, 1]* code_units.code_length.to(u.kpc), 
+           snapshots_com.states[0, 1, 0, 2]* code_units.code_length.to(u.kpc), c='b', label='Final position Particle')
+ax.plot(snapshots_com.states[:, 1, 0, 0]* code_units.code_length.to(u.kpc), 
+        snapshots_com.states[:, 1, 0, 1]* code_units.code_length.to(u.kpc), 
+        snapshots_com.states[:, 1, 0, 2]* code_units.code_length.to(u.kpc), 'k-', label='trajectory')
 ax.scatter(snapshots_com.states[-1, 0, 0, 0]* code_units.code_length.to(u.kpc), 
            snapshots_com.states[-1, 0, 0, 1]* code_units.code_length.to(u.kpc), 
-           snapshots_com.states[-1,0, 0, 2]* code_units.code_length.to(u.kpc),c='r', label='Initial position')
+           snapshots_com.states[-1, 0, 0, 2]* code_units.code_length.to(u.kpc),c='g', label='Initial position MW')
 ax.scatter(snapshots_com.states[0, 0, 0, 0]* code_units.code_length.to(u.kpc), 
            snapshots_com.states[0, 0, 0, 1]* code_units.code_length.to(u.kpc), 
-           snapshots_com.states[0,0, 0, 2]* code_units.code_length.to(u.kpc), c='b', label='Final position')
+           snapshots_com.states[0, 0, 0, 2]* code_units.code_length.to(u.kpc), c='y', label='Final position MW')
 ax.plot(snapshots_com.states[:, 0, 0, 0]* code_units.code_length.to(u.kpc), 
         snapshots_com.states[:, 0, 0, 1]* code_units.code_length.to(u.kpc), 
-        snapshots_com.states[:,0, 0, 2]* code_units.code_length.to(u.kpc), 'k-', label='CoM trajectory')
+        snapshots_com.states[:, 0, 0, 2]* code_units.code_length.to(u.kpc), 'k-')
 ax.set_xlabel("X [kpc]")
 ax.set_ylabel("Y [kpc]")
 ax.set_zlabel("Z [kpc]")
 ax.legend()
 plt.savefig("reflex_motion_3d_orbit.png")
-
-fig = plt.figure(figsize=(10, 10), tight_layout=True)
-ax = fig.add_subplot(111)
-ax.plot(snapshots_com.states[:, 0, 0, 0]* code_units.code_length.to(u.kpc), 
-        snapshots_com.states[:, 0, 0, 1]* code_units.code_length.to(u.kpc), 'k-', label='CoM trajectory')
-ax.plot(snapshots_com.states[-1, 0, 0, 0]* code_units.code_length.to(u.kpc), 
-        snapshots_com.states[-1, 0, 0, 1]* code_units.code_length.to(u.kpc), 'ro', label='Initial position')
-ax.plot(snapshots_com.states[0, 0, 0, 0]* code_units.code_length.to(u.kpc), 
-        snapshots_com.states[0, 0, 0, 1]* code_units.code_length.to(u.kpc), 'bo', label='Final position')
-ax.set_xlabel("X [kpc]")
-ax.set_ylabel("Y [kpc]")
-ax.legend()
-plt.savefig("reflex_motion_2d_orbit.png")
-
-#check conservation of energy and angular momentum
-energy_angular_momentum_plot(snapshots_com, code_units,)
