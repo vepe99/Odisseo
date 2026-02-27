@@ -40,47 +40,54 @@ def combined_external_acceleration_vmpa_switch(state: jnp.ndarray,
 
     total_external_acceleration = jnp.zeros_like(state[:, 0])
     total_external_potential = jnp.zeros_like(config.N_particles)
-    state_tobe_vmap  = jnp.repeat(state[jnp.newaxis, ...], repeats=len(config.external_accelerations), axis=0)
+
+    for potential_state_idx, potentials in enumerate(config.external_accelerations):
+
+        state_tobe_vmap  = jnp.repeat(state[jnp.newaxis, ...], repeats=len(potentials), axis=0)
+        if return_potential:
+            # The POTENTIAL_LIST NEEDS TO BE IN THE SAME ORDER AS THE INTEGER VALUES 
+            POTENTIAL_LIST = [lambda state: NFW(state, config=config, params=params, return_potential=True, potential_state_idx=potential_state_idx), 
+                            lambda state: point_mass(state, config=config, params=params, return_potential=True, potential_state_idx=potential_state_idx),
+                            lambda state: MyamotoNagai(state, config=config, params=params, return_potential=True, potential_state_idx=potential_state_idx),
+                            lambda state: PowerSphericalPotentialwCutoff(state, config=config, params=params, return_potential=True, potential_state_idx=potential_state_idx), 
+                            lambda state: logarithmic_potential(state, config=config, params=params, return_potential=True, potential_state_idx=potential_state_idx),
+                            lambda state: TriaxialNFW(state, config=config, params=params, return_potential=True, potential_state_idx=potential_state_idx),
+                            lambda state: Thin_MN3DiskPotential(state, config=config, params=params, return_potential=True, potential_state_idx=potential_state_idx),
+                            lambda state: Thick_MN3DiskPotential(state, config=config, params=params, return_potential=True, potential_state_idx=potential_state_idx),
+                            lambda state: TwoPowerTriaxialPotential(state, config=config, params=params, return_potential=True, potential_state_idx=potential_state_idx),
+                            ]  
+            vmap_function = vmap(lambda i, state: lax.switch(i, POTENTIAL_LIST, state))
+            external_acc, external_pot = vmap_function(jnp.array(potentials), state_tobe_vmap)
+            total_external_acceleration = total_external_acceleration + jnp.sum(external_acc, axis=0)
+            total_external_potential = total_external_potential + jnp.sum(external_pot, axis=0)
+
+        else:
+            POTENTIAL_LIST = [lambda state: NFW(state, config=config, params=params, return_potential=False,  potential_state_idx=potential_state_idx),
+                            lambda state: point_mass(state, config=config, params=params, return_potential=False, potential_state_idx=potential_state_idx),
+                            lambda state: MyamotoNagai(state, config=config, params=params, return_potential=False, potential_state_idx=potential_state_idx),
+                            lambda state: PowerSphericalPotentialwCutoff(state, config=config, params=params, return_potential=False, potential_state_idx=potential_state_idx),
+                            lambda state: logarithmic_potential(state, config=config, params=params, return_potential=False, potential_state_idx=potential_state_idx),
+                            lambda state: TriaxialNFW(state, config=config, params=params, return_potential=False, potential_state_idx=potential_state_idx),
+                            lambda state: Thin_MN3DiskPotential(state, config=config, params=params, return_potential=False, potential_state_idx=potential_state_idx),
+                            lambda state: Thick_MN3DiskPotential(state, config=config, params=params, return_potential=False, potential_state_idx=potential_state_idx),
+                            lambda state: TwoPowerTriaxialPotential(state, config=config, params=params, return_potential=False, potential_state_idx=potential_state_idx),
+                            ]  
+            vmap_function = vmap(lambda i, state: lax.switch(i, POTENTIAL_LIST, state))
+            external_acc = vmap_function(jnp.array(potentials), state_tobe_vmap)
+            total_external_acceleration = total_external_acceleration + jnp.sum(external_acc, axis=0)
+
     if return_potential:
-        # The POTENTIAL_LIST NEEDS TO BE IN THE SAME ORDER AS THE INTEGER VALUES 
-        POTENTIAL_LIST = [lambda state: NFW(state, config=config, params=params, return_potential=True), 
-                          lambda state: point_mass(state, config=config, params=params, return_potential=True),
-                          lambda state: MyamotoNagai(state, config=config, params=params, return_potential=True),
-                          lambda state: PowerSphericalPotentialwCutoff(state, config=config, params=params, return_potential=True), 
-                          lambda state: logarithmic_potential(state, config=config, params=params, return_potential=True),
-                          lambda state: TriaxialNFW(state, config=config, params=params, return_potential=True),
-                          lambda state: Thin_MN3DiskPotential(state, config=config, params=params, return_potential=True),
-                          lambda state: Thick_MN3DiskPotential(state, config=config, params=params, return_potential=True),
-                          lambda state: TwoPowerTriaxialPotential(state, config=config, params=params, return_potential=True),
-
-                          ]  
-        vmap_function = vmap(lambda i, state: lax.switch(i, POTENTIAL_LIST, state))
-        external_acc, external_pot = vmap_function(jnp.array(config.external_accelerations), state_tobe_vmap)
-        total_external_acceleration = jnp.sum(external_acc, axis=0)
-        total_external_potential = jnp.sum(external_pot, axis=0)
         return total_external_acceleration, total_external_potential
-    else:
-        POTENTIAL_LIST = [lambda state: NFW(state, config=config, params=params, return_potential=False),
-                          lambda state: point_mass(state, config=config, params=params, return_potential=False),
-                          lambda state: MyamotoNagai(state, config=config, params=params, return_potential=False),
-                          lambda state: PowerSphericalPotentialwCutoff(state, config=config, params=params, return_potential=False),
-                          lambda state: logarithmic_potential(state, config=config, params=params, return_potential=False),
-                          lambda state: TriaxialNFW(state, config=config, params=params, return_potential=False),
-                          lambda state: Thin_MN3DiskPotential(state, config=config, params=params, return_potential=False),
-                          lambda state: Thick_MN3DiskPotential(state, config=config, params=params, return_potential=False),
-                          lambda state: TwoPowerTriaxialPotential(state, config=config, params=params, return_potential=False),
-                          ]  
-        vmap_function = vmap(lambda i, state: lax.switch(i, POTENTIAL_LIST, state))
-        external_acc = vmap_function(jnp.array(config.external_accelerations), state_tobe_vmap)
-        total_external_acceleration = jnp.sum(external_acc, axis=0)
-        return total_external_acceleration
+    return total_external_acceleration
 
-@partial(jax.jit, static_argnames=['config', 'return_potential'])
+@partial(jax.jit, static_argnames=['config', 'return_potential', 'potential_state_idx'])
 @jaxtyped(typechecker=typechecker)
 def NFW(state: jnp.ndarray, 
         config: SimulationConfig,
         params: SimulationParams,
-        return_potential=False):
+        return_potential=False,
+        potential_state_idx=0
+        ):
     """
     Compute acceleration of all particles due to a NFW profile.
 
@@ -89,6 +96,7 @@ def NFW(state: jnp.ndarray,
         config (NamedTuple): Configuration parameters.
         params (NamedTuple): Simulation parameters.
         return_potential (bool, optional): If True, also returns the potential energy of the NFW profile. Defaults to False.
+        potential_state_idx (int, optional): This index specifies in which index the state of the external potential itself is stored. Only used if reflex motion is enabled. Defaults to 0.
     Returns:
         Tuple[jnp.ndarray, jnp.ndarray]: 
             - Acceleration (jnp.ndarray): Acceleration of all particles due to NFW external potential.
@@ -118,9 +126,13 @@ def NFW(state: jnp.ndarray,
     #     return acc, pot
     # else:
     #     return acc
-
+    
+    # Slice the state of external potential to prevent interaction with itself in case reflex motion is enabled
     if config.reflex_motion:
-        rel_pos = state[1:, 0] - state[0, 0]
+        indices = jnp.concatenate([jnp.arange(potential_state_idx), 
+                                   jnp.arange(potential_state_idx + 1, len(state))
+                                   ])
+        rel_pos = state[indices, 0] - state[potential_state_idx, 0]
     else:
         rel_pos = state[:, 0]
 
@@ -173,25 +185,40 @@ def NFW(state: jnp.ndarray,
     #calculate the acceleration
     acc = acceleration(r)
 
+    # If reflex motion is enabled, insert zeros in the index of the external potential itself to return an array of the same shape as the input state
     if return_potential:
         pot = potential(r)
         if config.reflex_motion:
-            return jnp.concatenate([jnp.zeros((1, 3)), acc], axis=0), jnp.concatenate([jnp.zeros(1), pot]) # First particle is external potetnial itself, so no acceleration and zero potential
+            indices = jnp.concatenate([jnp.arange(potential_state_idx), 
+                                       jnp.arange(potential_state_idx + 1, len(state))
+                                   ])
+            acc_full = jnp.zeros((len(state), 3))
+            pot_full = jnp.zeros(len(state))
+            acc_full = acc_full.at[indices].set(acc)
+            pot_full = pot_full.at[indices].set(pot)
+            return acc_full, pot_full
         return acc, pot
     else:
         if config.reflex_motion:
-            return jnp.concatenate([jnp.zeros((1, 3)), acc], axis=0)
+            indices = jnp.concatenate([jnp.arange(potential_state_idx), 
+                                       jnp.arange(potential_state_idx + 1, len(state))
+                                   ])
+            acc_full = jnp.zeros((len(state), 3))
+            acc_full = acc_full.at[indices].set(acc)
+            return acc_full
         return acc
     
     
 
 
-@partial(jax.jit, static_argnames=['config', 'return_potential'])
+@partial(jax.jit, static_argnames=['config', 'return_potential', 'potential_state_idx'])
 @jaxtyped(typechecker=typechecker)
 def point_mass(state: jnp.ndarray, 
         config: SimulationConfig,
         params: SimulationParams,
-        return_potential=False):
+        return_potential=False,
+        potential_state_idx=0
+        ):
     """
     Compute acceleration of all particles due to a point mass potential.
 
@@ -200,6 +227,7 @@ def point_mass(state: jnp.ndarray,
         config (NamedTuple): Configuration parameters.
         params (NamedTuple): Simulation parameters.
         return_potential (bool, optional): If True, also returns the potential energy of the point mass potential. Defaults to False.
+        potential_state_idx (int, optional): This index specifies in which index the state of the external potential itself is stored. Only used if reflex motion is enabled. Defaults to 0.
     Returns:
         Tuple[jnp.ndarray, jnp.ndarray]: 
             - Acceleration (jnp.ndarray): Acceleration of all particles due to point mass external potential.
@@ -208,7 +236,10 @@ def point_mass(state: jnp.ndarray,
     params_point_mass = params.PointMass_params
     
     if config.reflex_motion:
-        rel_pos = state[1:, 0] - state[0, 0]
+        indices = jnp.concatenate([jnp.arange(potential_state_idx), 
+                                   jnp.arange(potential_state_idx + 1, len(state))
+                                   ])
+        rel_pos = state[indices, 0] - state[potential_state_idx, 0]
     else:
         rel_pos = state[:, 0]
 
@@ -227,19 +258,33 @@ def point_mass(state: jnp.ndarray,
     if return_potential:
         pot = potential(r)
         if config.reflex_motion:
-            return jnp.concatenate([jnp.zeros((1, 3)), acc], axis=0), jnp.concatenate([jnp.zeros(1), pot])
+            indices = jnp.concatenate([jnp.arange(potential_state_idx), 
+                                    jnp.arange(potential_state_idx + 1, len(state))
+                                ])
+            acc_full = jnp.zeros((len(state), 3))
+            pot_full = jnp.zeros(len(state))
+            acc_full = acc_full.at[indices].set(acc)
+            pot_full = pot_full.at[indices].set(pot)
+            return acc_full, pot_full
         return acc, pot
     else:
         if config.reflex_motion:
-            return jnp.concatenate([jnp.zeros((1, 3)), acc], axis=0)
+            indices = jnp.concatenate([jnp.arange(potential_state_idx), 
+                                    jnp.arange(potential_state_idx + 1, len(state))
+                                ])
+            acc_full = jnp.zeros((len(state), 3))
+            acc_full = acc_full.at[indices].set(acc)
+            return acc_full
         return acc
     
-@partial(jax.jit, static_argnames=['config', 'return_potential'])
+@partial(jax.jit, static_argnames=['config', 'return_potential', 'potential_state_idx'])
 @jaxtyped(typechecker=typechecker)
 def MyamotoNagai(state: jnp.ndarray, 
         config: SimulationConfig,
         params: SimulationParams,
-        return_potential=False):
+        return_potential=False,
+        potential_state_idx=0
+        ):
     """
     Compute acceleration of all particles due to a MyamotoNagai disk profile.
 
@@ -248,6 +293,7 @@ def MyamotoNagai(state: jnp.ndarray,
         config (NamedTuple): Configuration parameters.
         params (NamedTuple): Simulation parameters.
         return_potential (bool, optional): If True, also returns the potential energy of the MyamotoNagai profile. Defaults to False.
+        potential_state_idx (int, optional): This index specifies in which index the state of the external potential itself is stored. Only used if reflex motion is enabled. Defaults to 0.
     Returns:
         Tuple[jnp.ndarray, jnp.ndarray]: 
             - Acceleration (jnp.ndarray): Acceleration of all particles due to MyamotoNagai external potential.
@@ -256,7 +302,10 @@ def MyamotoNagai(state: jnp.ndarray,
     params_MN = params.MN_params
 
     if config.reflex_motion:
-        rel_pos = state[1:, 0] - state[0, 0]
+        indices = jnp.concatenate([jnp.arange(potential_state_idx), 
+                                   jnp.arange(potential_state_idx + 1, len(state))
+                                   ])
+        rel_pos = state[indices, 0] - state[potential_state_idx, 0]
     else:
         rel_pos = state[:, 0]
     
@@ -286,14 +335,26 @@ def MyamotoNagai(state: jnp.ndarray,
     if return_potential:
         pot = potential(rel_pos)
         if config.reflex_motion:
-            return jnp.concatenate([jnp.zeros((1, 3)), acc], axis=0), jnp.concatenate([jnp.zeros(1), pot])
+            indices = jnp.concatenate([jnp.arange(potential_state_idx), 
+                                       jnp.arange(potential_state_idx + 1, len(state))
+                                   ])
+            acc_full = jnp.zeros((len(state), 3))
+            pot_full = jnp.zeros(len(state))
+            acc_full = acc_full.at[indices].set(acc)
+            pot_full = pot_full.at[indices].set(pot)
+            return acc_full, pot_full
         return acc, pot
     else:
         if config.reflex_motion:
-            return jnp.concatenate([jnp.zeros((1, 3)), acc], axis=0)
+            indices = jnp.concatenate([jnp.arange(potential_state_idx), 
+                                       jnp.arange(potential_state_idx + 1, len(state))
+                                   ])
+            acc_full = jnp.zeros((len(state), 3))
+            acc_full = acc_full.at[indices].set(acc)
+            return acc_full
         return acc
     
-@partial(jax.jit, static_argnames=['config', 'return_potential'])
+@partial(jax.jit, static_argnames=['config', 'return_potential', 'potential_state_idx'])
 @jaxtyped(typechecker=typechecker)
 def call_MyamotoNagai(state: jnp.ndarray, 
                         M: Union[float, jnp.ndarray],
@@ -301,7 +362,8 @@ def call_MyamotoNagai(state: jnp.ndarray,
                         b: Union[float, jnp.ndarray],
                         config: SimulationConfig,
                         params: SimulationParams,
-                        return_potential=False):
+                        return_potential=False,
+                        potential_state_idx=0):
     """
     Compute acceleration of all particles due to a MyamotoNagai disk profile. It is used as base function for MN3 approximation of douoble exponential disk.
     This function exposes directly the a, b and M parameters intstead of calling the params of the simulation
@@ -311,6 +373,7 @@ def call_MyamotoNagai(state: jnp.ndarray,
         config (NamedTuple): Configuration parameters.
         params (NamedTuple): Simulation parameters.
         return_potential (bool, optional): If True, also returns the potential energy of the MyamotoNagai profile. Defaults to False.
+        potential_state_idx (int, optional): This index specifies in which index the state of the external potential itself is stored. Only used if reflex motion is enabled. Defaults to 0.
     Returns:
         Tuple[jnp.ndarray, jnp.ndarray]: 
             - Acceleration (jnp.ndarray): Acceleration of all particles due to MyamotoNagai external potential.
@@ -318,7 +381,10 @@ def call_MyamotoNagai(state: jnp.ndarray,
     """
     
     if config.reflex_motion:
-        rel_pos = state[1:, 0] - state[0, 0]
+        indices = jnp.concatenate([jnp.arange(potential_state_idx), 
+                                   jnp.arange(potential_state_idx + 1, len(state))
+                                   ])
+        rel_pos = state[indices, 0] - state[potential_state_idx, 0]
     else:
         rel_pos = state[:, 0]
 
@@ -345,20 +411,33 @@ def call_MyamotoNagai(state: jnp.ndarray,
     if return_potential:
         pot = potential(rel_pos)
         if config.reflex_motion:
-            return jnp.concatenate([jnp.zeros((1, 3)), acc], axis=0), jnp.concatenate([jnp.zeros(1), pot])
+            indices = jnp.concatenate([jnp.arange(potential_state_idx), 
+                                       jnp.arange(potential_state_idx + 1, len(state))
+                                   ])
+            acc_full = jnp.zeros((len(state), 3))
+            pot_full = jnp.zeros(len(state))
+            acc_full = acc_full.at[indices].set(acc)
+            pot_full = pot_full.at[indices].set(pot)
+            return acc_full, pot_full
         return acc, pot
     else:
         if config.reflex_motion:
-            return jnp.concatenate([jnp.zeros((1, 3)), acc], axis=0)
+            indices = jnp.concatenate([jnp.arange(potential_state_idx), 
+                                       jnp.arange(potential_state_idx + 1, len(state))
+                                   ])
+            acc_full = jnp.zeros((len(state), 3))
+            acc_full = acc_full.at[indices].set(acc)
+            return acc_full
         return acc
     
 
-@partial(jax.jit, static_argnames=['config', 'return_potential'])
+@partial(jax.jit, static_argnames=['config', 'return_potential', 'potential_state_idx'])
 @jaxtyped(typechecker=typechecker)
 def PowerSphericalPotentialwCutoff(state: jnp.ndarray, 
         config: SimulationConfig,
         params: SimulationParams,
-        return_potential=False):
+        return_potential=False,
+        potential_state_idx=0):
     """
     Compute acceleration of all particles due to a power spherical potential with cutoff.
     taken from galax: https://github.com/GalacticDynamics/galax/blob/main/src/galax/potential/_src/builtin/powerlawcutoff.py#L35
@@ -368,6 +447,7 @@ def PowerSphericalPotentialwCutoff(state: jnp.ndarray,
         config (NamedTuple): Configuration parameters.
         params (NamedTuple): Simulation parameters.
         return_potential (bool, optional): If True, also returns the potential energy of the power spherical potential. Defaults to False.
+        potential_state_idx (int, optional): This index specifies in which index the state of the external potential itself is stored. Only used if reflex motion is enabled. Defaults to 0.
     Returns:
         Tuple[jnp.ndarray, jnp.ndarray]: 
             - Acceleration (jnp.ndarray): Acceleration of all particles due to power spherical external potential.
@@ -384,7 +464,10 @@ def PowerSphericalPotentialwCutoff(state: jnp.ndarray,
     r_c = params_PSP.r_c
     
     if config.reflex_motion:
-        rel_pos = state[1:, 0] - state[0, 0]
+        indices = jnp.concatenate([jnp.arange(potential_state_idx), 
+                                   jnp.arange(potential_state_idx + 1, len(state))
+                                   ])
+        rel_pos = state[indices, 0] - state[potential_state_idx, 0]
     else:
         rel_pos = state[:, 0]
 
@@ -421,19 +504,32 @@ def PowerSphericalPotentialwCutoff(state: jnp.ndarray,
     if return_potential:
         pot = jax.vmap(potential)(rel_pos)
         if config.reflex_motion:
-            return jnp.concatenate([jnp.zeros((1, 3)), acc], axis=0), jnp.concatenate([jnp.zeros(1), pot])
+            indices = jnp.concatenate([jnp.arange(potential_state_idx), 
+                                       jnp.arange(potential_state_idx + 1, len(state))
+                                   ])
+            acc_full = jnp.zeros((len(state), 3))
+            pot_full = jnp.zeros(len(state))
+            acc_full = acc_full.at[indices].set(acc)
+            pot_full = pot_full.at[indices].set(pot)
+            return acc_full, pot_full
         return acc, pot
     else:
         if config.reflex_motion:
-            return jnp.concatenate([jnp.zeros((1, 3)), acc], axis=0)
+            indices = jnp.concatenate([jnp.arange(potential_state_idx), 
+                                       jnp.arange(potential_state_idx + 1, len(state))
+                                   ])
+            acc_full = jnp.zeros((len(state), 3))
+            acc_full = acc_full.at[indices].set(acc)
+            return acc_full
         return acc
  
-@partial(jax.jit, static_argnames=['config', 'return_potential'])  
+@partial(jax.jit, static_argnames=['config', 'return_potential', 'potential_state_idx'])  
 @jaxtyped(typechecker=typechecker)
 def logarithmic_potential(state: jnp.ndarray,
                           config: SimulationConfig,
                           params: SimulationParams,
-                          return_potential=False):
+                          return_potential=False,
+                          potential_state_idx=0):
     """
     Compute acceleration of all particles due to a logarithmic potential.
 
@@ -442,6 +538,7 @@ def logarithmic_potential(state: jnp.ndarray,
         config (NamedTuple): Configuration parameters.
         params (NamedTuple): Simulation parameters.
         return_potential (bool, optional): If True, also returns the potential energy of the logarithmic potential. Defaults to False.
+        potential_state_idx (int, optional): This index specifies in which index the state of the external potential itself is stored. Only used if reflex motion is enabled. Defaults to 0.
     
     Returns:
         Tuple[jnp.ndarray, jnp.ndarray]: 
@@ -450,7 +547,10 @@ def logarithmic_potential(state: jnp.ndarray,
     """
 
     if config.reflex_motion:
-        rel_pos = state[1:, 0] - state[0, 0]
+        indices = jnp.concatenate([jnp.arange(potential_state_idx), 
+                                   jnp.arange(potential_state_idx + 1, len(state))
+                                   ])
+        rel_pos = state[indices, 0] - state[potential_state_idx, 0]
     else:
         rel_pos = state[:, 0]
 
@@ -474,22 +574,35 @@ def logarithmic_potential(state: jnp.ndarray,
     acc = acceleration(rel_pos)
     
     if return_potential:
-        pot = potential(rel_pos)
+        pot = potential(r)
         if config.reflex_motion:
-            return jnp.concatenate([jnp.zeros((1, 3)), acc], axis=0), jnp.concatenate([jnp.zeros(1), pot])
+            indices = jnp.concatenate([jnp.arange(potential_state_idx), 
+                                       jnp.arange(potential_state_idx + 1, len(state))
+                                   ])
+            acc_full = jnp.zeros((len(state), 3))
+            pot_full = jnp.zeros(len(state))
+            acc_full = acc_full.at[indices].set(acc)
+            pot_full = pot_full.at[indices].set(pot)
+            return acc_full, pot_full
         return acc, pot
     else:
         if config.reflex_motion:
-            return jnp.concatenate([jnp.zeros((1, 3)), acc], axis=0)
+            indices = jnp.concatenate([jnp.arange(potential_state_idx), 
+                                       jnp.arange(potential_state_idx + 1, len(state))
+                                   ])
+            acc_full = jnp.zeros((len(state), 3))
+            acc_full = acc_full.at[indices].set(acc)
+            return acc_full
         return acc
     
 
-@partial(jax.jit, static_argnames=['config', 'return_potential'])
+@partial(jax.jit, static_argnames=['config', 'return_potential', 'potential_state_idx'])
 @jaxtyped(typechecker=typechecker)
 def TriaxialNFW(state: jnp.ndarray, 
                 config: SimulationConfig,
                 params: SimulationParams,
-                return_potential=False):
+                return_potential=False,
+                potential_state_idx=0):
     """
     Compute acceleration of all particles due to a Triaxial NFW profile.
     This code is heavily inspired by the implementation in galax: https://github.com/GalacticDynamics/galax/blob/main/src/galax/potential/_src/builtin/nfw/triaxial.py
@@ -504,6 +617,7 @@ def TriaxialNFW(state: jnp.ndarray,
         config (NamedTuple): Configuration parameters.
         params (NamedTuple): Simulation parameters.
         return_potential (bool, optional): If True, also returns the potential energy. Defaults to False.
+        potential_state_idx (int, optional): This index specifies in which index the state of the external potential itself is stored. Only used if reflex motion is enabled. Defaults to 0.
     Returns:
         Tuple[jnp.ndarray, jnp.ndarray]: 
             - Acceleration (jnp.ndarray): Acceleration of all particles due to Triaxial NFW external potential.
@@ -530,7 +644,10 @@ def TriaxialNFW(state: jnp.ndarray,
     q2sq = q2**2
 
     if config.reflex_motion:
-        rel_pos = state[1:, 0] - state[0, 0]
+        indices = jnp.concatenate([jnp.arange(potential_state_idx), 
+                                   jnp.arange(potential_state_idx + 1, len(state))
+                                   ])
+        rel_pos = state[indices, 0] - state[potential_state_idx, 0]
     else:
         rel_pos = state[:, 0]
     
@@ -570,20 +687,33 @@ def TriaxialNFW(state: jnp.ndarray,
     if return_potential:
         pot = vmap(potential_single)(rel_pos)
         if config.reflex_motion:
-            return jnp.concatenate([jnp.zeros((1, 3)), acc], axis=0), jnp.concatenate([jnp.zeros(1), pot])
+            indices = jnp.concatenate([jnp.arange(potential_state_idx), 
+                                       jnp.arange(potential_state_idx + 1, len(state))
+                                   ])
+            acc_full = jnp.zeros((len(state), 3))
+            pot_full = jnp.zeros(len(state))
+            acc_full = acc_full.at[indices].set(acc)
+            pot_full = pot_full.at[indices].set(pot)
+            return acc_full, pot_full
         return acc, pot
     else:
         if config.reflex_motion:
-            return jnp.concatenate([jnp.zeros((1, 3)), acc], axis=0)
+            indices = jnp.concatenate([jnp.arange(potential_state_idx), 
+                                       jnp.arange(potential_state_idx + 1, len(state))
+                                   ])
+            acc_full = jnp.zeros((len(state), 3))
+            acc_full = acc_full.at[indices].set(acc)
+            return acc_full
         return acc
     
     
-@partial(jax.jit, static_argnames=['config', 'return_potential'])
+@partial(jax.jit, static_argnames=['config', 'return_potential', 'potential_state_idx'])
 @jaxtyped(typechecker=typechecker)
 def Thin_MN3DiskPotential(state: jnp.ndarray,
                             config: SimulationConfig,
                             params: SimulationParams,
-                            return_potential=False):
+                            return_potential=False,
+                            potential_state_idx=0):
     """
     Compute acceleration and potential of all particles due to a thin disk approximated by 3 Miyamoto-Nagai potentials.
     Inspired by: https://gala.adrian.pw/en/latest/_modules/gala/potential/potential/builtin/core.html#MN3ExponentialDiskPotential.
@@ -594,6 +724,7 @@ def Thin_MN3DiskPotential(state: jnp.ndarray,
         config (NamedTuple): Configuration parameters.
         params (NamedTuple): Simulation parameters.
         return_potential (bool): If True, also returns the potential.
+        potential_state_idx (int, optional): This index specifies in which index the state of the external potential itself is stored. Only used if reflex motion is enabled. Defaults to 0.
 
     Returns:
         jnp.ndarray: Acceleration (N_particles, 3)
@@ -647,12 +778,12 @@ def Thin_MN3DiskPotential(state: jnp.ndarray,
         c_only[f"a{i + 1}"] = _as[i]
         c_only[f"b{i + 1}"] = _b
     
-    acc_total = jax.vmap(lambda m, a, b: call_MyamotoNagai(state, m, a, b, config, params, return_potential=False))(
+    acc_total = jax.vmap(lambda m, a, b: call_MyamotoNagai(state, m, a, b, config, params, return_potential=False, potential_state_idx=potential_state_idx))(
         _ms, _as, _b
     ).sum(axis=0)
 
     if return_potential:
-        pot_total = jax.vmap(lambda m, a, b: call_MyamotoNagai(state, m, a, b, config, params, return_potential=True))(
+        pot_total = jax.vmap(lambda m, a, b: call_MyamotoNagai(state, m, a, b, config, params, return_potential=True, potential_state_idx=potential_state_idx))(
             _ms, _as, _b
         )[1].sum(axis=0)
         return acc_total, pot_total
@@ -661,12 +792,14 @@ def Thin_MN3DiskPotential(state: jnp.ndarray,
 
 
 
-@partial(jax.jit, static_argnames=['config', 'return_potential'])
+@partial(jax.jit, static_argnames=['config', 'return_potential', 'potential_state_idx'])
 @jaxtyped(typechecker=typechecker)
 def Thick_MN3DiskPotential(state: jnp.ndarray,
                             config: SimulationConfig,
                             params: SimulationParams,
-                            return_potential=False):
+                            return_potential=False,
+                            potential_state_idx=0):
+
     """
     Compute acceleration and potential of all particles due to a thin disk approximated by 3 Miyamoto-Nagai potentials.
     Inspired by: https://gala.adrian.pw/en/latest/_modules/gala/potential/potential/builtin/core.html#MN3ExponentialDiskPotential.
@@ -677,6 +810,7 @@ def Thick_MN3DiskPotential(state: jnp.ndarray,
         config (NamedTuple): Configuration parameters.
         params (NamedTuple): Simulation parameters.
         return_potential (bool): If True, also returns the potential.
+        potential_state_idx (int, optional): This index specifies in which index the state of the external potential itself is stored. Only used if reflex motion is enabled. Defaults to 0.
 
     Returns:
         jnp.ndarray: Acceleration (N_particles, 3)
@@ -723,12 +857,12 @@ def Thick_MN3DiskPotential(state: jnp.ndarray,
     _b = b_hR * h_R
     _b = jnp.broadcast_to(_b, _ms.shape)
     
-    acc_total = jax.vmap(lambda m, a, b: call_MyamotoNagai(state, m, a, b, config, params, return_potential=False))(
+    acc_total = jax.vmap(lambda m, a, b: call_MyamotoNagai(state, m, a, b, config, params, return_potential=False, potential_state_idx=potential_state_idx))(
         _ms, _as, _b
     ).sum(axis=0)
 
     if return_potential:
-        pot_total = jax.vmap(lambda m, a, b: call_MyamotoNagai(state, m, a, b, config, params, return_potential=True))(
+        pot_total = jax.vmap(lambda m, a, b: call_MyamotoNagai(state, m, a, b, config, params, return_potential=True, potential_state_idx=potential_state_idx))(
             _ms, _as, _b
         )[1].sum(axis=0)
         return acc_total, pot_total
@@ -736,12 +870,13 @@ def Thick_MN3DiskPotential(state: jnp.ndarray,
         return acc_total
 
 
-@partial(jax.jit, static_argnames=['config', 'return_potential'])
+@partial(jax.jit, static_argnames=['config', 'return_potential', 'potential_state_idx'])
 @jaxtyped(typechecker=typechecker)
 def TwoPowerTriaxialPotential(state: jnp.ndarray,
                               config: SimulationConfig,
                               params: SimulationParams,
-                              return_potential=False):
+                              return_potential=False,
+                              potential_state_idx=0):
     """
     General triaxial two-power-law potential:
         rho(x,y,z) = amp/(4*pi*a^3) * 1/(m/a)^alpha * 1/(1+m/a)^(beta-alpha)
@@ -752,6 +887,7 @@ def TwoPowerTriaxialPotential(state: jnp.ndarray,
         config: Configuration parameters.
         params: Simulation parameters.
         return_potential: If True, also returns the potential.
+        potential_state_idx (int, optional): This index specifies in which index the state of the external potential itself is stored. Only used if reflex motion is enabled. Defaults to 0.
 
     Returns:
         acc: (N_particles, 3) acceleration
@@ -913,7 +1049,10 @@ def TwoPowerTriaxialPotential(state: jnp.ndarray,
         return acc, pot
     
     if config.reflex_motion:
-        rel_pos = state[1:, 0] - state[0, 0]
+        indices = jnp.concatenate([jnp.arange(potential_state_idx), 
+                                   jnp.arange(potential_state_idx + 1, len(state))
+                                   ])
+        rel_pos = state[indices, 0] - state[potential_state_idx, 0]
     else:
         rel_pos = state[:, 0]
 
@@ -921,11 +1060,23 @@ def TwoPowerTriaxialPotential(state: jnp.ndarray,
 
     if return_potential:
         if config.reflex_motion:
-            return jnp.concatenate([jnp.zeros((1, 3)), acc], axis=0), jnp.concatenate([jnp.zeros(1), pot])
+            indices = jnp.concatenate([jnp.arange(potential_state_idx), 
+                                       jnp.arange(potential_state_idx + 1, len(state))
+                                   ])
+            acc_full = jnp.zeros((len(state), 3))
+            pot_full = jnp.zeros(len(state))
+            acc_full = acc_full.at[indices].set(acc)
+            pot_full = pot_full.at[indices].set(pot)
+            return acc_full, pot_full
         return acc, pot
     else:
         if config.reflex_motion:
-            return jnp.concatenate([jnp.zeros((1, 3)), acc], axis=0)
+            indices = jnp.concatenate([jnp.arange(potential_state_idx), 
+                                       jnp.arange(potential_state_idx + 1, len(state))
+                                   ])
+            acc_full = jnp.zeros((len(state), 3))
+            acc_full = acc_full.at[indices].set(acc)
+            return acc_full
         return acc
 
 
