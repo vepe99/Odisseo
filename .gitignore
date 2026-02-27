@@ -17,3 +17,7 @@ odisseo.egg-info/
 
 #VS Code settings
 .vscode/
+
+#PyCache
+__pycache__/
+*.pyc
