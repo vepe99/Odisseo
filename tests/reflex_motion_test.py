@@ -9,7 +9,7 @@ autocvd(num_gpus = 1)
 import jax.numpy as jnp
 from jax import random
 
-import matplotlib.pyplot as plt
+import plotly.graph_objects as go
 
 from astropy import units as u
 
@@ -24,27 +24,17 @@ from odisseo.visualization import energy_angular_momentum_plot
 
 print("Imports successful")
 
-plt.rcParams.update({
-    'font.size': 20,
-    'axes.labelsize': 20,
-    'xtick.labelsize': 13,
-    'ytick.labelsize': 13,
-    'legend.fontsize': 15,
-})
-plt.style.use('default')
-
 code_length = 10 * u.kpc
 code_mass = 1e4 * u.Msun
 G = 1
 code_time = 1 * u.Gyr
 code_units = CodeUnits(code_length, code_mass, G=1, unit_time = code_time )  
 
-
 config = SimulationConfig(N_particles=100, 
                           return_snapshots = True, 
-                          num_snapshots = 10, 
+                          num_snapshots = 1000, 
                           fixed_timestep=False,
-                          num_timesteps=10000,
+                          num_timesteps=10,
                           softening = (0.1 * u.pc).to(code_units.code_length).value,
                           integrator=DIFFRAX_BACKEND,
                           acceleration_scheme=DIRECT_ACC_MATRIX,
@@ -71,7 +61,10 @@ mass_com = jnp.array([params_com.Plummer_params.Mtot])
 final_state_com = construct_initial_state(pos_com_final, vel_com_final) # state is a (N_particles x 2 x 3)
 
 # Add the Milky Way as particle in index 0
-final_state_com = jnp.concatenate([jnp.zeros((1, 2, 3)), final_state_com], axis=0)
+MW_position = jnp.array([[0., 0., 0.]]) * u.kpc.to(code_units.code_length)
+MW_velocity = jnp.array([[10., 0., 0.]]) * (u.km/u.s).to(code_units.code_velocity)
+MW_mass = jnp.array([0. * u.Msun.to(code_units.code_mass)])
+final_state_com = jnp.concatenate([construct_initial_state(MW_position, MW_velocity), final_state_com], axis=0)
 mass_com = jnp.concatenate([jnp.zeros(1), mass_com], axis=0) # Set its mass to zero, as its effect is included as an external potential
 print("Setup successful")
 
@@ -80,31 +73,58 @@ snapshots_com = time_integration(final_state_com, mass_com, config_com, params_c
 print("Time integration successful")
 
 #we can plot the snapshots of simulations, the snapshot are NameTuple with states=(N_snapshots x N_particles x 2 x 3) array
-pos_com, vel_com = snapshots_com.states[-1, :, 0], snapshots_com.states[-1, :, 1]
 
 ##### CoM orbit plot####
-fig = plt.figure(figsize=(15, 10), tight_layout=True)
-ax = fig.add_subplot(111, projection='3d')
-ax.scatter(snapshots_com.states[-1, 1, 0, 0]* code_units.code_length.to(u.kpc), 
-           snapshots_com.states[-1, 1, 0, 1]* code_units.code_length.to(u.kpc), 
-           snapshots_com.states[-1, 1, 0, 2]* code_units.code_length.to(u.kpc),c='r', label='Initial position Particle')
-ax.scatter(snapshots_com.states[0, 1, 0, 0]* code_units.code_length.to(u.kpc), 
-           snapshots_com.states[0, 1, 0, 1]* code_units.code_length.to(u.kpc), 
-           snapshots_com.states[0, 1, 0, 2]* code_units.code_length.to(u.kpc), c='b', label='Final position Particle')
-ax.plot(snapshots_com.states[:, 1, 0, 0]* code_units.code_length.to(u.kpc), 
-        snapshots_com.states[:, 1, 0, 1]* code_units.code_length.to(u.kpc), 
-        snapshots_com.states[:, 1, 0, 2]* code_units.code_length.to(u.kpc), 'k-', label='trajectory')
-ax.scatter(snapshots_com.states[-1, 0, 0, 0]* code_units.code_length.to(u.kpc), 
-           snapshots_com.states[-1, 0, 0, 1]* code_units.code_length.to(u.kpc), 
-           snapshots_com.states[-1, 0, 0, 2]* code_units.code_length.to(u.kpc),c='g', label='Initial position MW')
-ax.scatter(snapshots_com.states[0, 0, 0, 0]* code_units.code_length.to(u.kpc), 
-           snapshots_com.states[0, 0, 0, 1]* code_units.code_length.to(u.kpc), 
-           snapshots_com.states[0, 0, 0, 2]* code_units.code_length.to(u.kpc), c='y', label='Final position MW')
-ax.plot(snapshots_com.states[:, 0, 0, 0]* code_units.code_length.to(u.kpc), 
-        snapshots_com.states[:, 0, 0, 1]* code_units.code_length.to(u.kpc), 
-        snapshots_com.states[:, 0, 0, 2]* code_units.code_length.to(u.kpc), 'k-')
-ax.set_xlabel("X [kpc]")
-ax.set_ylabel("Y [kpc]")
-ax.set_zlabel("Z [kpc]")
-ax.legend()
-plt.savefig("reflex_motion_3d_orbit.png")
+scale = code_units.code_length.to(u.kpc)
+
+fig = go.Figure()
+
+# Particle trajectory
+fig.add_trace(go.Scatter3d(
+    x=snapshots_com.states[:, 1, 0, 0] * scale,
+    y=snapshots_com.states[:, 1, 0, 1] * scale,
+    z=snapshots_com.states[:, 1, 0, 2] * scale,
+    mode='lines', name='Particle trajectory', line=dict(color='black')
+))
+fig.add_trace(go.Scatter3d(
+    x=[snapshots_com.states[0, 1, 0, 0] * scale],
+    y=[snapshots_com.states[0, 1, 0, 1] * scale],
+    z=[snapshots_com.states[0, 1, 0, 2] * scale],
+    mode='markers', name='Initial position Particle', marker=dict(color='blue')
+))
+fig.add_trace(go.Scatter3d(
+    x=[snapshots_com.states[-1, 1, 0, 0] * scale],
+    y=[snapshots_com.states[-1, 1, 0, 1] * scale],
+    z=[snapshots_com.states[-1, 1, 0, 2] * scale],
+    mode='markers', name='Final position Particle', marker=dict(color='red')
+))
+
+# MW trajectory
+fig.add_trace(go.Scatter3d(
+    x=snapshots_com.states[:, 0, 0, 0] * scale,
+    y=snapshots_com.states[:, 0, 0, 1] * scale,
+    z=snapshots_com.states[:, 0, 0, 2] * scale,
+    mode='lines', name='MW trajectory', line=dict(color='gray')
+))
+fig.add_trace(go.Scatter3d(
+    x=[snapshots_com.states[0, 0, 0, 0] * scale],
+    y=[snapshots_com.states[0, 0, 0, 1] * scale],
+    z=[snapshots_com.states[0, 0, 0, 2] * scale],
+    mode='markers', name='Initial position MW', marker=dict(color='green')
+))
+fig.add_trace(go.Scatter3d(
+    x=[snapshots_com.states[-1, 0, 0, 0] * scale],
+    y=[snapshots_com.states[-1, 0, 0, 1] * scale],
+    z=[snapshots_com.states[-1, 0, 0, 2] * scale],
+    mode='markers', name='Final position MW', marker=dict(color='yellow')
+))
+
+fig.update_layout(scene=dict(
+    xaxis_title='X [kpc]',
+    yaxis_title='Y [kpc]',
+    zaxis_title='Z [kpc]'
+))
+
+fig.write_html("./tests/reflex_motion_3d_orbit.html")
+
+energy_angular_momentum_plot(snapshots_com, code_units, "./tests/reflex_motion_energy_angular_momentum.png")
