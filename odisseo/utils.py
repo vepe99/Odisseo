@@ -86,7 +86,7 @@ def E_pot(state: jnp.ndarray,
     elif config.acceleration_scheme == NO_SELF_GRAVITY:
         _, pot = no_self_gravity(state, mass, config, params, return_potential=True)
     
-    self_Epot = pot*mass
+    self_Epot = 0.5 * pot*mass
 
     external_Epot = 0.
     if len(config.external_accelerations) > 0:
