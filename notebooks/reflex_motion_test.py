@@ -4,7 +4,7 @@ from autocvd import autocvd
 autocvd(num_gpus = 1)
 
 # import os
-# os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+# os.environ["CUDA_VISIBLE_DEVICES"] = "7"
 
 import jax.numpy as jnp
 from jax import random
@@ -34,15 +34,16 @@ code_units = CodeUnits(unit_length = code_length,
                        unit_time = code_time
 )  
 
-config = SimulationConfig(N_particles = 0, 
+config = SimulationConfig(N_particles = 1, 
                           return_snapshots = True, 
-                          num_snapshots = 10000, 
+                          num_snapshots = 1000, 
                           fixed_timestep = False,
-                          num_timesteps = 10000,
+                          num_timesteps = 1000,
                           softening = 0.1 * u.pc.to(code_units.code_length),
                           integrator = DIFFRAX_BACKEND,
                           acceleration_scheme = DIRECT_ACC_MATRIX,
-                          external_accelerations = ((NFW_POTENTIAL, MN_POTENTIAL, PSP_POTENTIAL),(HERNQUIST_POTENTIAL,)), 
+                        external_accelerations = ((NFW_POTENTIAL, MN_POTENTIAL, PSP_POTENTIAL),(HERNQUIST_POTENTIAL,)), 
+                        # external_accelerations = ((NFW_POTENTIAL,),(NFW_POTENTIAL,)), 
                           reflex_motion = True,
                           diffrax_solver = TSIT5
 )       
@@ -61,23 +62,25 @@ key = random.PRNGKey(1)
 # State of test particle
 # pos = jnp.array([[10., 0., 0.]]) * u.kpc.to(code_units.code_length)
 # vel = jnp.array([[0., 100., 0.]]) * (u.km/u.s).to(code_units.code_velocity)
-# mass = jnp.array([1e4]) * u.Msun.to(code_units.code_mass)
-# state = construct_initial_state(pos, vel) # state is a (N_particles x 2 x 3)
-state = jnp.zeros((0, 2, 3))
-mass = jnp.zeros((0,)) 
+# particle_mass = jnp.array([1e4]) * u.Msun.to(code_units.code_mass)
+# particle_state = construct_initial_state(pos, vel) # state is a (N_particles x 2 x 3)
 
 # Add the Milky Way as particle in index 0
 MW_pos = jnp.array([[0., 0., 0.]]) * u.kpc.to(code_units.code_length)
 MW_vel = jnp.array([[0., 0., 0.]]) * (u.km/u.s).to(code_units.code_velocity)
-MW_mass = jnp.array([15e11]) * u.Msun.to(code_units.code_mass) # Set its mass to zero, as its effect is included as an external potential
+MW_mass = jnp.array([15e11]) * u.Msun.to(code_units.code_mass)
+# MW_mass = jnp.array([4.3683325e11]) * u.Msun.to(code_units.code_mass)
+MW_state = construct_initial_state(MW_pos, MW_vel) # state is a (N_particles x 2 x 3)
 
 # Add the LMC as particle in index 1
 LMC_pos = jnp.array([[-0.6, -41.3, -27.1]]) * u.kpc.to(code_units.code_length)
 LMC_vel = jnp.array([[-63.9, -213.8, 206.6]]) * (u.km/u.s).to(code_units.code_velocity)
-LMC_mass = jnp.array([15e10]) * u.Msun.to(code_units.code_mass) # Set its mass to zero, as its effect is included as an external potential
+LMC_mass = jnp.array([15e10]) * u.Msun.to(code_units.code_mass)
+# LMC_mass = jnp.array([4.3683325e11]) * u.Msun.to(code_units.code_mass)
+LMC_state = construct_initial_state(LMC_pos, LMC_vel) # state is a (N_particles x 2 x 3)
 
-final_state = jnp.concatenate([construct_initial_state(MW_pos, MW_vel), construct_initial_state(LMC_pos, LMC_vel), state], axis=0)
-final_mass = jnp.concatenate([MW_mass, LMC_mass, mass], axis=0) 
+final_state = jnp.concatenate([MW_state, LMC_state], axis=0)
+final_mass = jnp.concatenate([MW_mass, LMC_mass], axis=0) 
 
 print("Setup successful")
 
@@ -102,13 +105,13 @@ fig = go.Figure()
 #     x = [snapshots.states[0, 2, 0, 0] * scale],
 #     y = [snapshots.states[0, 2, 0, 1] * scale],
 #     z = [snapshots.states[0, 2, 0, 2] * scale],
-#     mode='markers', name='Initial position Particle', marker=dict(color='green')
+#     mode='markers', name='Earlier position Particle', marker=dict(color='green')
 # ))
 # fig.add_trace(go.Scatter3d(
 #     x = [snapshots.states[-1, 2, 0, 0] * scale],
 #     y = [snapshots.states[-1, 2, 0, 1] * scale],
 #     z = [snapshots.states[-1, 2, 0, 2] * scale],
-#     mode='markers', name='Final position Particle', marker=dict(color='red')
+#     mode='markers', name='Current position Particle', marker=dict(color='red')
 # ))
 
 # MW trajectory
@@ -122,13 +125,13 @@ fig.add_trace(go.Scatter3d(
     x = [snapshots.states[0, 0, 0, 0] * scale],
     y = [snapshots.states[0, 0, 0, 1] * scale],
     z = [snapshots.states[0, 0, 0, 2] * scale],
-    mode='markers', name='Initial position MW', marker=dict(color='green')
+    mode='markers', name='Current position MW', marker=dict(color='green')
 ))
 fig.add_trace(go.Scatter3d(
     x = [snapshots.states[-1, 0, 0, 0] * scale],
     y = [snapshots.states[-1, 0, 0, 1] * scale],
     z = [snapshots.states[-1, 0, 0, 2] * scale],
-    mode='markers', name='Final position MW', marker=dict(color='red')
+    mode='markers', name='Earlier position MW', marker=dict(color='red')
 ))
 
 # LMC trajectory
@@ -142,13 +145,13 @@ fig.add_trace(go.Scatter3d(
     x = [snapshots.states[0, 1, 0, 0] * scale],
     y = [snapshots.states[0, 1, 0, 1] * scale],
     z = [snapshots.states[0, 1, 0, 2] * scale],
-    mode='markers', name='Initial position LMC', marker=dict(color='green')
+    mode='markers', name='Current position LMC', marker=dict(color='green')
 ))
 fig.add_trace(go.Scatter3d(
     x = [snapshots.states[-1, 1, 0, 0] * scale],
     y = [snapshots.states[-1, 1, 0, 1] * scale],
     z = [snapshots.states[-1, 1, 0, 2] * scale],
-    mode='markers', name='Final position LMC', marker=dict(color='red')
+    mode='markers', name='Earlier position LMC', marker=dict(color='red')
 ))
 
 fig.update_layout(scene=dict(
@@ -157,6 +160,6 @@ fig.update_layout(scene=dict(
     zaxis_title = 'Z [kpc]'
 ))
 
-fig.write_html("./reflex_motion_3d_orbit.html")
+fig.write_html("./notebooks/reflex_motion_orbits.html")
 
-energy_angular_momentum_plot(snapshots, code_units, "./reflex_motion_energy_angular_momentum.png")
+energy_angular_momentum_plot(snapshots, code_units, "./notebooks/reflex_motion_conservation.png")

@@ -91,7 +91,10 @@ def E_pot(state: jnp.ndarray,
     external_Epot = 0.
     if len(config.external_accelerations) > 0:
         _, external_pot = combined_external_acceleration_vmpa_switch(state, config, params, return_potential=True)
-        external_Epot = external_pot*mass
+        if config.reflex_motion:
+            external_Epot = 0.5 * external_pot * mass
+        else:
+            external_Epot = external_pot * mass
         
     return self_Epot + external_Epot
 
