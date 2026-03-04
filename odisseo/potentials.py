@@ -27,7 +27,7 @@ def combined_external_acceleration_vmpa_switch(state: jnp.ndarray,
     Vectorized way
 
     Args:
-        state (jnp.ndarray): Array of shape (N_particles,2,3) representing the positions and velocities of the particles. 
+        state (jnp.ndarray): Array of shape (N_particles,2,3) representing the positions and velocities of the particles. . Shape (N_particles + N_external_potentials, 2, 3) if reflex motion is enabled 
         config (NamedTuple): Configuration parameters.
         params (NamedTuple): Simulation parameters.
         return_potential (bool): If True, also returns the total potential energy of all external potentials.
@@ -39,7 +39,7 @@ def combined_external_acceleration_vmpa_switch(state: jnp.ndarray,
     """
 
     total_external_acceleration = jnp.zeros_like(state[:, 0])
-    total_external_potential = jnp.zeros_like(config.N_particles)
+    total_external_potential = jnp.zeros_like(state[:, 0, 0])
 
     for potential_state_idx, potentials in enumerate(config.external_accelerations):
 
@@ -94,7 +94,7 @@ def NFW(state: jnp.ndarray,
     Compute acceleration of all particles due to a NFW profile.
 
     Args:
-        state (jnp.ndarray): Array of shape (N_particles, 2, 3) representing the positions and velocities of the particles.
+        state (jnp.ndarray): Array of shape (N_particles, 2, 3) representing the positions and velocities of the particles. Shape (N_particles + N_external_potentials, 2, 3) if reflex motion is enabled
         config (NamedTuple): Configuration parameters.
         params (NamedTuple): Simulation parameters.
         return_potential (bool, optional): If True, also returns the potential energy of the NFW profile. Defaults to False.
@@ -225,7 +225,7 @@ def point_mass(state: jnp.ndarray,
     Compute acceleration of all particles due to a point mass potential.
 
     Args:
-        state (jnp.ndarray): Array of shape (N_particles, 2, 3) representing the positions and velocities of the particles.
+        state (jnp.ndarray): Array of shape (N_particles, 2, 3) representing the positions and velocities of the particles. Shape (N_particles + N_external_potentials, 2, 3) if reflex motion is enabled
         config (NamedTuple): Configuration parameters.
         params (NamedTuple): Simulation parameters.
         return_potential (bool, optional): If True, also returns the potential energy of the point mass potential. Defaults to False.
@@ -291,7 +291,7 @@ def MyamotoNagai(state: jnp.ndarray,
     Compute acceleration of all particles due to a MyamotoNagai disk profile.
 
     Args:
-        state (jnp.ndarray): Array of shape (N_particles, 2, 3) representing the positions and velocities of the particles.
+        state (jnp.ndarray): Array of shape (N_particles, 2, 3) representing the positions and velocities of the particles. Shape (N_particles + N_external_potentials, 2, 3) if reflex motion is enabled
         config (NamedTuple): Configuration parameters.
         params (NamedTuple): Simulation parameters.
         return_potential (bool, optional): If True, also returns the potential energy of the MyamotoNagai profile. Defaults to False.
@@ -371,7 +371,7 @@ def call_MyamotoNagai(state: jnp.ndarray,
     This function exposes directly the a, b and M parameters intstead of calling the params of the simulation
 
     Args:
-        state (jnp.ndarray): Array of shape (N_particles, 2, 3) representing the positions and velocities of the particles.
+        state (jnp.ndarray): Array of shape (N_particles, 2, 3) representing the positions and velocities of the particles. Shape (N_particles + N_external_potentials, 2, 3) if reflex motion is enabled.
         config (NamedTuple): Configuration parameters.
         params (NamedTuple): Simulation parameters.
         return_potential (bool, optional): If True, also returns the potential energy of the MyamotoNagai profile. Defaults to False.
@@ -445,7 +445,7 @@ def PowerSphericalPotentialwCutoff(state: jnp.ndarray,
     taken from galax: https://github.com/GalacticDynamics/galax/blob/main/src/galax/potential/_src/builtin/powerlawcutoff.py#L35
     
     Args:
-        state (jnp.ndarray): Array of shape (N_particles, 2, 3) representing the positions and velocities of the particles.
+        state (jnp.ndarray): Array of shape (N_particles, 2, 3) representing the positions and velocities of the particles. Shape (N_particles + N_external_potentials, 2, 3) if reflex motion is enabled
         config (NamedTuple): Configuration parameters.
         params (NamedTuple): Simulation parameters.
         return_potential (bool, optional): If True, also returns the potential energy of the power spherical potential. Defaults to False.
@@ -536,7 +536,7 @@ def logarithmic_potential(state: jnp.ndarray,
     Compute acceleration of all particles due to a logarithmic potential.
 
     Args:
-        state (jnp.ndarray): Array of shape (N_particles, 2, 3) representing the positions and velocities of the particles.
+        state (jnp.ndarray): Array of shape (N_particles, 2, 3) representing the positions and velocities of the particles. Shape (N_particles + N_external_potentials, 2, 3) if reflex motion is enabled
         config (NamedTuple): Configuration parameters.
         params (NamedTuple): Simulation parameters.
         return_potential (bool, optional): If True, also returns the potential energy of the logarithmic potential. Defaults to False.
@@ -615,7 +615,7 @@ def TriaxialNFW(state: jnp.ndarray,
         xi^2 = x^2 + y^2/q1^2 + z^2/q2^2
 
     Args:
-        state (jnp.ndarray): Array of shape (N_particles, 2, 3) representing the positions and velocities of the particles.
+        state (jnp.ndarray): Array of shape (N_particles, 2, 3) representing the positions and velocities of the particles. Shape (N_particles + N_external_potentials, 2, 3) if reflex motion is enabled
         config (NamedTuple): Configuration parameters.
         params (NamedTuple): Simulation parameters.
         return_potential (bool, optional): If True, also returns the potential energy. Defaults to False.
@@ -722,15 +722,15 @@ def Thin_MN3DiskPotential(state: jnp.ndarray,
     Original paper: `Smith et al. (2015) <https://ui.adsabs.harvard.edu/abs/2015MNRAS.448.2934S/abstract>`
 
     Args:
-        state (jnp.ndarray): (N_particles, 2, 3) positions and velocities.
+        state (jnp.ndarray): (N_particles, 2, 3) positions and velocities. Shape (N_particles + N_external_potentials, 2, 3) if reflex motion is enabled
         config (NamedTuple): Configuration parameters.
         params (NamedTuple): Simulation parameters.
         return_potential (bool): If True, also returns the potential.
         potential_state_idx (int, optional): This index specifies in which index the state of the external potential itself is stored. Only used if reflex motion is enabled. Defaults to 0.
 
     Returns:
-        jnp.ndarray: Acceleration (N_particles, 3)
-        jnp.ndarray: Potential (N_particles,) if return_potential is True
+        jnp.ndarray: Acceleration (N_particles, 3). Shape (N_particles + N_external_potentials, 3) if reflex motion is enabled
+        jnp.ndarray: Potential (N_particles,) if return_potential is True. Shape (N_particles + N_external_potentials,) if reflex motion is enabled
 
     """
     params_ThinMN3Disk = params.ThinMN3Disk_params
@@ -808,15 +808,15 @@ def Thick_MN3DiskPotential(state: jnp.ndarray,
     Original paper: `Smith et al. (2015) <https://ui.adsabs.harvard.edu/abs/2015MNRAS.448.2934S/abstract>`
 
     Args:
-        state (jnp.ndarray): (N_particles, 2, 3) positions and velocities.
+        state (jnp.ndarray): (N_particles, 2, 3) positions and velocities. Shape (N_particles + N_external_potentials, 2, 3) if reflex motion is enabled
         config (NamedTuple): Configuration parameters.
         params (NamedTuple): Simulation parameters.
         return_potential (bool): If True, also returns the potential.
         potential_state_idx (int, optional): This index specifies in which index the state of the external potential itself is stored. Only used if reflex motion is enabled. Defaults to 0.
 
     Returns:
-        jnp.ndarray: Acceleration (N_particles, 3)
-        jnp.ndarray: Potential (N_particles,) if return_potential is True
+        jnp.ndarray: Acceleration (N_particles, 3). Shape (N_particles + N_external_potentials, 3) if reflex motion is enabled
+        jnp.ndarray: Potential (N_particles,) if return_potential is True. Shape (N_particles + N_external_potentials,) if reflex motion is enabled
 
     """
     params_ThickMN3Disk = params.ThickMN3Disk_params
@@ -885,15 +885,15 @@ def TwoPowerTriaxialPotential(state: jnp.ndarray,
         m^2 = x^2 + y^2/b^2 + z^2/c^2
 
     Args:
-        state: (N_particles, 2, 3) positions and velocities.
+        state: (N_particles, 2, 3) positions and velocities . Shape (N_particles + N_external_potentials, 2, 3) if reflex motion is enabled
         config: Configuration parameters.
         params: Simulation parameters.
         return_potential: If True, also returns the potential.
         potential_state_idx (int, optional): This index specifies in which index the state of the external potential itself is stored. Only used if reflex motion is enabled. Defaults to 0.
 
     Returns:
-        acc: (N_particles, 3) acceleration
-        pot: (N_particles,) potential (if return_potential)
+        acc: (N_particles, 3) acceleration. Shape (N_particles + N_external_potentials, 3) if reflex motion is enabled
+        pot: (N_particles,) potential (if return_potential). Shape (N_particles + N_external_potentials,) if reflex motion is enabled
     """
     p = params.TwoPowerTriaxial_params
     rho = p.rho
@@ -1092,7 +1092,7 @@ def HernquistPotential(state: jnp.ndarray,
     Compute acceleration of all particles due to a Hernquist potential.
     
     Args:
-        state (jnp.ndarray): Array of shape (N_particles, 2, 3) representing the positions and velocities of the particles.
+        state (jnp.ndarray): Array of shape (N_particles, 2, 3) representing the positions and velocities of the particles. Shape (N_particles + N_external_potentials, 2, 3) if reflex motion is enabled
         config (NamedTuple): Configuration parameters.
         params (NamedTuple): Simulation parameters.
         return_potential (bool, optional): If True, also returns the potential energy of the Hernquist profile. Defaults to False.
