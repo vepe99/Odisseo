@@ -219,7 +219,7 @@ def direct_acc_matrix(state: jnp.ndarray,
     if return_potential:
         # Compute potential energy (only sum interactions once)
         inv_r = r2_safe**-0.5 * (1.0 - eye)  # Diagonal is zero
-        pot = -params.G * jnp.sum(particle_masses[None, :] * inv_r, axis=1)
+        pot = -params.G * jnp.sum(particle_masses[:, None] * inv_r, axis=1)
         if config.reflex_motion:
             return jnp.concatenate([jnp.zeros((num_external_potentials, 3)), acc], axis=0), jnp.concatenate([jnp.zeros(num_external_potentials), pot])
         return acc, pot
@@ -348,7 +348,7 @@ def direct_acc_sharding(state: jnp.ndarray,
     r2_safe = jnp.sum(dpos**2, axis=-1) + config.softening**2 + eye # Shape: (N, N)
     if return_potential:
         inv_r = r2_safe**-0.5 * (1.0 - eye)
-        result = jax.device_put(jnp.sum(-params.G * jnp.sum(particle_masses[None, :] * inv_r, axis=1), axis=0), devices[0])
+        result = jax.device_put(jnp.sum(-params.G * jnp.sum(particle_masses[:, None] * inv_r, axis=1), axis=0), devices[0])
         if config.reflex_motion:
             return jnp.concatenate([jnp.zeros(num_external_potentials), result], axis=0)
         return result
