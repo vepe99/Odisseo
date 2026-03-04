@@ -43,6 +43,7 @@ TRIAXIAL_NFW_POTENTIAL = 5
 THIN_MN3_DISK = 6
 THICK_MN3_DISK = 7
 TWO_POWER_TRIAXIAL = 8
+HERNQUIST_POTENTIAL = 9
 
 class PlummerParams(NamedTuple):
     """
@@ -148,6 +149,15 @@ class TwoPowerTriaxialParams(NamedTuple):
 
     beta: float = 3.0  #Outer slope
 
+class HernquistParams(NamedTuple):
+    """
+    NamedTuple containing the parameters for the Hernquist potential
+    """
+
+    M: float = 1.0 #M☉
+
+    r_s: float = 1.0 #kpc
+
 class SimulationParams(NamedTuple):
     """
     NamedTuple containing the parameters for the simulation. This parameter do not require recompilation
@@ -176,6 +186,8 @@ class SimulationParams(NamedTuple):
     ThickMN3Disk_params: ThickMN3DiskParams = ThickMN3DiskParams()
 
     TwoPowerTriaxial_params: TwoPowerTriaxialParams = TwoPowerTriaxialParams()
+    
+    Hernquist_params: HernquistParams = HernquistParams()
         
 class SimulationConfig(NamedTuple):
     """

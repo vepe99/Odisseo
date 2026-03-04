@@ -55,6 +55,7 @@ def combined_external_acceleration_vmpa_switch(state: jnp.ndarray,
                             lambda state: Thin_MN3DiskPotential(state, config=config, params=params, return_potential=True, potential_state_idx=potential_state_idx),
                             lambda state: Thick_MN3DiskPotential(state, config=config, params=params, return_potential=True, potential_state_idx=potential_state_idx),
                             lambda state: TwoPowerTriaxialPotential(state, config=config, params=params, return_potential=True, potential_state_idx=potential_state_idx),
+                            lambda state: HernquistPotential(state, config=config, params=params, return_potential=True, potential_state_idx=potential_state_idx),
                             ]  
             vmap_function = vmap(lambda i, state: lax.switch(i, POTENTIAL_LIST, state))
             external_acc, external_pot = vmap_function(jnp.array(potentials), state_tobe_vmap)
@@ -71,6 +72,7 @@ def combined_external_acceleration_vmpa_switch(state: jnp.ndarray,
                             lambda state: Thin_MN3DiskPotential(state, config=config, params=params, return_potential=False, potential_state_idx=potential_state_idx),
                             lambda state: Thick_MN3DiskPotential(state, config=config, params=params, return_potential=False, potential_state_idx=potential_state_idx),
                             lambda state: TwoPowerTriaxialPotential(state, config=config, params=params, return_potential=False, potential_state_idx=potential_state_idx),
+                            lambda state: HernquistPotential(state, config=config, params=params, return_potential=False, potential_state_idx=potential_state_idx),
                             ]  
             vmap_function = vmap(lambda i, state: lax.switch(i, POTENTIAL_LIST, state))
             external_acc = vmap_function(jnp.array(potentials), state_tobe_vmap)
@@ -1079,4 +1081,77 @@ def TwoPowerTriaxialPotential(state: jnp.ndarray,
             return acc_full
         return acc
 
+@partial(jax.jit, static_argnames=['config', 'return_potential', 'potential_state_idx'])
+@jaxtyped(typechecker=typechecker)
+def HernquistPotential(state: jnp.ndarray, 
+                        config: SimulationConfig,
+                        params: SimulationParams,
+                        return_potential=False,
+                        potential_state_idx=0):
+    """
+    Compute acceleration of all particles due to a Hernquist potential.
+    
+    Args:
+        state (jnp.ndarray): Array of shape (N_particles, 2, 3) representing the positions and velocities of the particles.
+        config (NamedTuple): Configuration parameters.
+        params (NamedTuple): Simulation parameters.
+        return_potential (bool, optional): If True, also returns the potential energy of the Hernquist profile. Defaults to False.
+        potential_state_idx (int, optional): This index specifies in which index the state of the external potential itself is stored. Only used if reflex motion is enabled. Defaults to 0.
+    Returns:
+        Tuple[jnp.ndarray, jnp.ndarray]: 
+            - Acceleration (jnp.ndarray): Acceleration of all particles due to Hernquist external potential.
+            - Potential (jnp.ndarray): Potential energy of all particles due to Hernquist external potential. Returned only if return_potential is True.
 
+    """
+
+    if config.reflex_motion:
+        indices = jnp.concatenate([jnp.arange(potential_state_idx), 
+                                   jnp.arange(potential_state_idx + 1, len(state))
+                                   ])
+        rel_pos = state[indices, 0] - state[potential_state_idx, 0]
+    else:
+        rel_pos = state[:, 0]
+
+    params_Hernquist = params.Hernquist_params
+    M = params_Hernquist.M
+    r_s = params_Hernquist.r_s
+
+    # Phi = - G M / (r + Rs)
+    @jax.jit
+    def potential(rel_pos):
+        '''
+        params: dict with keys 'logM', 'Rs', 'x_origin', 'y_origin', 'z_origin', 'dirx', 'diry', 'dirz'
+        '''
+        s = jnp.sqrt(jnp.dot(rel_pos, rel_pos))
+        return - params.G * M / (s + r_s)  # kpc^2 / Gyr^2
+
+    @jax.jit
+    def acceleration(rel_pos):
+        def potential_vec(pos):
+            return potential(pos)
+        grad_phi = jax.grad(potential_vec)(rel_pos)
+        return -grad_phi
+    
+    acc = jax.vmap(acceleration)(rel_pos)
+    
+    if return_potential:
+        pot = jax.vmap(potential)(rel_pos)
+        if config.reflex_motion:
+            indices = jnp.concatenate([jnp.arange(potential_state_idx), 
+                                       jnp.arange(potential_state_idx + 1, len(state))
+                                   ])
+            acc_full = jnp.zeros((len(state), 3))
+            pot_full = jnp.zeros(len(state))
+            acc_full = acc_full.at[indices].set(acc)
+            pot_full = pot_full.at[indices].set(pot)
+            return acc_full, pot_full
+        return acc, pot
+    else:
+        if config.reflex_motion:
+            indices = jnp.concatenate([jnp.arange(potential_state_idx), 
+                                       jnp.arange(potential_state_idx + 1, len(state))
+                                   ])
+            acc_full = jnp.zeros((len(state), 3))
+            acc_full = acc_full.at[indices].set(acc)
+            return acc_full
+        return acc
