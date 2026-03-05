@@ -157,7 +157,7 @@ def ic_two_body(mass1: Union[float, jnp.ndarray],
     
     By default, the two bodies will be placed along the x-axis at the
     closest distance rp. Depending on the input eccentricity, the two 
-    bodies can be in a circular (e < 1), parabolic (e = 1), or hyperbolic 
+    bodies can be in a circular (e = 0), parabolic (e = 1), or hyperbolic 
     orbit (e > 1).
 
     Args:
@@ -183,19 +183,19 @@ def ic_two_body(mass1: Union[float, jnp.ndarray],
     #     vrel=jnp.sqrt(params.G * Mtot*(2./rp-1./a))
 
     def circular_orbit():
-        return jnp.sqrt(params.G * 2*Mtot/rp)
+        return jnp.sqrt(params.G * Mtot/rp)
     def elliptical_orbit():
         a=rp/(1-e)
         return jnp.sqrt(params.G * Mtot*(2./rp-1./a))
 
     vrel = jax.lax.cond(
-            e == 1.,
+            e == 0.,
             circular_orbit,
             elliptical_orbit,
             )
 
-    v1 = -params.G*mass2/Mtot * vrel
-    v2 = params.G*mass1/Mtot * vrel
+    v1 = -mass2/Mtot * vrel
+    v2 = mass1/Mtot * vrel
 
     pos  = jnp.array([[0.,0.,0.],[rp,0.,0.]])
     vel  = jnp.array([[0.,v1,0.],[0.,v2,0.]])
