@@ -63,7 +63,7 @@ class NFWParams(NamedTuple):
     
     r_s: float = 15.3 #kpc
     
-    # c: float = 10
+    c: float = 10
 
     # d_c: float = log(1+c) - c/(1+c)
 
@@ -158,6 +158,17 @@ class HernquistParams(NamedTuple):
 
     r_s: float = 1.0 #kpc
 
+class DynamicalFrictionParams(NamedTuple):
+    """
+    NamedTuple containing the parameters for the dynamical friction acceleration
+    """
+
+    sigma_MW: float = 120.0 #km/s, velocity dispersion of the Milky Way's dark matter halo
+
+    lambda_df: float = 1e-3 #dimensionless parameter to scale the dynamical friction acceleration
+
+    coulomb_log_numerator: float = 100.0 #kpc, the numerator of the Coulomb logarithm
+
 class SimulationParams(NamedTuple):
     """
     NamedTuple containing the parameters for the simulation. This parameter do not require recompilation
@@ -188,6 +199,8 @@ class SimulationParams(NamedTuple):
     TwoPowerTriaxial_params: TwoPowerTriaxialParams = TwoPowerTriaxialParams()
     
     Hernquist_params: HernquistParams = HernquistParams()
+
+    DynamicalFriction_params: DynamicalFrictionParams = DynamicalFrictionParams()
         
 class SimulationConfig(NamedTuple):
     """

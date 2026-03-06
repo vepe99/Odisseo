@@ -12,7 +12,8 @@ from scipy.special import j0, j1, jv
 import numpy as np
 import scipy
 
-from odisseo.option_classes import SimulationConfig, SimulationParams
+from odisseo.accelerations import LMC_dynamical_friction
+from odisseo.option_classes import HERNQUIST_POTENTIAL, NFW_POTENTIAL, SimulationConfig, SimulationParams
 
 
 @partial(jax.jit, static_argnames=['config', 'return_potential'])   
@@ -77,6 +78,11 @@ def combined_external_acceleration_vmpa_switch(state: jnp.ndarray,
             vmap_function = vmap(lambda i, state: lax.switch(i, POTENTIAL_LIST, state))
             external_acc = vmap_function(jnp.array(potentials), state_tobe_vmap)
             total_external_acceleration = total_external_acceleration + jnp.sum(external_acc, axis=0)
+    
+    # Only apply dynamical friction if all conditions for correct function workings are met
+    if len(config.external_accelerations) >= 2 and NFW_POTENTIAL in config.external_accelerations[0] and HERNQUIST_POTENTIAL in config.external_accelerations[1]:
+        LMC_acc = LMC_dynamical_friction(state, config=config, params=params)
+        total_external_acceleration = total_external_acceleration.at[1].set(total_external_acceleration[1] + LMC_acc)
 
     if return_potential:
         return total_external_acceleration, total_external_potential

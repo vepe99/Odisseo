@@ -18,7 +18,7 @@ from astropy import units as u
 
 from odisseo import construct_initial_state
 from odisseo.dynamics import DIRECT_ACC_MATRIX
-from odisseo.option_classes import SimulationConfig, SimulationParams, HernquistParams, NFWParams, MNParams, PSPParams, PointMassParams
+from odisseo.option_classes import SimulationConfig, SimulationParams, HernquistParams, NFWParams, MNParams, PSPParams, PointMassParams, DynamicalFrictionParams
 from odisseo.option_classes import NFW_POTENTIAL, DIFFRAX_BACKEND, MN_POTENTIAL, PSP_POTENTIAL, HERNQUIST_POTENTIAL, TSIT5, POINT_MASS
 from odisseo.time_integration import time_integration
 from odisseo.units import CodeUnits
@@ -31,7 +31,7 @@ print("Imports successful")
 code_length = 10 * u.kpc
 code_mass = 1e11 * u.Msun
 code_time = 1 * u.Gyr
-code_units = CodeUnits(unit_length = code_length,
+code_units = CodeUnits(unit_length = code_length, 
                        unit_mass = code_mass,
                        unit_time = code_time,
                        G = None
@@ -45,19 +45,29 @@ config = SimulationConfig(N_particles = 1,
                           softening = 0.1 * u.pc.to(code_units.code_length),
                           integrator = DIFFRAX_BACKEND,
                           acceleration_scheme = DIRECT_ACC_MATRIX,
-                        external_accelerations = ((NFW_POTENTIAL, MN_POTENTIAL, PSP_POTENTIAL),(HERNQUIST_POTENTIAL,)), 
-                        # external_accelerations = ((POINT_MASS,),(HERNQUIST_POTENTIAL,)), 
+                          external_accelerations = ((NFW_POTENTIAL, MN_POTENTIAL, PSP_POTENTIAL),(HERNQUIST_POTENTIAL,)), 
+                          # external_accelerations = ((POINT_MASS,),(HERNQUIST_POTENTIAL,)), 
                           reflex_motion = True,
                           diffrax_solver = TSIT5
 )       
 
 params = SimulationParams(t_end = -1 * u.Gyr.to(code_units.code_time),
                           G = code_units.G,
-                          Hernquist_params=HernquistParams(M = 15e10 * u.Msun.to(code_units.code_mass), r_s = 17.14 * u.kpc.to(code_units.code_length)),
-                          NFW_params=NFWParams(Mvir = 4.3683325e11 * u.Msun.to(code_units.code_mass), r_s = 15.3 * u.kpc.to(code_units.code_length)),
-                          MN_params=MNParams(M = 68_193_902_782.346756 * u.Msun.to(code_units.code_mass), a = 3.0 * u.kpc.to(code_units.code_length), b = 0.28 * u.kpc.to(code_units.code_length)),
-                          PSP_params=PSPParams(M = 4501365375.06545 * u.Msun.to(code_units.code_mass), alpha = 1.8, r_c = 1.9 * u.kpc.to(code_units.code_length)),
-                          PointMass_params=PointMassParams(M = 15e11 * u.Msun.to(code_units.code_mass))
+                          Hernquist_params = HernquistParams(M = 15e10 * u.Msun.to(code_units.code_mass), 
+                                                             r_s = 17.14 * u.kpc.to(code_units.code_length)),
+                          NFW_params = NFWParams(Mvir = 4.3683325e11 * u.Msun.to(code_units.code_mass), 
+                                                 r_s = 15.3 * u.kpc.to(code_units.code_length),
+                                                 c = 10),
+                          MN_params = MNParams(M = 68_193_902_782.346756 * u.Msun.to(code_units.code_mass), 
+                                               a = 3.0 * u.kpc.to(code_units.code_length), 
+                                               b = 0.28 * u.kpc.to(code_units.code_length)),
+                          PSP_params = PSPParams(M = 4501365375.06545 * u.Msun.to(code_units.code_mass), 
+                                                 alpha = 1.8, 
+                                                 r_c = 1.9 * u.kpc.to(code_units.code_length)),
+                          PointMass_params = PointMassParams(M = 15e11 * u.Msun.to(code_units.code_mass)),
+                          DynamicalFriction_params = DynamicalFrictionParams(sigma_MW = 120. * (u.km/u.s).to(code_units.code_velocity),
+                                                                             lambda_df = 1.,
+                                                                             coulomb_log_numerator = 100. * u.kpc.to(code_units.code_length)) 
 ) 
 
 key = random.PRNGKey(1)
@@ -193,7 +203,7 @@ fig.update_layout(scene=dict(
     zaxis_title = 'Z [kpc]'
 ))
 
-fig.write_html("./notebooks/reflex_motion_orbits.html")
+fig.write_html("./notebooks/reflex_motion_orbits_largeDynFric.html")
 
 # energy_angular_momentum_plot(snapshots, code_units, "./notebooks/reflex_motion_conservation_noextpot.png")
 
