@@ -16,7 +16,7 @@ from astropy import units as u
 from odisseo import construct_initial_state
 from odisseo.dynamics import DIRECT_ACC_MATRIX
 from odisseo.option_classes import SimulationConfig, SimulationParams, HernquistParams, NFWParams, MNParams, PSPParams, PointMassParams, DynamicalFrictionParams
-from odisseo.option_classes import NFW_POTENTIAL, DIFFRAX_BACKEND, MN_POTENTIAL, PSP_POTENTIAL, HERNQUIST_POTENTIAL, TSIT5
+from odisseo.option_classes import NFW_POTENTIAL, DIFFRAX_BACKEND, MN_POTENTIAL, PSP_POTENTIAL, HERNQUIST_POTENTIAL, DOPRI8
 from odisseo.time_integration import time_integration
 from odisseo.units import CodeUnits
 from odisseo.initial_condition import ic_two_body
@@ -44,7 +44,7 @@ config = SimulationConfig(N_particles = 1,
                           external_accelerations = ((NFW_POTENTIAL, MN_POTENTIAL, PSP_POTENTIAL),(HERNQUIST_POTENTIAL,)), 
                           # external_accelerations = ((POINT_MASS,),(HERNQUIST_POTENTIAL,)), 
                           reflex_motion = True,
-                          diffrax_solver = TSIT5
+                          diffrax_solver = DOPRI8
 )       
 
 params = SimulationParams(t_end = -1 * u.Gyr.to(code_units.code_time),
