@@ -495,3 +495,39 @@ def haze(scale_factor, r_mult, z_mult, density):
         z = np.random.uniform(-1, 1) * z_mult
         haze_coords.append((x, y, z))
     return haze_coords
+
+def MW_pot_representation(params):
+    """Return coordinates for visualizing the Milky Way potential components."""
+
+    r_bulge = params.PSP_params.r_c
+    a_disk = params.MN_params.a
+    b_disk = params.MN_params.b
+    r_halo = params.NFW_params.r_s
+
+    def sphere(radius, n=50):
+        u = np.linspace(0, 2 * np.pi, n)
+        v = np.linspace(0, np.pi, n)
+        x = radius * np.outer(np.cos(u), np.sin(v))
+        y = radius * np.outer(np.sin(u), np.sin(v))
+        z = radius * np.outer(np.ones_like(u), np.cos(v))
+        return x, y, z
+
+    def ellipsoid(a, b, c, n=50):
+        u = np.linspace(0, 2 * np.pi, n)
+        v = np.linspace(0, np.pi, n)
+        x = a * np.outer(np.cos(u), np.sin(v))
+        y = b * np.outer(np.sin(u), np.sin(v))
+        z = c * np.outer(np.ones_like(u), np.cos(v))
+        return x, y, z
+
+
+    # Halo (big sphere)
+    x_halo, y_halo, z_halo = sphere(r_halo)
+
+    # Bulge (small sphere)
+    x_bulge, y_bulge, z_bulge = sphere(r_bulge)
+
+    # Disk (flattened ellipsoid)
+    x_disk, y_disk, z_disk = ellipsoid(a_disk, a_disk, b_disk)
+
+    return (x_halo, y_halo, z_halo), (x_bulge, y_bulge, z_bulge), (x_disk, y_disk, z_disk)
