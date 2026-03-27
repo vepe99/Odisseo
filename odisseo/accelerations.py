@@ -35,9 +35,9 @@ def LMC_dynamical_friction(state: jnp.ndarray,
 
     # Actual NFW desnity at the position of the LMC
     r = jnp.linalg.norm(state[1, 0, :] - state[0, 0, :])
-    c = params_MWhalo.c
     r_s = params_MWhalo.r_s
-    rho_s = params_MWhalo.Mvir / (4 * jnp.pi * r_s**3 * (jnp.log(1 + c) - c / (1 + c)))
+    M_char = params_MWhalo.Mvir # Actually M_char, not Mvir
+    rho_s = M_char / (4 * jnp.pi * r_s**3)
     rho_MW = rho_s / ((r/r_s) * (1 + (r/r_s))**2)
 
     vel_LMC = state[1, 1, :] - state[0, 1, :]

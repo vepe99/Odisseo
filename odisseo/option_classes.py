@@ -59,11 +59,9 @@ class NFWParams(NamedTuple):
     NamedTuple containing the parameters for the NFW profile
     """
     
-    Mvir: float = 1.62*1e11 #M☉
+    Mvir: float = 1.62*1e11 #M☉ This is actually M_char
     
     r_s: float = 15.3 #kpc
-    
-    c: float = 10
 
     # d_c: float = log(1+c) - c/(1+c)
 
