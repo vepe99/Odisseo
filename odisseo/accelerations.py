@@ -8,7 +8,7 @@ def LMC_dynamical_friction(state: jnp.ndarray,
                            config: SimulationConfig,
                            params: SimulationParams):
     """
-    Compute the dynamical friction acceleration on the LMC due to the Milky Way's dark matter halo.
+    Compute the dynamical friction acceleration on the LMC due to the Milky Way's dark matter halo. Follows the implementation of Brooks et al. (2025).
     Assumes that the state of the MW is sored at index 0, and the state of the LMC is stored at index 1. 
     Assumes that the MW halo is modeled as an NFW potential, and the LMC is modeled as a Hernquist potential.
 

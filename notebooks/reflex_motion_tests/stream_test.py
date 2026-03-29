@@ -330,4 +330,4 @@ fig.update_layout(
     )
 )
 
-fig.write_html("./notebooks/reflex_motion_tests/orbits_PlummerSphere_statMW.html")
+fig.write_html("./notebooks/reflex_motion_tests/orbits_PlummerSphere_MWcof.html")
