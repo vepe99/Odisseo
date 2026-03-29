@@ -78,8 +78,10 @@ params = SimulationParams(
     ),
     # Mvir is actually M_char
     NFW_params=NFWParams(
-        Mvir=436723306039.5261 * u.Msun.to(code_units.code_mass),
+        M_char=436723306039.5261 * u.Msun.to(code_units.code_mass),
         r_s=16 * u.kpc.to(code_units.code_length),
+        M_vir=1751367215711.3765 * u.Msun.to(code_units.code_mass),
+        r_vir=295.5735153741678 * u.kpc.to(code_units.code_length),
     ),
     MN_params=MNParams(
         M=68176739700.15533 * u.Msun.to(code_units.code_mass),

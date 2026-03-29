@@ -78,8 +78,10 @@ params = SimulationParams(
         r_s=17.14 * u.kpc.to(code_units.code_length),
     ),
     NFW_params=NFWParams(
-        Mvir=4.3683325e11 * u.Msun.to(code_units.code_mass),
-        r_s=15.3 * u.kpc.to(code_units.code_length),
+        M_char=436723306039.5261 * u.Msun.to(code_units.code_mass),
+        r_s=16 * u.kpc.to(code_units.code_length),
+        M_vir=1751367215711.3765 * u.Msun.to(code_units.code_mass),
+        r_vir=295.5735153741678 * u.kpc.to(code_units.code_length),
     ),
     MN_params=MNParams(
         M=68_193_902_782.346756 * u.Msun.to(code_units.code_mass),

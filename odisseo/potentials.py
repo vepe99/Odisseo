@@ -145,7 +145,7 @@ def NFW(state: jnp.ndarray,
         rel_pos = state[:, 0]
 
     params_NFW = params.NFW_params
-    M = params_NFW.Mvir
+    M = params_NFW.M_char
     r_s = params_NFW.r_s
     r = jnp.linalg.norm(rel_pos, axis=1)
 
