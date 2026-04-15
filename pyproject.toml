@@ -27,7 +27,6 @@ dependencies = [
     "autocvd",
     "diffrax >= 0.7.0",
     "jax >= 0.6.1",
-    "nvidia-cublas-cu12==12.9.0.13",
     "scipy >= 1.0.0",
     "astropy >= 6.0.0",
     "numpy >= 1.0.0",
