@@ -132,16 +132,28 @@ The plan is to allow the central potential (Milky Way) to become dynamic and mov
 
     ```python
     config = SimulationConfig(...,
-                              external_potentials = (("halo_MW",), ("halo_LMC",))
+                              external_potentials = dict[
+                                                    'MW':("halo_MW", "disc1_MW", "disc2_MW", ...), 
+                                                    'LMC':("halo_LMC",)
+                                                    ]
                               )
 
     params = SimulationParams(t_end = ...,
                               G = ...,
-                              potentials = dict["halo_MW": NFWParams(...),
-                                                "halo_LMC": NFWParams(...),
+                              potentials = dict['MW': dict[
+                                                "halo_MW": NFWParams(...),
+                                                "disc1_MW": MNParams(...),
+                                                "disc2_MW": MNParams(...),
+                                                ...
+                                                ],
+                                                "LMC": dict[ 
+                                                "halo_LMC": HernquistParams(...),
                                                 ]
+                              ]
                               )
     ```
+
+  - This implementation would also allow to fix the hardcoded dynamical friction to become more flexible.
 
 - Tracer stars in MW halo to see how they respond to LMC.
 - Split simulation scripts into data generation and plotting files.
@@ -150,6 +162,7 @@ The plan is to allow the central potential (Milky Way) to become dynamic and mov
   - Currently the only viable option seems to be to use smaller and smaller timesteps and see if the trajectories converge
   - Add $U_\text{int}$ to calculations of total energy.
     ![Image containing the U_int proposal of ChatGPT on how to overcome the numerical validation problem](./numVal_Uint_proposal.png)
+  - Other option: Compare forward and backwards time integration. In theory, they should move along the same trajectory, only inverted. However, due to the dynamical time step size, small deviations may occur (which is fine!). To check for larger deviations, interpolation could be used to get the coordinates for the same time step. The difference could give insights into the numerical stability (inside a fixed deviation tolerance due to interpolation).
 - Validate MW-LMC movement on other simulations.
 
 ### On Hold
@@ -167,7 +180,23 @@ The plan is to allow the central potential (Milky Way) to become dynamic and mov
   - Iterates over `config.external_accelerations`, to get the index of the external potentials (LMC, MW) in the state array, this then get masked out.
 - Milky Way does not move due to other particles anymore.
 - Unlimited 'external' potentials can now be added. Theses external potentials only interact with each other, not with the other particles. Their state is saved together with the particles in `state`, and the index of the potentials in `external_accelerations` decides which state index is which external potential. For this an additional depth (dimension?) has been added to `external_accelerations`. The first entry corresponds to the first particle in `state` etc.
-- Dynamical friction is automatically applied if at least two external potentials are added, the first one contains an NFW potential (MW halo), and the second one a Hernquist potential (LMC). The resulting acceleration gets added at each step to the LMC acceleration in `potentials.py`. This solution is hardcoded
+- Dynamical friction is automatically applied if at least two external potentials are added, the first one contains an NFW potential (MW halo), and the second one a Hernquist potential (LMC). The resulting acceleration gets added at each step to the LMC acceleration in `potentials.py`. This solution is hardcoded!
 - Parameters are now the same as used in `galpy`.
   - Added distinction between viral and characteristic mass for the NFW profile. The potential uses the characteristic mass, while the dynamical friction uses the viral mass.
   - LMC Hernquist profile still uses the parameters from Brooks et al (2025).
+
+### What is in this folder
+
+- Python Scripts: These scripts perform the simulations using reflex motion between MW and LMC.
+  - `singleParticle_test.py`: A single particle is added to the simulation as a test particle.
+    - `orbits_dynFric.html`, `orbits_largeDynFric.html`, `orbits_noDynFric.html`: The resulting plots of the trajectories for varying dynamical friction uses/strengths.
+    - `orbits_singlePart_MWcof.html`: Plots using the center of the Milky Way as the coordinate centre. Computed by subtracting the MW trajectory from all trajectories before plotting.
+  - `stream_test.py`: the CoM of a Plummer sphere is simulated backwards in time, and then populated with stars. Afterwards the stars are simulated forwards in time.
+    - `orbits_PlummerSphere_MWcof.html`: Plots using the center of the Milky Way as the coordinate centre. Computed by subtracting the MW trajectory from all trajectories before plotting.
+    - `orbits_PlummerSphere_MWcof.html`: Plots using a static coordinate center, where the MW also moves due to the LMC.
+- Images:
+  - `conservation.png`: Energy and Angular Momentum conservation plots for a reflex motion simulation of MW, LMC adn test particle. Broken, as in a system of multiple different moving interacting potentials these quantities are not conserved
+  - `symPot_conservation.png`: Energy and Angular Momentum conservation plots for the a system with two identical potentials and a test particle. Here the quantities are conserved, as the forces are due to the exact same potentials used symmetric.
+- `Notebooks`:
+  - `galpy_parameters.ipynb`: Extracts the MW parameters from galpy's implementation of the `MWPotential2014`. Also contains the LMC implementation used in galpy docs, but is very different to Paper-implementation
+  - `example-mwlmc-integration.ipynb`: Example simulation script for MW-LMC simulation in `gala` provided by Brooks.
