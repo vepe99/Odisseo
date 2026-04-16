@@ -107,7 +107,7 @@ key = random.PRNGKey(1)
 particle_mass = 1e4 * u.Msun.to(code_units.code_mass)
 rp = 10 * u.kpc.to(code_units.code_length)
 e = 0.0
-M = params.NFW_params.Mvir
+M = params.NFW_params.M_vir
 r_s = params.NFW_params.r_s
 MW_mass_at_r = M * (jnp.log(1 + (rp / r_s)) - (rp / r_s) / (1 + (rp / r_s)))
 
