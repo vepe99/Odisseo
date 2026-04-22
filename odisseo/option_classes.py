@@ -213,6 +213,7 @@ class SimulationConfig(NamedTuple):
     fmm_preset: str = "fast"
     fmm_basis: str = "solidfmm"
     fmm_theta: float = 0.6
+    fmm_runtime_path: str = "auto"
     fmm_mac_type: str = "dehnen"
     fmm_farfield_mode: str = "auto"
     fmm_nearfield_mode: str = "auto"
@@ -221,6 +222,9 @@ class SimulationConfig(NamedTuple):
     fmm_fixed_order: Optional[int] = None
     fmm_jit_tree: Optional[bool] = None
     fmm_jit_traversal: Optional[bool] = True
+    fmm_auto_large_n_profile: bool = True
+    fmm_large_n_min_particles: int = 200_000
+    fmm_large_n_force_fp32: bool = True
 
     batch_size: int = 10_000
 
