@@ -7,6 +7,12 @@
 
 `odisseo` differentiable direct Nbody written in `JAX`.
 
+## Highlight: 200k-Particle Galaxy Disk (FMM)
+
+Generated with the new `jaccpot` large-`N` radix integration path in ODISSEO:
+
+![Galaxy disk evolution (200k particles)](notebooks/scalability/galaxy_disk_gpu9.gif)
+
 
 
 ## Installation
@@ -42,8 +48,14 @@ Use `odisseo.integrate(...)` as the main entrypoint. Backend selection is done v
 
 Key FMM tuning fields in `SimulationConfig`:
 - `fmm_refresh_every`, `fmm_leaf_size`, `fmm_max_order`
-- `fmm_preset`, `fmm_basis`, `fmm_theta`, `fmm_mac_type`
+- `fmm_preset`, `fmm_basis`, `fmm_theta`, `fmm_runtime_path`, `fmm_mac_type`
 - `fmm_farfield_mode`, `fmm_nearfield_mode`, `fmm_nearfield_edge_chunk_size`, `fmm_tree_leaf_target`
+- `fmm_auto_large_n_profile`, `fmm_large_n_min_particles`, `fmm_large_n_force_fp32`
+
+Large-`N` GPU runs can now auto-switch from `fmm_preset="fast"` to jaccpot's
+radix fast lane (`"large_n_gpu"` preset + `"large_n"` runtime path) when
+`fmm_auto_large_n_profile=True` and particle count exceeds
+`fmm_large_n_min_particles`.
 
 Example:
 
@@ -60,4 +72,22 @@ cfg = SimulationConfig(
 )
 params = SimulationParams(G=1.0, t_end=1.0)
 state_out = integrate(state0, masses, cfg, params)
+```
+
+Galaxy-disk large-`N` example (auto-selects jaccpot radix fast lane on GPU):
+
+```bash
+python notebooks/scalability/galaxy_disk_fmm_large_n.py --n-particles 200000 --num-steps 200
+```
+
+Render snapshots live after the run:
+
+```bash
+python notebooks/scalability/galaxy_disk_fmm_large_n.py --n-particles 200000 --num-steps 200 --live --num-snapshots 240
+```
+
+Record a movie (`.gif` or `.mp4`):
+
+```bash
+python notebooks/scalability/galaxy_disk_fmm_large_n.py --n-particles 200000 --num-steps 200 --num-snapshots 240 --movie-path ./galaxy_disk.gif --movie-fps 24
 ```

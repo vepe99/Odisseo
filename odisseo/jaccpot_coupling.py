@@ -12,12 +12,13 @@ from odisseo.potentials import combined_external_acceleration_vmpa_switch
 
 def _build_fmm_solver(
     *,
-    state_dtype,
+    working_dtype,
     config: SimulationConfig,
     params: SimulationParams,
     fmm_preset: str,
     fmm_basis: str,
     fmm_theta: float,
+    fmm_runtime_path: str,
     fmm_mac_type: str,
     fmm_farfield_mode: str,
     fmm_nearfield_mode: str,
@@ -40,10 +41,11 @@ def _build_fmm_solver(
     return FastMultipoleMethod(
         preset=str(fmm_preset),
         basis=str(fmm_basis),
+        runtime_path=str(fmm_runtime_path),
         theta=float(fmm_theta),
         G=float(params.G),
         softening=float(config.softening),
-        working_dtype=state_dtype,
+        working_dtype=working_dtype,
         advanced=FMMAdvancedConfig(
             tree=TreeConfig(leaf_target=int(fmm_tree_leaf_target)),
             farfield=FarFieldConfig(mode=str(fmm_farfield_mode)),
@@ -239,6 +241,8 @@ def integrate_leapfrog_jaccpot_active(
     fmm_preset: str = "fast",
     fmm_basis: str = "solidfmm",
     fmm_theta: float = 0.6,
+    fmm_runtime_path: str = "auto",
+    fmm_working_dtype=None,
     fmm_mac_type: str = "dehnen",
     fmm_farfield_mode: str = "auto",
     fmm_nearfield_mode: str = "auto",
@@ -275,12 +279,15 @@ def integrate_leapfrog_jaccpot_active(
     dt_arr = jnp.asarray(dt_val, dtype=state_curr.dtype)
 
     solver = _build_fmm_solver(
-        state_dtype=state_curr.dtype,
+        working_dtype=(
+            state_curr.dtype if fmm_working_dtype is None else jnp.dtype(fmm_working_dtype)
+        ),
         config=config,
         params=params,
         fmm_preset=fmm_preset,
         fmm_basis=fmm_basis,
         fmm_theta=fmm_theta,
+        fmm_runtime_path=fmm_runtime_path,
         fmm_mac_type=fmm_mac_type,
         fmm_farfield_mode=fmm_farfield_mode,
         fmm_nearfield_mode=fmm_nearfield_mode,
@@ -487,6 +494,8 @@ def evaluate_acceleration_jaccpot(
     fmm_preset: str = "fast",
     fmm_basis: str = "solidfmm",
     fmm_theta: float = 0.6,
+    fmm_runtime_path: str = "auto",
+    fmm_working_dtype=None,
     fmm_mac_type: str = "dehnen",
     fmm_farfield_mode: str = "auto",
     fmm_nearfield_mode: str = "auto",
@@ -500,12 +509,15 @@ def evaluate_acceleration_jaccpot(
     state_arr = jnp.asarray(state)
     mass_arr = jnp.asarray(mass)
     solver = _build_fmm_solver(
-        state_dtype=state_arr.dtype,
+        working_dtype=(
+            state_arr.dtype if fmm_working_dtype is None else jnp.dtype(fmm_working_dtype)
+        ),
         config=config,
         params=params,
         fmm_preset=fmm_preset,
         fmm_basis=fmm_basis,
         fmm_theta=fmm_theta,
+        fmm_runtime_path=fmm_runtime_path,
         fmm_mac_type=fmm_mac_type,
         fmm_farfield_mode=fmm_farfield_mode,
         fmm_nearfield_mode=fmm_nearfield_mode,
@@ -539,6 +551,8 @@ def build_jitted_jaccpot_acceleration(
     fmm_preset: str = "fast",
     fmm_basis: str = "solidfmm",
     fmm_theta: float = 0.6,
+    fmm_runtime_path: str = "auto",
+    fmm_working_dtype=None,
     fmm_mac_type: str = "dehnen",
     fmm_farfield_mode: str = "auto",
     fmm_nearfield_mode: str = "auto",
@@ -571,6 +585,8 @@ def build_jitted_jaccpot_acceleration(
             fmm_preset=fmm_preset,
             fmm_basis=fmm_basis,
             fmm_theta=fmm_theta,
+            fmm_runtime_path=fmm_runtime_path,
+            fmm_working_dtype=fmm_working_dtype,
             fmm_mac_type=fmm_mac_type,
             fmm_farfield_mode=fmm_farfield_mode,
             fmm_nearfield_mode=fmm_nearfield_mode,
@@ -604,6 +620,8 @@ def build_jitted_leapfrog_jaccpot_active(
     fmm_preset: str = "fast",
     fmm_basis: str = "solidfmm",
     fmm_theta: float = 0.6,
+    fmm_runtime_path: str = "auto",
+    fmm_working_dtype=None,
     fmm_mac_type: str = "dehnen",
     fmm_farfield_mode: str = "auto",
     fmm_nearfield_mode: str = "auto",
@@ -640,6 +658,8 @@ def build_jitted_leapfrog_jaccpot_active(
             fmm_preset=fmm_preset,
             fmm_basis=fmm_basis,
             fmm_theta=fmm_theta,
+            fmm_runtime_path=fmm_runtime_path,
+            fmm_working_dtype=fmm_working_dtype,
             fmm_mac_type=fmm_mac_type,
             fmm_farfield_mode=fmm_farfield_mode,
             fmm_nearfield_mode=fmm_nearfield_mode,

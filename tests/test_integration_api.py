@@ -47,6 +47,8 @@ def test_integrate_dispatches_to_fmm_coupler(monkeypatch):
         assert kwargs["fmm_preset"] == "accurate"
         assert kwargs["fmm_basis"] == "cartesian"
         assert kwargs["fmm_theta"] == 0.4
+        assert kwargs["fmm_runtime_path"] == "auto"
+        assert kwargs["fmm_working_dtype"] == state.dtype
         assert kwargs["fmm_mac_type"] == "bh"
         assert kwargs["fmm_farfield_mode"] == "dense"
         assert kwargs["fmm_nearfield_mode"] == "pairwise"
@@ -76,6 +78,41 @@ def test_integrate_dispatches_to_fmm_coupler(monkeypatch):
         fmm_nearfield_mode="pairwise",
         fmm_nearfield_edge_chunk_size=96,
         fmm_tree_leaf_target=20,
+    )
+    params = SimulationParams(G=1.0, t_end=1.0)
+
+    out = api.integrate(state, mass, cfg, params)
+    assert out.shape == state.shape
+    assert calls["fmm"] == 1
+
+
+def test_integrate_auto_selects_large_n_gpu_profile(monkeypatch):
+    from odisseo import integration_api as api
+
+    calls = {"fmm": 0}
+
+    def fake_fmm(*args, **kwargs):
+        calls["fmm"] += 1
+        assert kwargs["fmm_preset"] == "large_n_gpu"
+        assert kwargs["fmm_runtime_path"] == "large_n"
+        assert kwargs["fmm_working_dtype"] == jnp.float32
+        return jnp.zeros((6, 2, 3), dtype=jnp.float32)
+
+    monkeypatch.setattr(api, "integrate_leapfrog_jaccpot_active", fake_fmm)
+    monkeypatch.setattr(api.jax, "default_backend", lambda: "gpu")
+
+    state = jnp.zeros((6, 2, 3), dtype=jnp.float32)
+    mass = jnp.ones((6,), dtype=jnp.float32)
+    cfg = SimulationConfig(
+        N_particles=6,
+        acceleration_scheme=FMM_ACC,
+        fixed_timestep=True,
+        num_timesteps=3,
+        fmm_preset="fast",
+        fmm_auto_large_n_profile=True,
+        fmm_large_n_min_particles=6,
+        fmm_runtime_path="auto",
+        fmm_large_n_force_fp32=True,
     )
     params = SimulationParams(G=1.0, t_end=1.0)
 

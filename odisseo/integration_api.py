@@ -2,22 +2,52 @@ from __future__ import annotations
 
 from typing import Callable, Optional
 
+import jax
 import jax.numpy as jnp
 
 from odisseo.jaccpot_coupling import integrate_leapfrog_jaccpot_active
 from odisseo.option_classes import (
-    SimulationConfig,
-    SimulationParams,
     DIRECT_ACC,
+    DIRECT_ACC_FOR_LOOP,
     DIRECT_ACC_LAXMAP,
     DIRECT_ACC_MATRIX,
-    DIRECT_ACC_FOR_LOOP,
     DIRECT_ACC_SHARDING,
-    NO_SELF_GRAVITY,
     FMM_ACC,
+    NO_SELF_GRAVITY,
+    SimulationConfig,
+    SimulationParams,
 )
 from odisseo.time_integration import SnapshotData, time_integration
 
+
+def _resolve_fmm_runtime_profile(
+    state: jnp.ndarray,
+    config: SimulationConfig,
+) -> tuple[str, str, jnp.dtype]:
+    """Resolve preset/runtime-path/dtype for jaccpot FMM execution."""
+    preset = str(config.fmm_preset).strip().lower()
+    runtime_path = str(config.fmm_runtime_path).strip().lower()
+    effective_dtype = state.dtype
+
+    auto_large_n = bool(config.fmm_auto_large_n_profile)
+    min_particles = max(1, int(config.fmm_large_n_min_particles))
+    on_gpu = str(jax.default_backend()).strip().lower() == "gpu"
+    if (
+        auto_large_n
+        and preset == "fast"
+        and int(state.shape[0]) >= min_particles
+        and on_gpu
+    ):
+        preset = "large_n_gpu"
+        if runtime_path == "auto":
+            runtime_path = "large_n"
+
+    if preset == "large_n_gpu" and bool(config.fmm_large_n_force_fp32):
+        effective_dtype = jnp.float32
+        if runtime_path == "auto":
+            runtime_path = "large_n"
+
+    return preset, runtime_path, effective_dtype
 
 
 def integrate(
@@ -60,6 +90,11 @@ def integrate(
                 "jaccpot_fmm backend currently requires fixed_timestep=True"
             )
 
+        fmm_preset, fmm_runtime_path, fmm_working_dtype = _resolve_fmm_runtime_profile(
+            primitive_state,
+            config,
+        )
+
         states_or_final = integrate_leapfrog_jaccpot_active(
             primitive_state,
             mass,
@@ -75,9 +110,11 @@ def integrate(
             ),
             leaf_size=int(config.fmm_leaf_size),
             max_order=int(config.fmm_max_order),
-            fmm_preset=str(config.fmm_preset),
+            fmm_preset=str(fmm_preset),
             fmm_basis=str(config.fmm_basis),
             fmm_theta=float(config.fmm_theta),
+            fmm_runtime_path=str(fmm_runtime_path),
+            fmm_working_dtype=fmm_working_dtype,
             fmm_mac_type=str(config.fmm_mac_type),
             fmm_farfield_mode=str(config.fmm_farfield_mode),
             fmm_nearfield_mode=str(config.fmm_nearfield_mode),
