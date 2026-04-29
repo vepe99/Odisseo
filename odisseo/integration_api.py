@@ -117,8 +117,14 @@ def integrate(
             fmm_working_dtype=fmm_working_dtype,
             fmm_mac_type=str(config.fmm_mac_type),
             fmm_farfield_mode=str(config.fmm_farfield_mode),
+            fmm_m2l_chunk_size=(
+                None
+                if config.fmm_m2l_chunk_size is None
+                else int(config.fmm_m2l_chunk_size)
+            ),
             fmm_nearfield_mode=str(config.fmm_nearfield_mode),
             fmm_nearfield_edge_chunk_size=int(config.fmm_nearfield_edge_chunk_size),
+            fmm_tree_build_mode=str(config.fmm_tree_build_mode),
             fmm_tree_leaf_target=int(config.fmm_tree_leaf_target),
             fmm_fixed_order=(
                 None if config.fmm_fixed_order is None else int(config.fmm_fixed_order)
@@ -130,6 +136,20 @@ def integrate(
                 None
                 if config.fmm_jit_traversal is None
                 else bool(config.fmm_jit_traversal)
+            ),
+            fmm_prepare_stage_memory_split_enabled=(
+                None
+                if config.fmm_prepare_stage_memory_split_enabled is None
+                else bool(config.fmm_prepare_stage_memory_split_enabled)
+            ),
+            enforce_static_shape_contract=bool(
+                config.fmm_enforce_static_shape_contract
+            ),
+            static_shape_warmup_prepares=int(
+                config.fmm_static_shape_warmup_prepares
+            ),
+            rematerialize_between_refresh=bool(
+                config.fmm_rematerialize_between_refresh
             ),
             return_history=bool(config.return_snapshots),
         )

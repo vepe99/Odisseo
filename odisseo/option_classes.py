@@ -216,15 +216,22 @@ class SimulationConfig(NamedTuple):
     fmm_runtime_path: str = "auto"
     fmm_mac_type: str = "dehnen"
     fmm_farfield_mode: str = "auto"
+    fmm_m2l_chunk_size: Optional[int] = None
     fmm_nearfield_mode: str = "auto"
     fmm_nearfield_edge_chunk_size: int = 256
+    fmm_tree_build_mode: str = "lbvh"
     fmm_tree_leaf_target: int = 32
     fmm_fixed_order: Optional[int] = None
     fmm_jit_tree: Optional[bool] = None
     fmm_jit_traversal: Optional[bool] = True
+    fmm_prepare_stage_memory_split_enabled: Optional[bool] = None
     fmm_auto_large_n_profile: bool = True
     fmm_large_n_min_particles: int = 200_000
     fmm_large_n_force_fp32: bool = True
+    # Static-shape/compile-stability experiment knobs.
+    fmm_enforce_static_shape_contract: bool = False
+    fmm_static_shape_warmup_prepares: int = 0
+    fmm_rematerialize_between_refresh: bool = True
 
     batch_size: int = 10_000
 
