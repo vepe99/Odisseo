@@ -38,20 +38,27 @@ def combined_external_acceleration_vmpa_switch(state: jnp.ndarray,
 
     """
 
-    total_external_acceleration = jnp.zeros_like(state[:, 0])
-    total_external_potential = jnp.zeros_like(config.N_particles)
+    dtype = state.dtype
+    total_external_acceleration = jnp.zeros_like(state[:, 0], dtype=dtype)
+    total_external_potential = jnp.zeros((state.shape[0],), dtype=dtype)
     state_tobe_vmap  = jnp.repeat(state[jnp.newaxis, ...], repeats=len(config.external_accelerations), axis=0)
     if return_potential:
+        def _cast_acc_pot(fn):
+            def _wrapped(s):
+                acc, pot = fn(s)
+                return jnp.asarray(acc, dtype=dtype), jnp.asarray(pot, dtype=dtype)
+            return _wrapped
+
         # The POTENTIAL_LIST NEEDS TO BE IN THE SAME ORDER AS THE INTEGER VALUES 
-        POTENTIAL_LIST = [lambda state: NFW(state, config=config, params=params, return_potential=True), 
-                          lambda state: point_mass(state, config=config, params=params, return_potential=True),
-                          lambda state: MyamotoNagai(state, config=config, params=params, return_potential=True),
-                          lambda state: PowerSphericalPotentialwCutoff(state, config=config, params=params, return_potential=True), 
-                          lambda state: logarithmic_potential(state, config=config, params=params, return_potential=True),
-                          lambda state: TriaxialNFW(state, config=config, params=params, return_potential=True),
-                          lambda state: Thin_MN3DiskPotential(state, config=config, params=params, return_potential=True),
-                          lambda state: Thick_MN3DiskPotential(state, config=config, params=params, return_potential=True),
-                          lambda state: TwoPowerTriaxialPotential(state, config=config, params=params, return_potential=True),
+        POTENTIAL_LIST = [_cast_acc_pot(lambda state: NFW(state, config=config, params=params, return_potential=True)),
+                          _cast_acc_pot(lambda state: point_mass(state, config=config, params=params, return_potential=True)),
+                          _cast_acc_pot(lambda state: MyamotoNagai(state, config=config, params=params, return_potential=True)),
+                          _cast_acc_pot(lambda state: PowerSphericalPotentialwCutoff(state, config=config, params=params, return_potential=True)),
+                          _cast_acc_pot(lambda state: logarithmic_potential(state, config=config, params=params, return_potential=True)),
+                          _cast_acc_pot(lambda state: TriaxialNFW(state, config=config, params=params, return_potential=True)),
+                          _cast_acc_pot(lambda state: Thin_MN3DiskPotential(state, config=config, params=params, return_potential=True)),
+                          _cast_acc_pot(lambda state: Thick_MN3DiskPotential(state, config=config, params=params, return_potential=True)),
+                          _cast_acc_pot(lambda state: TwoPowerTriaxialPotential(state, config=config, params=params, return_potential=True)),
 
                           ]  
         vmap_function = vmap(lambda i, state: lax.switch(i, POTENTIAL_LIST, state))
@@ -60,15 +67,18 @@ def combined_external_acceleration_vmpa_switch(state: jnp.ndarray,
         total_external_potential = jnp.sum(external_pot, axis=0)
         return total_external_acceleration, total_external_potential
     else:
-        POTENTIAL_LIST = [lambda state: NFW(state, config=config, params=params, return_potential=False),
-                          lambda state: point_mass(state, config=config, params=params, return_potential=False),
-                          lambda state: MyamotoNagai(state, config=config, params=params, return_potential=False),
-                          lambda state: PowerSphericalPotentialwCutoff(state, config=config, params=params, return_potential=False),
-                          lambda state: logarithmic_potential(state, config=config, params=params, return_potential=False),
-                          lambda state: TriaxialNFW(state, config=config, params=params, return_potential=False),
-                          lambda state: Thin_MN3DiskPotential(state, config=config, params=params, return_potential=False),
-                          lambda state: Thick_MN3DiskPotential(state, config=config, params=params, return_potential=False),
-                          lambda state: TwoPowerTriaxialPotential(state, config=config, params=params, return_potential=False),
+        def _cast_acc(fn):
+            return lambda s: jnp.asarray(fn(s), dtype=dtype)
+
+        POTENTIAL_LIST = [_cast_acc(lambda state: NFW(state, config=config, params=params, return_potential=False)),
+                          _cast_acc(lambda state: point_mass(state, config=config, params=params, return_potential=False)),
+                          _cast_acc(lambda state: MyamotoNagai(state, config=config, params=params, return_potential=False)),
+                          _cast_acc(lambda state: PowerSphericalPotentialwCutoff(state, config=config, params=params, return_potential=False)),
+                          _cast_acc(lambda state: logarithmic_potential(state, config=config, params=params, return_potential=False)),
+                          _cast_acc(lambda state: TriaxialNFW(state, config=config, params=params, return_potential=False)),
+                          _cast_acc(lambda state: Thin_MN3DiskPotential(state, config=config, params=params, return_potential=False)),
+                          _cast_acc(lambda state: Thick_MN3DiskPotential(state, config=config, params=params, return_potential=False)),
+                          _cast_acc(lambda state: TwoPowerTriaxialPotential(state, config=config, params=params, return_potential=False)),
                           ]  
         vmap_function = vmap(lambda i, state: lax.switch(i, POTENTIAL_LIST, state))
         external_acc = vmap_function(jnp.array(config.external_accelerations), state_tobe_vmap)
@@ -859,5 +869,3 @@ def TwoPowerTriaxialPotential(state: jnp.ndarray,
         return acc, pot
     else:
         return acc
-
-

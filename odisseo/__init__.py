@@ -27,7 +27,8 @@ def construct_initial_state(position, velocity):
     Returns:
         jnp.ndarray: The initial state containing positions and velocities.
     """
-    state = jnp.zeros((position.shape[0], 2, position.shape[1]))
+    state_dtype = jnp.result_type(position, velocity)
+    state = jnp.zeros((position.shape[0], 2, position.shape[1]), dtype=state_dtype)
     state = state.at[:, 0, :].set(position)
     state = state.at[:, 1, :].set(velocity)
     

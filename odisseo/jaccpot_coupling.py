@@ -1,7 +1,12 @@
 from __future__ import annotations
 
+from collections import Counter
 from functools import partial
-from typing import Callable, Optional
+import hashlib
+import inspect
+import os
+import time
+from typing import Any, Callable, Optional
 
 import jax
 import jax.numpy as jnp
@@ -21,13 +26,16 @@ def _build_fmm_solver(
     fmm_runtime_path: str,
     fmm_mac_type: str,
     fmm_farfield_mode: str,
+    fmm_m2l_chunk_size: Optional[int],
     fmm_nearfield_mode: str,
     fmm_nearfield_edge_chunk_size: int,
+    fmm_tree_build_mode: str,
     fmm_tree_leaf_target: int,
     fmm_fixed_order: Optional[int],
     leaf_size: int,
     fmm_jit_tree: Optional[bool],
     fmm_jit_traversal: Optional[bool],
+    fmm_prepare_stage_memory_split_enabled: Optional[bool],
 ):
     from jaccpot import (
         FMMAdvancedConfig,
@@ -47,8 +55,16 @@ def _build_fmm_solver(
         softening=float(config.softening),
         working_dtype=working_dtype,
         advanced=FMMAdvancedConfig(
-            tree=TreeConfig(leaf_target=int(fmm_tree_leaf_target)),
-            farfield=FarFieldConfig(mode=str(fmm_farfield_mode)),
+            tree=TreeConfig(
+                mode=str(fmm_tree_build_mode),
+                leaf_target=int(fmm_tree_leaf_target),
+            ),
+            farfield=FarFieldConfig(
+                mode=str(fmm_farfield_mode),
+                m2l_chunk_size=(
+                    None if fmm_m2l_chunk_size is None else int(fmm_m2l_chunk_size)
+                ),
+            ),
             nearfield=NearFieldConfig(
                 mode=str(fmm_nearfield_mode),
                 edge_chunk_size=int(fmm_nearfield_edge_chunk_size),
@@ -57,6 +73,11 @@ def _build_fmm_solver(
                 jit_tree=None if fmm_jit_tree is None else bool(fmm_jit_tree),
                 jit_traversal=(
                     None if fmm_jit_traversal is None else bool(fmm_jit_traversal)
+                ),
+                prepare_stage_memory_split_enabled=(
+                    None
+                    if fmm_prepare_stage_memory_split_enabled is None
+                    else bool(fmm_prepare_stage_memory_split_enabled)
                 ),
             ),
             mac_type=str(fmm_mac_type),
@@ -81,6 +102,23 @@ def _scatter_masked_vectors(
     gathered = base[safe_idx]
     updates = jnp.where(mask[:, None], values, gathered)
     return base.at[safe_idx].set(updates)
+
+
+def _prepared_state_shape_signature(
+    prepared_state: Any,
+) -> tuple[tuple[str, tuple[int, ...]], ...]:
+    """Return dtype+shape signature across array leaves in a prepared state."""
+    leaves, _ = jax.tree_util.tree_flatten(prepared_state)
+    signature = []
+    for leaf in leaves:
+        shape = getattr(leaf, "shape", None)
+        if shape is None:
+            continue
+        dtype = str(getattr(leaf, "dtype", "unknown"))
+        signature.append((dtype, tuple(int(d) for d in shape)))
+    # Canonicalize ordering so equivalent leaf-shape multisets compare equal
+    # even if pytree traversal order changes across topology variants.
+    return tuple(sorted(signature))
 
 
 @partial(jax.jit, static_argnames=("add_external", "config", "params"))
@@ -245,13 +283,20 @@ def integrate_leapfrog_jaccpot_active(
     fmm_working_dtype=None,
     fmm_mac_type: str = "dehnen",
     fmm_farfield_mode: str = "auto",
+    fmm_m2l_chunk_size: Optional[int] = None,
     fmm_nearfield_mode: str = "auto",
     fmm_nearfield_edge_chunk_size: int = 256,
+    fmm_tree_build_mode: str = "lbvh",
     fmm_tree_leaf_target: int = 32,
     fmm_fixed_order: Optional[int] = None,
     fmm_jit_tree: Optional[bool] = None,
     fmm_jit_traversal: Optional[bool] = True,
+    fmm_prepare_stage_memory_split_enabled: Optional[bool] = None,
+    enforce_static_shape_contract: bool = False,
+    static_shape_warmup_prepares: int = 0,
+    rematerialize_between_refresh: bool = True,
     return_history: bool = False,
+    timing_stats: Optional[dict] = None,
 ) -> jnp.ndarray:
     """Integrate with Jaccpot FMM using optional active-particle substeps.
 
@@ -274,6 +319,356 @@ def integrate_leapfrog_jaccpot_active(
 
     state_curr = jnp.asarray(state)
     mass_arr = jnp.asarray(mass)
+    profile = timing_stats is not None
+    t_total_start = time.perf_counter() if profile else 0.0
+    prepare_seconds = 0.0
+    evaluate_seconds = 0.0
+    update_seconds = 0.0
+    warmup_seconds = 0.0
+    prepare_calls = 0
+    evaluate_calls = 0
+    update_calls = 0
+    warmup_prepare_calls = 0
+    warmup_evaluate_calls = 0
+    refresh_prepare_attempts = 0
+    refresh_prepare_successes = 0
+    refresh_prepare_fallbacks = 0
+    full_prepare_calls = 0
+    profiled_full_prepare_calls = 0
+    profiled_refresh_prepare_calls = 0
+    profiled_refresh_fallback_prepare_calls = 0
+    profiled_full_prepare_seconds = 0.0
+    profiled_refresh_prepare_seconds = 0.0
+    profiled_refresh_fallback_prepare_seconds = 0.0
+    profiled_prepare_events: list[dict[str, Any]] = []
+    last_prepare_path = "none"
+    shape_signature_ref: Optional[tuple[tuple[str, tuple[int, ...]], ...]] = None
+    shape_signature_unique: set[tuple[tuple[str, tuple[int, ...]], ...]] = set()
+    shape_drift_events = 0
+    shape_checks = 0
+    shape_signature_ref_post_warmup: Optional[
+        tuple[tuple[str, tuple[int, ...]], ...]
+    ] = None
+    shape_signature_unique_post_warmup: set[
+        tuple[tuple[str, tuple[int, ...]], ...]
+    ] = set()
+    shape_drift_events_post_warmup = 0
+    shape_checks_post_warmup = 0
+    shape_signature_hashes_post_warmup: list[str] = []
+    shape_signature_diff_post_warmup: list[dict[str, Any]] = []
+
+    def _record_shape_signature(prepared_state, *, warmup_phase: bool = False):
+        nonlocal shape_signature_ref
+        nonlocal shape_signature_unique
+        nonlocal shape_drift_events
+        nonlocal shape_checks
+        nonlocal shape_signature_ref_post_warmup
+        nonlocal shape_signature_unique_post_warmup
+        nonlocal shape_drift_events_post_warmup
+        nonlocal shape_checks_post_warmup
+        nonlocal shape_signature_hashes_post_warmup
+        nonlocal shape_signature_diff_post_warmup
+        signature = _prepared_state_shape_signature(prepared_state)
+        sig_hash = hashlib.sha1(repr(signature).encode("utf-8")).hexdigest()
+        shape_checks += 1
+        shape_signature_unique.add(signature)
+        if shape_signature_ref is None:
+            shape_signature_ref = signature
+            return
+        if signature != shape_signature_ref:
+            shape_drift_events += 1
+            if bool(enforce_static_shape_contract):
+                raise RuntimeError(
+                    "Static-shape contract violated in FMM prepared state: "
+                    "leaf dtype/shape signature drifted across refresh segments."
+                )
+        if warmup_phase:
+            return
+        shape_checks_post_warmup += 1
+        shape_signature_unique_post_warmup.add(signature)
+        shape_signature_hashes_post_warmup.append(sig_hash)
+        if shape_signature_ref_post_warmup is None:
+            shape_signature_ref_post_warmup = signature
+            return
+        if signature != shape_signature_ref_post_warmup:
+            shape_drift_events_post_warmup += 1
+            ref_counter = Counter(shape_signature_ref_post_warmup)
+            cur_counter = Counter(signature)
+            added = []
+            removed = []
+            for key, count in (cur_counter - ref_counter).items():
+                added.append({"dtype": key[0], "shape": list(key[1]), "count": int(count)})
+            for key, count in (ref_counter - cur_counter).items():
+                removed.append({"dtype": key[0], "shape": list(key[1]), "count": int(count)})
+            shape_signature_diff_post_warmup = [
+                {"added": added[:12], "removed": removed[:12]}
+            ]
+
+    def _finalize(out_arr):
+        if not profile:
+            return out_arr
+        _ = jax.block_until_ready(out_arr)
+        runtime_diag = {}
+        get_diag = getattr(solver, "get_runtime_diagnostics", None)
+        if callable(get_diag):
+            try:
+                runtime_diag = dict(get_diag())
+            except Exception:
+                runtime_diag = {}
+        timing_stats.clear()
+        timing_stats.update(
+            {
+                "total_seconds": float(time.perf_counter() - t_total_start),
+                "prepare_seconds": float(prepare_seconds),
+                "evaluate_seconds": float(evaluate_seconds),
+                "update_seconds": float(update_seconds),
+                "prepare_calls": int(prepare_calls),
+                "evaluate_calls": int(evaluate_calls),
+                "update_calls": int(update_calls),
+                "num_steps": int(num_steps),
+                "refresh_every": int(refresh_every),
+                "used_external_potential": bool(add_external),
+                "used_schedule_scan_mode": bool(active_indices_schedule is not None),
+                "used_fast_full_scan_mode": bool(
+                    active_indices_fn is None and not bool(refresh_after_position_update)
+                ),
+                "shape_contract_enforced": bool(enforce_static_shape_contract),
+                "shape_signature_checks": int(shape_checks),
+                "shape_signature_unique_count": int(len(shape_signature_unique)),
+                "shape_signature_drift_events": int(shape_drift_events),
+                "shape_signature_stable": bool(shape_drift_events == 0),
+                "shape_signature_checks_post_warmup": int(shape_checks_post_warmup),
+                "shape_signature_unique_count_post_warmup": int(
+                    len(shape_signature_unique_post_warmup)
+                ),
+                "shape_signature_drift_events_post_warmup": int(
+                    shape_drift_events_post_warmup
+                ),
+                "shape_signature_stable_post_warmup": bool(
+                    shape_drift_events_post_warmup == 0
+                ),
+                "shape_signature_hashes_post_warmup": list(
+                    shape_signature_hashes_post_warmup
+                ),
+                "shape_signature_diff_post_warmup": list(
+                    shape_signature_diff_post_warmup
+                ),
+                "warmup_seconds": float(warmup_seconds),
+                "warmup_prepare_calls": int(warmup_prepare_calls),
+                "warmup_evaluate_calls": int(warmup_evaluate_calls),
+                "refresh_prepare_attempts": int(refresh_prepare_attempts),
+                "refresh_prepare_successes": int(refresh_prepare_successes),
+                "refresh_prepare_fallbacks": int(refresh_prepare_fallbacks),
+                "full_prepare_calls": int(full_prepare_calls),
+                "profiled_full_prepare_calls": int(profiled_full_prepare_calls),
+                "profiled_refresh_prepare_calls": int(profiled_refresh_prepare_calls),
+                "profiled_refresh_fallback_prepare_calls": int(
+                    profiled_refresh_fallback_prepare_calls
+                ),
+                "profiled_full_prepare_seconds": float(profiled_full_prepare_seconds),
+                "profiled_refresh_prepare_seconds": float(
+                    profiled_refresh_prepare_seconds
+                ),
+                "profiled_refresh_fallback_prepare_seconds": float(
+                    profiled_refresh_fallback_prepare_seconds
+                ),
+                "profiled_prepare_events": list(profiled_prepare_events),
+                "refresh_prepare_method_available": bool(
+                    callable(getattr(solver, "refresh_prepared_state", None))
+                ),
+                "rematerialize_between_refresh": bool(rematerialize_between_refresh),
+                "runtime_compiled_profile_fingerprint_last": runtime_diag.get(
+                    "compiled_profile_fingerprint_last"
+                ),
+                "runtime_compiled_profile_transitions": int(
+                    runtime_diag.get("compiled_profile_transitions", 0)
+                ),
+                "runtime_refresh_prepare_calls": int(
+                    runtime_diag.get("refresh_prepare_calls", 0)
+                ),
+                "runtime_max_leaf_size": int(runtime_diag.get("max_leaf_size", 0)),
+                "runtime_max_leaves": int(runtime_diag.get("max_leaves", 0)),
+                "runtime_refresh_prepare_reuse_tier_full": int(
+                    runtime_diag.get("refresh_prepare_reuse_tier_full", 0)
+                ),
+                "runtime_refresh_prepare_reuse_tier_topology": int(
+                    runtime_diag.get("refresh_prepare_reuse_tier_topology", 0)
+                ),
+                "runtime_refresh_prepare_reuse_tier_overflow": int(
+                    runtime_diag.get("refresh_prepare_reuse_tier_overflow", 0)
+                ),
+                "runtime_large_n_same_topology_refresh_attempts": int(
+                    runtime_diag.get("large_n_same_topology_refresh_attempts", 0)
+                ),
+                "runtime_large_n_same_topology_refresh_hits": int(
+                    runtime_diag.get("large_n_same_topology_refresh_hits", 0)
+                ),
+                "runtime_large_n_same_topology_refresh_misses": int(
+                    runtime_diag.get("large_n_same_topology_refresh_misses", 0)
+                ),
+                "runtime_large_n_same_topology_refresh_miss_no_key": int(
+                    runtime_diag.get("large_n_same_topology_refresh_miss_no_key", 0)
+                ),
+                "runtime_large_n_same_topology_refresh_miss_topology": int(
+                    runtime_diag.get("large_n_same_topology_refresh_miss_topology", 0)
+                ),
+                "runtime_large_n_same_topology_refresh_miss_neighbor": int(
+                    runtime_diag.get("large_n_same_topology_refresh_miss_neighbor", 0)
+                ),
+                "runtime_large_n_same_topology_refresh_miss_traced": int(
+                    runtime_diag.get("large_n_same_topology_refresh_miss_traced", 0)
+                ),
+                "runtime_large_n_same_topology_refresh_last_error": str(
+                    runtime_diag.get("large_n_same_topology_refresh_last_error", "")
+                ),
+                "runtime_static_radix_refresh_hits": int(
+                    runtime_diag.get("static_radix_refresh_hits", 0)
+                ),
+                "runtime_static_radix_refresh_misses": int(
+                    runtime_diag.get("static_radix_refresh_misses", 0)
+                ),
+                "runtime_static_radix_profile_overflows": int(
+                    runtime_diag.get("static_radix_profile_overflows", 0)
+                ),
+                "runtime_large_n_overflow_profile_cap": int(
+                    runtime_diag.get("large_n_overflow_profile_cap", 0)
+                ),
+                "runtime_large_n_overflow_profile_reprofiles": int(
+                    runtime_diag.get("large_n_overflow_profile_reprofiles", 0)
+                ),
+                "runtime_large_n_neighbor_edges_profile_cap": int(
+                    runtime_diag.get("large_n_neighbor_edges_profile_cap", 0)
+                ),
+                "runtime_large_n_neighbor_edges_profile_reprofiles": int(
+                    runtime_diag.get("large_n_neighbor_edges_profile_reprofiles", 0)
+                ),
+                "runtime_interaction_cache_hits": int(
+                    runtime_diag.get("interaction_cache_hits", 0)
+                ),
+                "runtime_interaction_cache_misses": int(
+                    runtime_diag.get("interaction_cache_misses", 0)
+                ),
+                "runtime_refresh_total_seconds": float(
+                    runtime_diag.get("refresh_total_seconds", 0.0)
+                ),
+                "runtime_refresh_input_seconds": float(
+                    runtime_diag.get("refresh_input_seconds", 0.0)
+                ),
+                "runtime_refresh_tree_upward_seconds": float(
+                    runtime_diag.get("refresh_tree_upward_seconds", 0.0)
+                ),
+                "runtime_refresh_dual_downward_seconds": float(
+                    runtime_diag.get("refresh_dual_downward_seconds", 0.0)
+                ),
+                "runtime_refresh_nearfield_seconds": float(
+                    runtime_diag.get("refresh_nearfield_seconds", 0.0)
+                ),
+                "runtime_refresh_nearfield_leaf_groups_seconds": float(
+                    runtime_diag.get("refresh_nearfield_leaf_groups_seconds", 0.0)
+                ),
+                "runtime_refresh_nearfield_precompute_seconds": float(
+                    runtime_diag.get("refresh_nearfield_precompute_seconds", 0.0)
+                ),
+                "runtime_refresh_nearfield_target_blocks_seconds": float(
+                    runtime_diag.get("refresh_nearfield_target_blocks_seconds", 0.0)
+                ),
+                "runtime_refresh_nearfield_block_sort_seconds": float(
+                    runtime_diag.get("refresh_nearfield_block_sort_seconds", 0.0)
+                ),
+                "runtime_refresh_nearfield_speed_layout_seconds": float(
+                    runtime_diag.get("refresh_nearfield_speed_layout_seconds", 0.0)
+                ),
+                "runtime_refresh_nearfield_overflow_profile_seconds": float(
+                    runtime_diag.get("refresh_nearfield_overflow_profile_seconds", 0.0)
+                ),
+                "runtime_refresh_nearfield_radix_payload_seconds": float(
+                    runtime_diag.get("refresh_nearfield_radix_payload_seconds", 0.0)
+                ),
+                "runtime_refresh_nearfield_neighbor_padding_seconds": float(
+                    runtime_diag.get("refresh_nearfield_neighbor_padding_seconds", 0.0)
+                ),
+                "runtime_refresh_nearfield_state_pack_seconds": float(
+                    runtime_diag.get("refresh_nearfield_state_pack_seconds", 0.0)
+                ),
+                "runtime_refresh_nearfield_residual_seconds": float(
+                    runtime_diag.get("refresh_nearfield_residual_seconds", 0.0)
+                ),
+                "runtime_refresh_profile_accounting_seconds": float(
+                    runtime_diag.get("refresh_profile_accounting_seconds", 0.0)
+                ),
+                "runtime_refresh_compile_or_sync_suspect_seconds": float(
+                    runtime_diag.get(
+                        "refresh_compile_or_sync_suspect_seconds",
+                        0.0,
+                    )
+                ),
+                "runtime_refresh_dual_setup_seconds": float(
+                    runtime_diag.get("refresh_dual_setup_seconds", 0.0)
+                ),
+                "runtime_refresh_dual_artifact_build_seconds": float(
+                    runtime_diag.get("refresh_dual_artifact_build_seconds", 0.0)
+                ),
+                "runtime_refresh_dual_far_pair_plan_seconds": float(
+                    runtime_diag.get("refresh_dual_far_pair_plan_seconds", 0.0)
+                ),
+                "runtime_refresh_dual_m2l_autotune_seconds": float(
+                    runtime_diag.get("refresh_dual_m2l_autotune_seconds", 0.0)
+                ),
+                "runtime_refresh_dual_select_interactions_seconds": float(
+                    runtime_diag.get(
+                        "refresh_dual_select_interactions_seconds",
+                        0.0,
+                    )
+                ),
+                "runtime_recent_dual_node_count": int(
+                    runtime_diag.get("recent_dual_node_count", 0)
+                ),
+                "runtime_recent_dual_leaf_count": int(
+                    runtime_diag.get("recent_dual_leaf_count", 0)
+                ),
+                "runtime_recent_dual_neighbor_count": int(
+                    runtime_diag.get("recent_dual_neighbor_count", 0)
+                ),
+                "runtime_recent_dual_far_pair_count": int(
+                    runtime_diag.get("recent_dual_far_pair_count", 0)
+                ),
+                "runtime_recent_dual_far_pairs_by_gear_counts": tuple(
+                    int(v)
+                    for v in runtime_diag.get(
+                        "recent_dual_far_pairs_by_gear_counts",
+                        tuple(),
+                    )
+                ),
+                "runtime_recent_dual_m2l_chunk_size": int(
+                    runtime_diag.get("recent_dual_m2l_chunk_size", 0)
+                ),
+                "runtime_refresh_dual_downward_compute_seconds": float(
+                    runtime_diag.get("refresh_dual_downward_compute_seconds", 0.0)
+                ),
+                "runtime_refresh_dual_m2l_compute_seconds": float(
+                    runtime_diag.get("refresh_dual_m2l_compute_seconds", 0.0)
+                ),
+                "runtime_refresh_dual_l2l_compute_seconds": float(
+                    runtime_diag.get("refresh_dual_l2l_compute_seconds", 0.0)
+                ),
+                "runtime_refresh_dual_final_symmetry_seconds": float(
+                    runtime_diag.get("refresh_dual_final_symmetry_seconds", 0.0)
+                ),
+                "runtime_refresh_dual_source_motion_seconds": float(
+                    runtime_diag.get("refresh_dual_source_motion_seconds", 0.0)
+                ),
+                "runtime_refresh_dual_finalize_seconds": float(
+                    runtime_diag.get("refresh_dual_finalize_seconds", 0.0)
+                ),
+                "runtime_refresh_dual_residual_seconds": float(
+                    runtime_diag.get("refresh_dual_residual_seconds", 0.0)
+                ),
+                "runtime_refresh_timing_calls": int(
+                    runtime_diag.get("refresh_timing_calls", 0)
+                ),
+            }
+        )
+        return out_arr
 
     dt_val = float(params.t_end) / float(num_steps) if dt is None else float(dt)
     dt_arr = jnp.asarray(dt_val, dtype=state_curr.dtype)
@@ -290,13 +685,18 @@ def integrate_leapfrog_jaccpot_active(
         fmm_runtime_path=fmm_runtime_path,
         fmm_mac_type=fmm_mac_type,
         fmm_farfield_mode=fmm_farfield_mode,
+        fmm_m2l_chunk_size=fmm_m2l_chunk_size,
         fmm_nearfield_mode=fmm_nearfield_mode,
         fmm_nearfield_edge_chunk_size=fmm_nearfield_edge_chunk_size,
+        fmm_tree_build_mode=fmm_tree_build_mode,
         fmm_tree_leaf_target=fmm_tree_leaf_target,
         fmm_fixed_order=fmm_fixed_order,
         leaf_size=leaf_size,
         fmm_jit_tree=fmm_jit_tree,
         fmm_jit_traversal=fmm_jit_traversal,
+        fmm_prepare_stage_memory_split_enabled=(
+            fmm_prepare_stage_memory_split_enabled
+        ),
     )
     def _prepare_state(state_in: jnp.ndarray):
         return solver.prepare_state(
@@ -305,6 +705,134 @@ def integrate_leapfrog_jaccpot_active(
             leaf_size=int(leaf_size),
             max_order=int(max_order),
         )
+
+    def _prepare_or_refresh_state(
+        state_in: jnp.ndarray,
+        prev_prepared_state: Any | None,
+    ) -> Any:
+        """Try incremental prepared-state refresh; fallback to full prepare."""
+        nonlocal refresh_prepare_attempts
+        nonlocal refresh_prepare_successes
+        nonlocal refresh_prepare_fallbacks
+        nonlocal full_prepare_calls
+        nonlocal last_prepare_path
+
+        if prev_prepared_state is None:
+            full_prepare_calls += 1
+            last_prepare_path = "full"
+            return _prepare_state(state_in)
+
+        disable_refresh = str(
+            os.environ.get("ODISSEO_DISABLE_FMM_REFRESH_PREPARED_STATE", "0")
+        ).strip().lower() in {"1", "true", "yes", "on"}
+        if bool(disable_refresh):
+            full_prepare_calls += 1
+            last_prepare_path = "full"
+            return _prepare_state(state_in)
+
+        refresh_fn = getattr(solver, "refresh_prepared_state", None)
+        if not callable(refresh_fn):
+            full_prepare_calls += 1
+            last_prepare_path = "full"
+            return _prepare_state(state_in)
+
+        refresh_prepare_attempts += 1
+        pos = state_in[:, 0, :]
+        leaf = int(leaf_size)
+        order = int(max_order)
+
+        # Try several likely public API signatures while keeping behavior
+        # backwards-compatible with older jaccpot builds.
+        attempts = [
+            (
+                (prev_prepared_state, pos, mass_arr),
+                {"leaf_size": leaf, "max_order": order},
+            ),
+            (
+                (pos, mass_arr, prev_prepared_state),
+                {"leaf_size": leaf, "max_order": order},
+            ),
+            (
+                (),
+                {
+                    "prepared_state": prev_prepared_state,
+                    "positions": pos,
+                    "masses": mass_arr,
+                    "leaf_size": leaf,
+                    "max_order": order,
+                },
+            ),
+            (
+                (),
+                {
+                    "previous_prepared_state": prev_prepared_state,
+                    "positions": pos,
+                    "masses": mass_arr,
+                    "leaf_size": leaf,
+                    "max_order": order,
+                },
+            ),
+            (
+                (prev_prepared_state, pos, mass_arr),
+                {},
+            ),
+            (
+                (pos, mass_arr, prev_prepared_state),
+                {},
+            ),
+        ]
+
+        for args, kwargs in attempts:
+            try:
+                if kwargs:
+                    # Filter kwargs to names accepted by the current signature.
+                    sig = inspect.signature(refresh_fn)
+                    params = sig.parameters
+                    accepts_var_kw = any(
+                        p.kind == inspect.Parameter.VAR_KEYWORD
+                        for p in params.values()
+                    )
+                    if accepts_var_kw:
+                        call_kwargs = kwargs
+                    else:
+                        call_kwargs = {k: v for k, v in kwargs.items() if k in params}
+                    out = refresh_fn(*args, **call_kwargs)
+                else:
+                    out = refresh_fn(*args)
+                refresh_prepare_successes += 1
+                last_prepare_path = "refresh"
+                return out
+            except TypeError:
+                continue
+
+        refresh_prepare_fallbacks += 1
+        full_prepare_calls += 1
+        last_prepare_path = "refresh_fallback"
+        return _prepare_state(state_in)
+
+    def _record_profiled_prepare_elapsed(elapsed: float) -> None:
+        nonlocal profiled_full_prepare_calls
+        nonlocal profiled_refresh_prepare_calls
+        nonlocal profiled_refresh_fallback_prepare_calls
+        nonlocal profiled_full_prepare_seconds
+        nonlocal profiled_refresh_prepare_seconds
+        nonlocal profiled_refresh_fallback_prepare_seconds
+        nonlocal profiled_prepare_events
+        event = {
+            "index": int(len(profiled_prepare_events)),
+            "path": str(last_prepare_path),
+            "elapsed_seconds": float(elapsed),
+        }
+        profiled_prepare_events.append(event)
+        if last_prepare_path == "refresh":
+            profiled_refresh_prepare_calls += 1
+            profiled_refresh_prepare_seconds += float(elapsed)
+        elif last_prepare_path == "refresh_fallback":
+            profiled_refresh_fallback_prepare_calls += 1
+            profiled_refresh_fallback_prepare_seconds += float(elapsed)
+        else:
+            profiled_full_prepare_calls += 1
+            profiled_full_prepare_seconds += float(elapsed)
 
     def _eval_prepared(prepared_state, active_indices=None):
         return solver.evaluate_prepared_state(
@@ -315,6 +843,19 @@ def integrate_leapfrog_jaccpot_active(
 
     history = []
     add_external = len(config.external_accelerations) > 0
+
+    warmup_prepares = max(0, int(static_shape_warmup_prepares))
+    if warmup_prepares > 0:
+        prepared_warmup = None
+        for _ in range(warmup_prepares):
+            tw = time.perf_counter()
+            prepared_warmup = _prepare_or_refresh_state(state_curr, prepared_warmup)
+            acc_warmup = _eval_prepared(prepared_warmup, active_indices=None)
+            _ = jax.block_until_ready(acc_warmup)
+            warmup_seconds += time.perf_counter() - tw
+            warmup_prepare_calls += 1
+            warmup_evaluate_calls += 1
+            _record_shape_signature(prepared_warmup, warmup_phase=True)
 
     if active_indices_schedule is not None:
         active_indices_schedule = jnp.asarray(active_indices_schedule, dtype=jnp.int32)
@@ -338,12 +879,29 @@ def integrate_leapfrog_jaccpot_active(
             )
 
         step = 0
+        prepared_state = None
         while step < int(num_steps):
-            prepared_state = _prepare_state(state_curr)
+            if profile:
+                t0 = time.perf_counter()
+            prepared_state = _prepare_or_refresh_state(state_curr, prepared_state)
+            if profile:
+                _ = jax.block_until_ready(prepared_state)
+                elapsed_prepare = time.perf_counter() - t0
+                prepare_seconds += elapsed_prepare
+                _record_profiled_prepare_elapsed(elapsed_prepare)
+                prepare_calls += 1
+                t0 = time.perf_counter()
+            _record_shape_signature(prepared_state)
             acc_self_full = _eval_prepared(prepared_state, active_indices=None)
+            if profile:
+                _ = jax.block_until_ready(acc_self_full)
+                evaluate_seconds += time.perf_counter() - t0
+                evaluate_calls += 1
             seg_len = min(int(refresh_every), int(num_steps) - step)
             idx_seg = active_indices_schedule[step : step + seg_len]
             mask_seg = active_mask_schedule[step : step + seg_len]
+            if profile:
+                t0 = time.perf_counter()
             state_curr, seg_hist = _run_active_segment_scan(
                 state_curr,
                 acc_self_full,
@@ -354,21 +912,47 @@ def integrate_leapfrog_jaccpot_active(
                 config=config,
                 params=params,
             )
+            if bool(rematerialize_between_refresh):
+                # Rematerialize to a standard dense array layout before the next
+                # FMM prepare. This avoids a large one-time prepare penalty after
+                # each scan segment.
+                state_curr = jnp.asarray(state_curr, dtype=state_curr.dtype)
+            if profile:
+                _ = jax.block_until_ready(state_curr)
+                update_seconds += time.perf_counter() - t0
+                update_calls += 1
             if return_history:
                 history.append(seg_hist)
             step += int(seg_len)
 
         if return_history:
-            return jnp.concatenate(history, axis=0)
-        return state_curr
+            return _finalize(jnp.concatenate(history, axis=0))
+        return _finalize(state_curr)
 
     # Fast path: full-particle updates with scan+jit inside each refresh segment.
     if active_indices_fn is None and not bool(refresh_after_position_update):
         step = 0
+        prepared_state = None
         while step < int(num_steps):
-            prepared_state = _prepare_state(state_curr)
+            if profile:
+                t0 = time.perf_counter()
+            prepared_state = _prepare_or_refresh_state(state_curr, prepared_state)
+            if profile:
+                _ = jax.block_until_ready(prepared_state)
+                elapsed_prepare = time.perf_counter() - t0
+                prepare_seconds += elapsed_prepare
+                _record_profiled_prepare_elapsed(elapsed_prepare)
+                prepare_calls += 1
+                t0 = time.perf_counter()
+            _record_shape_signature(prepared_state)
             acc_self_full = _eval_prepared(prepared_state, active_indices=None)
+            if profile:
+                _ = jax.block_until_ready(acc_self_full)
+                evaluate_seconds += time.perf_counter() - t0
+                evaluate_calls += 1
             seg_len = min(int(refresh_every), int(num_steps) - step)
+            if profile:
+                t0 = time.perf_counter()
             state_curr, seg_hist = _run_full_segment_scan(
                 state_curr,
                 acc_self_full,
@@ -378,26 +962,59 @@ def integrate_leapfrog_jaccpot_active(
                 config=config,
                 params=params,
             )
+            if bool(rematerialize_between_refresh):
+                # Rematerialize to a standard dense array layout before the next
+                # FMM prepare. This avoids a large one-time prepare penalty after
+                # each scan segment.
+                state_curr = jnp.asarray(state_curr, dtype=state_curr.dtype)
+            if profile:
+                _ = jax.block_until_ready(state_curr)
+                update_seconds += time.perf_counter() - t0
+                update_calls += 1
             if return_history:
                 history.append(seg_hist)
             step += int(seg_len)
 
         if return_history:
-            return jnp.concatenate(history, axis=0)
-        return state_curr
+            return _finalize(jnp.concatenate(history, axis=0))
+        return _finalize(state_curr)
 
     # General fallback path for active-index callbacks and/or post-position refresh.
     prepared_state = None
     for step in range(int(num_steps)):
         if step % int(refresh_every) == 0:
-            prepared_state = _prepare_state(state_curr)
+            if profile:
+                t0 = time.perf_counter()
+            prepared_state = _prepare_or_refresh_state(state_curr, prepared_state)
+            if profile:
+                _ = jax.block_until_ready(prepared_state)
+                elapsed_prepare = time.perf_counter() - t0
+                prepare_seconds += elapsed_prepare
+                _record_profiled_prepare_elapsed(elapsed_prepare)
+                prepare_calls += 1
+            _record_shape_signature(prepared_state)
 
         full_active = active_indices_fn is None
         if full_active:
             active_idx = None
             if prepared_state is None:
-                prepared_state = _prepare_state(state_curr)
+                if profile:
+                    t0 = time.perf_counter()
+                prepared_state = _prepare_or_refresh_state(state_curr, prepared_state)
+                if profile:
+                    _ = jax.block_until_ready(prepared_state)
+                    elapsed_prepare = time.perf_counter() - t0
+                    prepare_seconds += elapsed_prepare
+                    _record_profiled_prepare_elapsed(elapsed_prepare)
+                    prepare_calls += 1
+                _record_shape_signature(prepared_state)
+            if profile:
+                t0 = time.perf_counter()
             acc_self = _eval_prepared(prepared_state, active_indices=None)
+            if profile:
+                _ = jax.block_until_ready(acc_self)
+                evaluate_seconds += time.perf_counter() - t0
+                evaluate_calls += 1
             if add_external:
                 acc_ext = combined_external_acceleration_vmpa_switch(
                     state_curr,
@@ -420,8 +1037,23 @@ def integrate_leapfrog_jaccpot_active(
                 dtype=jnp.int32,
             )
             if prepared_state is None:
-                prepared_state = _prepare_state(state_curr)
+                if profile:
+                    t0 = time.perf_counter()
+                prepared_state = _prepare_or_refresh_state(state_curr, prepared_state)
+                if profile:
+                    _ = jax.block_until_ready(prepared_state)
+                    elapsed_prepare = time.perf_counter() - t0
+                    prepare_seconds += elapsed_prepare
+                    _record_profiled_prepare_elapsed(elapsed_prepare)
+                    prepare_calls += 1
+                _record_shape_signature(prepared_state)
+            if profile:
+                t0 = time.perf_counter()
             acc_self = _eval_prepared(prepared_state, active_indices=active_idx)
+            if profile:
+                _ = jax.block_until_ready(acc_self)
+                evaluate_seconds += time.perf_counter() - t0
+                evaluate_calls += 1
             if add_external:
                 acc_ext = combined_external_acceleration_vmpa_switch(
                     state_curr,
@@ -440,12 +1072,38 @@ def integrate_leapfrog_jaccpot_active(
             state_pos = state_curr.at[active_idx, 0].set(pos_new_active)
 
         if bool(refresh_after_position_update):
-            prepared_state = _prepare_state(state_pos)
+            if profile:
+                t0 = time.perf_counter()
+            prepared_state = _prepare_or_refresh_state(state_pos, prepared_state)
+            if profile:
+                _ = jax.block_until_ready(prepared_state)
+                elapsed_prepare = time.perf_counter() - t0
+                prepare_seconds += elapsed_prepare
+                _record_profiled_prepare_elapsed(elapsed_prepare)
+                prepare_calls += 1
+            _record_shape_signature(prepared_state)
 
+        if profile:
+            t0 = time.perf_counter()
         if full_active:
             if prepared_state is None:
-                prepared_state = _prepare_state(state_pos)
+                if profile:
+                    tp = time.perf_counter()
+                prepared_state = _prepare_or_refresh_state(state_pos, prepared_state)
+                if profile:
+                    _ = jax.block_until_ready(prepared_state)
+                    elapsed_prepare = time.perf_counter() - tp
+                    prepare_seconds += elapsed_prepare
+                    _record_profiled_prepare_elapsed(elapsed_prepare)
+                    prepare_calls += 1
+                _record_shape_signature(prepared_state)
+            if profile:
+                te = time.perf_counter()
             acc_self_2 = _eval_prepared(prepared_state, active_indices=None)
+            if profile:
+                _ = jax.block_until_ready(acc_self_2)
+                evaluate_seconds += time.perf_counter() - te
+                evaluate_calls += 1
             if add_external:
                 acc_ext_2 = combined_external_acceleration_vmpa_switch(
                     state_pos,
@@ -459,8 +1117,23 @@ def integrate_leapfrog_jaccpot_active(
             state_curr = state_pos.at[:, 1].set(vel_new)
         else:
             if prepared_state is None:
-                prepared_state = _prepare_state(state_pos)
+                if profile:
+                    tp = time.perf_counter()
+                prepared_state = _prepare_or_refresh_state(state_pos, prepared_state)
+                if profile:
+                    _ = jax.block_until_ready(prepared_state)
+                    elapsed_prepare = time.perf_counter() - tp
+                    prepare_seconds += elapsed_prepare
+                    _record_profiled_prepare_elapsed(elapsed_prepare)
+                    prepare_calls += 1
+                _record_shape_signature(prepared_state)
+            if profile:
+                te = time.perf_counter()
             acc_self_2 = _eval_prepared(prepared_state, active_indices=active_idx)
+            if profile:
+                _ = jax.block_until_ready(acc_self_2)
+                evaluate_seconds += time.perf_counter() - te
+                evaluate_calls += 1
             if add_external:
                 acc_ext_2 = combined_external_acceleration_vmpa_switch(
                     state_pos,
@@ -473,13 +1146,16 @@ def integrate_leapfrog_jaccpot_active(
 
             vel_new_active = state_curr[active_idx, 1] + 0.5 * (acc_1 + acc_2) * dt_arr
             state_curr = state_pos.at[active_idx, 1].set(vel_new_active)
+        if profile:
+            _ = jax.block_until_ready(state_curr)
+            update_seconds += time.perf_counter() - t0
+            update_calls += 1
 
         if return_history:
             history.append(state_curr)
 
-    if return_history:
-        return jnp.stack(history, axis=0)
-    return state_curr
+    out = jnp.stack(history, axis=0) if return_history else state_curr
+    return _finalize(out)
 
 
 def evaluate_acceleration_jaccpot(
@@ -498,12 +1174,15 @@ def evaluate_acceleration_jaccpot(
     fmm_working_dtype=None,
     fmm_mac_type: str = "dehnen",
     fmm_farfield_mode: str = "auto",
+    fmm_m2l_chunk_size: Optional[int] = None,
     fmm_nearfield_mode: str = "auto",
     fmm_nearfield_edge_chunk_size: int = 256,
+    fmm_tree_build_mode: str = "lbvh",
     fmm_tree_leaf_target: int = 32,
     fmm_fixed_order: Optional[int] = None,
     fmm_jit_tree: Optional[bool] = None,
     fmm_jit_traversal: Optional[bool] = True,
+    fmm_prepare_stage_memory_split_enabled: Optional[bool] = None,
 ) -> jnp.ndarray:
     """Evaluate one FMM acceleration call for an ODISSEO primitive state."""
     state_arr = jnp.asarray(state)
@@ -520,13 +1199,18 @@ def evaluate_acceleration_jaccpot(
         fmm_runtime_path=fmm_runtime_path,
         fmm_mac_type=fmm_mac_type,
         fmm_farfield_mode=fmm_farfield_mode,
+        fmm_m2l_chunk_size=fmm_m2l_chunk_size,
         fmm_nearfield_mode=fmm_nearfield_mode,
         fmm_nearfield_edge_chunk_size=fmm_nearfield_edge_chunk_size,
+        fmm_tree_build_mode=fmm_tree_build_mode,
         fmm_tree_leaf_target=fmm_tree_leaf_target,
         fmm_fixed_order=fmm_fixed_order,
         leaf_size=leaf_size,
         fmm_jit_tree=fmm_jit_tree,
         fmm_jit_traversal=fmm_jit_traversal,
+        fmm_prepare_stage_memory_split_enabled=(
+            fmm_prepare_stage_memory_split_enabled
+        ),
     )
     prepared = solver.prepare_state(
         state_arr[:, 0, :],
@@ -555,12 +1239,15 @@ def build_jitted_jaccpot_acceleration(
     fmm_working_dtype=None,
     fmm_mac_type: str = "dehnen",
     fmm_farfield_mode: str = "auto",
+    fmm_m2l_chunk_size: Optional[int] = None,
     fmm_nearfield_mode: str = "auto",
     fmm_nearfield_edge_chunk_size: int = 256,
+    fmm_tree_build_mode: str = "lbvh",
     fmm_tree_leaf_target: int = 32,
     fmm_fixed_order: Optional[int] = None,
     fmm_jit_tree: Optional[bool] = None,
     fmm_jit_traversal: Optional[bool] = True,
+    fmm_prepare_stage_memory_split_enabled: Optional[bool] = None,
     outer_jit: bool = False,
 ):
     """Return a reusable one-call FMM acceleration evaluator.
@@ -589,12 +1276,17 @@ def build_jitted_jaccpot_acceleration(
             fmm_working_dtype=fmm_working_dtype,
             fmm_mac_type=fmm_mac_type,
             fmm_farfield_mode=fmm_farfield_mode,
+            fmm_m2l_chunk_size=fmm_m2l_chunk_size,
             fmm_nearfield_mode=fmm_nearfield_mode,
             fmm_nearfield_edge_chunk_size=fmm_nearfield_edge_chunk_size,
+            fmm_tree_build_mode=fmm_tree_build_mode,
             fmm_tree_leaf_target=fmm_tree_leaf_target,
             fmm_fixed_order=fmm_fixed_order,
             fmm_jit_tree=fmm_jit_tree,
             fmm_jit_traversal=fmm_jit_traversal,
+            fmm_prepare_stage_memory_split_enabled=(
+                fmm_prepare_stage_memory_split_enabled
+            ),
         )
 
     if bool(outer_jit):
@@ -624,12 +1316,18 @@ def build_jitted_leapfrog_jaccpot_active(
     fmm_working_dtype=None,
     fmm_mac_type: str = "dehnen",
     fmm_farfield_mode: str = "auto",
+    fmm_m2l_chunk_size: Optional[int] = None,
     fmm_nearfield_mode: str = "auto",
     fmm_nearfield_edge_chunk_size: int = 256,
+    fmm_tree_build_mode: str = "lbvh",
     fmm_tree_leaf_target: int = 32,
     fmm_fixed_order: Optional[int] = None,
     fmm_jit_tree: Optional[bool] = None,
     fmm_jit_traversal: Optional[bool] = True,
+    fmm_prepare_stage_memory_split_enabled: Optional[bool] = None,
+    enforce_static_shape_contract: bool = False,
+    static_shape_warmup_prepares: int = 0,
+    rematerialize_between_refresh: bool = True,
     return_history: bool = False,
     outer_jit: bool = False,
 ):
@@ -662,12 +1360,20 @@ def build_jitted_leapfrog_jaccpot_active(
             fmm_working_dtype=fmm_working_dtype,
             fmm_mac_type=fmm_mac_type,
             fmm_farfield_mode=fmm_farfield_mode,
+            fmm_m2l_chunk_size=fmm_m2l_chunk_size,
             fmm_nearfield_mode=fmm_nearfield_mode,
             fmm_nearfield_edge_chunk_size=fmm_nearfield_edge_chunk_size,
+            fmm_tree_build_mode=fmm_tree_build_mode,
             fmm_tree_leaf_target=fmm_tree_leaf_target,
             fmm_fixed_order=fmm_fixed_order,
             fmm_jit_tree=fmm_jit_tree,
             fmm_jit_traversal=fmm_jit_traversal,
+            fmm_prepare_stage_memory_split_enabled=(
+                fmm_prepare_stage_memory_split_enabled
+            ),
+            enforce_static_shape_contract=enforce_static_shape_contract,
+            static_shape_warmup_prepares=static_shape_warmup_prepares,
+            rematerialize_between_refresh=rematerialize_between_refresh,
             return_history=return_history,
         )
 
