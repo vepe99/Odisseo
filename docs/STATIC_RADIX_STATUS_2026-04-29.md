@@ -285,3 +285,181 @@ Review diffs in yggdrax, jaccpot, and ODISSEO; separate static-radix edits from
 pre-existing dirty files; then run the same three focused verification commands
 once after final cleanup.
 ```
+
+## PR Staging Update
+
+Diff hygiene, final verification, commits, branch pushes, and PR creation are
+complete.
+
+Static-radix commits:
+
+```text
+yggdrax:  a7180a3 Add static radix tree build mode
+jaccpot:  577b092 Integrate static radix FMM refresh path
+ODISSEO:  8bf35f6 Expose static radix FMM integration
+ODISSEO:  eecdf22 Add radix fast-lane investigation harness
+```
+
+Branches pushed:
+
+```text
+TobiBu/yggdrax:   feat/capacity-fixed-radix, feat/static-radix
+TobiBu/jaccpot:   feat/capacity-fixed-radix, feat/static-radix
+vepe99/Odisseo:   feat/capacity-fixed-radix, feat/static-radix
+```
+
+Open PRs, all targeting the base branch of this work:
+
+```text
+yggdrax:  https://github.com/TobiBu/yggdrax/pull/22
+          base feat/capacity-fixed-radix <- head feat/static-radix
+
+jaccpot:  https://github.com/TobiBu/jaccpot/pull/13
+          base feat/capacity-fixed-radix <- head feat/static-radix
+
+ODISSEO:  https://github.com/vepe99/Odisseo/pull/2
+          base feat/capacity-fixed-radix <- head feat/static-radix
+```
+
+GitHub CLI note:
+
+```text
+gh was installed locally under /tmp/gh-cli for this server session.
+Version: gh 2.92.0
+Authenticated user: TobiBu
+```
+
+The older capacity/performance investigation docs remain intentionally
+untracked in ODISSEO and are not part of the static-radix PR:
+
+```text
+docs/CAPACITY_FIXED_RADIX_IMPLEMENTATION_PLAN_2026-04-27.md
+docs/CAPACITY_FIXED_RADIX_STATUS_2026-04-27.md
+docs/PERFORMANCE_HANDOFF_2026-04-22.md
+docs/PERFORMANCE_RADIX_INVESTIGATION_PLAN_2026-04-22.md
+docs/Radix Large-N Recompile-Minimization .md
+```
+
+The radix fast-lane investigation harness was intentionally added to the
+ODISSEO PR for future benchmarking:
+
+```text
+notebooks/scalability/radix_fastlane_investigation.py
+```
+
+## Final Pre-PR Verification
+
+Final focused suites were run after cleanup and before PR creation:
+
+```text
+PYTHONPATH=/export/home/tbuck/yggdrax \
+  micromamba run -n odisseo python -B -m pytest \
+  /export/home/tbuck/yggdrax/tests/unit/test_tree.py -o addopts=
+
+24 passed in 130.77s
+```
+
+```text
+CUDA_VISIBLE_DEVICES=0 JAX_ENABLE_X64=1 \
+PYTHONPATH=/export/home/tbuck/yggdrax:/export/home/tbuck/jaccpot:/export/home/tbuck/Odisseo \
+XLA_PYTHON_CLIENT_PREALLOCATE=false TF_GPU_ALLOCATOR=cuda_malloc_async \
+  micromamba run -n odisseo python -B -m pytest \
+  /export/home/tbuck/jaccpot/tests/integration/test_fmm.py -o addopts=
+
+59 passed in 576.69s
+```
+
+```text
+CUDA_VISIBLE_DEVICES=0 JAX_ENABLE_X64=1 \
+PYTHONPATH=/export/home/tbuck/yggdrax:/export/home/tbuck/jaccpot:/export/home/tbuck/Odisseo \
+XLA_PYTHON_CLIENT_PREALLOCATE=false TF_GPU_ALLOCATOR=cuda_malloc_async \
+  micromamba run -n odisseo python -B -m pytest \
+  /export/home/tbuck/Odisseo/tests/test_integration_api.py -o addopts=
+
+4 passed, 1 warning in 3.06s
+```
+
+Fresh small ODISSEO static-radix GPU smoke on GPU 0:
+
+```text
+CUDA_VISIBLE_DEVICES=0 JAX_ENABLE_X64=1 \
+PYTHONPATH=/export/home/tbuck/yggdrax:/export/home/tbuck/jaccpot:/export/home/tbuck/Odisseo \
+XLA_PYTHON_CLIENT_PREALLOCATE=false TF_GPU_ALLOCATOR=cuda_malloc_async \
+micromamba run -n odisseo python -B \
+  /export/home/tbuck/Odisseo/notebooks/scalability/galaxy_disk_fmm_large_n.py \
+  --mode perf \
+  --n-particles 20000 \
+  --num-steps 2 \
+  --t-end-gyr 0.2 \
+  --fmm-preset large_n_gpu \
+  --fmm-runtime-path large_n \
+  --fmm-tree-build-mode static_radix \
+  --fmm-refresh-every 1 \
+  --fmm-leaf-size 256 \
+  --fmm-max-order 4 \
+  --fmm-prepare-stage-memory-split \
+  --profile-breakdown \
+  --require-static-shape \
+  --max-compiled-profile-transitions 0 \
+  --max-overflow-reprofiles 0 \
+  --min-refresh-prepare-successes 1 \
+  --report-dir /tmp/static_radix_gpu0_20k_2 \
+  --output /tmp/static_radix_gpu0_20k_2.npz
+```
+
+Result:
+
+```text
+Saved /tmp/static_radix_gpu0_20k_2.npz
+Runtime: 44.242 s
+Saved timing report JSON: /tmp/static_radix_gpu0_20k_2/galaxy_disk_profile_20260429_203811.json
+Saved timing report CSV : /tmp/static_radix_gpu0_20k_2/galaxy_disk_profile_20260429_203811.csv
+
+profiled_full_prepare_calls: 1
+profiled_refresh_prepare_calls: 1
+profiled_refresh_fallback_prepare_calls: 0
+runtime_static_radix_refresh_hits: 1
+runtime_static_radix_refresh_misses: 0
+runtime_static_radix_profile_overflows: 0
+runtime_large_n_same_topology_refresh_hits: 1
+runtime_large_n_same_topology_refresh_misses: 0
+runtime_compiled_profile_transitions: 0
+shape_signature_stable_post_warmup: True
+refresh_prepare_successes: 1
+runtime_refresh_tree_upward_seconds: 0.5593071468174458
+runtime_refresh_dual_downward_seconds: 0.005494195967912674
+runtime_refresh_nearfield_seconds: 0.026852678507566452
+```
+
+## Current Blocker
+
+No known functional static-radix blocker remains from the local focused tests,
+the 200k/20 acceptance run, or the fresh GPU 0 smoke.
+
+The only remaining local ODISSEO working-tree dirt is the intentionally
+excluded older handoff/investigation docs listed above.
+
+## Exact Next Actions
+
+1. Review PRs in dependency order:
+
+```text
+1. yggdrax  #22
+2. jaccpot  #13, depends on yggdrax #22
+3. ODISSEO  #2, depends on yggdrax #22 and jaccpot #13
+```
+
+2. Address any CI/review comments without mixing in the intentionally excluded
+older capacity/performance docs.
+
+3. After merge, update dependency pins/submodule/source checkout assumptions
+for any downstream environment that expects the new yggdrax and jaccpot APIs.
+
+4. Continue performance work after functional merge:
+
+```text
+- first full prepare remains the dominant cost,
+- 200k/20 evaluate time remains about 25 s,
+- static refresh is about 0.6 s per refresh in the acceptance run,
+- radix fast-lane investigation harness is now available for follow-up profiling.
+```
