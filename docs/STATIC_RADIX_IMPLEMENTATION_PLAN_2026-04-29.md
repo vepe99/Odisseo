@@ -241,3 +241,122 @@ Append after every meaningful session:
 - First implementation target is fixed `N` across refreshes, matching ODISSEO
   galaxy runs.
 
+## Current Plan State
+
+As of the PR staging session, implementation and local verification are
+complete for the first functional static-radix milestone.
+
+Open PRs:
+
+```text
+yggdrax:  https://github.com/TobiBu/yggdrax/pull/22
+jaccpot:  https://github.com/TobiBu/jaccpot/pull/13
+ODISSEO:  https://github.com/vepe99/Odisseo/pull/2
+```
+
+All PRs target:
+
+```text
+base: feat/capacity-fixed-radix
+head: feat/static-radix
+```
+
+Local verification completed:
+
+```text
+yggdrax tree tests:        24 passed
+jaccpot FMM tests:         59 passed
+ODISSEO API regression:     4 passed, 1 warning
+ODISSEO GPU 0 smoke:        passed
+```
+
+Fresh GPU 0 smoke satisfied:
+
+```text
+static_radix refresh hits:      1
+static_radix refresh misses:    0
+static_radix profile overflows: 0
+fallback full prepares:         0
+compiled-profile transitions:   0
+shape stable post-warmup:       true
+```
+
+## Remaining Plan
+
+### Merge Path
+
+Review and merge in dependency order:
+
+```text
+1. yggdrax static-radix tree mode
+2. jaccpot static-radix FMM refresh integration
+3. ODISSEO static-radix exposure, docs, and benchmark harness
+```
+
+If review or CI requires follow-up commits, keep them scoped to static radix.
+Do not add the older capacity/performance handoff docs to these PRs.
+
+### Post-Merge Functional Checks
+
+After the dependency PRs merge, rerun at least:
+
+```text
+PYTHONPATH=/path/to/yggdrax \
+  micromamba run -n odisseo python -B -m pytest \
+  /path/to/yggdrax/tests/unit/test_tree.py -o addopts=
+```
+
+```text
+CUDA_VISIBLE_DEVICES=0 JAX_ENABLE_X64=1 \
+PYTHONPATH=/path/to/yggdrax:/path/to/jaccpot:/path/to/Odisseo \
+XLA_PYTHON_CLIENT_PREALLOCATE=false TF_GPU_ALLOCATOR=cuda_malloc_async \
+  micromamba run -n odisseo python -B -m pytest \
+  /path/to/jaccpot/tests/integration/test_fmm.py -o addopts=
+```
+
+```text
+CUDA_VISIBLE_DEVICES=0 JAX_ENABLE_X64=1 \
+PYTHONPATH=/path/to/yggdrax:/path/to/jaccpot:/path/to/Odisseo \
+XLA_PYTHON_CLIENT_PREALLOCATE=false TF_GPU_ALLOCATOR=cuda_malloc_async \
+  micromamba run -n odisseo python -B -m pytest \
+  /path/to/Odisseo/tests/test_integration_api.py -o addopts=
+```
+
+Then rerun the small ODISSEO static-radix smoke before any larger benchmark:
+
+```text
+CUDA_VISIBLE_DEVICES=0 JAX_ENABLE_X64=1 \
+PYTHONPATH=/path/to/yggdrax:/path/to/jaccpot:/path/to/Odisseo \
+XLA_PYTHON_CLIENT_PREALLOCATE=false TF_GPU_ALLOCATOR=cuda_malloc_async \
+micromamba run -n odisseo python -B \
+  /path/to/Odisseo/notebooks/scalability/galaxy_disk_fmm_large_n.py \
+  --mode perf \
+  --n-particles 20000 \
+  --num-steps 2 \
+  --t-end-gyr 0.2 \
+  --fmm-preset large_n_gpu \
+  --fmm-runtime-path large_n \
+  --fmm-tree-build-mode static_radix \
+  --fmm-refresh-every 1 \
+  --fmm-leaf-size 256 \
+  --fmm-max-order 4 \
+  --fmm-prepare-stage-memory-split \
+  --profile-breakdown \
+  --require-static-shape \
+  --max-compiled-profile-transitions 0 \
+  --max-overflow-reprofiles 0 \
+  --min-refresh-prepare-successes 1 \
+  --report-dir /tmp/static_radix_gpu0_20k_2_postmerge \
+  --output /tmp/static_radix_gpu0_20k_2_postmerge.npz
+```
+
+### Performance Follow-Up
+
+Functional acceptance is met. Remaining work is performance-focused:
+
+- reduce the first full prepare cost,
+- reduce total evaluate time for 200k/20-step runs,
+- keep static refresh near the current roughly `0.6 s` per call level,
+- use `notebooks/scalability/radix_fastlane_investigation.py` to compare
+  direct jaccpot construction against the ODISSEO coupler path and identify
+  remaining fast-lane gaps.
