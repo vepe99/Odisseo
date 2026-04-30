@@ -463,3 +463,81 @@ for any downstream environment that expects the new yggdrax and jaccpot APIs.
 - static refresh is about 0.6 s per refresh in the acceptance run,
 - radix fast-lane investigation harness is now available for follow-up profiling.
 ```
+
+## Post-Merge Performance Follow-Up - 2026-04-30
+
+All static-radix PRs were merged. Local `jaccpot` was fast-forwarded to
+`origin/feat/static-radix` commit `4c9a893`; ODISSEO remained synced on
+`feat/static-radix` after the review-fix push.
+
+Updated the radix fast-lane harness:
+
+- added `--fmm-tree-build-mode`, defaulting to `static_radix`,
+- passed matching tree/nearfield/runtime advanced config into the direct
+  jaccpot solver path,
+- moved cold-start timing before FMM-based benchmark-state generation,
+- added `--cold-start-order` to prove which solver pays the first compile cost.
+
+Verification:
+
+```text
+micromamba run -n odisseo python -m py_compile \
+  notebooks/scalability/radix_fastlane_investigation.py
+```
+
+20k static-radix smoke:
+
+```text
+Saved JSON report: /tmp/radix_fastlane_static_smoke/static_radix_fastlane_20k_20260430_101352.json
+Saved CSV report : /tmp/radix_fastlane_static_smoke/static_radix_fastlane_20k_20260430_101352.csv
+
+direct_jaccpot: prepare=0.968s evaluate=0.214s total=1.181s over 2 states
+odisseo_coupler_builder: prepare=1.040s evaluate=0.214s total=1.254s over 2 states
+```
+
+200k direct-first cold-start run:
+
+```text
+Saved JSON report: /tmp/radix_fastlane_static_200k_coldfirst/static_radix_fastlane_200k_coldfirst_20260430_102038.json
+Saved CSV report : /tmp/radix_fastlane_static_200k_coldfirst/static_radix_fastlane_200k_coldfirst_20260430_102038.csv
+
+cold_start_single_call:
+  direct_jaccpot: prepare=74.674s evaluate=6.942s total=81.616s
+  odisseo_coupler_builder: prepare=0.762s evaluate=0.906s total=1.668s
+
+steady rows:
+  direct_jaccpot: prepare=1.102s evaluate=1.815s total=2.918s over 2 states
+  odisseo_coupler_builder: prepare=1.101s evaluate=1.817s total=2.918s over 2 states
+```
+
+200k coupler-first cold-start run:
+
+```text
+Saved JSON report: /tmp/radix_fastlane_static_200k_couplerfirst/static_radix_fastlane_200k_couplerfirst_20260430_102503.json
+Saved CSV report : /tmp/radix_fastlane_static_200k_couplerfirst/static_radix_fastlane_200k_couplerfirst_20260430_102503.csv
+
+cold_start_single_call:
+  odisseo_coupler_builder: prepare=73.981s evaluate=6.964s total=80.945s
+  direct_jaccpot: prepare=0.767s evaluate=0.917s total=1.684s
+
+steady rows:
+  direct_jaccpot: prepare=1.150s evaluate=1.819s total=2.969s over 2 states
+  odisseo_coupler_builder: prepare=1.134s evaluate=1.820s total=2.953s over 2 states
+```
+
+Conclusion:
+
+- the old `~80s` first full prepare is the cold large-N compile/startup bill,
+  not an ODISSEO wrapper-specific cost,
+- direct jaccpot and the ODISSEO coupler builder have indistinguishable
+  steady-state static-radix prepare/evaluate timing at 200k,
+- steady-state per-state cost at 200k is roughly `0.56s` prepare plus `0.91s`
+  evaluate for `leaf_size=256`, `max_order=4`.
+
+Exact next action:
+
+```text
+Profile the cold large-N compile/startup path inside jaccpot and decide whether
+to hide it with an explicit warmup, split/report it separately, or reduce the
+compiled surface area for first prepare/evaluate.
+```
