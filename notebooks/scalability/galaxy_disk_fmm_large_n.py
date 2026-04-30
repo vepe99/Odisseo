@@ -1023,7 +1023,7 @@ def main() -> None:
                 "fmm_nearfield_edge_chunk_size_requested": int(
                     args.fmm_nearfield_edge_chunk_size
                 ),
-                "fmm_prepare_stage_memory_split_enabled": bool(
+                "fmm_prepare_stage_memory_split_enabled": (
                     config.fmm_prepare_stage_memory_split_enabled
                 ),
                 "fmm_enforce_static_shape_contract": bool(
