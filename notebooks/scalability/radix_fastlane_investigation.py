@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+import os
 import pathlib
 import time
 from datetime import datetime
@@ -87,6 +88,30 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--leaf-size", type=int, default=64)
     parser.add_argument("--max-order", type=int, default=4)
+    parser.add_argument("--fmm-nearfield-edge-chunk-size", type=int, default=256)
+    parser.add_argument(
+        "--large-n-target-block-size",
+        type=int,
+        default=None,
+        help=(
+            "Set JACCPOT_LARGE_N_TARGET_BLOCK_SIZE for this run. "
+            "Leave unset to preserve the current environment/default."
+        ),
+    )
+    parser.add_argument(
+        "--large-n-static-target-blocks",
+        action="store_true",
+        help="Enable JACCPOT_LARGE_N_STATIC_TARGET_BLOCKS for this run.",
+    )
+    parser.add_argument(
+        "--large-n-static-target-blocks-max-per-leaf",
+        type=int,
+        default=None,
+        help=(
+            "Set JACCPOT_LARGE_N_STATIC_TARGET_BLOCKS_MAX_PER_LEAF for this run. "
+            "Leave unset to preserve the current environment/default."
+        ),
+    )
     parser.add_argument("--seed", type=int, default=7)
     parser.add_argument("--t-end-gyr", type=float, default=2.0)
     parser.add_argument("--disk-radius-kpc", type=float, default=12.0)
@@ -108,6 +133,31 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--report-dir", type=str, default="./notebooks/scalability/reports")
     parser.add_argument("--report-stem", type=str, default="radix_fastlane")
     return parser.parse_args()
+
+
+def _apply_large_n_env_overrides(args: argparse.Namespace) -> None:
+    if args.large_n_target_block_size is not None:
+        os.environ["JACCPOT_LARGE_N_TARGET_BLOCK_SIZE"] = str(
+            int(args.large_n_target_block_size)
+        )
+    if bool(args.large_n_static_target_blocks):
+        os.environ["JACCPOT_LARGE_N_STATIC_TARGET_BLOCKS"] = "1"
+    if args.large_n_static_target_blocks_max_per_leaf is not None:
+        os.environ["JACCPOT_LARGE_N_STATIC_TARGET_BLOCKS_MAX_PER_LEAF"] = str(
+            int(args.large_n_static_target_blocks_max_per_leaf)
+        )
+
+
+def _large_n_env_snapshot() -> dict[str, str | None]:
+    keys = (
+        "JACCPOT_LARGE_N_TARGET_BLOCK_SIZE",
+        "JACCPOT_LARGE_N_STATIC_TARGET_BLOCKS",
+        "JACCPOT_LARGE_N_STATIC_TARGET_BLOCKS_MAX_PER_LEAF",
+        "JACCPOT_LARGE_N_TARGET_BLOCK_TILE_SIZE",
+        "JACCPOT_LARGE_N_TARGET_BLOCK_TILE_SCAN_UNROLL",
+        "JACCPOT_LARGE_N_TARGET_BLOCK_BATCH_SCAN_UNROLL",
+    )
+    return {key: os.environ.get(key) for key in keys}
 
 
 def _dtype_from_name(name: str):
@@ -141,7 +191,7 @@ def _build_simulation(args: argparse.Namespace):
         fmm_tree_leaf_target=int(args.leaf_size),
         fmm_tree_build_mode=str(args.fmm_tree_build_mode),
         fmm_nearfield_mode="bucketed",
-        fmm_nearfield_edge_chunk_size=256,
+        fmm_nearfield_edge_chunk_size=int(args.fmm_nearfield_edge_chunk_size),
         fmm_jit_tree=bool(args.fmm_jit_tree),
         fmm_jit_traversal=bool(args.fmm_jit_traversal),
     )
@@ -491,6 +541,7 @@ def _write_reports(report_dir: str, report_stem: str, payload: dict, rows: list[
 
 def main() -> None:
     args = parse_args()
+    _apply_large_n_env_overrides(args)
     state0, mass, config, params = _build_simulation(args)
     effective_cfg = _assert_fast_lane(args, state0, config)
 
@@ -555,6 +606,7 @@ def main() -> None:
         "backend": str(jax.default_backend()),
         "devices": [str(d) for d in jax.devices()],
         "args": vars(args),
+        "large_n_environment": _large_n_env_snapshot(),
         "effective_runtime_config": effective_cfg,
         "state0_dtype": str(state0.dtype),
         "mass_dtype": str(mass.dtype),

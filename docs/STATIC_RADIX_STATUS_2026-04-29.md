@@ -692,3 +692,146 @@ side-by-side with the current ODISSEO fast-lane harness, then diff runtime
 knobs and prepared-state profiles until the warm prepare+evaluate gap is
 explained.
 ```
+
+## Static Harness Guardrail And A/B Update - 2026-04-30
+
+Guardrail from the 2026-04-30 working session:
+
+- do not weaken `static_radix` into an adaptive/spatial rebuild path just to
+  improve timings,
+- preserve the fixed-shape harness because its core value is reusable prepared
+  datastructures across changing particle distributions,
+- performance work should tune large-N execution knobs and diagnostics around
+  the fixed topology contract, not replace that contract.
+
+Historical timing clarification:
+
+- `/tmp/radix_fastlane_repro_gpu9/radix_fastlane_repro_gpu9_leaf256_order4_20260427_154917.json`
+  recorded the reproduced standalone/coupler fast-lane sweep at `leaf_size=256`,
+  `max_order=4`, `large_n_gpu`, `float32`.
+- That reproduction showed warm ODISSEO coupler rows around
+  `prepare=0.62-0.69s`, `evaluate=0.94-0.96s`, total `~1.58-1.63s` per state.
+- Older integration profiles such as
+  `/tmp/radix_m2l4096_gpu8_200k_20/galaxy_disk_profile_20260427_113637.json`
+  reported `evaluate_seconds=0.355s` over `5` evaluate calls, but those profiles
+  had expensive refresh prepares and did not represent the same isolated
+  warm-sweep timing surface as the fast-lane harness.
+
+New A/B runs:
+
+```text
+static_radix + jit_tree/jit_traversal:
+  report: /tmp/radix_static_jit_true_200k/static_radix_jit_true_200k_20260430_120228.json
+  CSV   : /tmp/radix_static_jit_true_200k/static_radix_jit_true_200k_20260430_120228.csv
+  warm odisseo rows:
+    state 0: prepare=0.621s evaluate=0.914s total=1.534s
+    state 1: prepare=0.632s evaluate=0.910s total=1.543s
+
+lbvh + jit_tree/jit_traversal:
+  report: /tmp/radix_lbvh_jit_true_200k/lbvh_jit_true_200k_20260430_120441.json
+  CSV   : /tmp/radix_lbvh_jit_true_200k/lbvh_jit_true_200k_20260430_120441.csv
+  warm odisseo rows:
+    state 0: prepare=0.567s evaluate=0.913s total=1.480s
+    state 1: prepare=0.761s evaluate=0.892s total=1.653s
+```
+
+Conclusion:
+
+- enabling the old `jit_tree/jit_traversal` flags does not recover subsecond
+  full-sweep timing,
+- `lbvh` and `static_radix` have essentially the same warm evaluate cost in the
+  current harness, so the `~0.9s/state` evaluate gap is not caused by static
+  radix topology reuse,
+- `static_radix` is still the correct target harness: the longer integration run
+  `/tmp/static_radix_gpu8_200k_20/galaxy_disk_profile_20260429_133354.json`
+  had `19` static refresh hits, `0` misses, `0` overflows, and refresh prepares
+  around `0.6s`.
+
+Harness update:
+
+- `notebooks/scalability/radix_fastlane_investigation.py` now exposes safe
+  large-N performance knobs without changing static-radix semantics:
+  - `--fmm-nearfield-edge-chunk-size`
+  - `--large-n-target-block-size`
+  - `--large-n-static-target-blocks`
+  - `--large-n-static-target-blocks-max-per-leaf`
+- the JSON report now records the effective `JACCPOT_LARGE_N_*` environment
+  values so future timings are reproducible.
+
+Exact next action:
+
+```text
+Run static_radix-only target-block/edge-chunk A/B experiments through the
+harness knobs, keeping static refresh hits/misses/overflows as acceptance
+guards. The next candidate set is target block size and static target-block
+capacity, because evaluate remains the dominant warm-sweep gap.
+```
+
+## Static Target Blocks Restores Subsecond Warm Sweep - 2026-04-30
+
+Command shape:
+
+```text
+micromamba run -n odisseo python notebooks/scalability/radix_fastlane_investigation.py \
+  --n-particles 200000 \
+  --num-steps 2 \
+  --fmm-refresh-every 1 \
+  --fmm-preset large_n_gpu \
+  --fmm-runtime-path large_n \
+  --fmm-working-dtype float32 \
+  --fmm-tree-build-mode static_radix \
+  --leaf-size 256 \
+  --max-order 4 \
+  --segments-to-benchmark 1 \
+  --cold-start-order coupler_first \
+  --skip-steady-state-warmup \
+  --assert-fast-lane \
+  --large-n-static-target-blocks \
+  --large-n-static-target-blocks-max-per-leaf 16
+```
+
+Report:
+
+```text
+JSON: /tmp/radix_static_targetblocks16_200k/static_targetblocks16_200k_20260430_124827.json
+CSV : /tmp/radix_static_targetblocks16_200k/static_targetblocks16_200k_20260430_124827.csv
+```
+
+Effective large-N env recorded in the JSON:
+
+```text
+JACCPOT_LARGE_N_STATIC_TARGET_BLOCKS=1
+JACCPOT_LARGE_N_STATIC_TARGET_BLOCKS_MAX_PER_LEAF=16
+JACCPOT_LARGE_N_TARGET_BLOCK_SIZE=<unset/default>
+```
+
+Warm rows:
+
+```text
+direct_jaccpot:
+  state 0: prepare=0.661s evaluate=0.234s total=0.895s
+  state 1: prepare=0.604s evaluate=0.227s total=0.831s
+
+odisseo_coupler_builder:
+  state 0: prepare=0.628s evaluate=0.227s total=0.856s
+  state 1: prepare=0.661s evaluate=0.227s total=0.888s
+```
+
+Conclusion:
+
+- `static_radix` plus static target blocks meets the warm full-FMM sweep target
+  at 200k: ODISSEO coupler warm sweeps are `0.856s` and `0.888s`,
+- this keeps the fixed/static datastructure harness intact; the speedup comes
+  from the nearfield target-block layout used by the large-N evaluate path,
+- cold startup still remains expensive (`~83s` prepare for coupler-first cold
+  in this run), and static target blocks increase cold nearfield state
+  construction cost, so cold compile/startup should stay reported separately.
+
+Exact next action:
+
+```text
+Promote the static target-block setting to the recommended 200k static_radix
+benchmark configuration, then run a longer integration-profile validation
+with the same knobs to confirm refresh hits/misses/overflows across changing
+particle distributions.
+```
