@@ -368,6 +368,8 @@ def integrate_leapfrog_jaccpot_active(
         nonlocal shape_checks_post_warmup
         nonlocal shape_signature_hashes_post_warmup
         nonlocal shape_signature_diff_post_warmup
+        if not (profile or enforce_static_shape_contract):
+            return
         signature = _prepared_state_shape_signature(prepared_state)
         sig_hash = hashlib.sha1(repr(signature).encode("utf-8")).hexdigest()
         shape_checks += 1
