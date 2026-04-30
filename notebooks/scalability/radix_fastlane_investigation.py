@@ -223,16 +223,117 @@ def _make_direct_solver(args: argparse.Namespace, state: jnp.ndarray, config: Si
     )
 
 
-def _time_prepare_eval(solver, state: jnp.ndarray, mass: jnp.ndarray, leaf_size: int, max_order: int) -> tuple[float, float]:
+_PREPARE_STAGE_KEYS = (
+    "refresh_input_seconds",
+    "refresh_tree_upward_seconds",
+    "refresh_dual_downward_seconds",
+    "refresh_nearfield_seconds",
+    "refresh_dual_setup_seconds",
+    "refresh_dual_artifact_build_seconds",
+    "refresh_dual_split_far_pairs_seconds",
+    "refresh_dual_split_leaf_neighbors_seconds",
+    "refresh_dual_split_combined_seconds",
+    "refresh_dual_raw_combined_seconds",
+    "refresh_dual_split_dense_buffers_seconds",
+    "refresh_dual_far_pair_plan_seconds",
+    "refresh_dual_m2l_autotune_seconds",
+    "refresh_dual_select_interactions_seconds",
+    "refresh_dual_downward_compute_seconds",
+    "refresh_dual_m2l_compute_seconds",
+    "refresh_dual_l2l_compute_seconds",
+    "refresh_dual_finalize_seconds",
+    "refresh_dual_residual_seconds",
+    "refresh_nearfield_leaf_groups_seconds",
+    "refresh_nearfield_precompute_seconds",
+    "refresh_nearfield_target_blocks_seconds",
+    "refresh_nearfield_block_sort_seconds",
+    "refresh_nearfield_speed_layout_seconds",
+    "refresh_nearfield_overflow_profile_seconds",
+    "refresh_nearfield_radix_payload_seconds",
+    "refresh_nearfield_neighbor_padding_seconds",
+    "refresh_nearfield_state_pack_seconds",
+    "refresh_nearfield_residual_seconds",
+)
+
+
+def _runtime_diagnostics(solver) -> dict:
+    getter = getattr(solver, "get_runtime_diagnostics", None)
+    if not callable(getter):
+        return {}
+    try:
+        return dict(getter())
+    except Exception:
+        return {}
+
+
+def _runtime_backend(solver):
+    return getattr(solver, "_impl", solver)
+
+
+def _diagnostic_delta(before: dict, after: dict, keys: tuple[str, ...]) -> dict:
+    delta = {}
+    for key in keys:
+        try:
+            delta[key] = float(after.get(key, 0.0)) - float(before.get(key, 0.0))
+        except Exception:
+            delta[key] = 0.0
+    return delta
+
+
+def _time_prepare_eval(
+    solver,
+    state: jnp.ndarray,
+    mass: jnp.ndarray,
+    leaf_size: int,
+    max_order: int,
+    *,
+    collect_prepare_stage_diagnostics: bool = False,
+) -> tuple[float, float, dict]:
+    diag_before = {}
+    previous_timing_active = False
+    runtime_backend = _runtime_backend(solver)
+    if bool(collect_prepare_stage_diagnostics):
+        diag_before = _runtime_diagnostics(solver)
+        previous_timing_active = bool(
+            getattr(runtime_backend, "_refresh_timing_active", False)
+        )
+        setattr(runtime_backend, "_refresh_timing_active", True)
+
     t0 = time.perf_counter()
-    prepared = solver.prepare_state(
-        state[:, 0, :],
-        mass,
-        leaf_size=int(leaf_size),
-        max_order=int(max_order),
-    )
-    jax.block_until_ready(prepared)
+    try:
+        prepared = solver.prepare_state(
+            state[:, 0, :],
+            mass,
+            leaf_size=int(leaf_size),
+            max_order=int(max_order),
+        )
+        jax.block_until_ready(prepared)
+    finally:
+        if bool(collect_prepare_stage_diagnostics):
+            setattr(runtime_backend, "_refresh_timing_active", previous_timing_active)
     t1 = time.perf_counter()
+
+    prepare_stage_diagnostics = {}
+    if bool(collect_prepare_stage_diagnostics):
+        diag_after_prepare = _runtime_diagnostics(solver)
+        stage_delta = _diagnostic_delta(
+            diag_before,
+            diag_after_prepare,
+            _PREPARE_STAGE_KEYS,
+        )
+        top_stage_keys = (
+            "refresh_input_seconds",
+            "refresh_tree_upward_seconds",
+            "refresh_dual_downward_seconds",
+            "refresh_nearfield_seconds",
+        )
+        top_stage_sum = sum(float(stage_delta.get(key, 0.0)) for key in top_stage_keys)
+        prepare_stage_diagnostics = {
+            "prepare_stage_delta": stage_delta,
+            "prepare_stage_top_level_sum_seconds": float(top_stage_sum),
+            "prepare_stage_unaccounted_seconds": float((t1 - t0) - top_stage_sum),
+        }
+
     acc = solver.evaluate_prepared_state(
         prepared,
         target_indices=None,
@@ -240,7 +341,7 @@ def _time_prepare_eval(solver, state: jnp.ndarray, mass: jnp.ndarray, leaf_size:
     )
     jax.block_until_ready(acc)
     t2 = time.perf_counter()
-    return float(t1 - t0), float(t2 - t1)
+    return float(t1 - t0), float(t2 - t1), prepare_stage_diagnostics
 
 
 def _generate_segment_end_states(
@@ -301,7 +402,7 @@ def _benchmark_solver_on_states(
 
     rows = []
     for idx, state in enumerate(states):
-        prep_s, eval_s = _time_prepare_eval(
+        prep_s, eval_s, _ = _time_prepare_eval(
             solver,
             state,
             mass,
@@ -329,17 +430,19 @@ def _cold_warmup(
     leaf_size: int,
     max_order: int,
 ) -> dict:
-    prep_s, eval_s = _time_prepare_eval(
+    prep_s, eval_s, prepare_diagnostics = _time_prepare_eval(
         solver,
         state0,
         mass,
         leaf_size=leaf_size,
         max_order=max_order,
+        collect_prepare_stage_diagnostics=True,
     )
     return {
         "prepare_seconds": float(prep_s),
         "evaluate_seconds": float(eval_s),
         "total_seconds": float(prep_s + eval_s),
+        "prepare_stage_diagnostics": prepare_diagnostics,
     }
 
 
