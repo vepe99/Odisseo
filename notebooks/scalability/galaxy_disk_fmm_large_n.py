@@ -16,7 +16,11 @@ from astropy import units as u
 
 from odisseo import construct_initial_state
 from odisseo.integration_api import integrate
-from odisseo.jaccpot_coupling import _build_fmm_solver, integrate_leapfrog_jaccpot_active
+from odisseo.jaccpot_coupling import (
+    _build_fmm_solver,
+    _large_n_environment_overrides,
+    integrate_leapfrog_jaccpot_active,
+)
 from odisseo.option_classes import (
     FMM_ACC,
     NFW_POTENTIAL,
@@ -92,6 +96,30 @@ def parse_args() -> argparse.Namespace:
         type=int,
         default=256,
         help="Near-field edge chunk size for jaccpot large-N execution.",
+    )
+    parser.add_argument(
+        "--fmm-large-n-target-block-size",
+        type=int,
+        default=None,
+        help="Optional jaccpot large-N target-owned nearfield block size.",
+    )
+    parser.add_argument(
+        "--fmm-large-n-static-target-blocks",
+        action="store_true",
+        default=None,
+        help="Enable fixed-capacity target-block layout for jaccpot large-N.",
+    )
+    parser.add_argument(
+        "--no-fmm-large-n-static-target-blocks",
+        dest="fmm_large_n_static_target_blocks",
+        action="store_false",
+        help="Disable fixed-capacity target-block layout for jaccpot large-N.",
+    )
+    parser.add_argument(
+        "--fmm-large-n-static-target-blocks-max-per-leaf",
+        type=int,
+        default=None,
+        help="Fixed-capacity target-block slots per leaf when static target blocks are enabled.",
     )
     parser.add_argument(
         "--fmm-m2l-chunk-size",
@@ -891,6 +919,17 @@ def main() -> None:
         ),
         fmm_nearfield_mode="bucketed",
         fmm_nearfield_edge_chunk_size=int(args.fmm_nearfield_edge_chunk_size),
+        fmm_large_n_target_block_size=(
+            None
+            if args.fmm_large_n_target_block_size is None
+            else int(args.fmm_large_n_target_block_size)
+        ),
+        fmm_large_n_static_target_blocks=args.fmm_large_n_static_target_blocks,
+        fmm_large_n_static_target_blocks_max_per_leaf=(
+            None
+            if args.fmm_large_n_static_target_blocks_max_per_leaf is None
+            else int(args.fmm_large_n_static_target_blocks_max_per_leaf)
+        ),
         fmm_jit_tree=True,
         fmm_jit_traversal=True,
         fmm_prepare_stage_memory_split_enabled=args.fmm_prepare_stage_memory_split_enabled,
@@ -1023,6 +1062,25 @@ def main() -> None:
                 "fmm_nearfield_edge_chunk_size_requested": int(
                     args.fmm_nearfield_edge_chunk_size
                 ),
+                "fmm_large_n_target_block_size_requested": (
+                    None
+                    if args.fmm_large_n_target_block_size is None
+                    else int(args.fmm_large_n_target_block_size)
+                ),
+                "fmm_large_n_static_target_blocks_requested": (
+                    args.fmm_large_n_static_target_blocks
+                ),
+                "fmm_large_n_static_target_blocks_max_per_leaf_requested": (
+                    None
+                    if args.fmm_large_n_static_target_blocks_max_per_leaf is None
+                    else int(args.fmm_large_n_static_target_blocks_max_per_leaf)
+                ),
+                "fmm_large_n_effective_environment_overrides": (
+                    _large_n_environment_overrides(
+                        config,
+                        fmm_preset=str(args.fmm_preset),
+                    )
+                ),
                 "fmm_prepare_stage_memory_split_enabled": (
                     config.fmm_prepare_stage_memory_split_enabled
                 ),
@@ -1083,6 +1141,25 @@ def main() -> None:
                 ),
                 "fmm_nearfield_edge_chunk_size_requested": int(
                     args.fmm_nearfield_edge_chunk_size
+                ),
+                "fmm_large_n_target_block_size_requested": (
+                    None
+                    if args.fmm_large_n_target_block_size is None
+                    else int(args.fmm_large_n_target_block_size)
+                ),
+                "fmm_large_n_static_target_blocks_requested": (
+                    args.fmm_large_n_static_target_blocks
+                ),
+                "fmm_large_n_static_target_blocks_max_per_leaf_requested": (
+                    None
+                    if args.fmm_large_n_static_target_blocks_max_per_leaf is None
+                    else int(args.fmm_large_n_static_target_blocks_max_per_leaf)
+                ),
+                "fmm_large_n_effective_environment_overrides": (
+                    _large_n_environment_overrides(
+                        config,
+                        fmm_preset=str(args.fmm_preset),
+                    )
                 ),
                 "fmm_prepare_stage_memory_split_enabled": (
                     config.fmm_prepare_stage_memory_split_enabled

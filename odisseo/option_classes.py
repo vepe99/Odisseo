@@ -228,6 +228,9 @@ class SimulationConfig(NamedTuple):
     fmm_auto_large_n_profile: bool = True
     fmm_large_n_min_particles: int = 200_000
     fmm_large_n_force_fp32: bool = True
+    fmm_large_n_target_block_size: Optional[int] = None
+    fmm_large_n_static_target_blocks: Optional[bool] = None
+    fmm_large_n_static_target_blocks_max_per_leaf: Optional[int] = None
     # Static-shape/compile-stability experiment knobs.
     fmm_enforce_static_shape_contract: bool = False
     fmm_static_shape_warmup_prepares: int = 0
