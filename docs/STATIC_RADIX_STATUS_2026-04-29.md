@@ -541,3 +541,105 @@ Profile the cold large-N compile/startup path inside jaccpot and decide whether
 to hide it with an explicit warmup, split/report it separately, or reduce the
 compiled surface area for first prepare/evaluate.
 ```
+
+## Cold Prepare Stage Breakdown - 2026-04-30
+
+Added temporary/profiling diagnostics for cold prepare stage deltas:
+
+- ODISSEO harness now enables jaccpot runtime stage counters around cold
+  `prepare_state`,
+- jaccpot now exposes split dual-tree artifact substage counters:
+  - split far-pair traversal,
+  - split leaf-neighbor traversal,
+  - raw combined traversal,
+  - split dense-buffer materialization.
+
+Verification:
+
+```text
+micromamba run -n odisseo python -m py_compile \
+  /export/home/tbuck/jaccpot/jaccpot/runtime/_interaction_cache.py \
+  /export/home/tbuck/jaccpot/jaccpot/runtime/_fmm_impl.py
+
+micromamba run -n odisseo python -m py_compile \
+  notebooks/scalability/radix_fastlane_investigation.py
+```
+
+20k split-substage smoke:
+
+```text
+Saved JSON report: /tmp/radix_fastlane_split_substage_20k/static_radix_split_substage_20k_20260430_113058.json
+Saved CSV report : /tmp/radix_fastlane_split_substage_20k/static_radix_split_substage_20k_20260430_113058.csv
+
+cold prepare:
+  total:          31.407s
+  tree/upward:    13.902s
+  dual/downward:  15.800s
+  nearfield:       1.640s
+  unaccounted:     0.065s
+
+dual artifact build:
+  total:          15.739s
+  split far:       7.524s
+  split neighbor:  8.215s
+```
+
+200k split-substage run:
+
+```text
+Saved JSON report: /tmp/radix_fastlane_split_substage_200k/static_radix_split_substage_200k_20260430_113434.json
+Saved CSV report : /tmp/radix_fastlane_split_substage_200k/static_radix_split_substage_200k_20260430_113434.csv
+
+cold prepare:
+  total:          75.071s
+  tree/upward:    14.708s
+  dual/downward:  59.104s
+  nearfield:       1.192s
+  unaccounted:     0.066s
+
+dual artifact build:
+  total:          48.804s
+  split far:      25.374s
+  split neighbor: 23.430s
+
+downward compute:
+  10.297s
+
+cold evaluate:
+  7.036s
+
+steady rows:
+  direct_jaccpot: prepare=1.179s evaluate=1.820s total=2.999s over 2 states
+  odisseo_coupler_builder: prepare=1.174s evaluate=1.821s total=2.995s over 2 states
+```
+
+Split toggle result:
+
+```text
+20k with JACCPOT_PREPARE_STAGE_MEMORY_SPLIT_ENABLED=0:
+  cold prepare: 26.319s
+  dual artifact build: 10.269s
+
+200k with JACCPOT_PREPARE_STAGE_MEMORY_SPLIT_ENABLED=0:
+  cold prepare: 87.961s
+  dual artifact build: 61.308s
+```
+
+Conclusion:
+
+- the cold `~80s` wall time is not hidden Python overhead; it is almost fully
+  accounted for inside jaccpot prepare stages,
+- at 200k the dominant compile/startup cost is dual-tree artifact build,
+  split almost evenly between far-pair traversal and leaf-neighbor traversal,
+- disabling the split traversal helps at 20k but hurts at 200k, so the default
+  split path remains the better large-N choice.
+
+Exact next action:
+
+```text
+Investigate whether the far-pair and leaf-neighbor traversal kernels can share
+compiled structure or be warmed explicitly before timed full prepare. The first
+candidate is a deliberate warmup/reporting mode rather than changing the split
+default, because steady-state timing is already good and no-split regresses at
+200k.
+```
