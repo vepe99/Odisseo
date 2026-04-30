@@ -320,6 +320,7 @@ def integrate_leapfrog_jaccpot_active(
     state_curr = jnp.asarray(state)
     mass_arr = jnp.asarray(mass)
     profile = timing_stats is not None
+    collect_shape_signatures = bool(profile or enforce_static_shape_contract)
     t_total_start = time.perf_counter() if profile else 0.0
     prepare_seconds = 0.0
     evaluate_seconds = 0.0
@@ -368,12 +369,12 @@ def integrate_leapfrog_jaccpot_active(
         nonlocal shape_checks_post_warmup
         nonlocal shape_signature_hashes_post_warmup
         nonlocal shape_signature_diff_post_warmup
-        if not (profile or enforce_static_shape_contract):
+        if not collect_shape_signatures:
             return
         signature = _prepared_state_shape_signature(prepared_state)
-        sig_hash = hashlib.sha1(repr(signature).encode("utf-8")).hexdigest()
         shape_checks += 1
-        shape_signature_unique.add(signature)
+        if profile:
+            shape_signature_unique.add(signature)
         if shape_signature_ref is None:
             shape_signature_ref = signature
             return
@@ -387,13 +388,22 @@ def integrate_leapfrog_jaccpot_active(
         if warmup_phase:
             return
         shape_checks_post_warmup += 1
-        shape_signature_unique_post_warmup.add(signature)
-        shape_signature_hashes_post_warmup.append(sig_hash)
+        if profile:
+            sig_hash = hashlib.sha1(repr(signature).encode("utf-8")).hexdigest()
+            shape_signature_unique_post_warmup.add(signature)
+            shape_signature_hashes_post_warmup.append(sig_hash)
         if shape_signature_ref_post_warmup is None:
             shape_signature_ref_post_warmup = signature
             return
         if signature != shape_signature_ref_post_warmup:
             shape_drift_events_post_warmup += 1
+            if bool(enforce_static_shape_contract):
+                raise RuntimeError(
+                    "Static-shape contract violated in FMM prepared state: "
+                    "leaf dtype/shape signature drifted after warmup."
+                )
+            if not profile:
+                return
             ref_counter = Counter(shape_signature_ref_post_warmup)
             cur_counter = Counter(signature)
             added = []
