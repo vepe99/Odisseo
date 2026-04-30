@@ -564,7 +564,7 @@ def _compute_conservation_metrics(
         ),
     )
 
-    potential_series = []
+    potential_values = []
     for i in range(int(sampled_states.shape[0])):
         state_i = sampled_states[i]
         prepared = solver.prepare_state(
@@ -580,7 +580,7 @@ def _compute_conservation_metrics(
         )
         self_energy = 0.5 * jnp.sum(mass_arr * self_potential)
 
-        ext_energy = 0.0
+        ext_energy = jnp.asarray(0.0, dtype=self_energy.dtype)
         if len(config.external_accelerations) > 0:
             _, ext_potential = combined_external_acceleration_vmpa_switch(
                 state_i,
@@ -590,9 +590,9 @@ def _compute_conservation_metrics(
             )
             ext_energy = jnp.sum(mass_arr * ext_potential)
 
-        potential_series.append(self_energy + ext_energy)
+        potential_values.append(self_energy + ext_energy)
 
-    potential_series = jnp.stack(potential_series)
+    potential_series = jnp.stack(potential_values)
     total_energy_series = kinetic_series + potential_series
     E0_abs = jnp.maximum(jnp.abs(total_energy_series[0]), 1e-30)
     rel_dE = (total_energy_series - total_energy_series[0]) / E0_abs
