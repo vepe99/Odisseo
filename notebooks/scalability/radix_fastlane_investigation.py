@@ -13,7 +13,14 @@ import jax
 import jax.numpy as jnp
 import numpy as np
 from astropy import units as u
-from jaccpot import FastMultipoleMethod
+from jaccpot import (
+    FMMAdvancedConfig,
+    FarFieldConfig,
+    FastMultipoleMethod,
+    NearFieldConfig,
+    RuntimePolicyConfig,
+    TreeConfig,
+)
 
 from odisseo import construct_initial_state
 from odisseo.integration_api import _resolve_fmm_runtime_profile
@@ -72,6 +79,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--fmm-working-dtype", type=str, default="float32", choices=("float32", "float64"))
     parser.add_argument("--fmm-jit-tree", action="store_true")
     parser.add_argument("--fmm-jit-traversal", action="store_true")
+    parser.add_argument(
+        "--fmm-tree-build-mode",
+        type=str,
+        default="static_radix",
+        choices=("lbvh", "fixed_depth", "static_radix", "adaptive"),
+    )
     parser.add_argument("--leaf-size", type=int, default=64)
     parser.add_argument("--max-order", type=int, default=4)
     parser.add_argument("--seed", type=int, default=7)
@@ -80,6 +93,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--disk-height-kpc", type=float, default=0.3)
     parser.add_argument("--disk-mass-msun", type=float, default=6.0e10)
     parser.add_argument("--segments-to-benchmark", type=int, default=5)
+    parser.add_argument(
+        "--cold-start-order",
+        type=str,
+        default="direct_first",
+        choices=("direct_first", "coupler_first"),
+    )
     parser.add_argument(
         "--skip-steady-state-warmup",
         action="store_true",
@@ -120,6 +139,7 @@ def _build_simulation(args: argparse.Namespace):
         fmm_refresh_every=int(args.fmm_refresh_every),
         fmm_leaf_size=int(args.leaf_size),
         fmm_tree_leaf_target=int(args.leaf_size),
+        fmm_tree_build_mode=str(args.fmm_tree_build_mode),
         fmm_nearfield_mode="bucketed",
         fmm_nearfield_edge_chunk_size=256,
         fmm_jit_tree=bool(args.fmm_jit_tree),
@@ -172,7 +192,7 @@ def _make_coupler_solver(args: argparse.Namespace, state: jnp.ndarray, config: S
 
 
 def _make_direct_solver(args: argparse.Namespace, state: jnp.ndarray, config: SimulationConfig, params: SimulationParams):
-    # Minimal standalone constructor to match common jaccpot-only benchmarks.
+    # Standalone constructor matching the ODISSEO coupler's static-radix knobs.
     return FastMultipoleMethod(
         preset=str(args.fmm_preset),
         runtime_path=str(args.fmm_runtime_path),
@@ -180,6 +200,26 @@ def _make_direct_solver(args: argparse.Namespace, state: jnp.ndarray, config: Si
         G=float(params.G),
         softening=float(config.softening),
         working_dtype=state.dtype,
+        advanced=FMMAdvancedConfig(
+            tree=TreeConfig(
+                mode=str(args.fmm_tree_build_mode),
+                leaf_target=int(args.leaf_size),
+            ),
+            farfield=FarFieldConfig(
+                mode=str(config.fmm_farfield_mode),
+                m2l_chunk_size=config.fmm_m2l_chunk_size,
+            ),
+            nearfield=NearFieldConfig(
+                mode=str(config.fmm_nearfield_mode),
+                edge_chunk_size=int(config.fmm_nearfield_edge_chunk_size),
+            ),
+            runtime=RuntimePolicyConfig(
+                jit_tree=bool(args.fmm_jit_tree),
+                jit_traversal=bool(args.fmm_jit_traversal),
+            ),
+            mac_type=str(config.fmm_mac_type),
+        ),
+        fixed_max_leaf_size=int(args.leaf_size),
     )
 
 
@@ -351,26 +391,27 @@ def main() -> None:
     state0, mass, config, params = _build_simulation(args)
     effective_cfg = _assert_fast_lane(args, state0, config)
 
-    states_for_benchmark = [state0] + _generate_segment_end_states(args, state0, mass, config, params)
     solver_direct = _make_direct_solver(args, state0, config, params)
     solver_coupler = _make_coupler_solver(args, state0, config, params)
 
-    cold = {
-        "direct_jaccpot": _cold_warmup(
-            solver_direct,
+    cold_solver_order = (
+        ("odisseo_coupler_builder", solver_coupler),
+        ("direct_jaccpot", solver_direct),
+    )
+    if str(args.cold_start_order) == "direct_first":
+        cold_solver_order = tuple(reversed(cold_solver_order))
+
+    cold = {}
+    for solver_name, solver in cold_solver_order:
+        cold[solver_name] = _cold_warmup(
+            solver,
             state0,
             mass,
             leaf_size=int(args.leaf_size),
             max_order=int(args.max_order),
-        ),
-        "odisseo_coupler_builder": _cold_warmup(
-            solver_coupler,
-            state0,
-            mass,
-            leaf_size=int(args.leaf_size),
-            max_order=int(args.max_order),
-        ),
-    }
+        )
+
+    states_for_benchmark = [state0] + _generate_segment_end_states(args, state0, mass, config, params)
 
     rows = []
     rows.extend(
@@ -415,6 +456,8 @@ def main() -> None:
         "state0_dtype": str(state0.dtype),
         "mass_dtype": str(mass.dtype),
         "cold_start_single_call": cold,
+        "cold_start_order": str(args.cold_start_order),
+        "cold_start_measured_before_state_generation": True,
         "num_states_benchmarked_per_solver": int(len(states_for_benchmark)),
         "summary_by_solver": by_solver,
     }
