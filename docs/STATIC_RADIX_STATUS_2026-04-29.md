@@ -643,3 +643,52 @@ candidate is a deliberate warmup/reporting mode rather than changing the split
 default, because steady-state timing is already good and no-split regresses at
 200k.
 ```
+
+## Warm Sweep Performance Target - 2026-04-30
+
+Important target clarification:
+
+- standalone jaccpot previously demonstrated subsecond warm full-FMM behavior at
+  `N=200000` in its optimal large-N/radix configuration,
+- ODISSEO should therefore not stop at "cold compile explained" or "refreshes
+  are shape-stable",
+- the warm ODISSEO+jaccpot target is:
+
+```text
+N = 200000
+tree_build_mode = static_radix
+leaf_size = 256
+max_order = 4
+runtime_path = large_n
+preset = large_n_gpu
+
+warm full FMM sweep = warm prepare_state + warm evaluate_prepared_state < 1.0 s
+```
+
+Current static-radix fast-lane harness numbers are still above that target:
+
+```text
+200k split-substage run, warm rows:
+  direct_jaccpot:           prepare=1.179s evaluate=1.820s total=2.999s over 2 states
+  odisseo_coupler_builder:  prepare=1.174s evaluate=1.821s total=2.995s over 2 states
+
+approx per-state warm sweep:
+  prepare ~= 0.59s
+  evaluate ~= 0.91s
+  total   ~= 1.50s
+```
+
+So the remaining performance goal is twofold:
+
+1. Treat cold compile/startup separately and report or warm it deliberately.
+2. Reduce the steady warm full sweep from roughly `1.5s` toward the standalone
+   jaccpot optimum below `1s`.
+
+Exact next action update:
+
+```text
+Reproduce the historical standalone jaccpot subsecond 200k configuration
+side-by-side with the current ODISSEO fast-lane harness, then diff runtime
+knobs and prepared-state profiles until the warm prepare+evaluate gap is
+explained.
+```
