@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from contextlib import contextmanager
 from collections import Counter
 from functools import partial
 import hashlib
@@ -13,6 +14,72 @@ import jax.numpy as jnp
 
 from odisseo.option_classes import SimulationConfig, SimulationParams
 from odisseo.potentials import combined_external_acceleration_vmpa_switch
+
+
+def _large_n_environment_overrides(
+    config: SimulationConfig,
+    *,
+    fmm_preset: Optional[str] = None,
+) -> dict[str, str]:
+    """Return jaccpot large-N env overrides requested by SimulationConfig."""
+    overrides: dict[str, str] = {}
+    target_block_size = getattr(config, "fmm_large_n_target_block_size", None)
+    if target_block_size is not None:
+        overrides["JACCPOT_LARGE_N_TARGET_BLOCK_SIZE"] = str(int(target_block_size))
+
+    static_target_blocks = getattr(config, "fmm_large_n_static_target_blocks", None)
+    auto_static_target_blocks = (
+        static_target_blocks is None
+        and str(getattr(config, "fmm_tree_build_mode", "")).strip().lower()
+        == "static_radix"
+        and str(fmm_preset or getattr(config, "fmm_preset", "")).strip().lower()
+        == "large_n_gpu"
+        and int(getattr(config, "N_particles", 0))
+        >= int(getattr(config, "fmm_large_n_min_particles", 200_000))
+    )
+    if auto_static_target_blocks:
+        static_target_blocks = True
+
+    if static_target_blocks is not None:
+        overrides["JACCPOT_LARGE_N_STATIC_TARGET_BLOCKS"] = (
+            "1" if bool(static_target_blocks) else "0"
+        )
+
+    static_target_blocks_cap = getattr(
+        config,
+        "fmm_large_n_static_target_blocks_max_per_leaf",
+        None,
+    )
+    if auto_static_target_blocks and static_target_blocks_cap is None:
+        static_target_blocks_cap = 16
+    if static_target_blocks_cap is not None:
+        overrides["JACCPOT_LARGE_N_STATIC_TARGET_BLOCKS_MAX_PER_LEAF"] = str(
+            int(static_target_blocks_cap)
+        )
+    return overrides
+
+
+@contextmanager
+def _temporary_large_n_environment(
+    config: SimulationConfig,
+    *,
+    fmm_preset: Optional[str] = None,
+):
+    overrides = _large_n_environment_overrides(config, fmm_preset=fmm_preset)
+    if not overrides:
+        yield
+        return
+
+    previous = {key: os.environ.get(key) for key in overrides}
+    try:
+        os.environ.update(overrides)
+        yield
+    finally:
+        for key, value in previous.items():
+            if value is None:
+                os.environ.pop(key, None)
+            else:
+                os.environ[key] = value
 
 
 def _build_fmm_solver(
@@ -711,12 +778,13 @@ def integrate_leapfrog_jaccpot_active(
         ),
     )
     def _prepare_state(state_in: jnp.ndarray):
-        return solver.prepare_state(
-            state_in[:, 0, :],
-            mass_arr,
-            leaf_size=int(leaf_size),
-            max_order=int(max_order),
-        )
+        with _temporary_large_n_environment(config, fmm_preset=fmm_preset):
+            return solver.prepare_state(
+                state_in[:, 0, :],
+                mass_arr,
+                leaf_size=int(leaf_size),
+                max_order=int(max_order),
+            )
 
     def _prepare_or_refresh_state(
         state_in: jnp.ndarray,
@@ -796,21 +864,24 @@ def integrate_leapfrog_jaccpot_active(
 
         for args, kwargs in attempts:
             try:
-                if kwargs:
-                    # Filter kwargs to names accepted by the current signature.
-                    sig = inspect.signature(refresh_fn)
-                    params = sig.parameters
-                    accepts_var_kw = any(
-                        p.kind == inspect.Parameter.VAR_KEYWORD
-                        for p in params.values()
-                    )
-                    if accepts_var_kw:
-                        call_kwargs = kwargs
+                with _temporary_large_n_environment(config, fmm_preset=fmm_preset):
+                    if kwargs:
+                        # Filter kwargs to names accepted by the current signature.
+                        sig = inspect.signature(refresh_fn)
+                        params = sig.parameters
+                        accepts_var_kw = any(
+                            p.kind == inspect.Parameter.VAR_KEYWORD
+                            for p in params.values()
+                        )
+                        if accepts_var_kw:
+                            call_kwargs = kwargs
+                        else:
+                            call_kwargs = {
+                                k: v for k, v in kwargs.items() if k in params
+                            }
+                        out = refresh_fn(*args, **call_kwargs)
                     else:
-                        call_kwargs = {k: v for k, v in kwargs.items() if k in params}
-                    out = refresh_fn(*args, **call_kwargs)
-                else:
-                    out = refresh_fn(*args)
+                        out = refresh_fn(*args)
                 refresh_prepare_successes += 1
                 last_prepare_path = "refresh"
                 return out
@@ -1224,12 +1295,13 @@ def evaluate_acceleration_jaccpot(
             fmm_prepare_stage_memory_split_enabled
         ),
     )
-    prepared = solver.prepare_state(
-        state_arr[:, 0, :],
-        mass_arr,
-        leaf_size=int(leaf_size),
-        max_order=int(max_order),
-    )
+    with _temporary_large_n_environment(config, fmm_preset=fmm_preset):
+        prepared = solver.prepare_state(
+            state_arr[:, 0, :],
+            mass_arr,
+            leaf_size=int(leaf_size),
+            max_order=int(max_order),
+        )
     return solver.evaluate_prepared_state(
         prepared,
         target_indices=active_indices,

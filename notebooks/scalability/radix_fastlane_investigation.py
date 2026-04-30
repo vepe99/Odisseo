@@ -25,7 +25,11 @@ from jaccpot import (
 
 from odisseo import construct_initial_state
 from odisseo.integration_api import _resolve_fmm_runtime_profile
-from odisseo.jaccpot_coupling import _build_fmm_solver, _run_full_segment_scan
+from odisseo.jaccpot_coupling import (
+    _build_fmm_solver,
+    _large_n_environment_overrides,
+    _run_full_segment_scan,
+)
 from odisseo.option_classes import FMM_ACC, NFW_POTENTIAL, NFWParams, SimulationConfig, SimulationParams
 from odisseo.potentials import combined_external_acceleration_vmpa_switch
 from odisseo.units import CodeUnits
@@ -192,6 +196,19 @@ def _build_simulation(args: argparse.Namespace):
         fmm_tree_build_mode=str(args.fmm_tree_build_mode),
         fmm_nearfield_mode="bucketed",
         fmm_nearfield_edge_chunk_size=int(args.fmm_nearfield_edge_chunk_size),
+        fmm_large_n_target_block_size=(
+            None
+            if args.large_n_target_block_size is None
+            else int(args.large_n_target_block_size)
+        ),
+        fmm_large_n_static_target_blocks=(
+            True if bool(args.large_n_static_target_blocks) else None
+        ),
+        fmm_large_n_static_target_blocks_max_per_leaf=(
+            None
+            if args.large_n_static_target_blocks_max_per_leaf is None
+            else int(args.large_n_static_target_blocks_max_per_leaf)
+        ),
         fmm_jit_tree=bool(args.fmm_jit_tree),
         fmm_jit_traversal=bool(args.fmm_jit_traversal),
     )
@@ -543,6 +560,9 @@ def main() -> None:
     args = parse_args()
     _apply_large_n_env_overrides(args)
     state0, mass, config, params = _build_simulation(args)
+    os.environ.update(
+        _large_n_environment_overrides(config, fmm_preset=str(args.fmm_preset))
+    )
     effective_cfg = _assert_fast_lane(args, state0, config)
 
     solver_direct = _make_direct_solver(args, state0, config, params)

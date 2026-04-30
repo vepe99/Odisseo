@@ -835,3 +835,294 @@ benchmark configuration, then run a longer integration-profile validation
 with the same knobs to confirm refresh hits/misses/overflows across changing
 particle distributions.
 ```
+
+## Production Config Wiring - 2026-04-30
+
+Longer moving-particle validation with static target blocks:
+
+```text
+env JACCPOT_LARGE_N_STATIC_TARGET_BLOCKS=1 \
+    JACCPOT_LARGE_N_STATIC_TARGET_BLOCKS_MAX_PER_LEAF=16 \
+  micromamba run -n odisseo python notebooks/scalability/galaxy_disk_fmm_large_n.py \
+    --mode perf \
+    --n-particles 200000 \
+    --num-steps 20 \
+    --fmm-refresh-every 1 \
+    --fmm-preset large_n_gpu \
+    --fmm-runtime-path large_n \
+    --fmm-tree-build-mode static_radix \
+    --fmm-leaf-size 256 \
+    --fmm-tree-leaf-target 256 \
+    --fmm-max-order 4 \
+    --fmm-nearfield-edge-chunk-size 256 \
+    --profile-breakdown \
+    --require-static-shape \
+    --max-compiled-profile-transitions 0 \
+    --max-overflow-reprofiles 0 \
+    --max-neighbor-edge-reprofiles 0 \
+    --min-refresh-prepare-successes 19
+```
+
+Report:
+
+```text
+JSON: /tmp/static_radix_targetblocks16_integration_200k_20/galaxy_disk_profile_20260430_142255.json
+CSV : /tmp/static_radix_targetblocks16_integration_200k_20/galaxy_disk_profile_20260430_142255.csv
+```
+
+Validation result:
+
+```text
+total runtime including cold startup: 108.132s
+prepare total: 94.993s over 20 calls
+evaluate total: 10.699s over 20 calls
+profiled cold full prepare: 82.181s
+profiled refresh prepare: 12.812s over 19 calls
+
+warm refresh prepare average: 0.674s
+warm evaluate average estimate: ~0.231s
+warm full FMM sweep estimate: ~0.905s
+
+static_radix refresh hits: 19
+static_radix refresh misses: 0
+static_radix profile overflows: 0
+compiled profile transitions: 0
+overflow reprofiles: 0
+neighbor-edge reprofiles: 0
+post-warmup shape signatures: stable, 1 unique signature
+```
+
+Production wiring added after that validation:
+
+- `SimulationConfig` now carries:
+  - `fmm_large_n_target_block_size`
+  - `fmm_large_n_static_target_blocks`
+  - `fmm_large_n_static_target_blocks_max_per_leaf`
+- `odisseo.jaccpot_coupling` applies these settings while calling jaccpot
+  full prepare and refresh prepare, so production integrations no longer have
+  to depend on ambient shell environment variables.
+- `notebooks/scalability/galaxy_disk_fmm_large_n.py` exposes the settings via:
+  - `--fmm-large-n-target-block-size`
+  - `--fmm-large-n-static-target-blocks`
+  - `--no-fmm-large-n-static-target-blocks`
+  - `--fmm-large-n-static-target-blocks-max-per-leaf`
+
+Config-driven smoke without shell env overrides:
+
+```text
+micromamba run -n odisseo python notebooks/scalability/galaxy_disk_fmm_large_n.py \
+  --mode perf \
+  --n-particles 20000 \
+  --num-steps 2 \
+  --fmm-refresh-every 1 \
+  --fmm-preset large_n_gpu \
+  --fmm-runtime-path large_n \
+  --fmm-tree-build-mode static_radix \
+  --fmm-leaf-size 256 \
+  --fmm-tree-leaf-target 256 \
+  --fmm-max-order 4 \
+  --fmm-nearfield-edge-chunk-size 256 \
+  --fmm-large-n-static-target-blocks \
+  --fmm-large-n-static-target-blocks-max-per-leaf 16 \
+  --profile-breakdown \
+  --require-static-shape \
+  --max-compiled-profile-transitions 0 \
+  --max-overflow-reprofiles 0 \
+  --max-neighbor-edge-reprofiles 0 \
+  --min-refresh-prepare-successes 1
+```
+
+Report:
+
+```text
+JSON: /tmp/static_radix_config_targetblocks16_smoke_20k_2/galaxy_disk_profile_20260430_145132.json
+```
+
+Smoke result:
+
+```text
+static_radix refresh hits: 1
+static_radix refresh misses: 0
+static_radix profile overflows: 0
+compiled profile transitions: 0
+overflow reprofiles: 0
+neighbor-edge reprofiles: 0
+reported fmm_large_n_static_target_blocks_requested: true
+reported fmm_large_n_static_target_blocks_max_per_leaf_requested: 16
+```
+
+Exact next action:
+
+```text
+Re-run the 200k/20 integration validation through the new config flags rather
+than env overrides, then decide whether static target blocks with max-per-leaf
+16 should become the default for static_radix + large_n_gpu at N>=200k.
+```
+
+## Config-Driven 200k Validation - 2026-04-30
+
+The production-path rerun uses the new ODISSEO config/CLI flags directly, with
+no `JACCPOT_LARGE_N_*` shell environment prefix:
+
+```text
+micromamba run -n odisseo python notebooks/scalability/galaxy_disk_fmm_large_n.py \
+  --mode perf \
+  --n-particles 200000 \
+  --num-steps 20 \
+  --fmm-refresh-every 1 \
+  --fmm-preset large_n_gpu \
+  --fmm-runtime-path large_n \
+  --fmm-tree-build-mode static_radix \
+  --fmm-leaf-size 256 \
+  --fmm-tree-leaf-target 256 \
+  --fmm-max-order 4 \
+  --fmm-nearfield-edge-chunk-size 256 \
+  --fmm-large-n-static-target-blocks \
+  --fmm-large-n-static-target-blocks-max-per-leaf 16 \
+  --profile-breakdown \
+  --require-static-shape \
+  --max-compiled-profile-transitions 0 \
+  --max-overflow-reprofiles 0 \
+  --max-neighbor-edge-reprofiles 0 \
+  --min-refresh-prepare-successes 19
+```
+
+Report:
+
+```text
+JSON: /tmp/static_radix_config_targetblocks16_integration_200k_20/galaxy_disk_profile_20260430_145648.json
+CSV : /tmp/static_radix_config_targetblocks16_integration_200k_20/galaxy_disk_profile_20260430_145648.csv
+```
+
+Result:
+
+```text
+total runtime including cold startup: 108.715s
+prepare total: 95.787s over 20 calls
+evaluate total: 10.613s over 20 calls
+profiled cold full prepare: 83.194s
+profiled refresh prepare: 12.593s over 19 calls
+
+warm refresh prepare average: 0.663s
+warm evaluate average estimate: ~0.232s
+warm full FMM sweep estimate: ~0.895s
+
+static_radix refresh hits: 19
+static_radix refresh misses: 0
+static_radix profile overflows: 0
+compiled profile transitions: 0
+overflow reprofiles: 0
+neighbor-edge reprofiles: 0
+post-warmup shape signatures: stable, 1 unique signature
+```
+
+The report confirms:
+
+```text
+fmm_large_n_static_target_blocks_requested = true
+fmm_large_n_static_target_blocks_max_per_leaf_requested = 16
+```
+
+Conclusion:
+
+- the production config path now reproduces the subsecond warm full-sweep
+  behavior without ambient env requirements,
+- `static_radix` remains stable across changing particle distributions,
+- static target blocks with max-per-leaf `16` is the current recommended
+  production setting for `static_radix + large_n_gpu` at `N=200000`.
+
+Follow-up implementation:
+
+- the target-block setting is now automatic for
+  `static_radix + large_n_gpu` when `N_particles >= fmm_large_n_min_particles`,
+- the automatic cap is `JACCPOT_LARGE_N_STATIC_TARGET_BLOCKS_MAX_PER_LEAF=16`,
+- explicit config still wins:
+  - `fmm_large_n_static_target_blocks=False` disables the automatic default,
+  - `fmm_large_n_static_target_blocks_max_per_leaf=<int>` overrides the cap,
+  - `fmm_large_n_target_block_size=<int>` still passes through to jaccpot.
+
+Sanity check:
+
+```text
+SimulationConfig(
+  N_particles=200000,
+  fmm_preset="large_n_gpu",
+  fmm_tree_build_mode="static_radix",
+)
+=> JACCPOT_LARGE_N_STATIC_TARGET_BLOCKS=1
+=> JACCPOT_LARGE_N_STATIC_TARGET_BLOCKS_MAX_PER_LEAF=16
+
+SimulationConfig(..., fmm_large_n_static_target_blocks=False)
+=> JACCPOT_LARGE_N_STATIC_TARGET_BLOCKS=0
+```
+
+Exact next action:
+
+```text
+Run one final 200k/20 integration gate without the explicit
+--fmm-large-n-static-target-blocks flags, confirming the automatic default
+is active and still keeps the warm full sweep below 1s.
+```
+
+## Automatic Default Smoke - 2026-04-30
+
+Command shape, intentionally without explicit target-block flags:
+
+```text
+micromamba run -n odisseo python notebooks/scalability/galaxy_disk_fmm_large_n.py \
+  --mode perf \
+  --n-particles 200000 \
+  --num-steps 2 \
+  --fmm-refresh-every 1 \
+  --fmm-preset large_n_gpu \
+  --fmm-runtime-path large_n \
+  --fmm-tree-build-mode static_radix \
+  --fmm-leaf-size 256 \
+  --fmm-tree-leaf-target 256 \
+  --fmm-max-order 4 \
+  --fmm-nearfield-edge-chunk-size 256 \
+  --profile-breakdown \
+  --require-static-shape \
+  --max-compiled-profile-transitions 0 \
+  --max-overflow-reprofiles 0 \
+  --max-neighbor-edge-reprofiles 0 \
+  --min-refresh-prepare-successes 1
+```
+
+Report:
+
+```text
+JSON: /tmp/static_radix_auto_targetblocks16_smoke_200k_2/galaxy_disk_profile_20260430_151259.json
+```
+
+Result:
+
+```text
+runtime including cold startup: 91.683s
+profiled cold full prepare: 82.122s
+profiled refresh prepare: 0.706s
+evaluate total: 6.680s over 2 calls
+
+static_radix refresh hits: 1
+static_radix refresh misses: 0
+static_radix profile overflows: 0
+compiled profile transitions: 0
+overflow reprofiles: 0
+neighbor-edge reprofiles: 0
+post-warmup shape signatures: stable
+```
+
+The auto-default smoke report was generated before the JSON gained an explicit
+`fmm_large_n_effective_environment_overrides` field, but the stage counters and
+the direct helper sanity check confirm the automatic static-target-block path.
+Future reports include the effective override dictionary directly.
+
+Production status:
+
+```text
+static_radix + large_n_gpu + N>=200k now defaults to:
+  JACCPOT_LARGE_N_STATIC_TARGET_BLOCKS=1
+  JACCPOT_LARGE_N_STATIC_TARGET_BLOCKS_MAX_PER_LEAF=16
+
+Explicit SimulationConfig values still override the default.
+```
