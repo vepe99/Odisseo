@@ -54,6 +54,9 @@ def test_integrate_dispatches_to_fmm_coupler(monkeypatch):
         assert kwargs["fmm_nearfield_mode"] == "pairwise"
         assert kwargs["fmm_nearfield_edge_chunk_size"] == 96
         assert kwargs["fmm_tree_leaf_target"] == 20
+        assert kwargs["enforce_static_shape_contract"] is True
+        assert kwargs["static_shape_warmup_prepares"] == 2
+        assert kwargs["rematerialize_between_refresh"] is False
         assert kwargs["return_history"] is False
         return jnp.zeros((4, 2, 3), dtype=jnp.float32)
 
@@ -78,6 +81,9 @@ def test_integrate_dispatches_to_fmm_coupler(monkeypatch):
         fmm_nearfield_mode="pairwise",
         fmm_nearfield_edge_chunk_size=96,
         fmm_tree_leaf_target=20,
+        fmm_enforce_static_shape_contract=True,
+        fmm_static_shape_warmup_prepares=2,
+        fmm_rematerialize_between_refresh=False,
     )
     params = SimulationParams(G=1.0, t_end=1.0)
 
