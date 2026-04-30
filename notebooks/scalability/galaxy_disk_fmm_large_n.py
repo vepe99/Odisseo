@@ -590,9 +590,9 @@ def _compute_conservation_metrics(
             )
             ext_energy = jnp.sum(mass_arr * ext_potential)
 
-        potential_series.append(float(self_energy + ext_energy))
+        potential_series.append(self_energy + ext_energy)
 
-    potential_series = jnp.asarray(potential_series)
+    potential_series = jnp.stack(potential_series)
     total_energy_series = kinetic_series + potential_series
     E0_abs = jnp.maximum(jnp.abs(total_energy_series[0]), 1e-30)
     rel_dE = (total_energy_series - total_energy_series[0]) / E0_abs
