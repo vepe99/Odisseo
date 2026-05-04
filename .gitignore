@@ -1,4 +1,6 @@
 *.gif
+__pycache__/
+*.py[cod]
 
 # Sphinx documentation
 docs/build/
