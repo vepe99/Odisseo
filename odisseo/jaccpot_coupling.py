@@ -24,8 +24,6 @@ def _large_n_environment_overrides(
     """Return jaccpot large-N env overrides requested by SimulationConfig."""
     overrides: dict[str, str] = {}
     target_block_size = getattr(config, "fmm_large_n_target_block_size", None)
-    if target_block_size is not None:
-        overrides["JACCPOT_LARGE_N_TARGET_BLOCK_SIZE"] = str(int(target_block_size))
 
     static_target_blocks = getattr(config, "fmm_large_n_static_target_blocks", None)
     auto_static_target_blocks = (
@@ -39,6 +37,11 @@ def _large_n_environment_overrides(
     )
     if auto_static_target_blocks:
         static_target_blocks = True
+        if target_block_size is None:
+            target_block_size = 4
+
+    if target_block_size is not None:
+        overrides["JACCPOT_LARGE_N_TARGET_BLOCK_SIZE"] = str(int(target_block_size))
 
     if static_target_blocks is not None:
         overrides["JACCPOT_LARGE_N_STATIC_TARGET_BLOCKS"] = (
