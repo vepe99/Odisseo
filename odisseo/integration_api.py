@@ -27,7 +27,7 @@ def _resolve_fmm_runtime_profile(
     """Resolve preset/runtime-path/dtype for jaccpot FMM execution."""
     preset = str(config.fmm_preset).strip().lower()
     runtime_path = str(config.fmm_runtime_path).strip().lower()
-    effective_dtype = state.dtype
+    effective_dtype = jnp.dtype(state.dtype)
 
     auto_large_n = bool(config.fmm_auto_large_n_profile)
     min_particles = max(1, int(config.fmm_large_n_min_particles))
@@ -43,7 +43,7 @@ def _resolve_fmm_runtime_profile(
             runtime_path = "large_n"
 
     if preset == "large_n_gpu" and bool(config.fmm_large_n_force_fp32):
-        effective_dtype = jnp.float32
+        effective_dtype = jnp.dtype(jnp.float32)
         if runtime_path == "auto":
             runtime_path = "large_n"
 
