@@ -80,14 +80,14 @@ Galaxy-disk large-`N` example (auto-selects jaccpot radix fast lane on GPU):
 python notebooks/scalability/galaxy_disk_fmm_large_n.py --n-particles 200000 --num-steps 200
 ```
 
-Render snapshots live after the run:
+Render snapshots live after the run (use `--mode render`):
 
 ```bash
-python notebooks/scalability/galaxy_disk_fmm_large_n.py --n-particles 200000 --num-steps 200 --live --num-snapshots 240
+python notebooks/scalability/galaxy_disk_fmm_large_n.py --n-particles 200000 --num-steps 200 --mode render --live --snapshot-stride 1 --snapshot-chunk-steps 20
 ```
 
-Record a movie (`.gif` or `.mp4`):
+Record a movie (`.gif` or `.mp4`; use `--mode render`):
 
 ```bash
-python notebooks/scalability/galaxy_disk_fmm_large_n.py --n-particles 200000 --num-steps 200 --num-snapshots 240 --movie-path ./galaxy_disk.gif --movie-fps 24
+python notebooks/scalability/galaxy_disk_fmm_large_n.py --n-particles 200000 --num-steps 200 --mode render --movie-path ./galaxy_disk.gif --movie-fps 24 --snapshot-stride 1 --snapshot-chunk-steps 20
 ```
