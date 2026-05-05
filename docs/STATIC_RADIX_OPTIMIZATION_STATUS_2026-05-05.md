@@ -756,6 +756,96 @@ Next target:
   and whether the static-radix topology can reuse a bounded scaffold for a
   capacity-first fill path without recounting.
 
+## Full Galaxy Timing Check
+
+Ran one more traversal process-block sweep point before switching to the real
+galaxy timing:
+
+```text
+process_block=2048:
+report: /tmp/static_radix_process_block_2048_200k_2_gpu2/galaxy_disk_profile_20260505_232335.json
+
+total_seconds: 72.560
+profiled_full_prepare_seconds: 62.313
+shared far/near total: 30.332
+  count pass:          10.967
+  combined fill:       17.593
+```
+
+Interpretation:
+
+- `2048` regressed versus `1024`; keep `_GPU_MINIMUM_MEMORY_PROCESS_BLOCK = 1024`.
+- The scaffold/cache idea is less compelling for the normal static-radix path
+  now because warm refreshes reuse the dual artifacts entirely. It would mainly
+  help fallback/full-reprepare cases, not the main steady-state run.
+
+Full 200k/200 galaxy-disk timing with the optimized static-radix defaults:
+
+```text
+report: /tmp/static_radix_optimized_galaxy_200k_200_gpu2/galaxy_disk_profile_20260505_232548.json
+output: /tmp/static_radix_optimized_galaxy_200k_200_gpu2.npz
+
+total_seconds: 100.161
+prepare_seconds: 77.393
+evaluate_seconds: 19.963
+update_seconds: 1.810
+
+profiled_full_prepare_calls: 1
+profiled_refresh_prepare_calls: 199
+profiled_full_prepare_seconds: 61.657
+profiled_refresh_prepare_seconds: 15.736
+
+runtime_static_radix_refresh_hits: 199
+runtime_static_radix_refresh_misses: 0
+runtime_compiled_profile_transitions: 0
+runtime_large_n_neighbor_edges_profile_reprofiles: 0
+runtime_large_n_overflow_profile_reprofiles: 0
+shape_signature_stable_post_warmup: true
+```
+
+Selected stage totals:
+
+```text
+full prepare:
+  dual/downward total:              41.352
+  dual artifact build:              30.265
+    shared far/near split builder:  30.257
+      count pass:                   10.890
+      combined fill:                17.656
+  tree/upward total:                15.813
+  upward compute:                   11.038
+  nearfield payload:                 4.417
+  tree build:                        4.183
+
+refresh aggregate over 199 calls:
+  refresh prepare total:            15.736
+  tree/upward total:                 4.378
+  dual artifact build:               0.007
+  dual downward compute:             1.081
+  compile/sync suspect:              2.028
+```
+
+Comparison against earlier documented 20-step gates:
+
+```text
+capacity-fixed 200k/20:              116.690
+static-radix targetblocks16 200k/20: 103.367
+static-radix targetblock4 200k/20:    99.386
+optimized static-radix 200k/200:     100.161
+```
+
+Interpretation:
+
+- The optimized path now runs a 200-step galaxy simulation in about the same
+  wall time as the earlier 20-step gates.
+- Cold prepare is still the largest single cost, but it is amortized over the
+  full run. Steady-state refresh is about `15.736 / 199 = 0.079s` per refresh.
+- Evaluate is about `19.963 / 200 = 0.100s` per step, and is now a meaningful
+  steady-state target if we want more end-to-end speed.
+- Further cold dual-build work is still possible, but the full simulation says
+  the next best user-visible target is probably steady-state evaluate/refresh,
+  not more cold-only micro-optimization.
+
 ## Split Timing Instrumentation
 
 Added counters:
