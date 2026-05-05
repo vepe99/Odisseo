@@ -413,6 +413,50 @@ def integrate_leapfrog_jaccpot_active(
     profiled_refresh_fallback_prepare_seconds = 0.0
     profiled_prepare_events: list[dict[str, Any]] = []
     last_prepare_path = "none"
+    prepare_stage_keys = (
+        "refresh_input_seconds",
+        "refresh_tree_upward_seconds",
+        "refresh_tree_build_seconds",
+        "refresh_upward_compute_seconds",
+        "refresh_upward_geometry_seconds",
+        "refresh_upward_mass_moments_seconds",
+        "refresh_upward_p2m_seconds",
+        "refresh_upward_m2m_seconds",
+        "refresh_upward_source_motion_seconds",
+        "refresh_dual_downward_seconds",
+        "refresh_dual_setup_seconds",
+        "refresh_dual_artifact_build_seconds",
+        "refresh_dual_split_shared_far_near_seconds",
+        "refresh_dual_split_shared_count_seconds",
+        "refresh_dual_split_shared_combined_fill_seconds",
+        "refresh_dual_split_shared_far_fill_seconds",
+        "refresh_dual_split_shared_near_fill_seconds",
+        "refresh_dual_split_far_pairs_seconds",
+        "refresh_dual_split_leaf_neighbors_seconds",
+        "refresh_dual_split_combined_seconds",
+        "refresh_dual_raw_combined_seconds",
+        "refresh_dual_split_dense_buffers_seconds",
+        "refresh_dual_far_pair_plan_seconds",
+        "refresh_dual_m2l_autotune_seconds",
+        "refresh_dual_select_interactions_seconds",
+        "refresh_dual_downward_compute_seconds",
+        "refresh_dual_m2l_compute_seconds",
+        "refresh_dual_l2l_compute_seconds",
+        "refresh_dual_finalize_seconds",
+        "refresh_dual_residual_seconds",
+        "refresh_nearfield_seconds",
+        "refresh_nearfield_leaf_groups_seconds",
+        "refresh_nearfield_precompute_seconds",
+        "refresh_nearfield_target_blocks_seconds",
+        "refresh_nearfield_block_sort_seconds",
+        "refresh_nearfield_speed_layout_seconds",
+        "refresh_nearfield_overflow_profile_seconds",
+        "refresh_nearfield_radix_payload_seconds",
+        "refresh_nearfield_neighbor_padding_seconds",
+        "refresh_nearfield_state_pack_seconds",
+        "refresh_nearfield_residual_seconds",
+        "refresh_compile_or_sync_suspect_seconds",
+    )
     shape_signature_ref: Optional[tuple[tuple[str, tuple[int, ...]], ...]] = None
     shape_signature_unique: set[tuple[tuple[str, tuple[int, ...]], ...]] = set()
     shape_drift_events = 0
@@ -490,6 +534,17 @@ def integrate_leapfrog_jaccpot_active(
         if not profile:
             return out_arr
         _ = jax.block_until_ready(out_arr)
+        stage_seconds_by_path: dict[str, dict[str, float]] = {}
+        for event in profiled_prepare_events:
+            path = str(event.get("path", "unknown"))
+            stage_seconds = event.get("stage_seconds", {})
+            if not isinstance(stage_seconds, dict):
+                continue
+            path_bucket = stage_seconds_by_path.setdefault(path, {})
+            for key, value in stage_seconds.items():
+                path_bucket[str(key)] = float(path_bucket.get(str(key), 0.0)) + float(
+                    value
+                )
         runtime_diag = {}
         get_diag = getattr(solver, "get_runtime_diagnostics", None)
         if callable(get_diag):
@@ -555,6 +610,13 @@ def integrate_leapfrog_jaccpot_active(
                     profiled_refresh_fallback_prepare_seconds
                 ),
                 "profiled_prepare_events": list(profiled_prepare_events),
+                "profiled_prepare_stage_seconds_by_path": {
+                    path: {
+                        str(key): float(value)
+                        for key, value in sorted(stage_seconds.items())
+                    }
+                    for path, stage_seconds in sorted(stage_seconds_by_path.items())
+                },
                 "refresh_prepare_method_available": bool(
                     callable(getattr(solver, "refresh_prepared_state", None))
                 ),
@@ -639,6 +701,27 @@ def integrate_leapfrog_jaccpot_active(
                 "runtime_refresh_tree_upward_seconds": float(
                     runtime_diag.get("refresh_tree_upward_seconds", 0.0)
                 ),
+                "runtime_refresh_tree_build_seconds": float(
+                    runtime_diag.get("refresh_tree_build_seconds", 0.0)
+                ),
+                "runtime_refresh_upward_compute_seconds": float(
+                    runtime_diag.get("refresh_upward_compute_seconds", 0.0)
+                ),
+                "runtime_refresh_upward_geometry_seconds": float(
+                    runtime_diag.get("refresh_upward_geometry_seconds", 0.0)
+                ),
+                "runtime_refresh_upward_mass_moments_seconds": float(
+                    runtime_diag.get("refresh_upward_mass_moments_seconds", 0.0)
+                ),
+                "runtime_refresh_upward_p2m_seconds": float(
+                    runtime_diag.get("refresh_upward_p2m_seconds", 0.0)
+                ),
+                "runtime_refresh_upward_m2m_seconds": float(
+                    runtime_diag.get("refresh_upward_m2m_seconds", 0.0)
+                ),
+                "runtime_refresh_upward_source_motion_seconds": float(
+                    runtime_diag.get("refresh_upward_source_motion_seconds", 0.0)
+                ),
                 "runtime_refresh_dual_downward_seconds": float(
                     runtime_diag.get("refresh_dual_downward_seconds", 0.0)
                 ),
@@ -689,6 +772,36 @@ def integrate_leapfrog_jaccpot_active(
                 ),
                 "runtime_refresh_dual_artifact_build_seconds": float(
                     runtime_diag.get("refresh_dual_artifact_build_seconds", 0.0)
+                ),
+                "runtime_refresh_dual_split_shared_far_near_seconds": float(
+                    runtime_diag.get(
+                        "refresh_dual_split_shared_far_near_seconds",
+                        0.0,
+                    )
+                ),
+                "runtime_refresh_dual_split_shared_count_seconds": float(
+                    runtime_diag.get(
+                        "refresh_dual_split_shared_count_seconds",
+                        0.0,
+                    )
+                ),
+                "runtime_refresh_dual_split_shared_combined_fill_seconds": float(
+                    runtime_diag.get(
+                        "refresh_dual_split_shared_combined_fill_seconds",
+                        0.0,
+                    )
+                ),
+                "runtime_refresh_dual_split_shared_far_fill_seconds": float(
+                    runtime_diag.get(
+                        "refresh_dual_split_shared_far_fill_seconds",
+                        0.0,
+                    )
+                ),
+                "runtime_refresh_dual_split_shared_near_fill_seconds": float(
+                    runtime_diag.get(
+                        "refresh_dual_split_shared_near_fill_seconds",
+                        0.0,
+                    )
                 ),
                 "runtime_refresh_dual_far_pair_plan_seconds": float(
                     runtime_diag.get("refresh_dual_far_pair_plan_seconds", 0.0)
@@ -896,7 +1009,62 @@ def integrate_leapfrog_jaccpot_active(
         last_prepare_path = "refresh_fallback"
         return _prepare_state(state_in)
 
-    def _record_profiled_prepare_elapsed(elapsed: float) -> None:
+    def _prepare_stage_snapshot() -> dict[str, float]:
+        get_diag = getattr(solver, "get_runtime_diagnostics", None)
+        if not callable(get_diag):
+            return {}
+        try:
+            runtime_diag = dict(get_diag())
+        except Exception:
+            return {}
+        return {
+            key: float(runtime_diag.get(key, 0.0))
+            for key in prepare_stage_keys
+        }
+
+    def _profiled_prepare_call(
+        state_in: jnp.ndarray,
+        prev_prepared_state: Any | None,
+    ) -> tuple[Any, float, dict[str, float]]:
+        stage_before = _prepare_stage_snapshot()
+        timing_target = getattr(solver, "_impl", solver)
+        old_timing_active = bool(
+            getattr(timing_target, "_refresh_timing_active", False)
+        )
+        if profile:
+            try:
+                setattr(timing_target, "_refresh_timing_active", True)
+            except Exception:
+                pass
+        t0 = time.perf_counter()
+        try:
+            prepared_out = _prepare_or_refresh_state(state_in, prev_prepared_state)
+            if profile:
+                _ = jax.block_until_ready(prepared_out)
+            elapsed = time.perf_counter() - t0
+        finally:
+            if profile:
+                try:
+                    setattr(
+                        timing_target,
+                        "_refresh_timing_active",
+                        old_timing_active,
+                    )
+                except Exception:
+                    pass
+        stage_after = _prepare_stage_snapshot()
+        stage_delta = {
+            key: float(stage_after.get(key, 0.0) - stage_before.get(key, 0.0))
+            for key in prepare_stage_keys
+            if abs(float(stage_after.get(key, 0.0) - stage_before.get(key, 0.0)))
+            > 0.0
+        }
+        return prepared_out, float(elapsed), stage_delta
+
+    def _record_profiled_prepare_elapsed(
+        elapsed: float,
+        stage_delta: Optional[dict[str, float]] = None,
+    ) -> None:
         nonlocal profiled_full_prepare_calls
         nonlocal profiled_refresh_prepare_calls
         nonlocal profiled_refresh_fallback_prepare_calls
@@ -909,6 +1077,11 @@ def integrate_leapfrog_jaccpot_active(
             "path": str(last_prepare_path),
             "elapsed_seconds": float(elapsed),
         }
+        if stage_delta:
+            event["stage_seconds"] = {
+                str(key): float(value)
+                for key, value in sorted(stage_delta.items())
+            }
         profiled_prepare_events.append(event)
         if last_prepare_path == "refresh":
             profiled_refresh_prepare_calls += 1
@@ -968,15 +1141,16 @@ def integrate_leapfrog_jaccpot_active(
         prepared_state = None
         while step < int(num_steps):
             if profile:
-                t0 = time.perf_counter()
-            prepared_state = _prepare_or_refresh_state(state_curr, prepared_state)
-            if profile:
-                _ = jax.block_until_ready(prepared_state)
-                elapsed_prepare = time.perf_counter() - t0
+                prepared_state, elapsed_prepare, stage_delta = _profiled_prepare_call(
+                    state_curr,
+                    prepared_state,
+                )
                 prepare_seconds += elapsed_prepare
-                _record_profiled_prepare_elapsed(elapsed_prepare)
+                _record_profiled_prepare_elapsed(elapsed_prepare, stage_delta)
                 prepare_calls += 1
                 t0 = time.perf_counter()
+            else:
+                prepared_state = _prepare_or_refresh_state(state_curr, prepared_state)
             _record_shape_signature(prepared_state)
             acc_self_full = _eval_prepared(prepared_state, active_indices=None)
             if profile:
@@ -1021,15 +1195,16 @@ def integrate_leapfrog_jaccpot_active(
         prepared_state = None
         while step < int(num_steps):
             if profile:
-                t0 = time.perf_counter()
-            prepared_state = _prepare_or_refresh_state(state_curr, prepared_state)
-            if profile:
-                _ = jax.block_until_ready(prepared_state)
-                elapsed_prepare = time.perf_counter() - t0
+                prepared_state, elapsed_prepare, stage_delta = _profiled_prepare_call(
+                    state_curr,
+                    prepared_state,
+                )
                 prepare_seconds += elapsed_prepare
-                _record_profiled_prepare_elapsed(elapsed_prepare)
+                _record_profiled_prepare_elapsed(elapsed_prepare, stage_delta)
                 prepare_calls += 1
                 t0 = time.perf_counter()
+            else:
+                prepared_state = _prepare_or_refresh_state(state_curr, prepared_state)
             _record_shape_signature(prepared_state)
             acc_self_full = _eval_prepared(prepared_state, active_indices=None)
             if profile:
@@ -1070,14 +1245,15 @@ def integrate_leapfrog_jaccpot_active(
     for step in range(int(num_steps)):
         if step % int(refresh_every) == 0:
             if profile:
-                t0 = time.perf_counter()
-            prepared_state = _prepare_or_refresh_state(state_curr, prepared_state)
-            if profile:
-                _ = jax.block_until_ready(prepared_state)
-                elapsed_prepare = time.perf_counter() - t0
+                prepared_state, elapsed_prepare, stage_delta = _profiled_prepare_call(
+                    state_curr,
+                    prepared_state,
+                )
                 prepare_seconds += elapsed_prepare
-                _record_profiled_prepare_elapsed(elapsed_prepare)
+                _record_profiled_prepare_elapsed(elapsed_prepare, stage_delta)
                 prepare_calls += 1
+            else:
+                prepared_state = _prepare_or_refresh_state(state_curr, prepared_state)
             _record_shape_signature(prepared_state)
 
         full_active = active_indices_fn is None
@@ -1085,14 +1261,19 @@ def integrate_leapfrog_jaccpot_active(
             active_idx = None
             if prepared_state is None:
                 if profile:
-                    t0 = time.perf_counter()
-                prepared_state = _prepare_or_refresh_state(state_curr, prepared_state)
-                if profile:
-                    _ = jax.block_until_ready(prepared_state)
-                    elapsed_prepare = time.perf_counter() - t0
+                    (
+                        prepared_state,
+                        elapsed_prepare,
+                        stage_delta,
+                    ) = _profiled_prepare_call(state_curr, prepared_state)
                     prepare_seconds += elapsed_prepare
-                    _record_profiled_prepare_elapsed(elapsed_prepare)
+                    _record_profiled_prepare_elapsed(elapsed_prepare, stage_delta)
                     prepare_calls += 1
+                else:
+                    prepared_state = _prepare_or_refresh_state(
+                        state_curr,
+                        prepared_state,
+                    )
                 _record_shape_signature(prepared_state)
             if profile:
                 t0 = time.perf_counter()
@@ -1124,14 +1305,19 @@ def integrate_leapfrog_jaccpot_active(
             )
             if prepared_state is None:
                 if profile:
-                    t0 = time.perf_counter()
-                prepared_state = _prepare_or_refresh_state(state_curr, prepared_state)
-                if profile:
-                    _ = jax.block_until_ready(prepared_state)
-                    elapsed_prepare = time.perf_counter() - t0
+                    (
+                        prepared_state,
+                        elapsed_prepare,
+                        stage_delta,
+                    ) = _profiled_prepare_call(state_curr, prepared_state)
                     prepare_seconds += elapsed_prepare
-                    _record_profiled_prepare_elapsed(elapsed_prepare)
+                    _record_profiled_prepare_elapsed(elapsed_prepare, stage_delta)
                     prepare_calls += 1
+                else:
+                    prepared_state = _prepare_or_refresh_state(
+                        state_curr,
+                        prepared_state,
+                    )
                 _record_shape_signature(prepared_state)
             if profile:
                 t0 = time.perf_counter()
@@ -1159,14 +1345,15 @@ def integrate_leapfrog_jaccpot_active(
 
         if bool(refresh_after_position_update):
             if profile:
-                t0 = time.perf_counter()
-            prepared_state = _prepare_or_refresh_state(state_pos, prepared_state)
-            if profile:
-                _ = jax.block_until_ready(prepared_state)
-                elapsed_prepare = time.perf_counter() - t0
+                prepared_state, elapsed_prepare, stage_delta = _profiled_prepare_call(
+                    state_pos,
+                    prepared_state,
+                )
                 prepare_seconds += elapsed_prepare
-                _record_profiled_prepare_elapsed(elapsed_prepare)
+                _record_profiled_prepare_elapsed(elapsed_prepare, stage_delta)
                 prepare_calls += 1
+            else:
+                prepared_state = _prepare_or_refresh_state(state_pos, prepared_state)
             _record_shape_signature(prepared_state)
 
         if profile:
@@ -1174,14 +1361,19 @@ def integrate_leapfrog_jaccpot_active(
         if full_active:
             if prepared_state is None:
                 if profile:
-                    tp = time.perf_counter()
-                prepared_state = _prepare_or_refresh_state(state_pos, prepared_state)
-                if profile:
-                    _ = jax.block_until_ready(prepared_state)
-                    elapsed_prepare = time.perf_counter() - tp
+                    (
+                        prepared_state,
+                        elapsed_prepare,
+                        stage_delta,
+                    ) = _profiled_prepare_call(state_pos, prepared_state)
                     prepare_seconds += elapsed_prepare
-                    _record_profiled_prepare_elapsed(elapsed_prepare)
+                    _record_profiled_prepare_elapsed(elapsed_prepare, stage_delta)
                     prepare_calls += 1
+                else:
+                    prepared_state = _prepare_or_refresh_state(
+                        state_pos,
+                        prepared_state,
+                    )
                 _record_shape_signature(prepared_state)
             if profile:
                 te = time.perf_counter()
@@ -1204,14 +1396,19 @@ def integrate_leapfrog_jaccpot_active(
         else:
             if prepared_state is None:
                 if profile:
-                    tp = time.perf_counter()
-                prepared_state = _prepare_or_refresh_state(state_pos, prepared_state)
-                if profile:
-                    _ = jax.block_until_ready(prepared_state)
-                    elapsed_prepare = time.perf_counter() - tp
+                    (
+                        prepared_state,
+                        elapsed_prepare,
+                        stage_delta,
+                    ) = _profiled_prepare_call(state_pos, prepared_state)
                     prepare_seconds += elapsed_prepare
-                    _record_profiled_prepare_elapsed(elapsed_prepare)
+                    _record_profiled_prepare_elapsed(elapsed_prepare, stage_delta)
                     prepare_calls += 1
+                else:
+                    prepared_state = _prepare_or_refresh_state(
+                        state_pos,
+                        prepared_state,
+                    )
                 _record_shape_signature(prepared_state)
             if profile:
                 te = time.perf_counter()
