@@ -137,6 +137,26 @@ def integrate(
                 if config.fmm_jit_traversal is None
                 else bool(config.fmm_jit_traversal)
             ),
+            fmm_max_pair_queue=(
+                None
+                if config.fmm_max_pair_queue is None
+                else int(config.fmm_max_pair_queue)
+            ),
+            fmm_pair_process_block=(
+                None
+                if config.fmm_pair_process_block is None
+                else int(config.fmm_pair_process_block)
+            ),
+            fmm_max_interactions_per_node=(
+                None
+                if config.fmm_max_interactions_per_node is None
+                else int(config.fmm_max_interactions_per_node)
+            ),
+            fmm_max_neighbors_per_leaf=(
+                None
+                if config.fmm_max_neighbors_per_leaf is None
+                else int(config.fmm_max_neighbors_per_leaf)
+            ),
             fmm_prepare_stage_memory_split_enabled=(
                 None
                 if config.fmm_prepare_stage_memory_split_enabled is None

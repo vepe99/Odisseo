@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import inspect
 import json
 import pathlib
 import time
@@ -19,6 +20,8 @@ from odisseo.integration_api import integrate
 from odisseo.jaccpot_coupling import (
     _build_fmm_solver,
     _large_n_environment_overrides,
+    _run_full_segment_scan,
+    _temporary_large_n_environment,
     integrate_leapfrog_jaccpot_active,
 )
 from odisseo.option_classes import (
@@ -55,16 +58,29 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--fmm-preset",
         type=str,
-        default="fast",
+        default="large_n_gpu",
         choices=("fast", "balanced", "accurate", "large_n_gpu"),
         help="FMM preset passed to jaccpot/ODISSEO coupling.",
     )
     parser.add_argument(
         "--fmm-runtime-path",
         type=str,
-        default="auto",
+        default="large_n",
         choices=("auto", "legacy", "large_n"),
         help="jaccpot runtime path selection.",
+    )
+    parser.add_argument(
+        "--fmm-theta",
+        type=float,
+        default=0.8,
+        help="FMM MAC opening angle theta.",
+    )
+    parser.add_argument(
+        "--fmm-mac-type",
+        type=str,
+        default="dehnen",
+        choices=("geometric", "dehnen", "dehnen_error"),
+        help="FMM multipole acceptance criterion.",
     )
     parser.add_argument(
         "--fmm-leaf-size",
@@ -81,7 +97,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--fmm-tree-build-mode",
         type=str,
-        default="lbvh",
+        default="static_radix",
         choices=("lbvh", "fixed_depth", "static_radix", "adaptive"),
         help="jaccpot tree build mode.",
     )
@@ -126,6 +142,30 @@ def parse_args() -> argparse.Namespace:
         type=int,
         default=None,
         help="Optional far-field M2L chunk size override.",
+    )
+    parser.add_argument(
+        "--fmm-max-pair-queue",
+        type=int,
+        default=None,
+        help="Optional explicit jaccpot traversal pair-queue capacity.",
+    )
+    parser.add_argument(
+        "--fmm-pair-process-block",
+        type=int,
+        default=None,
+        help="Optional jaccpot traversal pair processing block size.",
+    )
+    parser.add_argument(
+        "--fmm-max-interactions-per-node",
+        type=int,
+        default=None,
+        help="Optional jaccpot traversal interaction-list capacity per node.",
+    )
+    parser.add_argument(
+        "--fmm-max-neighbors-per-leaf",
+        type=int,
+        default=None,
+        help="Optional jaccpot traversal neighbor-list capacity per leaf.",
     )
     parser.add_argument(
         "--fmm-enforce-static-shape-contract",
@@ -250,6 +290,25 @@ def parse_args() -> argparse.Namespace:
         help="Projection used for live/movie rendering.",
     )
     parser.add_argument(
+        "--render-backend",
+        type=str,
+        default="density",
+        choices=("density", "scatter"),
+        help="Movie rendering backend. density streams raster frames with imageio.",
+    )
+    parser.add_argument(
+        "--render-resolution",
+        type=int,
+        default=900,
+        help="Square pixel resolution for density-rendered movie frames.",
+    )
+    parser.add_argument(
+        "--render-cmap",
+        type=str,
+        default="magma",
+        help="Matplotlib colormap used by the density renderer.",
+    )
+    parser.add_argument(
         "--snapshot-stride",
         type=int,
         default=1,
@@ -342,21 +401,80 @@ def render_positions(
     live: bool,
     movie_path: str | None,
     movie_fps: int,
+    backend: str = "density",
+    resolution: int = 900,
+    cmap_name: str = "magma",
 ) -> None:
     """Render sampled snapshot positions live and/or save as movie."""
     if not live and movie_path is None:
         return
 
     import matplotlib.pyplot as plt
-    from matplotlib import animation
 
     n_frames = positions_frames.shape[0]
     i0, i1, xlabel, ylabel = _projection_axes(projection)
     x_all = positions_frames[:, :, i0]
     y_all = positions_frames[:, :, i1]
 
-    extent = float(np.percentile(np.abs(np.concatenate((x_all.ravel(), y_all.ravel()))), 99.5))
+    finite_xy = np.concatenate(
+        (
+            x_all[np.isfinite(x_all)].ravel(),
+            y_all[np.isfinite(y_all)].ravel(),
+        )
+    )
+    extent = float(np.percentile(np.abs(finite_xy), 99.5)) if finite_xy.size else 1.0
     extent = max(extent, 1e-6)
+
+    if str(backend).strip().lower() == "density" and movie_path is not None:
+        try:
+            import imageio.v2 as imageio
+        except Exception:
+            imageio = None
+
+        if imageio is not None:
+            movie_path_obj = pathlib.Path(movie_path)
+            movie_path_obj.parent.mkdir(parents=True, exist_ok=True)
+            fps = max(1, int(movie_fps))
+            res = max(64, int(resolution))
+            cmap = plt.get_cmap(str(cmap_name))
+            writer_kwargs = {"mode": "I", "fps": fps}
+            if movie_path_obj.suffix.lower() == ".gif":
+                writer_kwargs = {"mode": "I", "duration": 1.0 / float(fps), "loop": 0}
+
+            def _frame_rgb(frame: int) -> np.ndarray:
+                x_frame = x_all[frame]
+                y_frame = y_all[frame]
+                mask = np.isfinite(x_frame) & np.isfinite(y_frame)
+                hist, _, _ = np.histogram2d(
+                    y_frame[mask],
+                    x_frame[mask],
+                    bins=res,
+                    range=[[-extent, extent], [-extent, extent]],
+                )
+                image = np.log1p(hist)
+                nonzero = image[image > 0]
+                scale = (
+                    float(np.percentile(nonzero, 99.7))
+                    if nonzero.size
+                    else 1.0
+                )
+                image = np.clip(image / max(scale, 1e-6), 0.0, 1.0)
+                rgba = cmap(image)
+                return (np.asarray(rgba[:, :, :3]) * 255.0).astype(np.uint8)
+
+            with imageio.get_writer(str(movie_path_obj), **writer_kwargs) as writer:
+                for frame in range(n_frames):
+                    writer.append_data(_frame_rgb(frame))
+            print(f"Saved movie: {movie_path_obj}")
+
+            if live:
+                fig, ax = plt.subplots(figsize=(7, 7))
+                ax.imshow(_frame_rgb(0), origin="lower")
+                ax.set_axis_off()
+                plt.show()
+            return
+
+    from matplotlib import animation
 
     fig, ax = plt.subplots(figsize=(7, 7))
     ax.set_xlim(-extent, extent)
@@ -366,11 +484,17 @@ def render_positions(
     ax.set_aspect("equal", "box")
     ax.grid(alpha=0.2)
 
-    scat = ax.scatter(x_all[0], y_all[0], s=0.6, alpha=0.6, linewidths=0)
+    def _finite_offsets(frame: int) -> np.ndarray:
+        x_frame = x_all[frame]
+        y_frame = y_all[frame]
+        mask = np.isfinite(x_frame) & np.isfinite(y_frame)
+        return np.column_stack((x_frame[mask], y_frame[mask]))
+
+    scat = ax.scatter(*_finite_offsets(0).T, s=0.6, alpha=0.6, linewidths=0)
     title = ax.set_title(f"Galaxy disk evolution: t={times[0]:.3f}")
 
     def _update(frame: int):
-        scat.set_offsets(np.column_stack((x_all[frame], y_all[frame])))
+        scat.set_offsets(_finite_offsets(frame))
         title.set_text(f"Galaxy disk evolution: t={times[frame]:.3f}")
         return scat, title
 
@@ -454,6 +578,10 @@ def _run_perf_mode(
                 fmm_fixed_order=config.fmm_fixed_order,
                 fmm_jit_tree=config.fmm_jit_tree,
                 fmm_jit_traversal=config.fmm_jit_traversal,
+                fmm_max_pair_queue=config.fmm_max_pair_queue,
+                fmm_pair_process_block=config.fmm_pair_process_block,
+                fmm_max_interactions_per_node=config.fmm_max_interactions_per_node,
+                fmm_max_neighbors_per_leaf=config.fmm_max_neighbors_per_leaf,
                 fmm_prepare_stage_memory_split_enabled=(
                     config.fmm_prepare_stage_memory_split_enabled
                 ),
@@ -516,6 +644,10 @@ def _run_perf_mode_with_history(
             fmm_fixed_order=config.fmm_fixed_order,
             fmm_jit_tree=config.fmm_jit_tree,
             fmm_jit_traversal=config.fmm_jit_traversal,
+            fmm_max_pair_queue=config.fmm_max_pair_queue,
+            fmm_pair_process_block=config.fmm_pair_process_block,
+            fmm_max_interactions_per_node=config.fmm_max_interactions_per_node,
+            fmm_max_neighbors_per_leaf=config.fmm_max_neighbors_per_leaf,
             fmm_prepare_stage_memory_split_enabled=(
                 config.fmm_prepare_stage_memory_split_enabled
             ),
@@ -587,6 +719,10 @@ def _compute_conservation_metrics(
         leaf_size=int(config.fmm_leaf_size),
         fmm_jit_tree=config.fmm_jit_tree,
         fmm_jit_traversal=config.fmm_jit_traversal,
+        fmm_max_pair_queue=config.fmm_max_pair_queue,
+        fmm_pair_process_block=config.fmm_pair_process_block,
+        fmm_max_interactions_per_node=config.fmm_max_interactions_per_node,
+        fmm_max_neighbors_per_leaf=config.fmm_max_neighbors_per_leaf,
         fmm_prepare_stage_memory_split_enabled=(
             config.fmm_prepare_stage_memory_split_enabled
         ),
@@ -677,12 +813,17 @@ def _run_render_mode(
     snapshot_max_particles: int,
     profile_breakdown: bool,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, float, dict | None]:
-    """Chunked integration for efficient snapshot collection.
+    """Persistent static-radix integration with efficient snapshot collection.
 
     Returns
     -------
     final_state, sampled_positions, sampled_times, sample_indices, elapsed_seconds, timing_stats
     """
+    if str(config.fmm_tree_build_mode).strip().lower() != "static_radix":
+        raise ValueError("render mode requires fmm_tree_build_mode='static_radix'")
+    if str(config.fmm_runtime_path).strip().lower() not in {"large_n", "auto"}:
+        raise ValueError("render mode requires the jaccpot large-N runtime path")
+
     n = int(config.N_particles)
     stride = max(1, int(snapshot_stride))
     chunk_steps = max(1, int(snapshot_chunk_steps))
@@ -693,7 +834,8 @@ def _run_render_mode(
 
     fmm_preset, fmm_runtime_path, fmm_dtype = _resolve_fmm_profile(config)
 
-    state_curr = state0
+    state_curr = jnp.asarray(state0)
+    mass_arr = jnp.asarray(mass)
     frames = []
     frame_times = []
 
@@ -702,7 +844,7 @@ def _run_render_mode(
     frame_times.append(0.0)
 
     timing_stats = {} if bool(profile_breakdown) else None
-    cumulative = {
+    cumulative: dict[str, object] = {
         "total_seconds": 0.0,
         "prepare_seconds": 0.0,
         "evaluate_seconds": 0.0,
@@ -712,59 +854,157 @@ def _run_render_mode(
         "update_calls": 0,
     }
 
+    solver = _build_fmm_solver(
+        working_dtype=jnp.dtype(fmm_dtype),
+        config=config,
+        params=params,
+        fmm_preset=fmm_preset,
+        fmm_basis=str(config.fmm_basis),
+        fmm_theta=float(config.fmm_theta),
+        fmm_runtime_path=fmm_runtime_path,
+        fmm_mac_type=str(config.fmm_mac_type),
+        fmm_farfield_mode=str(config.fmm_farfield_mode),
+        fmm_m2l_chunk_size=config.fmm_m2l_chunk_size,
+        fmm_nearfield_mode=str(config.fmm_nearfield_mode),
+        fmm_nearfield_edge_chunk_size=int(config.fmm_nearfield_edge_chunk_size),
+        fmm_tree_build_mode=str(config.fmm_tree_build_mode),
+        fmm_tree_leaf_target=int(config.fmm_tree_leaf_target),
+        fmm_fixed_order=config.fmm_fixed_order,
+        leaf_size=int(config.fmm_leaf_size),
+        fmm_jit_tree=config.fmm_jit_tree,
+        fmm_jit_traversal=config.fmm_jit_traversal,
+        fmm_max_pair_queue=config.fmm_max_pair_queue,
+        fmm_pair_process_block=config.fmm_pair_process_block,
+        fmm_max_interactions_per_node=config.fmm_max_interactions_per_node,
+        fmm_max_neighbors_per_leaf=config.fmm_max_neighbors_per_leaf,
+        fmm_prepare_stage_memory_split_enabled=(
+            config.fmm_prepare_stage_memory_split_enabled
+        ),
+    )
+
+    def _prepare_state(state_in: jnp.ndarray):
+        with _temporary_large_n_environment(config, fmm_preset=fmm_preset):
+            return solver.prepare_state(
+                state_in[:, 0, :],
+                mass_arr,
+                leaf_size=int(config.fmm_leaf_size),
+                max_order=int(config.fmm_max_order),
+            )
+
+    def _refresh_state(prev_prepared_state, state_in: jnp.ndarray):
+        refresh_fn = getattr(solver, "refresh_prepared_state", None)
+        if not callable(refresh_fn):
+            raise RuntimeError("static-radix render mode requires refresh_prepared_state")
+        pos = state_in[:, 0, :]
+        attempts = [
+            (
+                (prev_prepared_state, pos, mass_arr),
+                {"leaf_size": int(config.fmm_leaf_size), "max_order": int(config.fmm_max_order)},
+            ),
+            (
+                (pos, mass_arr, prev_prepared_state),
+                {"leaf_size": int(config.fmm_leaf_size), "max_order": int(config.fmm_max_order)},
+            ),
+            (
+                (),
+                {
+                    "prepared_state": prev_prepared_state,
+                    "positions": pos,
+                    "masses": mass_arr,
+                    "leaf_size": int(config.fmm_leaf_size),
+                    "max_order": int(config.fmm_max_order),
+                },
+            ),
+            (
+                (),
+                {
+                    "previous_prepared_state": prev_prepared_state,
+                    "positions": pos,
+                    "masses": mass_arr,
+                    "leaf_size": int(config.fmm_leaf_size),
+                    "max_order": int(config.fmm_max_order),
+                },
+            ),
+            ((prev_prepared_state, pos, mass_arr), {}),
+            ((pos, mass_arr, prev_prepared_state), {}),
+        ]
+        for args, kwargs in attempts:
+            try:
+                with _temporary_large_n_environment(config, fmm_preset=fmm_preset):
+                    if kwargs:
+                        sig = inspect.signature(refresh_fn)
+                        params_sig = sig.parameters
+                        accepts_var_kw = any(
+                            p.kind == inspect.Parameter.VAR_KEYWORD
+                            for p in params_sig.values()
+                        )
+                        call_kwargs = (
+                            kwargs
+                            if accepts_var_kw
+                            else {k: v for k, v in kwargs.items() if k in params_sig}
+                        )
+                        return refresh_fn(*args, **call_kwargs)
+                    return refresh_fn(*args)
+            except TypeError:
+                continue
+        raise RuntimeError("refresh_prepared_state signature was not recognized")
+
     t0 = time.time()
     num_steps = int(config.num_timesteps)
     t_end = float(params.t_end)
+    dt_arr = jnp.asarray(float(params.t_end) / float(num_steps), dtype=state_curr.dtype)
+    add_external = len(config.external_accelerations) > 0
 
     done = 0
+    prepared_state = None
     while done < num_steps:
-        seg = min(chunk_steps, num_steps - done)
-        seg_stats = {} if bool(profile_breakdown) else None
-        hist = jax.block_until_ready(
-            integrate_leapfrog_jaccpot_active(
-                state_curr,
-                mass,
-                config,
-                params,
-                num_steps=int(seg),
-                refresh_every=int(config.fmm_refresh_every),
-                leaf_size=int(config.fmm_leaf_size),
-                max_order=int(config.fmm_max_order),
-                fmm_preset=fmm_preset,
-                fmm_runtime_path=fmm_runtime_path,
-                fmm_working_dtype=fmm_dtype,
-                fmm_basis=str(config.fmm_basis),
-                fmm_theta=float(config.fmm_theta),
-                fmm_mac_type=str(config.fmm_mac_type),
-                fmm_farfield_mode=str(config.fmm_farfield_mode),
-                fmm_m2l_chunk_size=config.fmm_m2l_chunk_size,
-                fmm_nearfield_mode=str(config.fmm_nearfield_mode),
-                fmm_nearfield_edge_chunk_size=int(config.fmm_nearfield_edge_chunk_size),
-                fmm_tree_build_mode=str(config.fmm_tree_build_mode),
-                fmm_tree_leaf_target=int(config.fmm_tree_leaf_target),
-                fmm_fixed_order=config.fmm_fixed_order,
-                fmm_jit_tree=config.fmm_jit_tree,
-                fmm_jit_traversal=config.fmm_jit_traversal,
-                fmm_prepare_stage_memory_split_enabled=(
-                    config.fmm_prepare_stage_memory_split_enabled
-                ),
-                enforce_static_shape_contract=bool(
-                    config.fmm_enforce_static_shape_contract
-                ),
-                static_shape_warmup_prepares=int(
-                    config.fmm_static_shape_warmup_prepares
-                ),
-                rematerialize_between_refresh=bool(
-                    config.fmm_rematerialize_between_refresh
-                ),
-                return_history=True,
-                timing_stats=seg_stats,
-            )
+        seg = min(max(1, int(config.fmm_refresh_every)), chunk_steps, num_steps - done)
+        prepare_t0 = time.perf_counter()
+        if prepared_state is None:
+            prepared_state = _prepare_state(state_curr)
+            cumulative["full_prepare_calls"] = int(cumulative.get("full_prepare_calls", 0)) + 1
+            last_prepare_path = "full"
+        else:
+            prepared_state = _refresh_state(prepared_state, state_curr)
+            cumulative["refresh_prepare_successes"] = int(
+                cumulative.get("refresh_prepare_successes", 0)
+            ) + 1
+            last_prepare_path = "refresh"
+        prepared_state = jax.block_until_ready(prepared_state)
+        cumulative["prepare_seconds"] = float(cumulative["prepare_seconds"]) + (
+            time.perf_counter() - prepare_t0
         )
+        cumulative["prepare_calls"] = int(cumulative["prepare_calls"]) + 1
 
-        if bool(profile_breakdown) and seg_stats is not None:
-            for k in cumulative:
-                cumulative[k] += float(seg_stats.get(k, 0.0))
+        eval_t0 = time.perf_counter()
+        acc_self_full = solver.evaluate_prepared_state(
+            prepared_state,
+            target_indices=None,
+            return_potential=False,
+        )
+        acc_self_full = jax.block_until_ready(acc_self_full)
+        cumulative["evaluate_seconds"] = float(cumulative["evaluate_seconds"]) + (
+            time.perf_counter() - eval_t0
+        )
+        cumulative["evaluate_calls"] = int(cumulative["evaluate_calls"]) + 1
+
+        update_t0 = time.perf_counter()
+        state_curr, hist = _run_full_segment_scan(
+            state_curr,
+            acc_self_full,
+            dt_arr,
+            steps=int(seg),
+            add_external=add_external,
+            config=config,
+            params=params,
+        )
+        state_curr, hist = jax.block_until_ready((state_curr, hist))
+        if bool(config.fmm_rematerialize_between_refresh):
+            state_curr = jnp.asarray(state_curr, dtype=state_curr.dtype)
+        cumulative["update_seconds"] = float(cumulative["update_seconds"]) + (
+            time.perf_counter() - update_t0
+        )
+        cumulative["update_calls"] = int(cumulative["update_calls"]) + 1
 
         # Pull only sampled positions for this chunk to host.
         pos_chunk = np.asarray(hist[:, sample_indices, 0, :], dtype=np.float32)
@@ -780,18 +1020,49 @@ def _run_render_mode(
 
     elapsed = time.time() - t0
 
-    if bool(profile_breakdown):
-        timing_stats = dict(cumulative)
-        timing_stats.update(
-            {
-                "num_steps": num_steps,
-                "refresh_every": int(config.fmm_refresh_every),
-                "used_external_potential": bool(len(config.external_accelerations) > 0),
-                "chunk_steps": int(chunk_steps),
-                "snapshot_stride": int(stride),
-                "sampled_particles": int(sample_indices_np.shape[0]),
-            }
-        )
+    runtime_diag = {}
+    get_diag = getattr(solver, "get_runtime_diagnostics", None)
+    if callable(get_diag):
+        try:
+            runtime_diag = dict(get_diag())
+        except Exception:
+            runtime_diag = {}
+    timing_stats = dict(cumulative)
+    timing_stats["total_seconds"] = float(elapsed)
+    timing_stats["render_chunk_count"] = int(np.ceil(num_steps / max(1, int(chunk_steps))))
+    timing_stats.update(
+        {
+            "num_steps": num_steps,
+            "refresh_every": int(config.fmm_refresh_every),
+            "used_external_potential": bool(add_external),
+            "used_persistent_static_solver": True,
+            "last_prepare_path": str(last_prepare_path),
+            "chunk_steps": int(chunk_steps),
+            "snapshot_stride": int(stride),
+            "sampled_particles": int(sample_indices_np.shape[0]),
+            "runtime_static_radix_refresh_hits": int(
+                runtime_diag.get("static_radix_refresh_hits", 0)
+            ),
+            "runtime_static_radix_refresh_misses": int(
+                runtime_diag.get("static_radix_refresh_misses", 0)
+            ),
+            "runtime_large_n_same_topology_refresh_hits": int(
+                runtime_diag.get("large_n_same_topology_refresh_hits", 0)
+            ),
+            "runtime_large_n_same_topology_refresh_misses": int(
+                runtime_diag.get("large_n_same_topology_refresh_misses", 0)
+            ),
+            "runtime_compiled_profile_transitions": int(
+                runtime_diag.get("compiled_profile_transitions", 0)
+            ),
+            "runtime_large_n_overflow_profile_reprofiles": int(
+                runtime_diag.get("large_n_overflow_profile_reprofiles", 0)
+            ),
+            "runtime_large_n_neighbor_edges_profile_reprofiles": int(
+                runtime_diag.get("large_n_neighbor_edges_profile_reprofiles", 0)
+            ),
+        }
+    )
 
     return (
         np.asarray(state_curr),
@@ -904,6 +1175,8 @@ def main() -> None:
         fmm_large_n_min_particles=100_000,
         fmm_large_n_force_fp32=True,
         fmm_runtime_path=str(args.fmm_runtime_path),
+        fmm_theta=float(args.fmm_theta),
+        fmm_mac_type=str(args.fmm_mac_type),
         fmm_refresh_every=int(args.fmm_refresh_every),
         fmm_leaf_size=int(args.fmm_leaf_size),
         fmm_tree_build_mode=str(args.fmm_tree_build_mode),
@@ -932,6 +1205,24 @@ def main() -> None:
         ),
         fmm_jit_tree=True,
         fmm_jit_traversal=True,
+        fmm_max_pair_queue=(
+            None if args.fmm_max_pair_queue is None else int(args.fmm_max_pair_queue)
+        ),
+        fmm_pair_process_block=(
+            None
+            if args.fmm_pair_process_block is None
+            else int(args.fmm_pair_process_block)
+        ),
+        fmm_max_interactions_per_node=(
+            None
+            if args.fmm_max_interactions_per_node is None
+            else int(args.fmm_max_interactions_per_node)
+        ),
+        fmm_max_neighbors_per_leaf=(
+            None
+            if args.fmm_max_neighbors_per_leaf is None
+            else int(args.fmm_max_neighbors_per_leaf)
+        ),
         fmm_prepare_stage_memory_split_enabled=args.fmm_prepare_stage_memory_split_enabled,
         fmm_enforce_static_shape_contract=bool(args.fmm_enforce_static_shape_contract),
         fmm_static_shape_warmup_prepares=int(args.fmm_static_shape_warmup_prepares),
@@ -1006,6 +1297,9 @@ def main() -> None:
             live=bool(args.live),
             movie_path=args.movie_path,
             movie_fps=int(args.movie_fps),
+            backend=str(args.render_backend),
+            resolution=int(args.render_resolution),
+            cmap_name=str(args.render_cmap),
         )
 
     payload = {
@@ -1035,70 +1329,102 @@ def main() -> None:
         )
         print(f"Saved snapshots: {args.snapshot_output}")
 
-    if bool(args.profile_breakdown) and timing_stats is not None:
-        timing_stats = dict(timing_stats)
-        timing_stats.update(
-            {
-                "script_runtime_seconds": float(elapsed),
-                "n_particles": int(n_particles),
-                "num_steps": int(args.num_steps),
-                "mode": str(args.mode),
-                "fmm_preset_requested": str(args.fmm_preset),
-                "fmm_runtime_path_requested": str(args.fmm_runtime_path),
-                "fmm_refresh_every_requested": int(args.fmm_refresh_every),
-                "fmm_leaf_size_requested": int(args.fmm_leaf_size),
-                "fmm_tree_build_mode_requested": str(args.fmm_tree_build_mode),
-                "fmm_tree_leaf_target_requested": (
-                    int(args.fmm_leaf_size)
-                    if args.fmm_tree_leaf_target is None
-                    else int(args.fmm_tree_leaf_target)
-                ),
-                "fmm_max_order_requested": int(args.fmm_max_order),
-                "fmm_m2l_chunk_size_requested": (
-                    None
-                    if args.fmm_m2l_chunk_size is None
-                    else int(args.fmm_m2l_chunk_size)
-                ),
-                "fmm_nearfield_edge_chunk_size_requested": int(
-                    args.fmm_nearfield_edge_chunk_size
-                ),
-                "fmm_large_n_target_block_size_requested": (
-                    None
-                    if args.fmm_large_n_target_block_size is None
-                    else int(args.fmm_large_n_target_block_size)
-                ),
-                "fmm_large_n_static_target_blocks_requested": (
-                    args.fmm_large_n_static_target_blocks
-                ),
-                "fmm_large_n_static_target_blocks_max_per_leaf_requested": (
-                    None
-                    if args.fmm_large_n_static_target_blocks_max_per_leaf is None
-                    else int(args.fmm_large_n_static_target_blocks_max_per_leaf)
-                ),
-                "fmm_large_n_effective_environment_overrides": (
-                    _large_n_environment_overrides(
-                        config,
-                        fmm_preset=str(args.fmm_preset),
-                    )
-                ),
-                "fmm_prepare_stage_memory_split_enabled": (
-                    config.fmm_prepare_stage_memory_split_enabled
-                ),
-                "fmm_enforce_static_shape_contract": bool(
-                    args.fmm_enforce_static_shape_contract
-                ),
-                "fmm_static_shape_warmup_prepares": int(
-                    args.fmm_static_shape_warmup_prepares
-                ),
-                "fmm_rematerialize_between_refresh": bool(
-                    not args.no_fmm_rematerialize_between_refresh
-                ),
-                "conservation_report_enabled": bool(args.conservation_report),
-                "used_visualization": bool(args.mode == "render" and (args.live or args.movie_path is not None)),
-                "output_file": str(args.output),
-            }
-        )
-        _check_timing_gates(args, timing_stats)
+    timing_stats = {} if timing_stats is None else dict(timing_stats)
+    timing_stats.update(
+        {
+            "script_runtime_seconds": float(elapsed),
+            "n_particles": int(n_particles),
+            "num_steps": int(args.num_steps),
+            "mode": str(args.mode),
+            "fmm_preset_requested": str(args.fmm_preset),
+            "fmm_runtime_path_requested": str(args.fmm_runtime_path),
+            "fmm_theta_requested": float(args.fmm_theta),
+            "fmm_mac_type_requested": str(args.fmm_mac_type),
+            "fmm_refresh_every_requested": int(args.fmm_refresh_every),
+            "fmm_leaf_size_requested": int(args.fmm_leaf_size),
+            "fmm_tree_build_mode_requested": str(args.fmm_tree_build_mode),
+            "fmm_tree_leaf_target_requested": (
+                int(args.fmm_leaf_size)
+                if args.fmm_tree_leaf_target is None
+                else int(args.fmm_tree_leaf_target)
+            ),
+            "fmm_max_order_requested": int(args.fmm_max_order),
+            "fmm_m2l_chunk_size_requested": (
+                None
+                if args.fmm_m2l_chunk_size is None
+                else int(args.fmm_m2l_chunk_size)
+            ),
+            "fmm_nearfield_edge_chunk_size_requested": int(
+                args.fmm_nearfield_edge_chunk_size
+            ),
+            "fmm_max_pair_queue_requested": (
+                None
+                if args.fmm_max_pair_queue is None
+                else int(args.fmm_max_pair_queue)
+            ),
+            "fmm_pair_process_block_requested": (
+                None
+                if args.fmm_pair_process_block is None
+                else int(args.fmm_pair_process_block)
+            ),
+            "fmm_max_interactions_per_node_requested": (
+                None
+                if args.fmm_max_interactions_per_node is None
+                else int(args.fmm_max_interactions_per_node)
+            ),
+            "fmm_max_neighbors_per_leaf_requested": (
+                None
+                if args.fmm_max_neighbors_per_leaf is None
+                else int(args.fmm_max_neighbors_per_leaf)
+            ),
+            "fmm_large_n_target_block_size_requested": (
+                None
+                if args.fmm_large_n_target_block_size is None
+                else int(args.fmm_large_n_target_block_size)
+            ),
+            "fmm_large_n_static_target_blocks_requested": (
+                args.fmm_large_n_static_target_blocks
+            ),
+            "fmm_large_n_static_target_blocks_max_per_leaf_requested": (
+                None
+                if args.fmm_large_n_static_target_blocks_max_per_leaf is None
+                else int(args.fmm_large_n_static_target_blocks_max_per_leaf)
+            ),
+            "fmm_large_n_effective_environment_overrides": (
+                _large_n_environment_overrides(
+                    config,
+                    fmm_preset=str(args.fmm_preset),
+                )
+            ),
+            "fmm_prepare_stage_memory_split_enabled": (
+                config.fmm_prepare_stage_memory_split_enabled
+            ),
+            "fmm_enforce_static_shape_contract": bool(
+                args.fmm_enforce_static_shape_contract
+            ),
+            "fmm_static_shape_warmup_prepares": int(
+                args.fmm_static_shape_warmup_prepares
+            ),
+            "fmm_rematerialize_between_refresh": bool(
+                not args.no_fmm_rematerialize_between_refresh
+            ),
+            "conservation_report_enabled": bool(args.conservation_report),
+            "used_visualization": bool(
+                args.mode == "render" and (args.live or args.movie_path is not None)
+            ),
+            "render_backend": str(args.render_backend),
+            "render_resolution": int(args.render_resolution),
+            "render_cmap": str(args.render_cmap),
+            "movie_path": None if args.movie_path is None else str(args.movie_path),
+            "snapshot_stride": int(args.snapshot_stride),
+            "snapshot_chunk_steps": int(args.snapshot_chunk_steps),
+            "snapshot_max_particles": int(args.snapshot_max_particles),
+            "output_file": str(args.output),
+        }
+    )
+    if timing_stats is not None:
+        if bool(args.profile_breakdown):
+            _check_timing_gates(args, timing_stats)
         json_path, csv_path = _write_timing_report(
             report_dir=str(args.report_dir),
             timing_stats=timing_stats,
@@ -1125,6 +1451,8 @@ def main() -> None:
                 "num_steps": int(args.num_steps),
                 "fmm_preset_requested": str(args.fmm_preset),
                 "fmm_runtime_path_requested": str(args.fmm_runtime_path),
+                "fmm_theta_requested": float(args.fmm_theta),
+                "fmm_mac_type_requested": str(args.fmm_mac_type),
                 "fmm_refresh_every_requested": int(args.fmm_refresh_every),
                 "fmm_leaf_size_requested": int(args.fmm_leaf_size),
                 "fmm_tree_build_mode_requested": str(args.fmm_tree_build_mode),
@@ -1141,6 +1469,26 @@ def main() -> None:
                 ),
                 "fmm_nearfield_edge_chunk_size_requested": int(
                     args.fmm_nearfield_edge_chunk_size
+                ),
+                "fmm_max_pair_queue_requested": (
+                    None
+                    if args.fmm_max_pair_queue is None
+                    else int(args.fmm_max_pair_queue)
+                ),
+                "fmm_pair_process_block_requested": (
+                    None
+                    if args.fmm_pair_process_block is None
+                    else int(args.fmm_pair_process_block)
+                ),
+                "fmm_max_interactions_per_node_requested": (
+                    None
+                    if args.fmm_max_interactions_per_node is None
+                    else int(args.fmm_max_interactions_per_node)
+                ),
+                "fmm_max_neighbors_per_leaf_requested": (
+                    None
+                    if args.fmm_max_neighbors_per_leaf is None
+                    else int(args.fmm_max_neighbors_per_leaf)
                 ),
                 "fmm_large_n_target_block_size_requested": (
                     None

@@ -105,6 +105,10 @@ def _build_fmm_solver(
     leaf_size: int,
     fmm_jit_tree: Optional[bool],
     fmm_jit_traversal: Optional[bool],
+    fmm_max_pair_queue: Optional[int],
+    fmm_pair_process_block: Optional[int],
+    fmm_max_interactions_per_node: Optional[int],
+    fmm_max_neighbors_per_leaf: Optional[int],
     fmm_prepare_stage_memory_split_enabled: Optional[bool],
 ):
     from jaccpot import (
@@ -115,6 +119,32 @@ def _build_fmm_solver(
         RuntimePolicyConfig,
         TreeConfig,
     )
+    from yggdrax.interactions import DualTreeTraversalConfig
+
+    traversal_config = None
+    if (
+        fmm_max_interactions_per_node is not None
+        or fmm_max_neighbors_per_leaf is not None
+    ):
+        traversal_values = (
+            fmm_max_pair_queue,
+            fmm_pair_process_block,
+            fmm_max_interactions_per_node,
+            fmm_max_neighbors_per_leaf,
+        )
+        if not all(value is not None for value in traversal_values):
+            raise ValueError(
+                "Full jaccpot traversal capacity overrides require "
+                "fmm_max_pair_queue, fmm_pair_process_block, "
+                "fmm_max_interactions_per_node, and "
+                "fmm_max_neighbors_per_leaf."
+            )
+        traversal_config = DualTreeTraversalConfig(
+            max_pair_queue=int(fmm_max_pair_queue),
+            process_block=int(fmm_pair_process_block),
+            max_interactions_per_node=int(fmm_max_interactions_per_node),
+            max_neighbors_per_leaf=int(fmm_max_neighbors_per_leaf),
+        )
 
     return FastMultipoleMethod(
         preset=str(fmm_preset),
@@ -144,6 +174,15 @@ def _build_fmm_solver(
                 jit_traversal=(
                     None if fmm_jit_traversal is None else bool(fmm_jit_traversal)
                 ),
+                max_pair_queue=(
+                    None if fmm_max_pair_queue is None else int(fmm_max_pair_queue)
+                ),
+                pair_process_block=(
+                    None
+                    if fmm_pair_process_block is None
+                    else int(fmm_pair_process_block)
+                ),
+                traversal_config=traversal_config,
                 prepare_stage_memory_split_enabled=(
                     None
                     if fmm_prepare_stage_memory_split_enabled is None
@@ -361,6 +400,10 @@ def integrate_leapfrog_jaccpot_active(
     fmm_fixed_order: Optional[int] = None,
     fmm_jit_tree: Optional[bool] = None,
     fmm_jit_traversal: Optional[bool] = True,
+    fmm_max_pair_queue: Optional[int] = None,
+    fmm_pair_process_block: Optional[int] = None,
+    fmm_max_interactions_per_node: Optional[int] = None,
+    fmm_max_neighbors_per_leaf: Optional[int] = None,
     fmm_prepare_stage_memory_split_enabled: Optional[bool] = None,
     enforce_static_shape_contract: bool = False,
     static_shape_warmup_prepares: int = 0,
@@ -889,6 +932,10 @@ def integrate_leapfrog_jaccpot_active(
         leaf_size=leaf_size,
         fmm_jit_tree=fmm_jit_tree,
         fmm_jit_traversal=fmm_jit_traversal,
+        fmm_max_pair_queue=fmm_max_pair_queue,
+        fmm_pair_process_block=fmm_pair_process_block,
+        fmm_max_interactions_per_node=fmm_max_interactions_per_node,
+        fmm_max_neighbors_per_leaf=fmm_max_neighbors_per_leaf,
         fmm_prepare_stage_memory_split_enabled=(
             fmm_prepare_stage_memory_split_enabled
         ),
@@ -1465,6 +1512,10 @@ def evaluate_acceleration_jaccpot(
     fmm_fixed_order: Optional[int] = None,
     fmm_jit_tree: Optional[bool] = None,
     fmm_jit_traversal: Optional[bool] = True,
+    fmm_max_pair_queue: Optional[int] = None,
+    fmm_pair_process_block: Optional[int] = None,
+    fmm_max_interactions_per_node: Optional[int] = None,
+    fmm_max_neighbors_per_leaf: Optional[int] = None,
     fmm_prepare_stage_memory_split_enabled: Optional[bool] = None,
 ) -> jnp.ndarray:
     """Evaluate one FMM acceleration call for an ODISSEO primitive state."""
@@ -1491,6 +1542,10 @@ def evaluate_acceleration_jaccpot(
         leaf_size=leaf_size,
         fmm_jit_tree=fmm_jit_tree,
         fmm_jit_traversal=fmm_jit_traversal,
+        fmm_max_pair_queue=fmm_max_pair_queue,
+        fmm_pair_process_block=fmm_pair_process_block,
+        fmm_max_interactions_per_node=fmm_max_interactions_per_node,
+        fmm_max_neighbors_per_leaf=fmm_max_neighbors_per_leaf,
         fmm_prepare_stage_memory_split_enabled=(
             fmm_prepare_stage_memory_split_enabled
         ),
@@ -1531,6 +1586,10 @@ def build_jitted_jaccpot_acceleration(
     fmm_fixed_order: Optional[int] = None,
     fmm_jit_tree: Optional[bool] = None,
     fmm_jit_traversal: Optional[bool] = True,
+    fmm_max_pair_queue: Optional[int] = None,
+    fmm_pair_process_block: Optional[int] = None,
+    fmm_max_interactions_per_node: Optional[int] = None,
+    fmm_max_neighbors_per_leaf: Optional[int] = None,
     fmm_prepare_stage_memory_split_enabled: Optional[bool] = None,
     outer_jit: bool = False,
 ):
@@ -1568,6 +1627,10 @@ def build_jitted_jaccpot_acceleration(
             fmm_fixed_order=fmm_fixed_order,
             fmm_jit_tree=fmm_jit_tree,
             fmm_jit_traversal=fmm_jit_traversal,
+            fmm_max_pair_queue=fmm_max_pair_queue,
+            fmm_pair_process_block=fmm_pair_process_block,
+            fmm_max_interactions_per_node=fmm_max_interactions_per_node,
+            fmm_max_neighbors_per_leaf=fmm_max_neighbors_per_leaf,
             fmm_prepare_stage_memory_split_enabled=(
                 fmm_prepare_stage_memory_split_enabled
             ),
@@ -1608,6 +1671,10 @@ def build_jitted_leapfrog_jaccpot_active(
     fmm_fixed_order: Optional[int] = None,
     fmm_jit_tree: Optional[bool] = None,
     fmm_jit_traversal: Optional[bool] = True,
+    fmm_max_pair_queue: Optional[int] = None,
+    fmm_pair_process_block: Optional[int] = None,
+    fmm_max_interactions_per_node: Optional[int] = None,
+    fmm_max_neighbors_per_leaf: Optional[int] = None,
     fmm_prepare_stage_memory_split_enabled: Optional[bool] = None,
     enforce_static_shape_contract: bool = False,
     static_shape_warmup_prepares: int = 0,
@@ -1652,6 +1719,10 @@ def build_jitted_leapfrog_jaccpot_active(
             fmm_fixed_order=fmm_fixed_order,
             fmm_jit_tree=fmm_jit_tree,
             fmm_jit_traversal=fmm_jit_traversal,
+            fmm_max_pair_queue=fmm_max_pair_queue,
+            fmm_pair_process_block=fmm_pair_process_block,
+            fmm_max_interactions_per_node=fmm_max_interactions_per_node,
+            fmm_max_neighbors_per_leaf=fmm_max_neighbors_per_leaf,
             fmm_prepare_stage_memory_split_enabled=(
                 fmm_prepare_stage_memory_split_enabled
             ),

@@ -224,6 +224,10 @@ class SimulationConfig(NamedTuple):
     fmm_fixed_order: Optional[int] = None
     fmm_jit_tree: Optional[bool] = None
     fmm_jit_traversal: Optional[bool] = True
+    fmm_max_pair_queue: Optional[int] = None
+    fmm_pair_process_block: Optional[int] = None
+    fmm_max_interactions_per_node: Optional[int] = None
+    fmm_max_neighbors_per_leaf: Optional[int] = None
     fmm_prepare_stage_memory_split_enabled: Optional[bool] = None
     fmm_auto_large_n_profile: bool = True
     fmm_large_n_min_particles: int = 200_000
