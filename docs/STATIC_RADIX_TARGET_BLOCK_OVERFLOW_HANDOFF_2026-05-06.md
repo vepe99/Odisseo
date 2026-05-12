@@ -797,3 +797,164 @@ Interpretation:
   helps in this smaller refresh-heavy lane.
 - We still need full 200k confirmation and deeper fusion to address the very
   low sustained GPU utilization and remaining host orchestration overhead.
+
+## Execution Checklist: Fully Static GPU Path (Structured, Test-Proofed Commits)
+
+### Objective
+
+Reach a strict static-radix production lane with:
+
+- fixed-capacity device buffers
+- one-shot compiled planning/fill
+- minimal host syncs
+- high sustained GPU compute utilization
+
+### Phase 1: Strict Mode Contract
+
+Scope:
+
+- Introduce strict runtime mode for production static lane.
+- Disable runtime retry ladders in strict mode; overflow becomes invariant
+  violation (or explicit fallback gate).
+
+Primary files:
+
+- `jaccpot/jaccpot/runtime/_fmm_impl.py`
+- `jaccpot/jaccpot/runtime/_interaction_cache.py`
+- `yggdrax/yggdrax/_interactions_impl.py`
+
+Tests required before commit:
+
+- `tests/integration/test_fmm.py -k "static_radix_refresh_dual_planner_mode_parity_and_diagnostics or static_radix_refresh_rebuilds_current_large_n_payloads"`
+- existing overflow-focused integration subset stays green
+
+Structured commit target:
+
+- `runtime: add strict static-radix production mode contract`
+
+### Phase 2: Fixed Capacity Envelope Profile
+
+Scope:
+
+- Add explicit profile artifact for queue/far/near capacity envelopes keyed by
+  topology + traversal signature.
+- In strict mode, load/use fixed capacities only.
+
+Primary files:
+
+- `jaccpot/jaccpot/runtime/_fmm_impl.py`
+- `jaccpot/jaccpot/runtime/_interaction_cache.py`
+
+Tests required before commit:
+
+- unit tests for profile key/cache behavior
+- integration parity tests above
+
+Structured commit target:
+
+- `runtime: add fixed capacity envelope profile for strict mode`
+
+### Phase 3: Fixed-Shape Masked Buffers
+
+Scope:
+
+- Replace dynamic compact buffer realization in strict mode with preallocated
+  fixed-shape buffers + validity masks/counts.
+- Keep compatibility path unchanged outside strict mode.
+
+Primary files:
+
+- `yggdrax/yggdrax/_interactions_impl.py`
+- `jaccpot/jaccpot/runtime/_interaction_cache.py`
+
+Tests required before commit:
+
+- parity checks old vs strict path on fixed seeds
+- overflow invariants (strict mode should not runtime-retry)
+
+Structured commit target:
+
+- `interactions: strict fixed-shape masked compact buffers`
+
+### Phase 4: One-Shot Compiled Shared Count->Fill
+
+Scope:
+
+- Promote one-shot shared count+fill as strict-mode default.
+- Allow fallback only when strict mode is off.
+
+Primary files:
+
+- `yggdrax/yggdrax/_interactions_impl.py`
+
+Tests required before commit:
+
+- static-radix refresh parity integration tests
+- forced-overflow behavior tests
+
+Structured commit target:
+
+- `interactions: default one-shot shared count-fill in strict mode`
+
+### Phase 5: Host Sync Elimination in Hot Refresh
+
+Scope:
+
+- Remove per-refresh host callbacks/device_get where not required for correctness.
+- Make diagnostics sampling non-blocking in strict mode.
+
+Primary files:
+
+- `jaccpot/jaccpot/runtime/_fmm_impl.py`
+
+Tests required before commit:
+
+- planner diagnostics/parity tests
+- short refresh-heavy perf smoke with unchanged results
+
+Structured commit target:
+
+- `runtime: remove hot-path host syncs in strict refresh mode`
+
+### Phase 6: Jitted Step Fusion
+
+Scope:
+
+- Add optional single compiled integration step loop (`lax.scan`/`lax.while_loop`)
+  including refresh planning + evaluate + update in strict lane.
+
+Primary files:
+
+- `jaccpot/jaccpot/runtime/_fmm_impl.py`
+- `odisseo/odisseo/jaccpot_coupling.py`
+- `odisseo/notebooks/scalability/galaxy_disk_fmm_large_n.py`
+
+Tests required before commit:
+
+- integration parity against non-fused strict mode
+- conservation checks on representative 200k run
+
+Structured commit target:
+
+- `runtime: add fused jitted strict integration step path`
+
+### Performance Gates (must be recorded in docs each phase)
+
+- single `autocvd` GPU runs for apples-to-apples comparison
+- targets:
+  - `runtime_refresh_dual_artifact_build_seconds` improve >= 40%
+  - `prepare_seconds` improve >= 25%
+  - refresh misses do not increase
+  - conservation drift stays within accepted noise
+
+### Documentation/Commit Discipline
+
+For each phase:
+
+1. implement minimal scoped change
+2. run targeted unit/integration tests
+3. run at least one short perf smoke
+4. commit code with focused message
+5. append findings and next step to this handoff markdown
+
+This keeps every optimization slice auditable, reversible, and test-proved.
