@@ -676,3 +676,26 @@ Notes:
 - This Phase A slice is a scaffold: it moves routing decisions into compiled
   execution while preserving existing fill semantics and fallback behavior.
 - Next step remains Phase B: compiled compact fill/count-to-fill pipeline.
+
+## 2026-05-12 Phase B Increment (Steady Count->Fill Orchestration Cut)
+
+Implemented an opt-in low-overhead mode in `yggdrax` compact bounded count-pass
+builders (far-only, near-only, and shared far+near):
+
+- New env flag:
+  - `YGGDRAX_DUAL_TREE_SHARED_COUNT_FILL_STEADY_SINGLE_QUEUE=1`
+- Effect when enabled:
+  - skip queue-candidate retry ladder expansion and auto-suggest queue probing
+    during compact count->fill orchestration
+  - run steady path with a single configured queue capacity
+- Default remains off (`0`) to preserve conservative fallback behavior.
+
+Validation run (with flag enabled):
+
+- `test_static_radix_refresh_dual_planner_mode_parity_and_diagnostics` (pass)
+- `test_static_radix_refresh_rebuilds_current_large_n_payloads` (pass)
+
+Intended use:
+
+- A/B performance experiments in stable static-radix production lanes where
+  queue capacity is already known to be sufficient.
