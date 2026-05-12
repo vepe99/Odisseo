@@ -556,3 +556,95 @@ Validation:
 
 - Planner parity/diagnostics integration test remains green and now asserts the
   new bypass counter is exercised.
+
+## 2026-05-12 Plan Revision: Device-Resident Planning + Toward Single-JIT Step
+
+### Goal Adjustment
+
+We now explicitly target a mostly device-resident execution path:
+
+- Near-term: refresh dual-artifact planning/count/fill runs in compiled JAX
+  control flow for stable static-radix profiles.
+- Mid-term: move the production time-integration step toward one jitted step
+  function (`lax.scan`/`lax.while_loop` style), minimizing host orchestration.
+
+Reason:
+
+- Current kernels are often jitted individually, but stage orchestration and
+  routing still spend host time and create launch/sync overhead that can keep
+  GPU utilization low.
+
+### Why Planning Is Still Required With Fixed Data Structure
+
+`static_radix` stabilizes tree shape/capacity and avoids recompilation churn,
+but active interaction sets still depend on current geometry:
+
+- MAC acceptance changes with positions.
+- Nearfield neighbor relations change as particles move.
+- Compact artifact sizes/offsets must be recomputed unless we accept very large
+  overprovisioned dense work.
+
+So fixed structure removes shape instability, not per-refresh interaction
+selection.
+
+### Smarter Planning Strategy (Concrete)
+
+1. **Two-tier planner representation**
+- Keep static topology metadata cached once (node/leaf ancestry, capacity
+  envelopes, static indexing tables).
+- Recompute only dynamic masks/counts each refresh.
+
+2. **Count-then-fill fused planner kernel**
+- Use one compiled planner pipeline with JAX control flow:
+  - pass A: compute far/near validity masks + per-block counts
+  - prefix-sum/scans for offsets
+  - pass B: fill compact buffers directly
+- Avoid Python-stage branch routing in steady mode.
+
+3. **Bucketed occupancy planning**
+- Pre-bucket leaves/nodes by static depth and capacity class.
+- Run class-wise vectorized planning kernels (`vmap`) to improve coherence and
+  reduce divergent control paths.
+
+4. **Adaptive sparse-vs-dense switch inside compiled planner**
+- If occupancy exceeds threshold, select dense evaluation path for that class.
+- Otherwise use compact sparse buffers.
+- Keep this decision in compiled control flow, not Python.
+
+5. **Refresh delta optimization (optional after parity)**
+- Detect low-displacement refresh windows.
+- Reuse prior interaction membership where validity is provably unchanged and
+  recompute only invalidated regions.
+- Guard behind strict correctness checks first.
+
+### Implementation Phases
+
+1. Phase A: compiled routing/count scaffold
+- Introduce compiled planner entrypoint for split/shared routing + count arrays.
+- Maintain existing fill kernels initially.
+
+2. Phase B: compiled compact fill
+- Move compact far-pair and neighbor fill into same compiled planner pipeline.
+- Preserve existing fallback and overflow correctness behavior.
+
+3. Phase C: jitted integration-step prototype
+- Create optional production lane where one step loop executes in one jitted
+  function with refresh + evaluate + integrate.
+- Keep non-jitted orchestration path as fallback.
+
+### Acceptance Gates
+
+1. Correctness
+- Old vs new planner parity for refresh-hit and refresh-miss paths.
+- Overflow-focused tests remain green.
+- Conservation and acceleration drift within current noise envelope.
+
+2. Performance (single `autocvd` GPU)
+- `runtime_refresh_dual_artifact_build_seconds` improvement target: >= 40%
+- `prepare_seconds` improvement target: >= 25%
+- GPU utilization: sustained increase and reduced idle fraction in refresh-heavy
+  windows.
+
+3. Stability
+- No increase in `runtime_large_n_same_topology_refresh_misses`
+- No planner cache churn for stable-profile production runs.
