@@ -699,3 +699,61 @@ Intended use:
 
 - A/B performance experiments in stable static-radix production lanes where
   queue capacity is already known to be sufficient.
+
+## 2026-05-12 A/B Result: Steady Single-Queue Mode (200k/40, autocvd 1 GPU)
+
+### Commands
+
+Both runs used:
+
+- `preset=large_n_gpu`
+- `runtime_path=large_n`
+- `tree_build_mode=static_radix`
+- `leaf_size=256`
+- `refresh_every=1`
+- `--no-fmm-large-n-environment-overrides`
+- `autocvd` single-GPU launcher (`run_in_odisseo_with_autocvd.py`)
+
+Variant run additionally set:
+
+- `YGGDRAX_DUAL_TREE_SHARED_COUNT_FILL_STEADY_SINGLE_QUEUE=1`
+
+### Artifacts
+
+- Baseline profile:
+  - `notebooks/scalability/reports/galaxy_disk_profile_20260512_203347.json`
+- Variant profile:
+  - `notebooks/scalability/reports/galaxy_disk_profile_20260512_204935.json`
+- GPU sampler logs:
+  - `/tmp/phaseb_ab_baseline_20260512_202032/nvidia_smi.csv`
+  - `/tmp/phaseb_ab_singlequeue_20260512_203601/nvidia_smi.csv`
+
+### Timing Comparison (variant vs baseline)
+
+- `script_runtime_seconds`: `+2.34%` (slower)
+- `prepare_seconds`: `+2.53%` (slower)
+- `runtime_refresh_dual_artifact_build_seconds`: `+2.27%` (slower)
+- `runtime_refresh_dual_split_shared_far_near_seconds`: `+1.40%` (slower)
+- `runtime_refresh_dual_split_shared_count_seconds`: `+0.28%` (about equal)
+- `runtime_refresh_dual_split_shared_combined_fill_seconds`: `+1.63%` (slower)
+- Refresh stability counters unchanged:
+  - hits `39 -> 39`
+  - misses `0 -> 0`
+
+### GPU9 Utilization (1 Hz sampler)
+
+- Baseline:
+  - mean util `5.63%`
+  - p50 util `0%`
+  - fraction util `<10%`: `90.69%`
+- Variant:
+  - mean util `5.33%`
+  - p50 util `0%`
+  - fraction util `<10%`: `90.66%`
+
+Interpretation:
+
+- This Phase B knob is correctness-neutral but does not improve performance in
+  this lane; it is slightly slower and does not raise sustained GPU utilization.
+- Keep this mode opt-in/off by default and pivot to deeper planner fusion (true
+  compiled count-to-fill pipeline and broader jitted step integration).
