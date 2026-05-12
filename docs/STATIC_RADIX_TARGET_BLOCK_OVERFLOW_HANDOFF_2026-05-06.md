@@ -1051,3 +1051,22 @@ Recommended production workflow for strict static lane:
 
 Next optimization target remains eliminating residual host sync/orchestration in
 refresh hot path and pushing deeper fusion into the jitted integration loop.
+
+## 2026-05-12 Strict Cap Profile Keying Update (Particle-Aware)
+
+Answer to caveat: **yes, caps are workload dependent** and should not be treated as globally transferable.
+
+Implemented in `jaccpot`:
+
+- strict cap profiles are now keyed by context:
+  - `tree_mode`
+  - `leaf_parameter`
+  - `particle_count (N)`
+- strict mode resolves the active key during refresh and loads the matching profile.
+- fallback behavior is conservative:
+  - if no exact key exists, choose the largest queue profile for same `tree_mode+leaf`.
+  - legacy single-profile JSON format is still supported.
+
+Result:
+
+- We can safely preseed strict caps for production scenarios without reusing an undersized profile from a different particle count.
