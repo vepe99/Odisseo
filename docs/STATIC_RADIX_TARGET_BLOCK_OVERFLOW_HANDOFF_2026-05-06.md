@@ -984,3 +984,37 @@ Validation:
 
 - `tests/integration/test_fmm.py -k "static_radix_refresh_dual_planner_mode_parity_and_diagnostics or static_radix_refresh_rebuilds_current_large_n_payloads"` passed.
 - strict-mode diagnostics assertion added for `refresh_strict_mode_active_count`.
+
+## 2026-05-12 Strict Cap Profiling Slice
+
+Added cap recording/loading path so strict mode can reuse capacities discovered
+in non-strict retry-capable runs:
+
+- `jaccpot` (`_fmm_impl.py`):
+  - records retry-observed queue capacities into:
+    - `/tmp/jaccpot_static_strict_caps.json` (default)
+    - configurable via `JACCPOT_STATIC_STRICT_CAP_PROFILE_PATH`
+  - loads profiled caps when strict mode is active and applies them to
+    `runtime_traversal_config` before dual-artifact build.
+  - new diagnostics:
+    - `strict_profiled_max_pair_queue`
+    - `strict_profiled_pair_process_block`
+  - recording toggle:
+    - `JACCPOT_STATIC_STRICT_CAP_RECORD` (default on)
+
+- `yggdrax` (`_interactions_impl.py`):
+  - shared compact count->fill now emits `success` retry events with actual
+    queue capacity, not only overflow events.
+
+Quick verification:
+
+- short non-strict run generated:
+  - `/tmp/jaccpot_static_strict_caps.json`
+  - example contents from 50k test: `{\"max_pair_queue\": 12996, ...}`
+
+Interpretation:
+
+- strict mode failure at 200k was due missing/undersized envelope data.
+- this slice creates the mechanism to promote observed capacities into strict
+  no-retry runs; next step is a 200k non-strict profiling pass, then strict
+  rerun using that recorded envelope.
