@@ -534,3 +534,25 @@ Next concrete implementation steps:
    - `prepare_seconds` improves by >= 25%
    - refresh misses do not increase
    - conservation drift stays within existing run-to-run noise.
+
+### 2026-05-12 Incremental Optimization (Steady Refresh)
+
+Added a low-risk hot-path overhead reduction in `jaccpot` for planner cache-hit
+refreshes:
+
+- New planner hint field:
+  - `suppress_substage_timing`
+- New env toggle (default enabled):
+  - `JACCPOT_LARGE_N_REFRESH_DUAL_PLANNER_STEADY_NO_SUBSTAGE_TIMING=1`
+- Behavior:
+  - On planner cache-hit steady refreshes, disable dual-artifact substage timing
+    callbacks to avoid repeated host-side timing callback overhead/sync in the
+    hot loop.
+  - Keep top-level stage timings and all correctness behavior unchanged.
+- New diagnostic counter:
+  - `refresh_dual_planner_steady_timing_bypass_count`
+
+Validation:
+
+- Planner parity/diagnostics integration test remains green and now asserts the
+  new bypass counter is exercised.
