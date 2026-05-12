@@ -648,3 +648,31 @@ selection.
 3. Stability
 - No increase in `runtime_large_n_same_topology_refresh_misses`
 - No planner cache churn for stable-profile production runs.
+
+## 2026-05-12 Phase A Implementation Progress (Compiled Planner Route)
+
+Implemented in `jaccpot`:
+
+- Added compiled refresh planner routing entrypoint in
+  `jaccpot/runtime/_interaction_cache.py`:
+  - `_compiled_refresh_dual_planner_route(...)` (`jax.jit`)
+  - Computes route booleans in compiled JAX control flow:
+    - split-build eligibility
+    - compact shared far+near eligibility
+    - steady timing suppression eligibility
+- Wired compiled route output into static-radix refresh planner setup in
+  `jaccpot/runtime/_fmm_impl.py` (planner mode `on/auto` path).
+- Added runtime diagnostic counter:
+  - `refresh_dual_planner_compiled_route_count`
+- Extended planner parity test to assert compiled route usage.
+
+Validation:
+
+- planner parity/diagnostics test: pass
+- focused static-radix refresh + overflow regression subset: pass
+
+Notes:
+
+- This Phase A slice is a scaffold: it moves routing decisions into compiled
+  execution while preserving existing fill semantics and fallback behavior.
+- Next step remains Phase B: compiled compact fill/count-to-fill pipeline.
