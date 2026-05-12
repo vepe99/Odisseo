@@ -1018,3 +1018,36 @@ Interpretation:
 - this slice creates the mechanism to promote observed capacities into strict
   no-retry runs; next step is a 200k non-strict profiling pass, then strict
   rerun using that recorded envelope.
+
+## 2026-05-12 Strict Cap Profiling Result (200k)
+
+Confirmed the workflow you proposed: use retry-capable mode to discover fitting
+static capacities once, then run strict mode with those pre-set caps.
+
+Execution summary:
+
+- Non-strict profiling run (record enabled) produced:
+  - `/tmp/jaccpot_static_strict_caps.json`
+  - observed envelope: `max_pair_queue=169101`, `pair_process_block=0`
+- Strict mode rerun loaded that profile and completed without pair-queue
+  overflow or refresh misses.
+
+Observed A/B effect on 200k/40 refresh-heavy run:
+
+- `prepare_seconds`: `764.08 -> 568.39` (`-25.6%`)
+- `runtime_refresh_dual_artifact_build_seconds`: `566.44 -> 377.64` (`-33.3%`)
+- `runtime_refresh_dual_split_shared_count_seconds`: `10.45 -> 1.97` (`-81.2%`)
+- refresh misses unchanged: `0 -> 0`
+
+Recommended production workflow for strict static lane:
+
+1. Profile lane once (retry-capable):
+   - `JACCPOT_STATIC_STRICT_GPU_MODE=off`
+   - `JACCPOT_STATIC_STRICT_CAP_RECORD=1`
+2. Reuse profile in strict lane:
+   - `JACCPOT_STATIC_STRICT_GPU_MODE=on`
+   - `JACCPOT_STATIC_STRICT_CAP_PROFILE_PATH=/tmp/jaccpot_static_strict_caps.json`
+3. Keep `tree_build_mode=static_radix` and `preset=large_n_gpu` fixed.
+
+Next optimization target remains eliminating residual host sync/orchestration in
+refresh hot path and pushing deeper fusion into the jitted integration loop.
