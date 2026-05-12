@@ -757,3 +757,43 @@ Interpretation:
   this lane; it is slightly slower and does not raise sustained GPU utilization.
 - Keep this mode opt-in/off by default and pivot to deeper planner fusion (true
   compiled count-to-fill pipeline and broader jitted step integration).
+
+## 2026-05-12 Host-Sync Reduction Follow-Up
+
+Implemented additional host-sync reductions:
+
+1. `jaccpot` planner route sync removal on refresh hits
+- In `jaccpot/runtime/_fmm_impl.py`, compiled planner route evaluation now runs
+  only on planner-cache miss.
+- On steady refresh hits, planner hint is reused directly without per-refresh
+  `jax.device_get` route extraction.
+
+2. `yggdrax` shared compact count->fill single-queue coverage
+- `YGGDRAX_DUAL_TREE_SHARED_COUNT_FILL_STEADY_SINGLE_QUEUE=1` now also applies
+  to the shared far+near compact count->fill path (in addition to far-only and
+  near-only), reducing Python-side queue-ladder orchestration in that branch.
+
+Validation:
+
+- static-radix refresh parity tests remain green after the changes.
+
+Short refresh-heavy micro-benchmark (autocvd 1 GPU, 50k particles, 20 steps,
+refresh every step, static-radix production lane):
+
+- baseline profile:
+  - `notebooks/scalability/reports/galaxy_disk_profile_20260512_211343.json`
+- variant profile (with `YGGDRAX_DUAL_TREE_SHARED_COUNT_FILL_STEADY_SINGLE_QUEUE=1`):
+  - `notebooks/scalability/reports/galaxy_disk_profile_20260512_211836.json`
+
+Observed deltas (variant vs baseline):
+
+- `script_runtime_seconds`: `-5.48%`
+- `prepare_seconds`: `-5.63%`
+- `runtime_refresh_dual_artifact_build_seconds`: `-8.78%`
+
+Interpretation:
+
+- The no-per-refresh-route-sync change plus shared-path single-queue reduction
+  helps in this smaller refresh-heavy lane.
+- We still need full 200k confirmation and deeper fusion to address the very
+  low sustained GPU utilization and remaining host orchestration overhead.
