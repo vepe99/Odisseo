@@ -958,3 +958,29 @@ For each phase:
 5. append findings and next step to this handoff markdown
 
 This keeps every optimization slice auditable, reversible, and test-proved.
+
+## 2026-05-12 Phase 1 Start: Strict Static Contract Slice
+
+Implemented strict-mode contract wiring in `jaccpot` refresh path:
+
+- New mode flag:
+  - `JACCPOT_STATIC_STRICT_GPU_MODE={off,auto,on}`
+- In strict mode (`on`, or `auto` on `large_n_gpu + static_radix`):
+  - effective `fail_fast=True` for dual-artifact build path
+  - force strict Yggdrax compact orchestration envs:
+    - `YGGDRAX_DUAL_TREE_SHARED_COUNT_FILL_ONE_SHOT=1`
+    - `YGGDRAX_DUAL_TREE_SHARED_COUNT_FILL_STEADY_SINGLE_QUEUE=1`
+  - increment diagnostics counter:
+    - `refresh_strict_mode_active_count`
+
+Also added one-shot shared compact count->fill mode in `yggdrax`:
+
+- `YGGDRAX_DUAL_TREE_SHARED_COUNT_FILL_ONE_SHOT=1`
+- behavior:
+  - execute one count + one fill at configured queue
+  - fallback to legacy retry ladder only when overflow is detected
+
+Validation:
+
+- `tests/integration/test_fmm.py -k "static_radix_refresh_dual_planner_mode_parity_and_diagnostics or static_radix_refresh_rebuilds_current_large_n_payloads"` passed.
+- strict-mode diagnostics assertion added for `refresh_strict_mode_active_count`.
