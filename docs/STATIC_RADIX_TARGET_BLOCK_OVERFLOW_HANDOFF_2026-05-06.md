@@ -1070,3 +1070,51 @@ Implemented in `jaccpot`:
 Result:
 
 - We can safely preseed strict caps for production scenarios without reusing an undersized profile from a different particle count.
+
+## Next Steps (2026-05-13)
+
+Goal: remove remaining GPU idle/burst behavior by eliminating host orchestration from the refresh hot path while keeping strict static correctness.
+
+1. Finalize today's measurement artifacts
+- Collect the latest profile JSON and `nvidia-smi` 1 Hz log from the final strict 200k/40 run.
+- Compute:
+  - mean util
+  - p50 util
+  - fraction util `<10%`
+  - longest contiguous idle windows
+- Add A/B against prior strict-profiled baseline in this handoff.
+
+2. Add explicit hot-path boundary tracing (minimal instrumentation)
+- Add lightweight counters around refresh substages to identify where host gaps remain:
+  - planner route selection
+  - split-shared count/plan
+  - artifact fill/scatter
+  - downward handoff
+- Keep instrumentation non-blocking and avoid new `device_get` in steady path.
+
+3. Implement next optimization slice: compiled refresh planner body (no host routing in hot loop)
+- Move split-shared count/plan routing fully into a jitted JAX body.
+- Keep fixed-shape artifacts and static capacities.
+- Ensure refresh-hit steady path does not execute Python branching for planner stage.
+
+4. Preserve strict static contracts
+- Keep strict mode requirements active:
+  - fail-fast overflow contract
+  - one-shot/single-queue shared compact path
+  - particle-aware cap profile keying (`tree_mode + leaf_parameter + N`)
+- Keep fallback only for non-strict/non-static lanes.
+
+5. Verification gates before/after the optimization slice
+- Correctness:
+  - existing integration parity tests must pass
+  - refresh miss count must not increase
+- Performance:
+  - target lower `runtime_refresh_dual_artifact_build_seconds`
+  - target lower `prepare_seconds`
+  - target improved sustained GPU util vs today's final run
+
+6. Commit/documentation discipline
+- One focused code change per commit.
+- Run targeted tests per slice before commit.
+- Append measured deltas + decision outcome to this handoff after each slice.
+
