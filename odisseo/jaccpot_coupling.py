@@ -442,6 +442,10 @@ def integrate_leapfrog_jaccpot_active(
     state_curr = jnp.asarray(state)
     mass_arr = jnp.asarray(mass)
     profile = timing_stats is not None
+    profile_sync = (
+        str(os.environ.get("ODISSEO_PROFILE_SYNC", "0")).strip().lower()
+        in {"1", "true", "yes", "on"}
+    )
     collect_shape_signatures = bool(profile or enforce_static_shape_contract)
     t_total_start = time.perf_counter() if profile else 0.0
     prepare_seconds = 0.0
@@ -1133,7 +1137,7 @@ def integrate_leapfrog_jaccpot_active(
         t0 = time.perf_counter()
         try:
             prepared_out = _prepare_or_refresh_state(state_in, prev_prepared_state)
-            if profile:
+            if profile and profile_sync:
                 _ = jax.block_until_ready(prepared_out)
             elapsed = time.perf_counter() - t0
         finally:
@@ -1204,7 +1208,8 @@ def integrate_leapfrog_jaccpot_active(
             tw = time.perf_counter()
             prepared_warmup = _prepare_or_refresh_state(state_curr, prepared_warmup)
             acc_warmup = _eval_prepared(prepared_warmup, active_indices=None)
-            _ = jax.block_until_ready(acc_warmup)
+            if profile_sync:
+                _ = jax.block_until_ready(acc_warmup)
             warmup_seconds += time.perf_counter() - tw
             warmup_prepare_calls += 1
             warmup_evaluate_calls += 1
@@ -1248,7 +1253,8 @@ def integrate_leapfrog_jaccpot_active(
             _record_shape_signature(prepared_state)
             acc_self_full = _eval_prepared(prepared_state, active_indices=None)
             if profile:
-                _ = jax.block_until_ready(acc_self_full)
+                if profile_sync:
+                    _ = jax.block_until_ready(acc_self_full)
                 evaluate_seconds += time.perf_counter() - t0
                 evaluate_calls += 1
             seg_len = min(int(refresh_every), int(num_steps) - step)
@@ -1272,7 +1278,8 @@ def integrate_leapfrog_jaccpot_active(
                 # each scan segment.
                 state_curr = jnp.asarray(state_curr, dtype=state_curr.dtype)
             if profile:
-                _ = jax.block_until_ready(state_curr)
+                if profile_sync:
+                    _ = jax.block_until_ready(state_curr)
                 update_seconds += time.perf_counter() - t0
                 update_calls += 1
             if return_history:
@@ -1302,7 +1309,8 @@ def integrate_leapfrog_jaccpot_active(
             _record_shape_signature(prepared_state)
             acc_self_full = _eval_prepared(prepared_state, active_indices=None)
             if profile:
-                _ = jax.block_until_ready(acc_self_full)
+                if profile_sync:
+                    _ = jax.block_until_ready(acc_self_full)
                 evaluate_seconds += time.perf_counter() - t0
                 evaluate_calls += 1
             seg_len = min(int(refresh_every), int(num_steps) - step)
@@ -1323,7 +1331,8 @@ def integrate_leapfrog_jaccpot_active(
                 # each scan segment.
                 state_curr = jnp.asarray(state_curr, dtype=state_curr.dtype)
             if profile:
-                _ = jax.block_until_ready(state_curr)
+                if profile_sync:
+                    _ = jax.block_until_ready(state_curr)
                 update_seconds += time.perf_counter() - t0
                 update_calls += 1
             if return_history:
@@ -1373,7 +1382,8 @@ def integrate_leapfrog_jaccpot_active(
                 t0 = time.perf_counter()
             acc_self = _eval_prepared(prepared_state, active_indices=None)
             if profile:
-                _ = jax.block_until_ready(acc_self)
+                if profile_sync:
+                    _ = jax.block_until_ready(acc_self)
                 evaluate_seconds += time.perf_counter() - t0
                 evaluate_calls += 1
             if add_external:
@@ -1417,7 +1427,8 @@ def integrate_leapfrog_jaccpot_active(
                 t0 = time.perf_counter()
             acc_self = _eval_prepared(prepared_state, active_indices=active_idx)
             if profile:
-                _ = jax.block_until_ready(acc_self)
+                if profile_sync:
+                    _ = jax.block_until_ready(acc_self)
                 evaluate_seconds += time.perf_counter() - t0
                 evaluate_calls += 1
             if add_external:
@@ -1473,7 +1484,8 @@ def integrate_leapfrog_jaccpot_active(
                 te = time.perf_counter()
             acc_self_2 = _eval_prepared(prepared_state, active_indices=None)
             if profile:
-                _ = jax.block_until_ready(acc_self_2)
+                if profile_sync:
+                    _ = jax.block_until_ready(acc_self_2)
                 evaluate_seconds += time.perf_counter() - te
                 evaluate_calls += 1
             if add_external:
@@ -1508,7 +1520,8 @@ def integrate_leapfrog_jaccpot_active(
                 te = time.perf_counter()
             acc_self_2 = _eval_prepared(prepared_state, active_indices=active_idx)
             if profile:
-                _ = jax.block_until_ready(acc_self_2)
+                if profile_sync:
+                    _ = jax.block_until_ready(acc_self_2)
                 evaluate_seconds += time.perf_counter() - te
                 evaluate_calls += 1
             if add_external:
@@ -1524,7 +1537,8 @@ def integrate_leapfrog_jaccpot_active(
             vel_new_active = state_curr[active_idx, 1] + 0.5 * (acc_1 + acc_2) * dt_arr
             state_curr = state_pos.at[active_idx, 1].set(vel_new_active)
         if profile:
-            _ = jax.block_until_ready(state_curr)
+            if profile_sync:
+                _ = jax.block_until_ready(state_curr)
             update_seconds += time.perf_counter() - t0
             update_calls += 1
 
