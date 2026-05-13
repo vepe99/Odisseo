@@ -23,6 +23,8 @@ def _large_n_environment_overrides(
 ) -> dict[str, str]:
     """Return jaccpot large-N env overrides requested by SimulationConfig."""
     overrides: dict[str, str] = {}
+    if not bool(getattr(config, "fmm_large_n_environment_overrides_enabled", True)):
+        return overrides
     target_block_size = getattr(config, "fmm_large_n_target_block_size", None)
 
     static_target_blocks = getattr(config, "fmm_large_n_static_target_blocks", None)
@@ -110,6 +112,7 @@ def _build_fmm_solver(
     fmm_max_interactions_per_node: Optional[int],
     fmm_max_neighbors_per_leaf: Optional[int],
     fmm_prepare_stage_memory_split_enabled: Optional[bool],
+    fmm_upward_leaf_batch_size: Optional[int],
 ):
     from jaccpot import (
         FMMAdvancedConfig,
@@ -187,6 +190,11 @@ def _build_fmm_solver(
                     None
                     if fmm_prepare_stage_memory_split_enabled is None
                     else bool(fmm_prepare_stage_memory_split_enabled)
+                ),
+                upward_leaf_batch_size=(
+                    None
+                    if fmm_upward_leaf_batch_size is None
+                    else int(fmm_upward_leaf_batch_size)
                 ),
             ),
             mac_type=str(fmm_mac_type),
@@ -405,6 +413,7 @@ def integrate_leapfrog_jaccpot_active(
     fmm_max_interactions_per_node: Optional[int] = None,
     fmm_max_neighbors_per_leaf: Optional[int] = None,
     fmm_prepare_stage_memory_split_enabled: Optional[bool] = None,
+    fmm_upward_leaf_batch_size: Optional[int] = None,
     enforce_static_shape_contract: bool = False,
     static_shape_warmup_prepares: int = 0,
     rematerialize_between_refresh: bool = True,
@@ -735,6 +744,39 @@ def integrate_leapfrog_jaccpot_active(
                 "runtime_interaction_cache_misses": int(
                     runtime_diag.get("interaction_cache_misses", 0)
                 ),
+                "runtime_refresh_dual_planner_cache_hits": int(
+                    runtime_diag.get("refresh_dual_planner_cache_hits", 0)
+                ),
+                "runtime_refresh_dual_planner_cache_misses": int(
+                    runtime_diag.get("refresh_dual_planner_cache_misses", 0)
+                ),
+                "runtime_refresh_dual_planner_compile_count": int(
+                    runtime_diag.get("refresh_dual_planner_compile_count", 0)
+                ),
+                "runtime_refresh_dual_planner_execute_count": int(
+                    runtime_diag.get("refresh_dual_planner_execute_count", 0)
+                ),
+                "runtime_refresh_dual_planner_steady_timing_bypass_count": int(
+                    runtime_diag.get(
+                        "refresh_dual_planner_steady_timing_bypass_count",
+                        0,
+                    )
+                ),
+                "runtime_refresh_dual_planner_compiled_route_count": int(
+                    runtime_diag.get("refresh_dual_planner_compiled_route_count", 0)
+                ),
+                "runtime_refresh_strict_mode_active_count": int(
+                    runtime_diag.get("refresh_strict_mode_active_count", 0)
+                ),
+                "runtime_strict_profiled_max_pair_queue": int(
+                    runtime_diag.get("strict_profiled_max_pair_queue", 0)
+                ),
+                "runtime_strict_profiled_pair_process_block": int(
+                    runtime_diag.get("strict_profiled_pair_process_block", 0)
+                ),
+                "runtime_strict_profiled_context_key": str(
+                    runtime_diag.get("strict_profiled_context_key", "")
+                ),
                 "runtime_refresh_total_seconds": float(
                     runtime_diag.get("refresh_total_seconds", 0.0)
                 ),
@@ -938,6 +980,11 @@ def integrate_leapfrog_jaccpot_active(
         fmm_max_neighbors_per_leaf=fmm_max_neighbors_per_leaf,
         fmm_prepare_stage_memory_split_enabled=(
             fmm_prepare_stage_memory_split_enabled
+        ),
+        fmm_upward_leaf_batch_size=(
+            getattr(config, "fmm_upward_leaf_batch_size", None)
+            if fmm_upward_leaf_batch_size is None
+            else int(fmm_upward_leaf_batch_size)
         ),
     )
     def _prepare_state(state_in: jnp.ndarray):
@@ -1517,6 +1564,7 @@ def evaluate_acceleration_jaccpot(
     fmm_max_interactions_per_node: Optional[int] = None,
     fmm_max_neighbors_per_leaf: Optional[int] = None,
     fmm_prepare_stage_memory_split_enabled: Optional[bool] = None,
+    fmm_upward_leaf_batch_size: Optional[int] = None,
 ) -> jnp.ndarray:
     """Evaluate one FMM acceleration call for an ODISSEO primitive state."""
     state_arr = jnp.asarray(state)
@@ -1548,6 +1596,11 @@ def evaluate_acceleration_jaccpot(
         fmm_max_neighbors_per_leaf=fmm_max_neighbors_per_leaf,
         fmm_prepare_stage_memory_split_enabled=(
             fmm_prepare_stage_memory_split_enabled
+        ),
+        fmm_upward_leaf_batch_size=(
+            getattr(config, "fmm_upward_leaf_batch_size", None)
+            if fmm_upward_leaf_batch_size is None
+            else int(fmm_upward_leaf_batch_size)
         ),
     )
     with _temporary_large_n_environment(config, fmm_preset=fmm_preset):
@@ -1591,6 +1644,7 @@ def build_jitted_jaccpot_acceleration(
     fmm_max_interactions_per_node: Optional[int] = None,
     fmm_max_neighbors_per_leaf: Optional[int] = None,
     fmm_prepare_stage_memory_split_enabled: Optional[bool] = None,
+    fmm_upward_leaf_batch_size: Optional[int] = None,
     outer_jit: bool = False,
 ):
     """Return a reusable one-call FMM acceleration evaluator.
@@ -1634,6 +1688,7 @@ def build_jitted_jaccpot_acceleration(
             fmm_prepare_stage_memory_split_enabled=(
                 fmm_prepare_stage_memory_split_enabled
             ),
+            fmm_upward_leaf_batch_size=fmm_upward_leaf_batch_size,
         )
 
     if bool(outer_jit):
@@ -1676,6 +1731,7 @@ def build_jitted_leapfrog_jaccpot_active(
     fmm_max_interactions_per_node: Optional[int] = None,
     fmm_max_neighbors_per_leaf: Optional[int] = None,
     fmm_prepare_stage_memory_split_enabled: Optional[bool] = None,
+    fmm_upward_leaf_batch_size: Optional[int] = None,
     enforce_static_shape_contract: bool = False,
     static_shape_warmup_prepares: int = 0,
     rematerialize_between_refresh: bool = True,
@@ -1726,6 +1782,7 @@ def build_jitted_leapfrog_jaccpot_active(
             fmm_prepare_stage_memory_split_enabled=(
                 fmm_prepare_stage_memory_split_enabled
             ),
+            fmm_upward_leaf_batch_size=fmm_upward_leaf_batch_size,
             enforce_static_shape_contract=enforce_static_shape_contract,
             static_shape_warmup_prepares=static_shape_warmup_prepares,
             rematerialize_between_refresh=rematerialize_between_refresh,
