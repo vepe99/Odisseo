@@ -446,6 +446,16 @@ def integrate_leapfrog_jaccpot_active(
         str(os.environ.get("ODISSEO_PROFILE_SYNC", "0")).strip().lower()
         in {"1", "true", "yes", "on"}
     )
+    strict_mode_env = str(
+        os.environ.get("JACCPOT_STATIC_STRICT_GPU_MODE", "auto")
+    ).strip().lower()
+    strict_mode_requested = strict_mode_env in {"on", "auto"}
+    strict_production_lane = bool(
+        strict_mode_requested
+        and str(fmm_preset).strip().lower() == "large_n_gpu"
+        and str(fmm_runtime_path).strip().lower() in {"large_n", "auto"}
+        and str(fmm_tree_build_mode).strip().lower() == "static_radix"
+    )
     collect_shape_signatures = bool(profile or enforce_static_shape_contract)
     t_total_start = time.perf_counter() if profile else 0.0
     prepare_seconds = 0.0
@@ -1216,6 +1226,22 @@ def integrate_leapfrog_jaccpot_active(
             warmup_evaluate_calls += 1
             _record_shape_signature(prepared_warmup, warmup_phase=True)
 
+    if strict_production_lane:
+        if active_indices_schedule is not None:
+            raise NotImplementedError(
+                "Strict production lane does not support active_indices_schedule; "
+                "use full-particle scan path."
+            )
+        if active_indices_fn is not None:
+            raise NotImplementedError(
+                "Strict production lane does not support active_indices_fn callbacks; "
+                "use full-particle scan path."
+            )
+        if bool(refresh_after_position_update):
+            raise NotImplementedError(
+                "Strict production lane requires refresh_after_position_update=False."
+            )
+
     if active_indices_schedule is not None:
         active_indices_schedule = jnp.asarray(active_indices_schedule, dtype=jnp.int32)
         if active_indices_schedule.ndim != 2:
@@ -1292,7 +1318,9 @@ def integrate_leapfrog_jaccpot_active(
         return _finalize(state_curr)
 
     # Fast path: full-particle updates with scan+jit inside each refresh segment.
-    if active_indices_fn is None and not bool(refresh_after_position_update):
+    if strict_production_lane or (
+        active_indices_fn is None and not bool(refresh_after_position_update)
+    ):
         step = 0
         prepared_state = None
         while step < int(num_steps):
