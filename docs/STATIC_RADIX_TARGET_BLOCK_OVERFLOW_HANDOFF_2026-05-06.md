@@ -1142,6 +1142,29 @@ Why this matters:
 Validation in this slice:
 - `python3 -m py_compile odisseo/jaccpot_coupling.py` (pass)
 
+## 2026-05-13 Unified Non-Profile Full-Segment Helper (Odisseo)
+
+Refactored duplicated host loop orchestration into one shared helper:
+
+- Added `_run_nonprofile_full_segmented_loop(...)` in
+  `odisseo/jaccpot_coupling.py`.
+- This helper now owns the non-profile full-particle segmented execution for:
+  - strict production lane fast path
+  - general full-particle fast lane (`active_indices_fn is None`,
+    `refresh_after_position_update=False`)
+- Behavior retained:
+  - same refresh cadence and tail handling
+  - same rematerialize-on/off behavior
+  - same `_prepare_refresh_and_eval_full` usage
+
+Why this matters:
+- Removes duplicated orchestration code, making the next major step (compiled
+  control-flow boundary work) safer and easier.
+- Keeps hot-path host logic centralized and minimal.
+
+Validation in this slice:
+- `python3 -m py_compile odisseo/jaccpot_coupling.py` (pass)
+
 ## 2026-05-13 Direct Cached Refresh Runner (Odisseo)
 
 Further reduced per-refresh Python overhead in `odisseo/jaccpot_coupling.py`:

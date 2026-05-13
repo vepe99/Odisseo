@@ -1434,6 +1434,77 @@ def integrate_leapfrog_jaccpot_active(
         acc_out = _eval_prepared(prepared_out, active_indices=None)
         return prepared_out, acc_out
 
+    def _run_nonprofile_full_segmented_loop(
+        state_in: jnp.ndarray,
+        *,
+        num_steps_i: int,
+        refresh_every_i: int,
+        remat_enabled: bool,
+    ) -> jnp.ndarray:
+        """Run the non-profile full-particle segmented loop with minimal branching."""
+        full_segments = num_steps_i // refresh_every_i
+        tail_segment = num_steps_i % refresh_every_i
+        prepared_state = None
+        state_out = state_in
+
+        if remat_enabled:
+            for _ in range(full_segments):
+                prepared_state, acc_self_full = _prepare_refresh_and_eval_full(
+                    state_out, prepared_state
+                )
+                state_out, _ = _run_full_segment_scan(
+                    state_out,
+                    acc_self_full,
+                    dt_arr,
+                    steps=refresh_every_i,
+                    add_external=add_external,
+                    config=config,
+                    params=params,
+                )
+                state_out = jnp.asarray(state_out, dtype=state_out.dtype)
+            if tail_segment > 0:
+                prepared_state, acc_self_full = _prepare_refresh_and_eval_full(
+                    state_out, prepared_state
+                )
+                state_out, _ = _run_full_segment_scan(
+                    state_out,
+                    acc_self_full,
+                    dt_arr,
+                    steps=tail_segment,
+                    add_external=add_external,
+                    config=config,
+                    params=params,
+                )
+                state_out = jnp.asarray(state_out, dtype=state_out.dtype)
+        else:
+            for _ in range(full_segments):
+                prepared_state, acc_self_full = _prepare_refresh_and_eval_full(
+                    state_out, prepared_state
+                )
+                state_out, _ = _run_full_segment_scan(
+                    state_out,
+                    acc_self_full,
+                    dt_arr,
+                    steps=refresh_every_i,
+                    add_external=add_external,
+                    config=config,
+                    params=params,
+                )
+            if tail_segment > 0:
+                prepared_state, acc_self_full = _prepare_refresh_and_eval_full(
+                    state_out, prepared_state
+                )
+                state_out, _ = _run_full_segment_scan(
+                    state_out,
+                    acc_self_full,
+                    dt_arr,
+                    steps=tail_segment,
+                    add_external=add_external,
+                    config=config,
+                    params=params,
+                )
+        return state_out
+
     history = []
     add_external = len(config.external_accelerations) > 0
 
@@ -1471,67 +1542,13 @@ def integrate_leapfrog_jaccpot_active(
             # branching and keep host orchestration minimal.
             num_steps_i = int(num_steps)
             refresh_every_i = int(refresh_every)
-            full_segments = num_steps_i // refresh_every_i
-            tail_segment = num_steps_i % refresh_every_i
             remat_enabled = bool(rematerialize_between_refresh)
-            prepared_state = None
-
-            if remat_enabled:
-                for _ in range(full_segments):
-                    prepared_state, acc_self_full = _prepare_refresh_and_eval_full(
-                        state_curr, prepared_state
-                    )
-                    state_curr, _ = _run_full_segment_scan(
-                        state_curr,
-                        acc_self_full,
-                        dt_arr,
-                        steps=refresh_every_i,
-                        add_external=add_external,
-                        config=config,
-                        params=params,
-                    )
-                    state_curr = jnp.asarray(state_curr, dtype=state_curr.dtype)
-                if tail_segment > 0:
-                    prepared_state, acc_self_full = _prepare_refresh_and_eval_full(
-                        state_curr, prepared_state
-                    )
-                    state_curr, _ = _run_full_segment_scan(
-                        state_curr,
-                        acc_self_full,
-                        dt_arr,
-                        steps=tail_segment,
-                        add_external=add_external,
-                        config=config,
-                        params=params,
-                    )
-                    state_curr = jnp.asarray(state_curr, dtype=state_curr.dtype)
-            else:
-                for _ in range(full_segments):
-                    prepared_state, acc_self_full = _prepare_refresh_and_eval_full(
-                        state_curr, prepared_state
-                    )
-                    state_curr, _ = _run_full_segment_scan(
-                        state_curr,
-                        acc_self_full,
-                        dt_arr,
-                        steps=refresh_every_i,
-                        add_external=add_external,
-                        config=config,
-                        params=params,
-                    )
-                if tail_segment > 0:
-                    prepared_state, acc_self_full = _prepare_refresh_and_eval_full(
-                        state_curr, prepared_state
-                    )
-                    state_curr, _ = _run_full_segment_scan(
-                        state_curr,
-                        acc_self_full,
-                        dt_arr,
-                        steps=tail_segment,
-                        add_external=add_external,
-                        config=config,
-                        params=params,
-                    )
+            state_curr = _run_nonprofile_full_segmented_loop(
+                state_curr,
+                num_steps_i=num_steps_i,
+                refresh_every_i=refresh_every_i,
+                remat_enabled=remat_enabled,
+            )
             return _finalize(state_curr)
 
     if active_indices_schedule is not None:
@@ -1616,67 +1633,13 @@ def integrate_leapfrog_jaccpot_active(
         if not profile and not bool(return_history):
             num_steps_i = int(num_steps)
             refresh_every_i = int(refresh_every)
-            full_segments = num_steps_i // refresh_every_i
-            tail_segment = num_steps_i % refresh_every_i
             remat_enabled = bool(rematerialize_between_refresh)
-            prepared_state = None
-
-            if remat_enabled:
-                for _ in range(full_segments):
-                    prepared_state, acc_self_full = _prepare_refresh_and_eval_full(
-                        state_curr, prepared_state
-                    )
-                    state_curr, _ = _run_full_segment_scan(
-                        state_curr,
-                        acc_self_full,
-                        dt_arr,
-                        steps=refresh_every_i,
-                        add_external=add_external,
-                        config=config,
-                        params=params,
-                    )
-                    state_curr = jnp.asarray(state_curr, dtype=state_curr.dtype)
-                if tail_segment > 0:
-                    prepared_state, acc_self_full = _prepare_refresh_and_eval_full(
-                        state_curr, prepared_state
-                    )
-                    state_curr, _ = _run_full_segment_scan(
-                        state_curr,
-                        acc_self_full,
-                        dt_arr,
-                        steps=tail_segment,
-                        add_external=add_external,
-                        config=config,
-                        params=params,
-                    )
-                    state_curr = jnp.asarray(state_curr, dtype=state_curr.dtype)
-            else:
-                for _ in range(full_segments):
-                    prepared_state, acc_self_full = _prepare_refresh_and_eval_full(
-                        state_curr, prepared_state
-                    )
-                    state_curr, _ = _run_full_segment_scan(
-                        state_curr,
-                        acc_self_full,
-                        dt_arr,
-                        steps=refresh_every_i,
-                        add_external=add_external,
-                        config=config,
-                        params=params,
-                    )
-                if tail_segment > 0:
-                    prepared_state, acc_self_full = _prepare_refresh_and_eval_full(
-                        state_curr, prepared_state
-                    )
-                    state_curr, _ = _run_full_segment_scan(
-                        state_curr,
-                        acc_self_full,
-                        dt_arr,
-                        steps=tail_segment,
-                        add_external=add_external,
-                        config=config,
-                        params=params,
-                    )
+            state_curr = _run_nonprofile_full_segmented_loop(
+                state_curr,
+                num_steps_i=num_steps_i,
+                refresh_every_i=refresh_every_i,
+                remat_enabled=remat_enabled,
+            )
             return _finalize(state_curr)
 
         step = 0
