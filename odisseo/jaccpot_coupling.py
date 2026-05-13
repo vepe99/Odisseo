@@ -498,6 +498,7 @@ def integrate_leapfrog_jaccpot_active(
         )
     )
     refresh_call_mode_index: Optional[int] = None
+    refresh_call_runner: Optional[Callable[[Any, jnp.ndarray], Any]] = None
     prepare_stage_keys = (
         "refresh_input_seconds",
         "refresh_tree_upward_seconds",
@@ -1040,6 +1041,8 @@ def integrate_leapfrog_jaccpot_active(
         nonlocal refresh_prepare_fallbacks
         nonlocal full_prepare_calls
         nonlocal last_prepare_path
+        nonlocal refresh_call_mode_index
+        nonlocal refresh_call_runner
 
         if prev_prepared_state is None:
             full_prepare_calls += 1
@@ -1056,11 +1059,22 @@ def integrate_leapfrog_jaccpot_active(
             last_prepare_path = "full"
             return _prepare_state(state_in)
 
-        nonlocal refresh_call_mode_index
         refresh_prepare_attempts += 1
         pos = state_in[:, 0, :]
         leaf = int(leaf_size)
         order = int(max_order)
+
+        if refresh_call_runner is not None:
+            try:
+                with _temporary_large_n_environment(config, fmm_preset=fmm_preset):
+                    out = refresh_call_runner(prev_prepared_state, pos)
+                refresh_prepare_successes += 1
+                last_prepare_path = "refresh"
+                return out
+            except TypeError:
+                # If signature drift occurs at runtime, re-resolve once.
+                refresh_call_mode_index = None
+                refresh_call_runner = None
 
         # Try several likely public API signatures while keeping behavior
         # backwards-compatible with older jaccpot builds.
@@ -1125,6 +1139,190 @@ def integrate_leapfrog_jaccpot_active(
                         out = refresh_fn(*args)
                 if refresh_call_mode_index is None:
                     refresh_call_mode_index = int(idx)
+                    if idx == 0:
+                        if refresh_fn_accepts_var_kw:
+                            refresh_call_runner = (
+                                lambda prepared, positions: refresh_fn(
+                                    prepared,
+                                    positions,
+                                    mass_arr,
+                                    leaf_size=leaf,
+                                    max_order=order,
+                                )
+                            )
+                        else:
+                            include_leaf = "leaf_size" in refresh_fn_params
+                            include_order = "max_order" in refresh_fn_params
+                            if include_leaf and include_order:
+                                refresh_call_runner = (
+                                    lambda prepared, positions: refresh_fn(
+                                        prepared,
+                                        positions,
+                                        mass_arr,
+                                        leaf_size=leaf,
+                                        max_order=order,
+                                    )
+                                )
+                            elif include_leaf:
+                                refresh_call_runner = (
+                                    lambda prepared, positions: refresh_fn(
+                                        prepared,
+                                        positions,
+                                        mass_arr,
+                                        leaf_size=leaf,
+                                    )
+                                )
+                            elif include_order:
+                                refresh_call_runner = (
+                                    lambda prepared, positions: refresh_fn(
+                                        prepared,
+                                        positions,
+                                        mass_arr,
+                                        max_order=order,
+                                    )
+                                )
+                            else:
+                                refresh_call_runner = (
+                                    lambda prepared, positions: refresh_fn(
+                                        prepared,
+                                        positions,
+                                        mass_arr,
+                                    )
+                                )
+                    elif idx == 1:
+                        if refresh_fn_accepts_var_kw:
+                            refresh_call_runner = (
+                                lambda prepared, positions: refresh_fn(
+                                    positions,
+                                    mass_arr,
+                                    prepared,
+                                    leaf_size=leaf,
+                                    max_order=order,
+                                )
+                            )
+                        else:
+                            include_leaf = "leaf_size" in refresh_fn_params
+                            include_order = "max_order" in refresh_fn_params
+                            if include_leaf and include_order:
+                                refresh_call_runner = (
+                                    lambda prepared, positions: refresh_fn(
+                                        positions,
+                                        mass_arr,
+                                        prepared,
+                                        leaf_size=leaf,
+                                        max_order=order,
+                                    )
+                                )
+                            elif include_leaf:
+                                refresh_call_runner = (
+                                    lambda prepared, positions: refresh_fn(
+                                        positions,
+                                        mass_arr,
+                                        prepared,
+                                        leaf_size=leaf,
+                                    )
+                                )
+                            elif include_order:
+                                refresh_call_runner = (
+                                    lambda prepared, positions: refresh_fn(
+                                        positions,
+                                        mass_arr,
+                                        prepared,
+                                        max_order=order,
+                                    )
+                                )
+                            else:
+                                refresh_call_runner = (
+                                    lambda prepared, positions: refresh_fn(
+                                        positions,
+                                        mass_arr,
+                                        prepared,
+                                    )
+                                )
+                    elif idx == 2:
+                        if refresh_fn_accepts_var_kw:
+                            refresh_call_runner = (
+                                lambda prepared, positions: refresh_fn(
+                                    prepared_state=prepared,
+                                    positions=positions,
+                                    masses=mass_arr,
+                                    leaf_size=leaf,
+                                    max_order=order,
+                                )
+                            )
+                        else:
+                            include_prepared = "prepared_state" in refresh_fn_params
+                            include_positions = "positions" in refresh_fn_params
+                            include_masses = "masses" in refresh_fn_params
+                            include_leaf = "leaf_size" in refresh_fn_params
+                            include_order = "max_order" in refresh_fn_params
+
+                            def _run_idx2(prepared, positions):
+                                kwargs2 = {}
+                                if include_prepared:
+                                    kwargs2["prepared_state"] = prepared
+                                if include_positions:
+                                    kwargs2["positions"] = positions
+                                if include_masses:
+                                    kwargs2["masses"] = mass_arr
+                                if include_leaf:
+                                    kwargs2["leaf_size"] = leaf
+                                if include_order:
+                                    kwargs2["max_order"] = order
+                                return refresh_fn(**kwargs2)
+
+                            refresh_call_runner = _run_idx2
+                    elif idx == 3:
+                        if refresh_fn_accepts_var_kw:
+                            refresh_call_runner = (
+                                lambda prepared, positions: refresh_fn(
+                                    previous_prepared_state=prepared,
+                                    positions=positions,
+                                    masses=mass_arr,
+                                    leaf_size=leaf,
+                                    max_order=order,
+                                )
+                            )
+                        else:
+                            include_prepared = (
+                                "previous_prepared_state" in refresh_fn_params
+                            )
+                            include_positions = "positions" in refresh_fn_params
+                            include_masses = "masses" in refresh_fn_params
+                            include_leaf = "leaf_size" in refresh_fn_params
+                            include_order = "max_order" in refresh_fn_params
+
+                            def _run_idx3(prepared, positions):
+                                kwargs3 = {}
+                                if include_prepared:
+                                    kwargs3["previous_prepared_state"] = prepared
+                                if include_positions:
+                                    kwargs3["positions"] = positions
+                                if include_masses:
+                                    kwargs3["masses"] = mass_arr
+                                if include_leaf:
+                                    kwargs3["leaf_size"] = leaf
+                                if include_order:
+                                    kwargs3["max_order"] = order
+                                return refresh_fn(**kwargs3)
+
+                            refresh_call_runner = _run_idx3
+                    elif idx == 4:
+                        refresh_call_runner = (
+                            lambda prepared, positions: refresh_fn(
+                                prepared,
+                                positions,
+                                mass_arr,
+                            )
+                        )
+                    else:
+                        refresh_call_runner = (
+                            lambda prepared, positions: refresh_fn(
+                                positions,
+                                mass_arr,
+                                prepared,
+                            )
+                        )
                 refresh_prepare_successes += 1
                 last_prepare_path = "refresh"
                 return out

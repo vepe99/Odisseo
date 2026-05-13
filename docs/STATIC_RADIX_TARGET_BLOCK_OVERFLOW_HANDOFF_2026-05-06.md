@@ -1142,6 +1142,26 @@ Why this matters:
 Validation in this slice:
 - `python3 -m py_compile odisseo/jaccpot_coupling.py` (pass)
 
+## 2026-05-13 Direct Cached Refresh Runner (Odisseo)
+
+Further reduced per-refresh Python overhead in `odisseo/jaccpot_coupling.py`:
+
+- Added `refresh_call_runner` cache alongside `refresh_call_mode_index`.
+- After first successful refresh signature resolution, we now build and cache a
+  direct callable for that exact call form.
+- Subsequent refreshes use this direct runner path immediately (no attempt tuple
+  construction, no per-call mode routing).
+- Safety behavior: if a `TypeError` happens on cached runner invocation, the code
+  resets the cache once and re-enters compatibility resolution.
+
+Why this matters:
+- Shrinks host orchestration work in refresh-heavy loops.
+- Preserves backward-compatible signature probing on first hit while making
+  steady-state refresh calls cheaper.
+
+Validation in this slice:
+- `python3 -m py_compile odisseo/jaccpot_coupling.py` (pass)
+
 ## 2026-05-13 Full-Particle Non-Profile Fast Lane Cleanup (Odisseo)
 
 Extended the same host-overhead reductions beyond strict-only mode:
