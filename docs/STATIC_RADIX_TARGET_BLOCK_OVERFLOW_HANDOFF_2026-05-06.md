@@ -1162,6 +1162,35 @@ Why this matters:
 Validation in this slice:
 - `python3 -m py_compile jaccpot/runtime/_fmm_impl.py` (pass)
 
+## 2026-05-13 Refresh Route Flag Compaction (Jaccpot)
+
+Refactor pass in `jaccpot/runtime/_fmm_impl.py` to reduce host branch churn:
+
+- Precomputed per-call route flags once near the top of the dual/downward refresh
+  block and reused them across routing logic:
+  - `grouped_interactions_active`
+  - `adaptive_order_active`
+  - `mixed_order_farfield_active`
+  - `retain_interactions_active`
+  - `has_pair_policy`
+  - `has_policy_state`
+- Replaced repeated inline `bool(...)` and `is None` checks across:
+  - compact streamed-pair eligibility
+  - strict streamed fast-path gate
+  - strict split-fastlane planner gate
+  - compiled planner-route inputs
+  - planner cache-key construction
+  - dual-artifact build argument routing
+
+Why this matters:
+- Shrinks repeated Python-side boolean recomputation and keeps hot routing logic
+  more deterministic and centralized.
+- Prepares the block for further structural extraction toward stricter fixed-route
+  execution in the static production lane.
+
+Validation in this slice:
+- `python3 -m py_compile jaccpot/runtime/_fmm_impl.py` (pass)
+
 ## 2026-05-13 Split-Build Env Routing Cache (Jaccpot)
 
 Another refresh-route host-orchestration reduction in `jaccpot/runtime/_fmm_impl.py`:
