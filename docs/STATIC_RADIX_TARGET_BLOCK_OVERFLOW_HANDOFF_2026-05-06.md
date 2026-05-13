@@ -1142,6 +1142,26 @@ Why this matters:
 Validation in this slice:
 - `python3 -m py_compile odisseo/jaccpot_coupling.py` (pass)
 
+## 2026-05-13 Jaccpot Refresh Mode Predicate Caching
+
+Implemented in `jaccpot/runtime/_fmm_impl.py`:
+
+- Cached hot-path mode predicates at initialization:
+  - `_strict_gpu_mode_on`, `_strict_gpu_mode_auto`
+  - `_refresh_dual_planner_mode_on`, `_refresh_dual_planner_mode_auto`
+  - `_large_n_gpu_production_profile_cached`
+- Switched refresh dual/downward routing block to use cached booleans instead of
+  repeated per-refresh string normalization/checks.
+- Added local `tree_mode_static_radix` once per refresh call and reused it for
+  strict/planner gating decisions.
+
+Why this matters:
+- Small but direct reduction of host overhead in refresh-heavy production lane.
+- Removes repeated mode parsing from one of the core refresh orchestration blocks.
+
+Validation in this slice:
+- `python3 -m py_compile jaccpot/runtime/_fmm_impl.py` (pass)
+
 ## 2026-05-13 Unified Non-Profile Full-Segment Helper (Odisseo)
 
 Refactored duplicated host loop orchestration into one shared helper:
