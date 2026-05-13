@@ -589,7 +589,8 @@ def integrate_leapfrog_jaccpot_active(
     def _finalize(out_arr):
         if not profile:
             return out_arr
-        _ = jax.block_until_ready(out_arr)
+        if profile_sync:
+            _ = jax.block_until_ready(out_arr)
         stage_seconds_by_path: dict[str, dict[str, float]] = {}
         for event in profiled_prepare_events:
             path = str(event.get("path", "unknown"))
