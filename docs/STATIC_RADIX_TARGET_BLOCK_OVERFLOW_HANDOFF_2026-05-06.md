@@ -1183,6 +1183,15 @@ Validation in this slice:
 - `python3 -m py_compile odisseo/jaccpot_coupling.py` (pass)
 - `pytest tests/integration/test_fmm.py -k "static_radix_refresh_dual_planner_mode_parity_and_diagnostics or strict_prepare_refresh_and_evaluate_api_and_diagnostics"` (pass)
 
+Follow-up hardening/coverage update:
+- Added strict exact-cap-profile fail-fast integration coverage:
+  - `test_strict_exact_cap_profile_match_fail_fast`
+  - validates explicit strict profile-key mismatch rejects immediately
+    in strict prepare path and increments fail-fast diagnostics counter.
+- Updated strict planner parity test to set
+  `JACCPOT_STATIC_STRICT_REQUIRE_EXACT_CAP_PROFILE_MATCH=0` so existing
+  parity semantics remain testable without external profile provisioning.
+
 ## 2026-05-13 Jaccpot Refresh Mode Predicate Caching
 
 Implemented in `jaccpot/runtime/_fmm_impl.py`:
