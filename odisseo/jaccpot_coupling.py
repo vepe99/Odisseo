@@ -803,6 +803,21 @@ def integrate_leapfrog_jaccpot_active(
                 "runtime_refresh_strict_mode_active_count": int(
                     runtime_diag.get("refresh_strict_mode_active_count", 0)
                 ),
+                "runtime_strict_runner_compile_count": int(
+                    runtime_diag.get("strict_runner_compile_count", 0)
+                ),
+                "runtime_strict_runner_execute_count": int(
+                    runtime_diag.get("strict_runner_execute_count", 0)
+                ),
+                "runtime_strict_runner_profile_key_hits": int(
+                    runtime_diag.get("strict_runner_profile_key_hits", 0)
+                ),
+                "runtime_strict_runner_profile_key_misses": int(
+                    runtime_diag.get("strict_runner_profile_key_misses", 0)
+                ),
+                "runtime_strict_runner_fail_fast_reject_count": int(
+                    runtime_diag.get("strict_runner_fail_fast_reject_count", 0)
+                ),
                 "runtime_strict_profiled_max_pair_queue": int(
                     runtime_diag.get("strict_profiled_max_pair_queue", 0)
                 ),
@@ -1430,6 +1445,20 @@ def integrate_leapfrog_jaccpot_active(
         prev_prepared_state: Any | None,
     ) -> tuple[Any, jnp.ndarray]:
         """Minimal refresh+evaluate helper for strict full-particle lane."""
+        if strict_production_lane and not profile:
+            positions_in = state_in[:, 0, :]
+            prepared_out, acc_out = solver.strict_prepare_refresh_and_evaluate(
+                prev_prepared_state,
+                positions_in,
+                mass_arr,
+                leaf_size=int(leaf_size),
+                max_order=int(max_order),
+                theta=float(fmm_theta),
+                jit_traversal=(
+                    True if fmm_jit_traversal is None else bool(fmm_jit_traversal)
+                ),
+            )
+            return prepared_out, jnp.asarray(acc_out)
         prepared_out = _prepare_or_refresh_state(state_in, prev_prepared_state)
         acc_out = _eval_prepared(prepared_out, active_indices=None)
         return prepared_out, acc_out

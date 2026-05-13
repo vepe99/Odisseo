@@ -1142,6 +1142,47 @@ Why this matters:
 Validation in this slice:
 - `python3 -m py_compile odisseo/jaccpot_coupling.py` (pass)
 
+## 2026-05-13 Strict One-Call Refresh+Evaluate API (Jaccpot + Odisseo Wiring)
+
+Implemented a new additive strict execution API in `jaccpot` and wired Odisseo
+strict lane to use it as a thinner orchestration boundary.
+
+### Jaccpot (`jaccpot/runtime/_fmm_impl.py`, `jaccpot/solver.py`)
+
+- Added `strict_prepare_refresh_and_evaluate(...)`:
+  - input: optional previous prepared state + current positions/masses
+  - behavior:
+    - first call (`prepared_state=None`) runs `prepare_state`
+    - subsequent calls attempt strict same-topology refresh
+    - on refresh miss: **fail-fast** runtime error (no fallback growth)
+    - evaluates acceleration in same call and returns `(prepared_state, acc)`
+- Added runtime diagnostics counters:
+  - `strict_runner_compile_count`
+  - `strict_runner_execute_count`
+  - `strict_runner_profile_key_hits`
+  - `strict_runner_profile_key_misses`
+  - `strict_runner_fail_fast_reject_count`
+- Added strict cap-profile hardening gate:
+  - env: `JACCPOT_STATIC_STRICT_REQUIRE_EXACT_CAP_PROFILE_MATCH` (default `1`)
+  - when strict mode is active, exact context key match is required
+  - rejects missing/undersized strict profile (`max_pair_queue <= 0`) in strict lane
+
+### Odisseo (`odisseo/jaccpot_coupling.py`)
+
+- `_prepare_refresh_and_eval_full(...)` now calls
+  `solver.strict_prepare_refresh_and_evaluate(...)` in strict non-profile path.
+- Added passthrough timing-stat fields for new strict-runner counters.
+
+Why this matters:
+- Moves strict refresh+evaluate orchestration into one jaccpot API call.
+- Enforces stricter fail-fast production behavior for strict static lane.
+- Adds explicit diagnostics to track strict runner reuse/execute behavior.
+
+Validation in this slice:
+- `python3 -m py_compile jaccpot/runtime/_fmm_impl.py jaccpot/solver.py` (pass)
+- `python3 -m py_compile odisseo/jaccpot_coupling.py` (pass)
+- `pytest tests/integration/test_fmm.py -k "static_radix_refresh_dual_planner_mode_parity_and_diagnostics or strict_prepare_refresh_and_evaluate_api_and_diagnostics"` (pass)
+
 ## 2026-05-13 Jaccpot Refresh Mode Predicate Caching
 
 Implemented in `jaccpot/runtime/_fmm_impl.py`:
