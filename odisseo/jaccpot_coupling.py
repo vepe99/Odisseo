@@ -808,6 +808,21 @@ def integrate_leapfrog_jaccpot_active(
                 "runtime_strict_runner_fail_fast_reject_count": int(
                     runtime_diag.get("strict_runner_fail_fast_reject_count", 0)
                 ),
+                "runtime_strict_v2_compile_count": int(
+                    runtime_diag.get("strict_v2_compile_count", 0)
+                ),
+                "runtime_strict_v2_execute_count": int(
+                    runtime_diag.get("strict_v2_execute_count", 0)
+                ),
+                "runtime_strict_v2_profile_key_hits": int(
+                    runtime_diag.get("strict_v2_profile_key_hits", 0)
+                ),
+                "runtime_strict_v2_profile_key_misses": int(
+                    runtime_diag.get("strict_v2_profile_key_misses", 0)
+                ),
+                "runtime_strict_v2_fail_fast_reject_count": int(
+                    runtime_diag.get("strict_v2_fail_fast_reject_count", 0)
+                ),
                 "runtime_strict_profiled_max_pair_queue": int(
                     runtime_diag.get("strict_profiled_max_pair_queue", 0)
                 ),
@@ -1572,49 +1587,57 @@ def integrate_leapfrog_jaccpot_active(
             raise NotImplementedError(
                 "Strict production lane requires refresh_after_position_update=False."
             )
-        if not profile and not bool(return_history):
+        if not bool(return_history):
             # Tight strict lane: avoid generic per-segment profile/history
             # branching and keep host orchestration minimal.
-            def _strict_segment_runner(
-                state_in: jnp.ndarray,
-                acc_self_full: jnp.ndarray,
-                steps: int,
-            ) -> tuple[jnp.ndarray, jnp.ndarray]:
-                return _run_full_segment_scan(
-                    state_in,
-                    acc_self_full,
-                    dt_arr,
-                    steps=int(steps),
-                    add_external=add_external,
-                    config=config,
-                    params=params,
+            external_acc_fn = None
+            if add_external:
+                def _strict_external_acceleration(state_in: jnp.ndarray) -> jnp.ndarray:
+                    return combined_external_acceleration_vmpa_switch(
+                        state_in, config, params
+                    )
+                external_acc_fn = _strict_external_acceleration
+
+            timing_target = getattr(solver, "_impl", solver)
+            old_timing_active = bool(getattr(timing_target, "_refresh_timing_active", False))
+            if profile:
+                try:
+                    setattr(timing_target, "_refresh_timing_active", True)
+                except Exception:
+                    pass
+                t0 = time.perf_counter()
+            try:
+                state_curr, _, hist_out = solver.strict_run_v2(
+                    state=state_curr,
+                    masses=mass_arr,
+                    dt=float(dt_val),
+                    num_steps=int(num_steps),
+                    refresh_every=int(refresh_every),
+                    leaf_size=int(leaf_size),
+                    max_order=int(max_order),
+                    theta=float(fmm_theta),
+                    prepared_state=None,
+                    jit_traversal=(
+                        True if fmm_jit_traversal is None else bool(fmm_jit_traversal)
+                    ),
+                    add_external=bool(add_external),
+                    external_acceleration_fn=external_acc_fn,
+                    rematerialize_between_refresh=bool(rematerialize_between_refresh),
+                    return_history=bool(return_history),
                 )
-
-            def _strict_positions_getter(state_in: jnp.ndarray) -> jnp.ndarray:
-                return state_in[:, 0, :]
-
-            def _strict_rematerialize(state_in: jnp.ndarray) -> jnp.ndarray:
-                return jnp.asarray(state_in, dtype=state_in.dtype)
-
-            state_curr, _, _ = solver.strict_run_segmented(
-                state=state_curr,
-                masses=mass_arr,
-                num_steps=int(num_steps),
-                refresh_every=int(refresh_every),
-                segment_runner=_strict_segment_runner,
-                positions_getter=_strict_positions_getter,
-                prepared_state=None,
-                leaf_size=int(leaf_size),
-                max_order=int(max_order),
-                theta=float(fmm_theta),
-                jit_traversal=(
-                    True if fmm_jit_traversal is None else bool(fmm_jit_traversal)
-                ),
-                rematerialize_fn=(
-                    _strict_rematerialize if bool(rematerialize_between_refresh) else None
-                ),
-                collect_history=False,
-            )
+            finally:
+                if profile:
+                    try:
+                        setattr(timing_target, "_refresh_timing_active", old_timing_active)
+                    except Exception:
+                        pass
+            if profile:
+                if profile_sync:
+                    _ = jax.block_until_ready(state_curr)
+                update_seconds += time.perf_counter() - t0
+                update_calls += 1
+            if bool(return_history) and hist_out is not None:
+                return _finalize(hist_out)
             return _finalize(state_curr)
 
     if active_indices_schedule is not None:

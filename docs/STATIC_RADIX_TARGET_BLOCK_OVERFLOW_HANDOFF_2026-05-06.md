@@ -1257,6 +1257,49 @@ Interpretation:
 - Next work should focus on deeper device-resident fusion of refresh cadence
   and reducing host orchestration boundaries beyond current strict segmented API.
 
+## 2026-05-13 Strict V2 Runner Validation (200k/40, autocvd 1 GPU)
+
+After migrating strict lane to `strict_run_v2` (raw tensor API, no segmented
+callback plumbing at callsite), a fresh strict validation run produced:
+
+- report:
+  - `notebooks/scalability/reports/galaxy_disk_profile_20260513_200252.json`
+- GPU sampler:
+  - `/tmp/strict200k_v2_20260513_190500/nvidia_smi.csv`
+
+Observed metrics:
+
+- `script_runtime_seconds`: `279.49`
+- `runtime_refresh_dual_artifact_build_seconds`: `60.58`
+- `runtime_large_n_same_topology_refresh_misses`: `0`
+
+Metric caveat:
+
+- `prepare_seconds` is now `0` in this report because strict V2 bypasses the
+  old Odisseo per-stage host profiling loop where that accumulator was filled.
+  Runtime refresh metrics remain available via jaccpot diagnostics.
+
+GPU utilization (selected GPU from sampler):
+
+- mean util: `75.78%`
+- p50 util: `97%`
+- fraction util `<10%`: `20.21%`
+- longest contiguous idle window (`<10%`): `9 s`
+
+Comparison vs prior strict run (`20260513_182233`):
+
+- `runtime_refresh_dual_artifact_build_seconds`: `57.15 -> 60.58` (`+6.0%`)
+- GPU utilization quality improved strongly (from low-util bursty behavior to
+  high sustained median utilization with much shorter idle windows).
+
+Takeaway:
+
+- Strict V2 significantly improves compute-density behavior (GPU occupancy
+  pattern), though wall-clock remains far above the ~10s objective.
+- Next iteration should target remaining refresh/evaluate host boundaries
+  inside jaccpot strict V2 path to reduce total runtime while preserving the
+  improved utilization profile.
+
 ## 2026-05-13 Jaccpot Refresh Mode Predicate Caching
 
 Implemented in `jaccpot/runtime/_fmm_impl.py`:
