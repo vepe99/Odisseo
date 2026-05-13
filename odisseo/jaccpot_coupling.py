@@ -482,21 +482,11 @@ def integrate_leapfrog_jaccpot_active(
     refresh_disabled = str(
         os.environ.get("ODISSEO_DISABLE_FMM_REFRESH_PREPARED_STATE", "0")
     ).strip().lower() in {"1", "true", "yes", "on"}
-    refresh_fn = getattr(solver, "refresh_prepared_state", None)
-    refresh_fn_callable = callable(refresh_fn)
-    refresh_fn_signature = (
-        inspect.signature(refresh_fn) if refresh_fn_callable else None
-    )
-    refresh_fn_params = (
-        refresh_fn_signature.parameters if refresh_fn_signature is not None else {}
-    )
-    refresh_fn_accepts_var_kw = bool(
-        refresh_fn_signature is not None
-        and any(
-            p.kind == inspect.Parameter.VAR_KEYWORD
-            for p in refresh_fn_params.values()
-        )
-    )
+    refresh_fn = None
+    refresh_fn_callable = False
+    refresh_fn_signature = None
+    refresh_fn_params = {}
+    refresh_fn_accepts_var_kw = False
     refresh_call_mode_index: Optional[int] = None
     refresh_call_runner: Optional[Callable[[Any, jnp.ndarray], Any]] = None
     prepare_stage_keys = (
@@ -1037,6 +1027,22 @@ def integrate_leapfrog_jaccpot_active(
             else int(fmm_upward_leaf_batch_size)
         ),
     )
+    refresh_fn = getattr(solver, "refresh_prepared_state", None)
+    refresh_fn_callable = callable(refresh_fn)
+    refresh_fn_signature = (
+        inspect.signature(refresh_fn) if refresh_fn_callable else None
+    )
+    refresh_fn_params = (
+        refresh_fn_signature.parameters if refresh_fn_signature is not None else {}
+    )
+    refresh_fn_accepts_var_kw = bool(
+        refresh_fn_signature is not None
+        and any(
+            p.kind == inspect.Parameter.VAR_KEYWORD
+            for p in refresh_fn_params.values()
+        )
+    )
+
     def _prepare_state(state_in: jnp.ndarray):
         with _temporary_large_n_environment(config, fmm_preset=fmm_preset):
             return solver.prepare_state(
@@ -1569,14 +1575,45 @@ def integrate_leapfrog_jaccpot_active(
         if not profile and not bool(return_history):
             # Tight strict lane: avoid generic per-segment profile/history
             # branching and keep host orchestration minimal.
-            num_steps_i = int(num_steps)
-            refresh_every_i = int(refresh_every)
-            remat_enabled = bool(rematerialize_between_refresh)
-            state_curr = _run_nonprofile_full_segmented_loop(
-                state_curr,
-                num_steps_i=num_steps_i,
-                refresh_every_i=refresh_every_i,
-                remat_enabled=remat_enabled,
+            def _strict_segment_runner(
+                state_in: jnp.ndarray,
+                acc_self_full: jnp.ndarray,
+                steps: int,
+            ) -> tuple[jnp.ndarray, jnp.ndarray]:
+                return _run_full_segment_scan(
+                    state_in,
+                    acc_self_full,
+                    dt_arr,
+                    steps=int(steps),
+                    add_external=add_external,
+                    config=config,
+                    params=params,
+                )
+
+            def _strict_positions_getter(state_in: jnp.ndarray) -> jnp.ndarray:
+                return state_in[:, 0, :]
+
+            def _strict_rematerialize(state_in: jnp.ndarray) -> jnp.ndarray:
+                return jnp.asarray(state_in, dtype=state_in.dtype)
+
+            state_curr, _, _ = solver.strict_run_segmented(
+                state=state_curr,
+                masses=mass_arr,
+                num_steps=int(num_steps),
+                refresh_every=int(refresh_every),
+                segment_runner=_strict_segment_runner,
+                positions_getter=_strict_positions_getter,
+                prepared_state=None,
+                leaf_size=int(leaf_size),
+                max_order=int(max_order),
+                theta=float(fmm_theta),
+                jit_traversal=(
+                    True if fmm_jit_traversal is None else bool(fmm_jit_traversal)
+                ),
+                rematerialize_fn=(
+                    _strict_rematerialize if bool(rematerialize_between_refresh) else None
+                ),
+                collect_history=False,
             )
             return _finalize(state_curr)
 

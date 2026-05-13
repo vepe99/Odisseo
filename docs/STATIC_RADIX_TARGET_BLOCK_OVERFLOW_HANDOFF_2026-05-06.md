@@ -1192,6 +1192,71 @@ Follow-up hardening/coverage update:
   `JACCPOT_STATIC_STRICT_REQUIRE_EXACT_CAP_PROFILE_MATCH=0` so existing
   parity semantics remain testable without external profile provisioning.
 
+Detailed standalone execution plan:
+- `docs/STATIC_RADIX_NEAR_SINGLE_JIT_EXECUTION_PLAN_2026-05-13.md`
+
+## 2026-05-13 200k Strict Validation (Autocvd 1 GPU) After Strict Runner API
+
+Execution sequence used:
+
+1. Non-strict profiling pass to record exact cap profile key:
+   - `JACCPOT_STATIC_STRICT_GPU_MODE=off`
+   - `JACCPOT_STATIC_STRICT_CAP_RECORD=1`
+   - `JACCPOT_STATIC_STRICT_CAP_PROFILE_PATH=/tmp/jaccpot_static_strict_caps.json`
+2. Strict validation pass with exact-profile enforcement:
+   - `JACCPOT_STATIC_STRICT_GPU_MODE=on`
+   - `JACCPOT_STATIC_STRICT_CAP_RECORD=0`
+   - `JACCPOT_STATIC_STRICT_CAP_PROFILE_PATH=/tmp/jaccpot_static_strict_caps.json`
+3. Benchmark driver:
+   - `notebooks/scalability/galaxy_disk_fmm_large_n.py`
+   - `--mode perf --n-particles 200000 --num-steps 40`
+   - `--fmm-preset large_n_gpu --fmm-runtime-path large_n`
+   - `--fmm-tree-build-mode static_radix --fmm-leaf-size 256`
+   - `--fmm-refresh-every 1 --no-fmm-large-n-environment-overrides`
+   - `--profile-breakdown --report-dir notebooks/scalability/reports`
+4. Single-GPU selection via `autocvd(num_gpus=1)` bootstrap in runner.
+
+Artifacts:
+
+- Profiling pass report:
+  - `notebooks/scalability/reports/galaxy_disk_profile_20260513_181424.json`
+- Strict validation report:
+  - `notebooks/scalability/reports/galaxy_disk_profile_20260513_182233.json`
+- Strict validation GPU sampler:
+  - `/tmp/strict200k_20260513_181900/nvidia_smi.csv`
+- Recorded strict cap profile:
+  - `/tmp/jaccpot_static_strict_caps.json`
+  - exact key present: `tree_mode=static_radix|leaf=256|n=200000`
+  - value: `max_pair_queue=131072`, `pair_process_block=0`
+
+Strict run outcomes (20260513_182233):
+
+- `script_runtime_seconds`: `270.996`
+- `prepare_seconds`: `260.533`
+- `runtime_refresh_dual_artifact_build_seconds`: `57.146`
+- `runtime_large_n_same_topology_refresh_misses`: `0`
+
+Delta vs prior strict-cap-profiled 200k baseline (2026-05-12):
+
+- baseline `prepare_seconds=568.39` -> `260.53` (`-54.16%`)
+- baseline `runtime_refresh_dual_artifact_build_seconds=377.64` -> `57.15` (`-84.87%`)
+
+GPU utilization summary (selected GPU index `9`, 1 Hz, strict run):
+
+- samples: `275`
+- mean util: `14.75%`
+- p50 util: `0%`
+- fraction util `<10%`: `72.36%`
+- longest contiguous idle window (`<10%`): `84 s`
+
+Interpretation:
+
+- The strict runner/API and routing reductions delivered substantial timing
+  improvements in refresh-heavy totals and preserved zero refresh misses.
+- GPU sustained utilization remains far from target; idle windows persist.
+- Next work should focus on deeper device-resident fusion of refresh cadence
+  and reducing host orchestration boundaries beyond current strict segmented API.
+
 ## 2026-05-13 Jaccpot Refresh Mode Predicate Caching
 
 Implemented in `jaccpot/runtime/_fmm_impl.py`:
