@@ -1143,3 +1143,25 @@ Validation in this slice:
 - `python3 -m py_compile odisseo/jaccpot_coupling.py` (pass)
 - No dedicated Odisseo strict-lane test target currently matched by local `tests/` grep;
   next slice should add/extend strict-lane targeted tests.
+
+## 2026-05-13 Refresh Call-Mode Caching (Odisseo)
+
+Implemented additional host-overhead reduction in `odisseo/jaccpot_coupling.py`:
+
+- `_prepare_or_refresh_state` no longer probes refresh API shape on every call.
+- Resolved once at setup:
+  - refresh enabled/disabled flag (`ODISSEO_DISABLE_FMM_REFRESH_PREPARED_STATE`)
+  - `solver.refresh_prepared_state` callable presence
+  - callable signature and `**kwargs` acceptance
+- Added refresh call-mode cache:
+  - first successful refresh attempt records selected call form
+  - subsequent refreshes reuse that single call form directly
+  - avoids repeated per-refresh retry loops and signature introspection
+
+Why this matters:
+- Removes persistent Python overhead in the refresh-heavy strict lane.
+- Keeps backward compatibility: first refresh still supports multiple historical
+  API signatures; fallback-to-full-prepare behavior remains unchanged.
+
+Validation in this slice:
+- `python3 -m py_compile odisseo/jaccpot_coupling.py` (pass)

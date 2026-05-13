@@ -479,6 +479,25 @@ def integrate_leapfrog_jaccpot_active(
     profiled_refresh_fallback_prepare_seconds = 0.0
     profiled_prepare_events: list[dict[str, Any]] = []
     last_prepare_path = "none"
+    refresh_disabled = str(
+        os.environ.get("ODISSEO_DISABLE_FMM_REFRESH_PREPARED_STATE", "0")
+    ).strip().lower() in {"1", "true", "yes", "on"}
+    refresh_fn = getattr(solver, "refresh_prepared_state", None)
+    refresh_fn_callable = callable(refresh_fn)
+    refresh_fn_signature = (
+        inspect.signature(refresh_fn) if refresh_fn_callable else None
+    )
+    refresh_fn_params = (
+        refresh_fn_signature.parameters if refresh_fn_signature is not None else {}
+    )
+    refresh_fn_accepts_var_kw = bool(
+        refresh_fn_signature is not None
+        and any(
+            p.kind == inspect.Parameter.VAR_KEYWORD
+            for p in refresh_fn_params.values()
+        )
+    )
+    refresh_call_mode_index: Optional[int] = None
     prepare_stage_keys = (
         "refresh_input_seconds",
         "refresh_tree_upward_seconds",
@@ -1027,20 +1046,17 @@ def integrate_leapfrog_jaccpot_active(
             last_prepare_path = "full"
             return _prepare_state(state_in)
 
-        disable_refresh = str(
-            os.environ.get("ODISSEO_DISABLE_FMM_REFRESH_PREPARED_STATE", "0")
-        ).strip().lower() in {"1", "true", "yes", "on"}
-        if bool(disable_refresh):
+        if bool(refresh_disabled):
             full_prepare_calls += 1
             last_prepare_path = "full"
             return _prepare_state(state_in)
 
-        refresh_fn = getattr(solver, "refresh_prepared_state", None)
-        if not callable(refresh_fn):
+        if not bool(refresh_fn_callable):
             full_prepare_calls += 1
             last_prepare_path = "full"
             return _prepare_state(state_in)
 
+        nonlocal refresh_call_mode_index
         refresh_prepare_attempts += 1
         pos = state_in[:, 0, :]
         leaf = int(leaf_size)
@@ -1048,7 +1064,7 @@ def integrate_leapfrog_jaccpot_active(
 
         # Try several likely public API signatures while keeping behavior
         # backwards-compatible with older jaccpot builds.
-        attempts = [
+        attempts = (
             (
                 (prev_prepared_state, pos, mass_arr),
                 {"leaf_size": leaf, "max_order": order},
@@ -1085,28 +1101,30 @@ def integrate_leapfrog_jaccpot_active(
                 (pos, mass_arr, prev_prepared_state),
                 {},
             ),
-        ]
+        )
+        if refresh_call_mode_index is None:
+            attempt_indices = range(len(attempts))
+        else:
+            attempt_indices = (int(refresh_call_mode_index),)
 
-        for args, kwargs in attempts:
+        for idx in attempt_indices:
+            args, kwargs = attempts[idx]
             try:
                 with _temporary_large_n_environment(config, fmm_preset=fmm_preset):
                     if kwargs:
-                        # Filter kwargs to names accepted by the current signature.
-                        sig = inspect.signature(refresh_fn)
-                        params = sig.parameters
-                        accepts_var_kw = any(
-                            p.kind == inspect.Parameter.VAR_KEYWORD
-                            for p in params.values()
-                        )
-                        if accepts_var_kw:
+                        if refresh_fn_accepts_var_kw:
                             call_kwargs = kwargs
                         else:
                             call_kwargs = {
-                                k: v for k, v in kwargs.items() if k in params
+                                k: v
+                                for k, v in kwargs.items()
+                                if k in refresh_fn_params
                             }
                         out = refresh_fn(*args, **call_kwargs)
                     else:
                         out = refresh_fn(*args)
+                if refresh_call_mode_index is None:
+                    refresh_call_mode_index = int(idx)
                 refresh_prepare_successes += 1
                 last_prepare_path = "refresh"
                 return out
