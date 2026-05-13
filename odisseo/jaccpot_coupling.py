@@ -1415,6 +1415,72 @@ def integrate_leapfrog_jaccpot_active(
     if strict_production_lane or (
         active_indices_fn is None and not bool(refresh_after_position_update)
     ):
+        if not profile and not bool(return_history):
+            num_steps_i = int(num_steps)
+            refresh_every_i = int(refresh_every)
+            full_segments = num_steps_i // refresh_every_i
+            tail_segment = num_steps_i % refresh_every_i
+            remat_enabled = bool(rematerialize_between_refresh)
+            prepared_state = None
+
+            if remat_enabled:
+                for _ in range(full_segments):
+                    prepared_state, acc_self_full = _prepare_refresh_and_eval_full(
+                        state_curr, prepared_state
+                    )
+                    state_curr, _ = _run_full_segment_scan(
+                        state_curr,
+                        acc_self_full,
+                        dt_arr,
+                        steps=refresh_every_i,
+                        add_external=add_external,
+                        config=config,
+                        params=params,
+                    )
+                    state_curr = jnp.asarray(state_curr, dtype=state_curr.dtype)
+                if tail_segment > 0:
+                    prepared_state, acc_self_full = _prepare_refresh_and_eval_full(
+                        state_curr, prepared_state
+                    )
+                    state_curr, _ = _run_full_segment_scan(
+                        state_curr,
+                        acc_self_full,
+                        dt_arr,
+                        steps=tail_segment,
+                        add_external=add_external,
+                        config=config,
+                        params=params,
+                    )
+                    state_curr = jnp.asarray(state_curr, dtype=state_curr.dtype)
+            else:
+                for _ in range(full_segments):
+                    prepared_state, acc_self_full = _prepare_refresh_and_eval_full(
+                        state_curr, prepared_state
+                    )
+                    state_curr, _ = _run_full_segment_scan(
+                        state_curr,
+                        acc_self_full,
+                        dt_arr,
+                        steps=refresh_every_i,
+                        add_external=add_external,
+                        config=config,
+                        params=params,
+                    )
+                if tail_segment > 0:
+                    prepared_state, acc_self_full = _prepare_refresh_and_eval_full(
+                        state_curr, prepared_state
+                    )
+                    state_curr, _ = _run_full_segment_scan(
+                        state_curr,
+                        acc_self_full,
+                        dt_arr,
+                        steps=tail_segment,
+                        add_external=add_external,
+                        config=config,
+                        params=params,
+                    )
+            return _finalize(state_curr)
+
         step = 0
         prepared_state = None
         while step < int(num_steps):

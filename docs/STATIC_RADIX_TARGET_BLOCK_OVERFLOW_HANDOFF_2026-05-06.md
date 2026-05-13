@@ -1142,6 +1142,27 @@ Why this matters:
 Validation in this slice:
 - `python3 -m py_compile odisseo/jaccpot_coupling.py` (pass)
 
+## 2026-05-13 Full-Particle Non-Profile Fast Lane Cleanup (Odisseo)
+
+Extended the same host-overhead reductions beyond strict-only mode:
+
+- In the full-particle fast path
+  (`active_indices_fn is None` and `refresh_after_position_update=False`),
+  added a dedicated non-profile/non-history lane that now:
+  - precomputes refresh segment schedule (`full_segments`, `tail_segment`)
+  - splits rematerialize vs non-rematerialize once outside loops
+  - uses `_prepare_refresh_and_eval_full` per segment
+  - avoids per-iteration `min(...)` and remat-branch checks
+
+Why this matters:
+- Reduces host orchestration overhead in the wider production-like full-particle
+  execution path, not only strict mode.
+- Keeps us aligned with the "fail fast or run dense JAX compute blocks" target
+  while we continue pushing the refresh boundary itself toward a compiled body.
+
+Validation in this slice:
+- `python3 -m py_compile odisseo/jaccpot_coupling.py` (pass)
+
 ## 2026-05-13 Strict Direct Refresh+Eval Helper (Odisseo)
 
 Implemented another strict-lane cleanup in `odisseo/jaccpot_coupling.py`:
