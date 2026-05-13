@@ -1141,6 +1141,26 @@ Why this matters:
 
 Validation in this slice:
 - `python3 -m py_compile odisseo/jaccpot_coupling.py` (pass)
+
+## 2026-05-13 Strict Direct Refresh+Eval Helper (Odisseo)
+
+Implemented another strict-lane cleanup in `odisseo/jaccpot_coupling.py`:
+
+- Added `_prepare_refresh_and_eval_full(state_in, prev_prepared_state)`:
+  - executes refresh/prepare selection
+  - immediately evaluates full-particle self-acceleration
+  - returns `(prepared_state, acc_self_full)` as one minimal helper step
+- Updated strict non-profile/non-history segment loops to use this helper in
+  both full segments and tail segment paths.
+
+Why this matters:
+- Keeps strict hot path behavior unchanged while reducing repeated host-level
+  call orchestration inside the refresh loop.
+- Creates a clearer single choke-point for the next step (moving more of this
+  strict orchestration into compiled control flow).
+
+Validation in this slice:
+- `python3 -m py_compile odisseo/jaccpot_coupling.py` (pass)
 - No dedicated Odisseo strict-lane test target currently matched by local `tests/` grep;
   next slice should add/extend strict-lane targeted tests.
 

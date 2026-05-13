@@ -1227,6 +1227,15 @@ def integrate_leapfrog_jaccpot_active(
             return_potential=False,
         )
 
+    def _prepare_refresh_and_eval_full(
+        state_in: jnp.ndarray,
+        prev_prepared_state: Any | None,
+    ) -> tuple[Any, jnp.ndarray]:
+        """Minimal refresh+evaluate helper for strict full-particle lane."""
+        prepared_out = _prepare_or_refresh_state(state_in, prev_prepared_state)
+        acc_out = _eval_prepared(prepared_out, active_indices=None)
+        return prepared_out, acc_out
+
     history = []
     add_external = len(config.external_accelerations) > 0
 
@@ -1271,11 +1280,8 @@ def integrate_leapfrog_jaccpot_active(
 
             if remat_enabled:
                 for _ in range(full_segments):
-                    prepared_state = _prepare_or_refresh_state(
+                    prepared_state, acc_self_full = _prepare_refresh_and_eval_full(
                         state_curr, prepared_state
-                    )
-                    acc_self_full = _eval_prepared(
-                        prepared_state, active_indices=None
                     )
                     state_curr, _ = _run_full_segment_scan(
                         state_curr,
@@ -1288,11 +1294,8 @@ def integrate_leapfrog_jaccpot_active(
                     )
                     state_curr = jnp.asarray(state_curr, dtype=state_curr.dtype)
                 if tail_segment > 0:
-                    prepared_state = _prepare_or_refresh_state(
+                    prepared_state, acc_self_full = _prepare_refresh_and_eval_full(
                         state_curr, prepared_state
-                    )
-                    acc_self_full = _eval_prepared(
-                        prepared_state, active_indices=None
                     )
                     state_curr, _ = _run_full_segment_scan(
                         state_curr,
@@ -1306,11 +1309,8 @@ def integrate_leapfrog_jaccpot_active(
                     state_curr = jnp.asarray(state_curr, dtype=state_curr.dtype)
             else:
                 for _ in range(full_segments):
-                    prepared_state = _prepare_or_refresh_state(
+                    prepared_state, acc_self_full = _prepare_refresh_and_eval_full(
                         state_curr, prepared_state
-                    )
-                    acc_self_full = _eval_prepared(
-                        prepared_state, active_indices=None
                     )
                     state_curr, _ = _run_full_segment_scan(
                         state_curr,
@@ -1322,11 +1322,8 @@ def integrate_leapfrog_jaccpot_active(
                         params=params,
                     )
                 if tail_segment > 0:
-                    prepared_state = _prepare_or_refresh_state(
+                    prepared_state, acc_self_full = _prepare_refresh_and_eval_full(
                         state_curr, prepared_state
-                    )
-                    acc_self_full = _eval_prepared(
-                        prepared_state, active_indices=None
                     )
                     state_curr, _ = _run_full_segment_scan(
                         state_curr,
