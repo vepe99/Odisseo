@@ -1162,6 +1162,24 @@ Why this matters:
 Validation in this slice:
 - `python3 -m py_compile jaccpot/runtime/_fmm_impl.py` (pass)
 
+## 2026-05-13 Strict Cap-Record Env Caching (Jaccpot)
+
+Additional refresh-path cleanup in `jaccpot/runtime/_fmm_impl.py`:
+
+- Cached `JACCPOT_STATIC_STRICT_CAP_RECORD` once at init as
+  `_strict_cap_record_enabled`.
+- Replaced two repeated env parses with this cached boolean:
+  - strict cap profile persistence gate (`_record_strict_cap_profile_from_retries`)
+  - refresh dual-artifact retry logger routing in
+    `_prepare_state_dual_and_downward`
+
+Why this matters:
+- Removes repeated env-string parsing from refresh-heavy orchestration.
+- Keeps behavior stable while reducing host overhead and branch noise.
+
+Validation in this slice:
+- `python3 -m py_compile jaccpot/runtime/_fmm_impl.py` (pass)
+
 ## 2026-05-13 Unified Non-Profile Full-Segment Helper (Odisseo)
 
 Refactored duplicated host loop orchestration into one shared helper:
