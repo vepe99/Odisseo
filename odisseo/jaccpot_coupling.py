@@ -1244,24 +1244,81 @@ def integrate_leapfrog_jaccpot_active(
         if not profile and not bool(return_history):
             # Tight strict lane: avoid generic per-segment profile/history
             # branching and keep host orchestration minimal.
-            step = 0
+            num_steps_i = int(num_steps)
+            refresh_every_i = int(refresh_every)
+            full_segments = num_steps_i // refresh_every_i
+            tail_segment = num_steps_i % refresh_every_i
+            remat_enabled = bool(rematerialize_between_refresh)
             prepared_state = None
-            while step < int(num_steps):
-                prepared_state = _prepare_or_refresh_state(state_curr, prepared_state)
-                acc_self_full = _eval_prepared(prepared_state, active_indices=None)
-                seg_len = min(int(refresh_every), int(num_steps) - step)
-                state_curr, _ = _run_full_segment_scan(
-                    state_curr,
-                    acc_self_full,
-                    dt_arr,
-                    steps=int(seg_len),
-                    add_external=add_external,
-                    config=config,
-                    params=params,
-                )
-                if bool(rematerialize_between_refresh):
+
+            if remat_enabled:
+                for _ in range(full_segments):
+                    prepared_state = _prepare_or_refresh_state(
+                        state_curr, prepared_state
+                    )
+                    acc_self_full = _eval_prepared(
+                        prepared_state, active_indices=None
+                    )
+                    state_curr, _ = _run_full_segment_scan(
+                        state_curr,
+                        acc_self_full,
+                        dt_arr,
+                        steps=refresh_every_i,
+                        add_external=add_external,
+                        config=config,
+                        params=params,
+                    )
                     state_curr = jnp.asarray(state_curr, dtype=state_curr.dtype)
-                step += int(seg_len)
+                if tail_segment > 0:
+                    prepared_state = _prepare_or_refresh_state(
+                        state_curr, prepared_state
+                    )
+                    acc_self_full = _eval_prepared(
+                        prepared_state, active_indices=None
+                    )
+                    state_curr, _ = _run_full_segment_scan(
+                        state_curr,
+                        acc_self_full,
+                        dt_arr,
+                        steps=tail_segment,
+                        add_external=add_external,
+                        config=config,
+                        params=params,
+                    )
+                    state_curr = jnp.asarray(state_curr, dtype=state_curr.dtype)
+            else:
+                for _ in range(full_segments):
+                    prepared_state = _prepare_or_refresh_state(
+                        state_curr, prepared_state
+                    )
+                    acc_self_full = _eval_prepared(
+                        prepared_state, active_indices=None
+                    )
+                    state_curr, _ = _run_full_segment_scan(
+                        state_curr,
+                        acc_self_full,
+                        dt_arr,
+                        steps=refresh_every_i,
+                        add_external=add_external,
+                        config=config,
+                        params=params,
+                    )
+                if tail_segment > 0:
+                    prepared_state = _prepare_or_refresh_state(
+                        state_curr, prepared_state
+                    )
+                    acc_self_full = _eval_prepared(
+                        prepared_state, active_indices=None
+                    )
+                    state_curr, _ = _run_full_segment_scan(
+                        state_curr,
+                        acc_self_full,
+                        dt_arr,
+                        steps=tail_segment,
+                        add_external=add_external,
+                        config=config,
+                        params=params,
+                    )
             return _finalize(state_curr)
 
     if active_indices_schedule is not None:

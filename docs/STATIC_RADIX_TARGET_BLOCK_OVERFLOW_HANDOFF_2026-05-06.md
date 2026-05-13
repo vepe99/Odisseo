@@ -1118,3 +1118,28 @@ Goal: remove remaining GPU idle/burst behavior by eliminating host orchestration
 - Run targeted tests per slice before commit.
 - Append measured deltas + decision outcome to this handoff after each slice.
 
+## 2026-05-13 Strict Loop Host-Branch Hoist (Odisseo)
+
+Implemented in `odisseo/jaccpot_coupling.py` strict production lane:
+
+- Refactored the non-profile, non-history strict refresh loop to remove per-iteration
+  host branching in the hot path:
+  - removed repeated `min(refresh_every, remaining_steps)` in-loop planning
+  - removed repeated `bool(rematerialize_between_refresh)` checks in-loop
+  - removed repeated `step`/remaining bookkeeping in-loop
+- Replaced with precomputed schedule:
+  - `full_segments = num_steps // refresh_every`
+  - `tail_segment = num_steps % refresh_every`
+  - two specialized host loops selected once:
+    - rematerialize enabled
+    - rematerialize disabled
+
+Why this matters:
+- This does not yet make the entire integration a single giant JIT, but it reduces
+  avoidable Python overhead in the strict hot refresh orchestration and makes the
+  path more predictable for GPU saturation work.
+
+Validation in this slice:
+- `python3 -m py_compile odisseo/jaccpot_coupling.py` (pass)
+- No dedicated Odisseo strict-lane test target currently matched by local `tests/` grep;
+  next slice should add/extend strict-lane targeted tests.
