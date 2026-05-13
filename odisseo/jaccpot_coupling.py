@@ -1241,6 +1241,28 @@ def integrate_leapfrog_jaccpot_active(
             raise NotImplementedError(
                 "Strict production lane requires refresh_after_position_update=False."
             )
+        if not profile and not bool(return_history):
+            # Tight strict lane: avoid generic per-segment profile/history
+            # branching and keep host orchestration minimal.
+            step = 0
+            prepared_state = None
+            while step < int(num_steps):
+                prepared_state = _prepare_or_refresh_state(state_curr, prepared_state)
+                acc_self_full = _eval_prepared(prepared_state, active_indices=None)
+                seg_len = min(int(refresh_every), int(num_steps) - step)
+                state_curr, _ = _run_full_segment_scan(
+                    state_curr,
+                    acc_self_full,
+                    dt_arr,
+                    steps=int(seg_len),
+                    add_external=add_external,
+                    config=config,
+                    params=params,
+                )
+                if bool(rematerialize_between_refresh):
+                    state_curr = jnp.asarray(state_curr, dtype=state_curr.dtype)
+                step += int(seg_len)
+            return _finalize(state_curr)
 
     if active_indices_schedule is not None:
         active_indices_schedule = jnp.asarray(active_indices_schedule, dtype=jnp.int32)
