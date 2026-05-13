@@ -1162,6 +1162,24 @@ Why this matters:
 Validation in this slice:
 - `python3 -m py_compile jaccpot/runtime/_fmm_impl.py` (pass)
 
+## 2026-05-13 Split-Build Env Routing Cache (Jaccpot)
+
+Another refresh-route host-orchestration reduction in `jaccpot/runtime/_fmm_impl.py`:
+
+- Cached `JACCPOT_PREPARE_STAGE_MEMORY_SPLIT_ENABLED` once at init as
+  `_prepare_stage_memory_split_env_override`.
+- Cached base default predicate for streamed minimum-memory GPU split build as
+  `_streamed_minimum_memory_gpu_default_split_build`.
+- `_prepare_state_dual_and_downward` now uses cached values instead of reading
+  and parsing split-build env vars inside the refresh hot path.
+
+Why this matters:
+- Removes another per-refresh env parse + repeated route predicate evaluation.
+- Keeps routing semantics intact while reducing host-side decision overhead.
+
+Validation in this slice:
+- `python3 -m py_compile jaccpot/runtime/_fmm_impl.py` (pass)
+
 ## 2026-05-13 Strict Cap-Record Env Caching (Jaccpot)
 
 Additional refresh-path cleanup in `jaccpot/runtime/_fmm_impl.py`:
