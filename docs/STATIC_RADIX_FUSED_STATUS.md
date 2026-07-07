@@ -82,19 +82,45 @@ work and are cleanup follow-ups:
 - **Odisseo (3)**: environmental under jax 0.9.0 — `test_initial_condition.py`
   (jaxtyping), `test_integrators.py` (diffrax `saveat`); files untouched by this work.
 
-## Next steps
+## jaxfmm head-to-head (2026-07-07, RTX 2080 Ti, fp32)
 
-1. **jaxfmm head-to-head baseline** — jaxfmm 0.2.0 is installed; run
-   `jaccpot/bench/bench_jaxfmm_paper_compare.py` at the paper parameter sets and
-   record a comparison table under `jaccpot/benchmarks/`. (falcON out of scope —
-   no build; Dehnen appears only as the MAC.)
-2. **Pallas L2P kernel** — the remaining launch-count tail is the near-field
-   `392+392` dynamic-slice/reduce and `483` add/update families (pure-JAX unroll
-   knobs exhausted, all <1.3%). Add a guarded, flag-gated Pallas L2P/near-field
-   kernel with a pure-JAX fallback; gate promotion on same-position force parity
-   (`tools/fused_payload_force_parity.py`) + finiteness, and a walltime win that
-   keeps `fallback_count=0` and recompile-free.
-3. Retire the deferred test debt above.
+jaxfmm 0.2.0 is installed. Compared via `jaccpot/bench/bench_fused_eval_vs_jaxfmm.py`
+(times the strict *fused* eval-only path via the new
+`FastMultipoleMethod.strict_fused_prepared_eval_fn`, not the slow non-fused
+`evaluate_prepared_state`). falcON is out of scope (no build; Dehnen appears only
+as the MAC).
+
+Eval at 200k, matched accuracy (p=4, theta=0.6, leaf/N_max=256), warm min-of-20:
+
+| quantity | jaxfmm | jaccpot fused eval-only |
+| --- | --- | --- |
+| potential | 0.051 s | ~0.12 s (far 0.006 + near-potential 0.116) |
+| force (3-vector) | — | 0.279 s (far 0.006 + near-force 0.267) |
+
+**Root cause of the gap (not what the aspiration assumed):**
+- jaccpot's **FMM far-field is excellent** — 0.006 s; never the bottleneck.
+- The near-field direct P2P is **~98% of the eval** and the whole gap.
+- ~half the apparent 5x is **force-vs-potential**: jaxfmm returns a scalar
+  potential; jaccpot returns 3-vector forces (~2.3x costlier). Potential-to-
+  potential the gap is **~2.4x**, not 5x.
+- The residual ~2x is **GPU utilization** in the near-field P2P. A pure-JAX
+  dense-block P2P (jaxfmm-style, verified to parity 3e-8 vs the canonical
+  near-field) does **not** close it — it matches the current ~0.24 s force
+  near-field regardless of batch size (~7% of GPU peak). Only a tiled **Pallas
+  P2P kernel** could plausibly close it; deferred as uncertain-payoff future work.
+
+**Conclusion:** jaccpot does not currently beat jaxfmm on raw eval throughput.
+Its defensible advantage is the in-integrator strict fused static-shape
+zero-recompile full step, which jaxfmm's functional `eval_potential` does not
+itself provide.
+
+## Next steps (deferred)
+
+1. **Pallas near-field P2P kernel** — the only remaining lever for the residual
+   ~2x eval gap; guarded/flagged with a pure-JAX fallback, parity-gated
+   (`tools/fused_payload_force_parity.py`), and kept only if it wins walltime
+   while preserving `fallback_count=0` and recompile-free.
+2. Retire the deferred test debt above.
 
 ## Reproduce
 
