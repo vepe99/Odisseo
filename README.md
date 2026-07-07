@@ -91,3 +91,68 @@ Record a movie (`.gif` or `.mp4`; use `--mode render`):
 ```bash
 python notebooks/scalability/galaxy_disk_fmm_large_n.py --n-particles 200000 --num-steps 200 --mode render --movie-path ./galaxy_disk.gif --movie-fps 24 --snapshot-stride 1 --snapshot-chunk-steps 20
 ```
+
+Render multiple projections from one simulation run (no duplicate integration):
+
+```bash
+python notebooks/scalability/galaxy_disk_fmm_large_n.py \
+  --n-particles 200000 --num-steps 200 \
+  --mode render \
+  --movie-path ./galaxy_disk.mp4 \
+  --movie-projections xy,xz \
+  --movie-fps 24 \
+  --snapshot-stride 1 \
+  --snapshot-chunk-steps 20
+```
+
+This produces:
+- `./galaxy_disk_xy.mp4` (face-on)
+- `./galaxy_disk_xz.mp4` (edge-on)
+
+### AGAMA-Based IC Generation (Reusable Fixed IC Files)
+
+Preferred generator (SCM-style, rotating disk target):
+
+```bash
+micromamba run -n odisseo python tools/agama_generate_scm_disk_ic.py \
+  --output /export/home/tbuck/Odisseo/notebooks/scalability/ic_cache/odisseo_fixed_agama_ic_200k.npz \
+  --n-particles 200000 \
+  --seed 7
+```
+
+Strict production behavior of this generator:
+- SCM convergence is required by default (fail-fast on iteration failure).
+- No fallback sampling is used unless `--allow-scm-fallback` is explicitly set.
+- Rotation acceptance gate is enforced (`prograde_fraction` and `median_vphi` minima).
+
+Run the galaxy simulation by loading that fixed IC file:
+
+Set `ODISSEO_IC_ROOT` (optional) to control the default persistent IC cache root used by benchmarking helpers.
+
+```bash
+python notebooks/scalability/galaxy_disk_fmm_large_n.py \
+  --mode render \
+  --n-particles 200000 \
+  --num-steps 40 \
+  --fmm-preset large_n_gpu \
+  --fmm-runtime-path large_n \
+  --fmm-tree-build-mode static_radix \
+  --fmm-leaf-size 256 \
+  --fmm-refresh-every 1 \
+  --no-fmm-large-n-environment-overrides \
+  --ic-source load \
+  --ic-input-path /export/home/tbuck/Odisseo/notebooks/scalability/ic_cache/odisseo_fixed_agama_ic_200k.npz \
+  --no-ic-require-runtime-potential-match \
+  --movie-path /tmp/galaxy_agama_scm.mp4 \
+  --movie-projections xy,xz \
+  --movie-fps 20 \
+  --render-backend density \
+  --render-resolution 768 \
+  --snapshot-stride 1 \
+  --snapshot-chunk-steps 1
+```
+
+Legacy note:
+- `tools/agama_generate_equilibrium_ic.py` is deprecated and kept only for
+  transition/debug compatibility. New production IC calibration should use
+  `tools/agama_generate_scm_disk_ic.py`.

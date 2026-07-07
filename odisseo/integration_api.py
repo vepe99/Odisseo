@@ -5,7 +5,10 @@ from typing import Callable, Optional
 import jax
 import jax.numpy as jnp
 
-from odisseo.jaccpot_coupling import integrate_leapfrog_jaccpot_active
+from odisseo.jaccpot_coupling import (
+    integrate_diffrax_jaccpot_active,
+    integrate_leapfrog_jaccpot_active,
+)
 from odisseo.option_classes import (
     DIRECT_ACC,
     DIRECT_ACC_FOR_LOOP,
@@ -85,21 +88,16 @@ def integrate(
         return time_integration(primitive_state, mass, config, params)
 
     if int(config.acceleration_scheme) == int(FMM_ACC):
-        if not bool(config.fixed_timestep):
-            raise NotImplementedError(
-                "jaccpot_fmm backend currently requires fixed_timestep=True"
-            )
-
         fmm_preset, fmm_runtime_path, fmm_working_dtype = _resolve_fmm_runtime_profile(
             primitive_state,
             config,
         )
 
-        states_or_final = integrate_leapfrog_jaccpot_active(
-            primitive_state,
-            mass,
-            config,
-            params,
+        common_kwargs = dict(
+            state=primitive_state,
+            mass=mass,
+            config=config,
+            params=params,
             num_steps=int(config.num_timesteps),
             active_indices_fn=active_indices_fn,
             active_indices_schedule=active_indices_schedule,
@@ -173,6 +171,11 @@ def integrate(
             ),
             return_history=bool(config.return_snapshots),
         )
+
+        if bool(config.fixed_timestep):
+            states_or_final = integrate_leapfrog_jaccpot_active(**common_kwargs)
+        else:
+            states_or_final = integrate_diffrax_jaccpot_active(**common_kwargs)
 
         if bool(config.return_snapshots):
             states = jnp.asarray(states_or_final)

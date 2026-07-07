@@ -7,6 +7,7 @@ import csv
 import inspect
 import json
 import pathlib
+import os
 import time
 from datetime import datetime
 
@@ -22,14 +23,19 @@ from odisseo.jaccpot_coupling import (
     _large_n_environment_overrides,
     _run_full_segment_scan,
     _temporary_large_n_environment,
+    integrate_diffrax_jaccpot_active,
     integrate_leapfrog_jaccpot_active,
 )
 from odisseo.option_classes import (
     FMM_ACC,
     NFW_POTENTIAL,
+    THICK_MN3_DISK,
+    THIN_MN3_DISK,
     SimulationConfig,
     SimulationParams,
     NFWParams,
+    ThickMN3DiskParams,
+    ThinMN3DiskParams,
 )
 from odisseo.potentials import combined_external_acceleration_vmpa_switch
 from odisseo.units import CodeUnits
@@ -50,10 +56,159 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--seed", type=int, default=7)
     parser.add_argument("--output", type=str, default="./galaxy_disk_fmm_large_n.npz")
     parser.add_argument(
+        "--state-dtype",
+        type=str,
+        default="float32",
+        choices=("float32", "float64"),
+        help="Dtype used for ODISSEO state/mass arrays. FMM may still use its configured working dtype.",
+    )
+    parser.add_argument(
+        "--initial-accel-report",
+        action="store_true",
+        help="Write sampled initial acceleration diagnostics before integration.",
+    )
+    parser.add_argument(
+        "--initial-accel-sample-targets",
+        type=int,
+        default=512,
+        help="Number of deterministic particles used for initial acceleration diagnostics.",
+    )
+    parser.add_argument(
+        "--initial-accel-direct-source-chunk",
+        type=int,
+        default=8192,
+        help="Source chunk size for sampled direct-sum initial acceleration diagnostics.",
+    )
+    parser.add_argument(
+        "--ic-velocity-potential",
+        type=str,
+        default="nfw",
+        choices=("nfw", "nfw_analytic_disk"),
+        help=(
+            "Potential used only to initialize quasi-circular velocities. "
+            "The integration still uses the runtime external potential plus live self-gravity."
+        ),
+    )
+    parser.add_argument(
+        "--ic-analytic-disk-mass-factor",
+        type=float,
+        default=1.0,
+        help="Analytic disk mass used for IC velocities as a factor of the live disk mass.",
+    )
+    parser.add_argument(
+        "--ic-thick-disk-mass-fraction",
+        type=float,
+        default=0.0,
+        help="Fraction of the analytic IC disk mass assigned to the thick MN3 component.",
+    )
+    parser.add_argument(
+        "--ic-thin-disk-radius-kpc",
+        type=float,
+        default=None,
+        help="Thin MN3 radial scale for IC velocities. Defaults to --disk-radius-kpc.",
+    )
+    parser.add_argument(
+        "--ic-thin-disk-height-kpc",
+        type=float,
+        default=None,
+        help="Thin MN3 vertical scale for IC velocities. Defaults to --disk-height-kpc.",
+    )
+    parser.add_argument(
+        "--ic-thick-disk-radius-kpc",
+        type=float,
+        default=None,
+        help="Thick MN3 radial scale for IC velocities. Defaults to --disk-radius-kpc.",
+    )
+    parser.add_argument(
+        "--ic-thick-disk-height-kpc",
+        type=float,
+        default=None,
+        help="Thick MN3 vertical scale for IC velocities. Defaults to 3.333 * --disk-height-kpc.",
+    )
+    parser.add_argument(
+        "--ic-source",
+        type=str,
+        default="generate",
+        choices=("generate", "load"),
+        help="Generate ICs from seed/potential or load fixed ICs from --ic-input-path.",
+    )
+    parser.add_argument(
+        "--ic-input-path",
+        type=str,
+        default=None,
+        help="Input NPZ path used when --ic-source=load.",
+    )
+    parser.add_argument(
+        "--ic-output-path",
+        type=str,
+        default=None,
+        help="Optional NPZ path to persist generated ICs for later reuse.",
+    )
+    parser.add_argument(
+        "--ic-require-runtime-potential-match",
+        action="store_true",
+        help="Require IC velocity potential to match runtime external potential setup (default on).",
+    )
+    parser.add_argument(
+        "--no-ic-require-runtime-potential-match",
+        dest="ic_require_runtime_potential_match",
+        action="store_false",
+        help="Allow IC velocity potential to differ from runtime external potential.",
+    )
+    parser.set_defaults(ic_require_runtime_potential_match=True)
+    parser.add_argument(
         "--fmm-refresh-every",
         type=int,
         default=1,
         help="Refresh source-tree/self-field every k steps.",
+    )
+    parser.add_argument(
+        "--adaptive-timestep",
+        action="store_true",
+        help="Use adaptive diffrax timesteps for FMM integration (fixed timestep remains default).",
+    )
+    parser.add_argument(
+        "--fmm-adaptive-rtol",
+        type=float,
+        default=1e-3,
+        help="Relative tolerance for adaptive diffrax FMM mode.",
+    )
+    parser.add_argument(
+        "--fmm-adaptive-atol",
+        type=float,
+        default=1e-6,
+        help="Absolute tolerance for adaptive diffrax FMM mode.",
+    )
+    parser.add_argument(
+        "--fmm-adaptive-max-dt",
+        type=float,
+        default=None,
+        help="Optional maximum dt (code time) for adaptive diffrax FMM mode.",
+    )
+    parser.add_argument(
+        "--fmm-adaptive-min-dt",
+        type=float,
+        default=None,
+        help="Optional minimum dt (code time) for adaptive diffrax FMM mode.",
+    )
+    parser.add_argument(
+        "--fmm-adaptive-refresh-rhs-calls",
+        type=int,
+        default=1,
+        help="Adaptive cadence: refresh prepared state every k RHS calls (python cache mode).",
+    )
+    parser.add_argument(
+        "--fmm-adaptive-refresh-displacement-threshold",
+        type=float,
+        default=None,
+        help="Adaptive cadence: refresh when max displacement since last refresh reaches this threshold.",
+    )
+    parser.add_argument(
+        "--adaptive-prepared-cache-mode",
+        type=str,
+        default="none",
+        choices=("none", "python"),
+        help="Adaptive prepared-state cache mode for diffrax core scaffold.",
     )
     parser.add_argument(
         "--fmm-preset",
@@ -138,6 +293,11 @@ def parse_args() -> argparse.Namespace:
         help="Fixed-capacity target-block slots per leaf when static target blocks are enabled.",
     )
     parser.add_argument(
+        "--no-fmm-large-n-environment-overrides",
+        action="store_true",
+        help="Disable ODISSEO's temporary JACCPOT_LARGE_N_* environment overrides.",
+    )
+    parser.add_argument(
         "--fmm-m2l-chunk-size",
         type=int,
         default=None,
@@ -179,6 +339,18 @@ def parse_args() -> argparse.Namespace:
         help="Number of pre-run warmup prepare/evaluate calls for compile stabilization.",
     )
     parser.add_argument(
+        "--perf-warmup-runs",
+        type=int,
+        default=0,
+        help="Number of full perf runs to execute before measured timing (compile/warmup excluded).",
+    )
+    parser.add_argument(
+        "--perf-measure-runs",
+        type=int,
+        default=1,
+        help="Number of measured full perf runs; report the median as runtime_seconds.",
+    )
+    parser.add_argument(
         "--no-fmm-rematerialize-between-refresh",
         action="store_true",
         help="Disable dense rematerialization between refresh segments (experiment only).",
@@ -196,6 +368,12 @@ def parse_args() -> argparse.Namespace:
         help="Disable jaccpot's split prepare-stage build.",
     )
     parser.set_defaults(fmm_prepare_stage_memory_split_enabled=None)
+    parser.add_argument(
+        "--fmm-upward-leaf-batch-size",
+        type=int,
+        default=None,
+        help="Optional jaccpot upward sweep leaf batch size override.",
+    )
 
     parser.add_argument(
         "--profile-breakdown",
@@ -231,6 +409,11 @@ def parse_args() -> argparse.Namespace:
         help="Optional regression gate: fail if post-warmup prepared-state shapes drift.",
     )
     parser.add_argument(
+        "--require-finite-final-state",
+        action="store_true",
+        help="Optional regression gate: fail if final_state contains NaN or Inf values.",
+    )
+    parser.add_argument(
         "--max-compiled-profile-transitions",
         type=int,
         default=None,
@@ -253,6 +436,18 @@ def parse_args() -> argparse.Namespace:
         type=int,
         default=None,
         help="Optional regression gate for incremental refresh prepare successes.",
+    )
+    parser.add_argument(
+        "--min-adaptive-cadence-skips-rhs-calls",
+        type=int,
+        default=None,
+        help="Optional regression gate for adaptive cadence RHS-call skip count.",
+    )
+    parser.add_argument(
+        "--min-adaptive-cadence-skips-displacement",
+        type=int,
+        default=None,
+        help="Optional regression gate for adaptive cadence displacement skip count.",
     )
     parser.add_argument(
         "--max-abs-de-over-e0",
@@ -288,6 +483,12 @@ def parse_args() -> argparse.Namespace:
         default="xy",
         choices=("xy", "xz", "yz"),
         help="Projection used for live/movie rendering.",
+    )
+    parser.add_argument(
+        "--movie-projections",
+        type=str,
+        default=None,
+        help="Optional comma-separated projections to render from one run (e.g. xy,xz).",
     )
     parser.add_argument(
         "--render-backend",
@@ -383,6 +584,292 @@ def build_quasi_circular_velocities(
 
     vel_xy = e_phi * v_c[:, None]
     return jnp.concatenate((vel_xy, jnp.zeros((position.shape[0], 1))), axis=1)
+
+
+def build_ic_velocity_potential(
+    args: argparse.Namespace,
+    code_units: CodeUnits,
+    config: SimulationConfig,
+    params: SimulationParams,
+    *,
+    total_mass: float,
+) -> tuple[SimulationConfig, SimulationParams, dict[str, object]]:
+    """Return the potential used only for quasi-circular IC velocities."""
+    mode = str(args.ic_velocity_potential).strip().lower()
+    if mode == "nfw":
+        return config, params, {
+            "ic_velocity_potential": mode,
+            "ic_uses_analytic_disk": False,
+        }
+
+    analytic_mass = float(total_mass) * max(0.0, float(args.ic_analytic_disk_mass_factor))
+    thick_fraction = float(np.clip(float(args.ic_thick_disk_mass_fraction), 0.0, 1.0))
+    thin_mass = analytic_mass * (1.0 - thick_fraction)
+    thick_mass = analytic_mass * thick_fraction
+
+    thin_radius = (
+        float(args.disk_radius_kpc)
+        if args.ic_thin_disk_radius_kpc is None
+        else float(args.ic_thin_disk_radius_kpc)
+    )
+    thin_height = (
+        float(args.disk_height_kpc)
+        if args.ic_thin_disk_height_kpc is None
+        else float(args.ic_thin_disk_height_kpc)
+    )
+    thick_radius = (
+        float(args.disk_radius_kpc)
+        if args.ic_thick_disk_radius_kpc is None
+        else float(args.ic_thick_disk_radius_kpc)
+    )
+    thick_height = (
+        3.3333333333333335 * float(args.disk_height_kpc)
+        if args.ic_thick_disk_height_kpc is None
+        else float(args.ic_thick_disk_height_kpc)
+    )
+
+    external = [NFW_POTENTIAL, THIN_MN3_DISK]
+    if thick_mass > 0.0:
+        external.append(THICK_MN3_DISK)
+
+    ic_config = config._replace(external_accelerations=tuple(external))
+    ic_params = params._replace(
+        ThinMN3Disk_params=ThinMN3DiskParams(
+            M=thin_mass,
+            hr=(thin_radius * u.kpc).to(code_units.code_length).value,
+            hz=(thin_height * u.kpc).to(code_units.code_length).value,
+        ),
+        ThickMN3Disk_params=ThickMN3DiskParams(
+            M=thick_mass,
+            hr=(thick_radius * u.kpc).to(code_units.code_length).value,
+            hz=(thick_height * u.kpc).to(code_units.code_length).value,
+        ),
+    )
+    return ic_config, ic_params, {
+        "ic_velocity_potential": mode,
+        "ic_uses_analytic_disk": True,
+        "ic_analytic_disk_mass_factor": float(args.ic_analytic_disk_mass_factor),
+        "ic_thick_disk_mass_fraction": thick_fraction,
+        "ic_thin_disk_mass_code": float(thin_mass),
+        "ic_thick_disk_mass_code": float(thick_mass),
+        "ic_thin_disk_radius_kpc": thin_radius,
+        "ic_thin_disk_height_kpc": thin_height,
+        "ic_thick_disk_radius_kpc": thick_radius,
+        "ic_thick_disk_height_kpc": thick_height,
+    }
+
+
+def _save_ic_file(
+    path: str,
+    *,
+    state0: jnp.ndarray,
+    mass: jnp.ndarray,
+    seed: int,
+    n_particles: int,
+    ic_velocity_metadata: dict[str, object],
+) -> None:
+    out = pathlib.Path(path)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    payload = {
+        "state0": np.asarray(state0),
+        "mass": np.asarray(mass),
+        "seed": np.asarray(int(seed)),
+        "n_particles": np.asarray(int(n_particles)),
+        "state_dtype": np.asarray(str(state0.dtype)),
+        "mass_dtype": np.asarray(str(mass.dtype)),
+        "ic_velocity_potential": np.asarray(str(ic_velocity_metadata["ic_velocity_potential"])),
+        "ic_uses_analytic_disk": np.asarray(bool(ic_velocity_metadata["ic_uses_analytic_disk"])),
+    }
+    np.savez_compressed(out, **payload)
+    print(f"Saved IC file: {out}")
+
+
+def _load_ic_file(path: str) -> dict[str, np.ndarray]:
+    data = np.load(path, allow_pickle=False)
+    return {k: data[k] for k in data.files}
+
+
+def _validate_ic_source_config(args: argparse.Namespace) -> None:
+    if str(args.ic_source) == "load" and not args.ic_input_path:
+        raise ValueError("--ic-input-path is required when --ic-source=load")
+
+
+def _summarize_finite(values: np.ndarray) -> dict[str, float | int]:
+    finite = np.asarray(values)[np.isfinite(values)]
+    if finite.size == 0:
+        return {"finite_count": 0}
+    return {
+        "finite_count": int(finite.size),
+        "p50": float(np.percentile(finite, 50)),
+        "p90": float(np.percentile(finite, 90)),
+        "p99": float(np.percentile(finite, 99)),
+        "p999": float(np.percentile(finite, 99.9)),
+        "max": float(np.max(finite)),
+    }
+
+
+def _direct_self_acceleration_targets(
+    positions: jnp.ndarray,
+    mass: jnp.ndarray,
+    target_indices: np.ndarray,
+    *,
+    softening: float,
+    source_chunk: int,
+) -> np.ndarray:
+    target_idx = jnp.asarray(target_indices, dtype=jnp.int32)
+    targets = positions[target_idx]
+    out = jnp.zeros_like(targets)
+    softening_sq = jnp.asarray(float(softening) ** 2, dtype=positions.dtype)
+    n = int(positions.shape[0])
+    chunk = max(1, int(source_chunk))
+    for start in range(0, n, chunk):
+        stop = min(n, start + chunk)
+        src = positions[start:stop]
+        src_mass = mass[start:stop]
+        diff = targets[:, None, :] - src[None, :, :]
+        dist_sq = jnp.sum(diff * diff, axis=-1) + softening_sq
+        inv_dist3 = jnp.reciprocal(dist_sq * jnp.sqrt(dist_sq))
+        src_idx = jnp.arange(start, stop, dtype=jnp.int32)
+        self_mask = src_idx[None, :] == target_idx[:, None]
+        inv_dist3 = jnp.where(self_mask, 0.0, inv_dist3)
+        out = out - jnp.sum(
+            diff * inv_dist3[:, :, None] * src_mass[None, :, None],
+            axis=1,
+        )
+        out = jax.block_until_ready(out)
+    return np.asarray(out)
+
+
+def _compute_initial_acceleration_diagnostics(
+    *,
+    state0: jnp.ndarray,
+    mass: jnp.ndarray,
+    config: SimulationConfig,
+    params: SimulationParams,
+    args: argparse.Namespace,
+) -> dict[str, object]:
+    n = int(state0.shape[0])
+    n_targets = min(n, max(1, int(args.initial_accel_sample_targets)))
+    stride = max(1, n // n_targets)
+    target_indices = np.arange(0, n, stride, dtype=np.int32)[:n_targets]
+    target_idx_jax = jnp.asarray(target_indices, dtype=jnp.int32)
+
+    pos = state0[:, 0, :]
+    vel = state0[:, 1, :]
+    fmm_preset, fmm_runtime_path, fmm_dtype = _resolve_fmm_profile(config)
+    solver = _build_fmm_solver(
+        working_dtype=jnp.dtype(fmm_dtype),
+        config=config,
+        params=params,
+        fmm_preset=fmm_preset,
+        fmm_basis=str(config.fmm_basis),
+        fmm_theta=float(config.fmm_theta),
+        fmm_runtime_path=fmm_runtime_path,
+        fmm_mac_type=str(config.fmm_mac_type),
+        fmm_farfield_mode=str(config.fmm_farfield_mode),
+        fmm_m2l_chunk_size=config.fmm_m2l_chunk_size,
+        fmm_nearfield_mode=str(config.fmm_nearfield_mode),
+        fmm_nearfield_edge_chunk_size=int(config.fmm_nearfield_edge_chunk_size),
+        fmm_tree_build_mode=str(config.fmm_tree_build_mode),
+        fmm_tree_leaf_target=int(config.fmm_tree_leaf_target),
+        fmm_fixed_order=config.fmm_fixed_order,
+        leaf_size=int(config.fmm_leaf_size),
+        fmm_jit_tree=config.fmm_jit_tree,
+        fmm_jit_traversal=config.fmm_jit_traversal,
+        fmm_max_pair_queue=config.fmm_max_pair_queue,
+        fmm_pair_process_block=config.fmm_pair_process_block,
+        fmm_max_interactions_per_node=config.fmm_max_interactions_per_node,
+        fmm_max_neighbors_per_leaf=config.fmm_max_neighbors_per_leaf,
+        fmm_prepare_stage_memory_split_enabled=(
+            config.fmm_prepare_stage_memory_split_enabled
+        ),
+        fmm_upward_leaf_batch_size=config.fmm_upward_leaf_batch_size,
+    )
+    with _temporary_large_n_environment(config, fmm_preset=fmm_preset):
+        prepared = solver.prepare_state(
+            pos,
+            mass,
+            leaf_size=int(config.fmm_leaf_size),
+            max_order=int(config.fmm_max_order),
+        )
+    acc_fmm_full = solver.evaluate_prepared_state(
+        prepared,
+        target_indices=None,
+        return_potential=False,
+    )
+    acc_fmm = np.asarray(jax.block_until_ready(acc_fmm_full[target_idx_jax]))
+    acc_direct = _direct_self_acceleration_targets(
+        pos,
+        mass,
+        target_indices,
+        softening=float(config.softening),
+        source_chunk=int(args.initial_accel_direct_source_chunk),
+    )
+    acc_ext = np.asarray(
+        combined_external_acceleration_vmpa_switch(state0, config, params)
+    )[target_indices]
+
+    pos_t = np.asarray(pos)[target_indices]
+    vel_t = np.asarray(vel)[target_indices]
+    radius = np.linalg.norm(pos_t[:, :2], axis=1)
+    e_r = pos_t[:, :2] / np.maximum(radius[:, None], 1.0e-30)
+    centripetal = np.sum(vel_t[:, :2] * vel_t[:, :2], axis=1) / np.maximum(radius, 1.0e-30)
+    radial_direct_total = np.sum((acc_direct + acc_ext)[:, :2] * e_r, axis=1)
+    radial_fmm_total = np.sum((acc_fmm + acc_ext)[:, :2] * e_r, axis=1)
+
+    err = np.linalg.norm(acc_fmm - acc_direct, axis=1)
+    direct_norm = np.linalg.norm(acc_direct, axis=1)
+    rel_err = err / np.maximum(direct_norm, 1.0e-30)
+    worst = np.argsort(rel_err)[-10:][::-1]
+
+    return {
+        "sampled_target_count": int(target_indices.shape[0]),
+        "sampled_target_stride": int(stride),
+        "state_dtype": str(state0.dtype),
+        "mass_dtype": str(mass.dtype),
+        "fmm_working_dtype": str(jnp.dtype(fmm_dtype)),
+        "fmm_preset_resolved": str(fmm_preset),
+        "fmm_runtime_path_resolved": str(fmm_runtime_path),
+        "softening_code": float(config.softening),
+        "radius_code": _summarize_finite(radius),
+        "external_acc_norm": _summarize_finite(np.linalg.norm(acc_ext, axis=1)),
+        "direct_self_acc_norm": _summarize_finite(direct_norm),
+        "fmm_self_acc_norm": _summarize_finite(np.linalg.norm(acc_fmm, axis=1)),
+        "fmm_vs_direct_abs_err": _summarize_finite(err),
+        "fmm_vs_direct_rel_err": _summarize_finite(rel_err),
+        "circular_residual_direct_self_abs": _summarize_finite(
+            np.abs(centripetal + radial_direct_total)
+        ),
+        "circular_residual_fmm_self_abs": _summarize_finite(
+            np.abs(centripetal + radial_fmm_total)
+        ),
+        "worst_fmm_vs_direct_rel_err": [
+            {
+                "target_index": int(target_indices[i]),
+                "radius_code": float(radius[i]),
+                "rel_err": float(rel_err[i]),
+                "abs_err": float(err[i]),
+                "direct_acc_norm": float(direct_norm[i]),
+                "fmm_acc_norm": float(np.linalg.norm(acc_fmm[i])),
+                "external_acc_norm": float(np.linalg.norm(acc_ext[i])),
+            }
+            for i in worst
+        ],
+    }
+
+
+def _write_initial_acceleration_report(
+    *,
+    report_dir: str,
+    accel_stats: dict,
+) -> pathlib.Path:
+    out_dir = pathlib.Path(report_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    json_path = out_dir / f"galaxy_disk_initial_acceleration_{stamp}.json"
+    with open(json_path, "w", encoding="utf-8") as f:
+        json.dump(accel_stats, f, indent=2)
+    return json_path
 
 
 def _projection_axes(projection: str) -> tuple[int, int, str, str]:
@@ -540,6 +1027,114 @@ def _resolve_fmm_profile(config: SimulationConfig) -> tuple[str, str, jnp.dtype]
     )
 
 
+def _run_perf_mode_once(
+    state0: jnp.ndarray,
+    mass: jnp.ndarray,
+    config: SimulationConfig,
+    params: SimulationParams,
+    *,
+    profile_breakdown: bool,
+    warmup_runs: int = 0,
+    measure_runs: int = 1,
+) -> tuple[jnp.ndarray, np.ndarray | None, dict | None]:
+    timing_stats = {} if bool(profile_breakdown) else None
+    fmm_preset, fmm_runtime_path, fmm_dtype = _resolve_fmm_profile(config)
+
+    if bool(profile_breakdown):
+        if bool(config.fixed_timestep):
+            final_state = jax.block_until_ready(
+                integrate_leapfrog_jaccpot_active(
+                    state0,
+                    mass,
+                    config,
+                    params,
+                    num_steps=int(config.num_timesteps),
+                    refresh_every=int(config.fmm_refresh_every),
+                    leaf_size=int(config.fmm_leaf_size),
+                    max_order=int(config.fmm_max_order),
+                    fmm_preset=fmm_preset,
+                    fmm_runtime_path=fmm_runtime_path,
+                    fmm_working_dtype=fmm_dtype,
+                    fmm_basis=str(config.fmm_basis),
+                    fmm_theta=float(config.fmm_theta),
+                    fmm_mac_type=str(config.fmm_mac_type),
+                    fmm_farfield_mode=str(config.fmm_farfield_mode),
+                    fmm_m2l_chunk_size=config.fmm_m2l_chunk_size,
+                    fmm_nearfield_mode=str(config.fmm_nearfield_mode),
+                    fmm_nearfield_edge_chunk_size=int(config.fmm_nearfield_edge_chunk_size),
+                    fmm_tree_build_mode=str(config.fmm_tree_build_mode),
+                    fmm_tree_leaf_target=int(config.fmm_tree_leaf_target),
+                    fmm_fixed_order=config.fmm_fixed_order,
+                    fmm_jit_tree=config.fmm_jit_tree,
+                    fmm_jit_traversal=config.fmm_jit_traversal,
+                    fmm_max_pair_queue=config.fmm_max_pair_queue,
+                    fmm_pair_process_block=config.fmm_pair_process_block,
+                    fmm_max_interactions_per_node=config.fmm_max_interactions_per_node,
+                    fmm_max_neighbors_per_leaf=config.fmm_max_neighbors_per_leaf,
+                    fmm_prepare_stage_memory_split_enabled=(
+                        config.fmm_prepare_stage_memory_split_enabled
+                    ),
+                    enforce_static_shape_contract=bool(
+                        config.fmm_enforce_static_shape_contract
+                    ),
+                    static_shape_warmup_prepares=int(
+                        config.fmm_static_shape_warmup_prepares
+                    ),
+                    rematerialize_between_refresh=bool(
+                        config.fmm_rematerialize_between_refresh
+                    ),
+                    return_history=False,
+                    perf_warmup_runs=int(warmup_runs),
+                    perf_measure_runs=int(measure_runs),
+                    timing_stats=timing_stats,
+                )
+            )
+        else:
+            final_state = jax.block_until_ready(
+                integrate_diffrax_jaccpot_active(
+                    state0,
+                    mass,
+                    config,
+                    params,
+                    num_steps=int(config.num_timesteps),
+                    refresh_every=int(config.fmm_refresh_every),
+                    leaf_size=int(config.fmm_leaf_size),
+                    max_order=int(config.fmm_max_order),
+                    fmm_preset=fmm_preset,
+                    fmm_runtime_path=fmm_runtime_path,
+                    fmm_working_dtype=fmm_dtype,
+                    fmm_basis=str(config.fmm_basis),
+                    fmm_theta=float(config.fmm_theta),
+                    fmm_mac_type=str(config.fmm_mac_type),
+                    fmm_farfield_mode=str(config.fmm_farfield_mode),
+                    fmm_m2l_chunk_size=config.fmm_m2l_chunk_size,
+                    fmm_nearfield_mode=str(config.fmm_nearfield_mode),
+                    fmm_nearfield_edge_chunk_size=int(config.fmm_nearfield_edge_chunk_size),
+                    fmm_tree_build_mode=str(config.fmm_tree_build_mode),
+                    fmm_tree_leaf_target=int(config.fmm_tree_leaf_target),
+                    fmm_fixed_order=config.fmm_fixed_order,
+                    fmm_jit_tree=config.fmm_jit_tree,
+                    fmm_jit_traversal=config.fmm_jit_traversal,
+                    fmm_max_pair_queue=config.fmm_max_pair_queue,
+                    fmm_pair_process_block=config.fmm_pair_process_block,
+                    fmm_max_interactions_per_node=config.fmm_max_interactions_per_node,
+                    fmm_max_neighbors_per_leaf=config.fmm_max_neighbors_per_leaf,
+                    fmm_prepare_stage_memory_split_enabled=(
+                        config.fmm_prepare_stage_memory_split_enabled
+                    ),
+                    rematerialize_between_refresh=bool(
+                        config.fmm_rematerialize_between_refresh
+                    ),
+                    return_history=False,
+                    timing_stats=timing_stats,
+                )
+            )
+    else:
+        final_state = jax.block_until_ready(integrate(state0, mass, config, params))
+
+    return final_state, None, timing_stats
+
+
 def _run_perf_mode(
     state0: jnp.ndarray,
     mass: jnp.ndarray,
@@ -547,13 +1142,41 @@ def _run_perf_mode(
     params: SimulationParams,
     *,
     profile_breakdown: bool,
+    warmup_runs: int = 0,
+    measure_runs: int = 1,
 ) -> tuple[np.ndarray, np.ndarray | None, float, dict | None]:
+    t0 = time.perf_counter()
+    final_state_jax, history, timing_stats = _run_perf_mode_once(
+        state0,
+        mass,
+        config,
+        params,
+        profile_breakdown=bool(profile_breakdown),
+        warmup_runs=max(0, int(warmup_runs)),
+        measure_runs=max(1, int(measure_runs)),
+    )
+    total_elapsed = float(time.perf_counter() - t0)
+    elapsed = total_elapsed
+    if timing_stats is not None and "perf_measured_median_seconds" in timing_stats:
+        elapsed = float(timing_stats["perf_measured_median_seconds"])
+        timing_stats["perf_total_wall_seconds_including_warmup"] = float(total_elapsed)
+    return np.asarray(final_state_jax), history, float(elapsed), timing_stats
+
+
+def _run_perf_mode_with_history(
+    state0: jnp.ndarray,
+    mass: jnp.ndarray,
+    config: SimulationConfig,
+    params: SimulationParams,
+    *,
+    profile_breakdown: bool,
+) -> tuple[np.ndarray, np.ndarray, float, dict | None]:
     timing_stats = {} if bool(profile_breakdown) else None
     t0 = time.time()
     fmm_preset, fmm_runtime_path, fmm_dtype = _resolve_fmm_profile(config)
 
-    if bool(profile_breakdown):
-        final_state = jax.block_until_ready(
+    if bool(config.fixed_timestep):
+        history = jax.block_until_ready(
             integrate_leapfrog_jaccpot_active(
                 state0,
                 mass,
@@ -594,76 +1217,50 @@ def _run_perf_mode(
                 rematerialize_between_refresh=bool(
                     config.fmm_rematerialize_between_refresh
                 ),
-                return_history=False,
+                return_history=True,
                 timing_stats=timing_stats,
             )
         )
-        history = None
     else:
-        final_state = jax.block_until_ready(integrate(state0, mass, config, params))
-        history = None
-
-    elapsed = time.time() - t0
-    return np.asarray(final_state), history, float(elapsed), timing_stats
-
-
-def _run_perf_mode_with_history(
-    state0: jnp.ndarray,
-    mass: jnp.ndarray,
-    config: SimulationConfig,
-    params: SimulationParams,
-    *,
-    profile_breakdown: bool,
-) -> tuple[np.ndarray, np.ndarray, float, dict | None]:
-    timing_stats = {} if bool(profile_breakdown) else None
-    t0 = time.time()
-    fmm_preset, fmm_runtime_path, fmm_dtype = _resolve_fmm_profile(config)
-
-    history = jax.block_until_ready(
-        integrate_leapfrog_jaccpot_active(
-            state0,
-            mass,
-            config,
-            params,
-            num_steps=int(config.num_timesteps),
-            refresh_every=int(config.fmm_refresh_every),
-            leaf_size=int(config.fmm_leaf_size),
-            max_order=int(config.fmm_max_order),
-            fmm_preset=fmm_preset,
-            fmm_runtime_path=fmm_runtime_path,
-            fmm_working_dtype=fmm_dtype,
-            fmm_basis=str(config.fmm_basis),
-            fmm_theta=float(config.fmm_theta),
-            fmm_mac_type=str(config.fmm_mac_type),
-            fmm_farfield_mode=str(config.fmm_farfield_mode),
-            fmm_m2l_chunk_size=config.fmm_m2l_chunk_size,
-            fmm_nearfield_mode=str(config.fmm_nearfield_mode),
-            fmm_nearfield_edge_chunk_size=int(config.fmm_nearfield_edge_chunk_size),
-            fmm_tree_build_mode=str(config.fmm_tree_build_mode),
-            fmm_tree_leaf_target=int(config.fmm_tree_leaf_target),
-            fmm_fixed_order=config.fmm_fixed_order,
-            fmm_jit_tree=config.fmm_jit_tree,
-            fmm_jit_traversal=config.fmm_jit_traversal,
-            fmm_max_pair_queue=config.fmm_max_pair_queue,
-            fmm_pair_process_block=config.fmm_pair_process_block,
-            fmm_max_interactions_per_node=config.fmm_max_interactions_per_node,
-            fmm_max_neighbors_per_leaf=config.fmm_max_neighbors_per_leaf,
-            fmm_prepare_stage_memory_split_enabled=(
-                config.fmm_prepare_stage_memory_split_enabled
-            ),
-            enforce_static_shape_contract=bool(
-                config.fmm_enforce_static_shape_contract
-            ),
-            static_shape_warmup_prepares=int(
-                config.fmm_static_shape_warmup_prepares
-            ),
-            rematerialize_between_refresh=bool(
-                config.fmm_rematerialize_between_refresh
-            ),
-            return_history=True,
-            timing_stats=timing_stats,
+        history = jax.block_until_ready(
+            integrate_diffrax_jaccpot_active(
+                state0,
+                mass,
+                config,
+                params,
+                num_steps=int(config.num_timesteps),
+                refresh_every=int(config.fmm_refresh_every),
+                leaf_size=int(config.fmm_leaf_size),
+                max_order=int(config.fmm_max_order),
+                fmm_preset=fmm_preset,
+                fmm_runtime_path=fmm_runtime_path,
+                fmm_working_dtype=fmm_dtype,
+                fmm_basis=str(config.fmm_basis),
+                fmm_theta=float(config.fmm_theta),
+                fmm_mac_type=str(config.fmm_mac_type),
+                fmm_farfield_mode=str(config.fmm_farfield_mode),
+                fmm_m2l_chunk_size=config.fmm_m2l_chunk_size,
+                fmm_nearfield_mode=str(config.fmm_nearfield_mode),
+                fmm_nearfield_edge_chunk_size=int(config.fmm_nearfield_edge_chunk_size),
+                fmm_tree_build_mode=str(config.fmm_tree_build_mode),
+                fmm_tree_leaf_target=int(config.fmm_tree_leaf_target),
+                fmm_fixed_order=config.fmm_fixed_order,
+                fmm_jit_tree=config.fmm_jit_tree,
+                fmm_jit_traversal=config.fmm_jit_traversal,
+                fmm_max_pair_queue=config.fmm_max_pair_queue,
+                fmm_pair_process_block=config.fmm_pair_process_block,
+                fmm_max_interactions_per_node=config.fmm_max_interactions_per_node,
+                fmm_max_neighbors_per_leaf=config.fmm_max_neighbors_per_leaf,
+                fmm_prepare_stage_memory_split_enabled=(
+                    config.fmm_prepare_stage_memory_split_enabled
+                ),
+                rematerialize_between_refresh=bool(
+                    config.fmm_rematerialize_between_refresh
+                ),
+                return_history=True,
+                timing_stats=timing_stats,
+            )
         )
-    )
     elapsed = time.time() - t0
     history_np = np.asarray(history)
     return history_np[-1], history_np, float(elapsed), timing_stats
@@ -726,6 +1323,7 @@ def _compute_conservation_metrics(
         fmm_prepare_stage_memory_split_enabled=(
             config.fmm_prepare_stage_memory_split_enabled
         ),
+        fmm_upward_leaf_batch_size=config.fmm_upward_leaf_batch_size,
     )
 
     potential_values = []
@@ -834,6 +1432,80 @@ def _run_render_mode(
 
     fmm_preset, fmm_runtime_path, fmm_dtype = _resolve_fmm_profile(config)
 
+    if not bool(config.fixed_timestep):
+        # Adaptive fallback path: integrate full history and subsample snapshots.
+        timing_stats = {} if bool(profile_breakdown) else None
+        t0 = time.time()
+        hist = jax.block_until_ready(
+            integrate_diffrax_jaccpot_active(
+                state0,
+                mass,
+                config,
+                params,
+                num_steps=int(config.num_timesteps),
+                refresh_every=int(config.fmm_refresh_every),
+                leaf_size=int(config.fmm_leaf_size),
+                max_order=int(config.fmm_max_order),
+                fmm_preset=fmm_preset,
+                fmm_runtime_path=fmm_runtime_path,
+                fmm_working_dtype=fmm_dtype,
+                fmm_basis=str(config.fmm_basis),
+                fmm_theta=float(config.fmm_theta),
+                fmm_mac_type=str(config.fmm_mac_type),
+                fmm_farfield_mode=str(config.fmm_farfield_mode),
+                fmm_m2l_chunk_size=config.fmm_m2l_chunk_size,
+                fmm_nearfield_mode=str(config.fmm_nearfield_mode),
+                fmm_nearfield_edge_chunk_size=int(config.fmm_nearfield_edge_chunk_size),
+                fmm_tree_build_mode=str(config.fmm_tree_build_mode),
+                fmm_tree_leaf_target=int(config.fmm_tree_leaf_target),
+                fmm_fixed_order=config.fmm_fixed_order,
+                fmm_jit_tree=config.fmm_jit_tree,
+                fmm_jit_traversal=config.fmm_jit_traversal,
+                fmm_max_pair_queue=config.fmm_max_pair_queue,
+                fmm_pair_process_block=config.fmm_pair_process_block,
+                fmm_max_interactions_per_node=config.fmm_max_interactions_per_node,
+                fmm_max_neighbors_per_leaf=config.fmm_max_neighbors_per_leaf,
+                fmm_prepare_stage_memory_split_enabled=(
+                    config.fmm_prepare_stage_memory_split_enabled
+                ),
+                rematerialize_between_refresh=bool(config.fmm_rematerialize_between_refresh),
+                return_history=True,
+                timing_stats=timing_stats,
+            )
+        )
+        elapsed = time.time() - t0
+        hist_np = np.asarray(hist)
+        num_steps = int(config.num_timesteps)
+        t_end = float(params.t_end)
+        frames = [np.asarray(state0[sample_indices, 0, :], dtype=np.float32)]
+        frame_times = [0.0]
+        for i in range(hist_np.shape[0]):
+            global_step = i + 1
+            if (global_step % stride) == 0 or global_step == num_steps:
+                frames.append(np.asarray(hist_np[i, sample_indices_np, 0, :], dtype=np.float32))
+                frame_times.append((global_step / max(1, num_steps)) * t_end)
+        if timing_stats is None:
+            timing_stats = {}
+        timing_stats.update(
+            {
+                "integration_mode": "adaptive_diffrax_fmm",
+                "used_persistent_static_solver": False,
+                "num_steps": int(num_steps),
+                "refresh_every": int(config.fmm_refresh_every),
+                "snapshot_stride": int(stride),
+                "sampled_particles": int(sample_indices_np.shape[0]),
+                "total_seconds": float(elapsed),
+            }
+        )
+        return (
+            np.asarray(hist_np[-1]),
+            np.asarray(frames, dtype=np.float32),
+            np.asarray(frame_times, dtype=np.float64),
+            sample_indices_np,
+            float(elapsed),
+            timing_stats,
+        )
+
     state_curr = jnp.asarray(state0)
     mass_arr = jnp.asarray(mass)
     frames = []
@@ -880,6 +1552,7 @@ def _run_render_mode(
         fmm_prepare_stage_memory_split_enabled=(
             config.fmm_prepare_stage_memory_split_enabled
         ),
+        fmm_upward_leaf_batch_size=config.fmm_upward_leaf_batch_size,
     )
 
     def _prepare_state(state_in: jnp.ndarray):
@@ -947,6 +1620,8 @@ def _run_render_mode(
                     return refresh_fn(*args)
             except TypeError:
                 continue
+            except (NotImplementedError, RuntimeError, ValueError):
+                break
         raise RuntimeError("refresh_prepared_state signature was not recognized")
 
     t0 = time.time()
@@ -1061,6 +1736,28 @@ def _run_render_mode(
             "runtime_large_n_neighbor_edges_profile_reprofiles": int(
                 runtime_diag.get("large_n_neighbor_edges_profile_reprofiles", 0)
             ),
+            "runtime_strict_fused_fastlane_diag_enabled": bool(
+                runtime_diag.get("strict_fused_fastlane_diag_enabled", False)
+            ),
+            "runtime_strict_fused_fastlane_attempts": int(
+                runtime_diag.get("strict_fused_fastlane_attempts", 0)
+            ),
+            "runtime_strict_fused_fastlane_hits": int(
+                runtime_diag.get("strict_fused_fastlane_hits", 0)
+            ),
+            "runtime_strict_fused_fastlane_misses": int(
+                runtime_diag.get("strict_fused_fastlane_misses", 0)
+            ),
+            "runtime_strict_fused_fastlane_last_blockers": tuple(
+                str(v)
+                for v in runtime_diag.get("strict_fused_fastlane_last_blockers", tuple())
+            ),
+            "runtime_strict_fused_fastlane_block_counts": {
+                str(k): int(v)
+                for k, v in dict(
+                    runtime_diag.get("strict_fused_fastlane_block_counts", {})
+                ).items()
+            },
         }
     )
 
@@ -1072,6 +1769,53 @@ def _run_render_mode(
         float(elapsed),
         timing_stats,
     )
+
+
+def _finite_norm_stats(prefix: str, values: np.ndarray) -> dict[str, object]:
+    arr = np.asarray(values)
+    if arr.size == 0:
+        return {
+            f"{prefix}_finite_count": 0,
+            f"{prefix}_p50": None,
+            f"{prefix}_p90": None,
+            f"{prefix}_p99": None,
+            f"{prefix}_max": None,
+        }
+    norms = np.linalg.norm(arr, axis=-1)
+    finite = np.isfinite(norms)
+    finite_norms = norms[finite]
+    if finite_norms.size == 0:
+        return {
+            f"{prefix}_finite_count": 0,
+            f"{prefix}_p50": None,
+            f"{prefix}_p90": None,
+            f"{prefix}_p99": None,
+            f"{prefix}_max": None,
+        }
+    return {
+        f"{prefix}_finite_count": int(finite_norms.size),
+        f"{prefix}_p50": float(np.percentile(finite_norms, 50.0)),
+        f"{prefix}_p90": float(np.percentile(finite_norms, 90.0)),
+        f"{prefix}_p99": float(np.percentile(finite_norms, 99.0)),
+        f"{prefix}_max": float(np.max(finite_norms)),
+    }
+
+
+def _final_state_finite_stats(final_state: np.ndarray) -> dict[str, object]:
+    arr = np.asarray(final_state)
+    finite = np.isfinite(arr)
+    stats: dict[str, object] = {
+        "final_state_shape": list(arr.shape),
+        "final_state_element_count": int(arr.size),
+        "final_state_finite_count": int(np.count_nonzero(finite)),
+        "final_state_nan_count": int(np.count_nonzero(np.isnan(arr))),
+        "final_state_inf_count": int(np.count_nonzero(np.isinf(arr))),
+        "final_state_all_finite": bool(np.all(finite)),
+    }
+    if arr.ndim >= 3 and arr.shape[1] >= 2:
+        stats.update(_finite_norm_stats("final_state_position_norm", arr[:, 0, :]))
+        stats.update(_finite_norm_stats("final_state_velocity_norm", arr[:, 1, :]))
+    return stats
 
 
 def _write_timing_report(
@@ -1113,6 +1857,16 @@ def _check_timing_gates(args: argparse.Namespace, timing_stats: dict) -> None:
             "Static-shape regression: post-warmup prepared-state shapes drifted "
             f"({timing_stats.get('shape_signature_drift_events_post_warmup', 'unknown')} events)."
         )
+    if bool(getattr(args, "require_finite_final_state", False)) and not bool(
+        timing_stats.get("final_state_all_finite", False)
+    ):
+        raise RuntimeError(
+            "Final-state regression: final_state contains non-finite values "
+            f"(finite={timing_stats.get('final_state_finite_count', 'unknown')}/"
+            f"{timing_stats.get('final_state_element_count', 'unknown')}, "
+            f"nan={timing_stats.get('final_state_nan_count', 'unknown')}, "
+            f"inf={timing_stats.get('final_state_inf_count', 'unknown')})."
+        )
 
     gate_specs = (
         (
@@ -1149,9 +1903,31 @@ def _check_timing_gates(args: argparse.Namespace, timing_stats: dict) -> None:
                 f"refresh_prepare_successes={value} < threshold={threshold}"
             )
 
+    if args.min_adaptive_cadence_skips_rhs_calls is not None:
+        value = int(timing_stats.get("adaptive_core_refresh_cadence_skips_rhs_calls", 0))
+        threshold = int(args.min_adaptive_cadence_skips_rhs_calls)
+        if value < threshold:
+            raise RuntimeError(
+                "Adaptive cadence regression (rhs-calls gate): "
+                f"adaptive_core_refresh_cadence_skips_rhs_calls={value} < threshold={threshold}"
+            )
+
+    if args.min_adaptive_cadence_skips_displacement is not None:
+        value = int(timing_stats.get("adaptive_core_refresh_cadence_skips_displacement", 0))
+        threshold = int(args.min_adaptive_cadence_skips_displacement)
+        if value < threshold:
+            raise RuntimeError(
+                "Adaptive cadence regression (displacement gate): "
+                f"adaptive_core_refresh_cadence_skips_displacement={value} < threshold={threshold}"
+            )
+
 
 def main() -> None:
     args = parse_args()
+    _validate_ic_source_config(args)
+    os.environ["ODISSEO_FMM_ADAPTIVE_PREPARED_CACHE_MODE"] = str(
+        args.adaptive_prepared_cache_mode
+    )
 
     code_units = CodeUnits(10.0 * u.kpc, 1.0e10 * u.Msun, G=1.0, unit_time=(1.0 * u.Gyr))
     n_particles = int(args.n_particles)
@@ -1165,7 +1941,7 @@ def main() -> None:
     config = SimulationConfig(
         N_particles=n_particles,
         acceleration_scheme=FMM_ACC,
-        fixed_timestep=True,
+        fixed_timestep=not bool(args.adaptive_timestep),
         num_timesteps=int(args.num_steps),
         return_snapshots=False,
         external_accelerations=(NFW_POTENTIAL,),
@@ -1203,6 +1979,9 @@ def main() -> None:
             if args.fmm_large_n_static_target_blocks_max_per_leaf is None
             else int(args.fmm_large_n_static_target_blocks_max_per_leaf)
         ),
+        fmm_large_n_environment_overrides_enabled=not bool(
+            args.no_fmm_large_n_environment_overrides
+        ),
         fmm_jit_tree=True,
         fmm_jit_traversal=True,
         fmm_max_pair_queue=(
@@ -1224,10 +2003,29 @@ def main() -> None:
             else int(args.fmm_max_neighbors_per_leaf)
         ),
         fmm_prepare_stage_memory_split_enabled=args.fmm_prepare_stage_memory_split_enabled,
+        fmm_upward_leaf_batch_size=(
+            None
+            if args.fmm_upward_leaf_batch_size is None
+            else int(args.fmm_upward_leaf_batch_size)
+        ),
         fmm_enforce_static_shape_contract=bool(args.fmm_enforce_static_shape_contract),
         fmm_static_shape_warmup_prepares=int(args.fmm_static_shape_warmup_prepares),
         fmm_rematerialize_between_refresh=not bool(
             args.no_fmm_rematerialize_between_refresh
+        ),
+        fmm_adaptive_rtol=float(args.fmm_adaptive_rtol),
+        fmm_adaptive_atol=float(args.fmm_adaptive_atol),
+        fmm_adaptive_max_dt=(
+            None if args.fmm_adaptive_max_dt is None else float(args.fmm_adaptive_max_dt)
+        ),
+        fmm_adaptive_min_dt=(
+            None if args.fmm_adaptive_min_dt is None else float(args.fmm_adaptive_min_dt)
+        ),
+        fmm_adaptive_refresh_rhs_calls=max(1, int(args.fmm_adaptive_refresh_rhs_calls)),
+        fmm_adaptive_refresh_displacement_threshold=(
+            None
+            if args.fmm_adaptive_refresh_displacement_threshold is None
+            else float(args.fmm_adaptive_refresh_displacement_threshold)
         ),
     )
 
@@ -1240,17 +2038,77 @@ def main() -> None:
         ),
     )
 
-    key = jax.random.PRNGKey(int(args.seed))
-    pos = sample_exponential_disk(key, n_particles, rd, zd)
-    vel = build_quasi_circular_velocities(pos, config, params)
+    state_dtype = jnp.float64 if str(args.state_dtype) == "float64" else jnp.float32
+    mass = jnp.full((n_particles,), total_mass / n_particles, dtype=state_dtype)
 
-    mass = jnp.full((n_particles,), total_mass / n_particles, dtype=jnp.float32)
-    state0 = construct_initial_state(pos.astype(jnp.float32), vel.astype(jnp.float32))
+    if bool(args.ic_require_runtime_potential_match) and str(args.ic_velocity_potential) != "nfw":
+        raise ValueError(
+            "Runtime-consistent IC policy is enabled; use --ic-velocity-potential nfw "
+            "or pass --no-ic-require-runtime-potential-match."
+        )
+
+    if str(args.ic_source) == "load":
+        ic_raw = _load_ic_file(str(args.ic_input_path))
+        if int(np.asarray(ic_raw["n_particles"])) != n_particles:
+            raise ValueError(
+                f"IC file n_particles={int(np.asarray(ic_raw['n_particles']))} "
+                f"does not match requested n_particles={n_particles}"
+            )
+        state0 = jnp.asarray(ic_raw["state0"], dtype=state_dtype)
+        mass = jnp.asarray(ic_raw["mass"], dtype=state_dtype)
+        ic_velocity_potential = str(np.asarray(ic_raw["ic_velocity_potential"]).item())
+        if bool(args.ic_require_runtime_potential_match) and ic_velocity_potential != "nfw":
+            raise ValueError(
+                "Loaded IC file was not generated with runtime-consistent 'nfw' IC potential."
+            )
+        ic_velocity_metadata = {
+            "ic_velocity_potential": ic_velocity_potential,
+            "ic_uses_analytic_disk": bool(np.asarray(ic_raw["ic_uses_analytic_disk"]).item()),
+            "ic_source": "load",
+        }
+    else:
+        key = jax.random.PRNGKey(int(args.seed))
+        pos = sample_exponential_disk(key, n_particles, rd, zd)
+        ic_config, ic_params, ic_velocity_metadata = build_ic_velocity_potential(
+            args,
+            code_units,
+            config,
+            params,
+            total_mass=total_mass,
+        )
+        vel = build_quasi_circular_velocities(pos, ic_config, ic_params)
+        state0 = construct_initial_state(pos.astype(state_dtype), vel.astype(state_dtype))
+        ic_velocity_metadata["ic_source"] = "generate"
+        if args.ic_output_path is not None:
+            _save_ic_file(
+                str(args.ic_output_path),
+                state0=state0,
+                mass=mass,
+                seed=int(args.seed),
+                n_particles=n_particles,
+                ic_velocity_metadata=ic_velocity_metadata,
+            )
 
     sampled_positions = None
     sampled_times = None
     sample_indices = None
     history = None
+    initial_accel_report_path = None
+
+    if bool(args.initial_accel_report):
+        accel_stats = _compute_initial_acceleration_diagnostics(
+            state0=state0,
+            mass=mass,
+            config=config,
+            params=params,
+            args=args,
+        )
+        accel_stats.update(ic_velocity_metadata)
+        initial_accel_report_path = _write_initial_acceleration_report(
+            report_dir=str(args.report_dir),
+            accel_stats=accel_stats,
+        )
+        print(f"Saved initial acceleration report JSON: {initial_accel_report_path}")
 
     if args.mode == "perf":
         if args.live or args.movie_path:
@@ -1270,6 +2128,8 @@ def main() -> None:
                 config,
                 params,
                 profile_breakdown=bool(args.profile_breakdown),
+                warmup_runs=int(args.perf_warmup_runs),
+                measure_runs=int(args.perf_measure_runs),
             )
     else:
         (
@@ -1290,25 +2150,53 @@ def main() -> None:
             profile_breakdown=bool(args.profile_breakdown),
         )
 
-        render_positions(
-            sampled_positions,
-            sampled_times,
-            projection=str(args.projection),
-            live=bool(args.live),
-            movie_path=args.movie_path,
-            movie_fps=int(args.movie_fps),
-            backend=str(args.render_backend),
-            resolution=int(args.render_resolution),
-            cmap_name=str(args.render_cmap),
-        )
+        projections = [str(args.projection)]
+        if args.movie_projections is not None:
+            parsed = [p.strip().lower() for p in str(args.movie_projections).split(",") if p.strip()]
+            valid = {"xy", "xz", "yz"}
+            bad = [p for p in parsed if p not in valid]
+            if bad:
+                raise ValueError(f"Invalid --movie-projections values: {bad}; valid={sorted(valid)}")
+            if parsed:
+                projections = parsed
+
+        for i, proj in enumerate(projections):
+            movie_path_proj = args.movie_path
+            if args.movie_path is not None and len(projections) > 1:
+                mp = pathlib.Path(str(args.movie_path))
+                movie_path_proj = str(mp.with_name(f"{mp.stem}_{proj}{mp.suffix}"))
+            render_positions(
+                sampled_positions,
+                sampled_times,
+                projection=proj,
+                live=bool(args.live) and i == 0,
+                movie_path=movie_path_proj,
+                movie_fps=int(args.movie_fps),
+                backend=str(args.render_backend),
+                resolution=int(args.render_resolution),
+                cmap_name=str(args.render_cmap),
+            )
+
+    final_state_np = np.asarray(final_state)
+    dt_code = float(t_end) / float(int(args.num_steps)) if int(args.num_steps) > 0 else float("nan")
+    dt_gyr = float(args.t_end_gyr) / float(int(args.num_steps)) if int(args.num_steps) > 0 else float("nan")
+    final_state_finite_stats = _final_state_finite_stats(final_state_np)
 
     payload = {
-        "final_state": np.asarray(final_state),
+        "final_state": final_state_np,
         "mass": np.asarray(mass),
         "runtime_seconds": np.asarray(elapsed),
         "n_particles": np.asarray(n_particles),
         "num_steps": np.asarray(int(args.num_steps)),
+        "t_end_gyr": np.asarray(float(args.t_end_gyr)),
+        "t_end_code": np.asarray(float(t_end)),
+        "dt_gyr": np.asarray(float(dt_gyr)),
+        "dt_code": np.asarray(float(dt_code)),
         "mode": np.asarray(args.mode),
+        "ic_velocity_potential": np.asarray(str(ic_velocity_metadata["ic_velocity_potential"])),
+        "ic_source": np.asarray(str(ic_velocity_metadata.get("ic_source", "generate"))),
+        "state_dtype": np.asarray(str(state0.dtype)),
+        "mass_dtype": np.asarray(str(mass.dtype)),
     }
 
     if bool(args.save_snapshots) and sampled_positions is not None:
@@ -1330,12 +2218,152 @@ def main() -> None:
         print(f"Saved snapshots: {args.snapshot_output}")
 
     timing_stats = {} if timing_stats is None else dict(timing_stats)
+    large_n_eval_diag_mode = str(
+        os.environ.get("JACCPOT_LARGE_N_EVAL_DIAG_MODE", "full")
+    ).strip().lower()
+    if large_n_eval_diag_mode not in {
+        "full",
+        "near_only",
+        "far_only",
+        "local_only",
+        "near_zero",
+        "far_zero",
+        "permutation_only",
+        "zero",
+    }:
+        large_n_eval_diag_mode = "full"
+    large_n_nearfield_diag_mode = str(
+        os.environ.get("JACCPOT_LARGE_N_NEARFIELD_DIAG_MODE", "full")
+    ).strip().lower()
+    if large_n_nearfield_diag_mode not in {
+        "full",
+        "self_only",
+        "pairs_only",
+        "overflow_only",
+        "zero",
+    }:
+        large_n_nearfield_diag_mode = "full"
+    strict_refresh_diag_mode = str(
+        os.environ.get("JACCPOT_STRICT_REFRESH_DIAG_MODE", "full")
+    ).strip().lower()
+    if strict_refresh_diag_mode not in {
+        "full",
+        "tree_only",
+        "upward_only",
+        "downward_only",
+        "eval_only",
+        "integrator_only",
+    }:
+        strict_refresh_diag_mode = "full"
+    strict_refresh_detail_diag_mode = str(
+        os.environ.get("JACCPOT_STRICT_REFRESH_DETAIL_DIAG_MODE", "full")
+    ).strip().lower()
+    if strict_refresh_detail_diag_mode not in {
+        "full",
+        "tree_sort_only",
+        "tree_metadata_only",
+        "p2m_only",
+        "m2m_only",
+        "m2l_only",
+        "l2l_only",
+        "downward_artifacts_only",
+    }:
+        strict_refresh_detail_diag_mode = "full"
+    static_radix_reuse_structures = str(
+        os.environ.get("JACCPOT_STATIC_RADIX_REUSE_STRUCTURES", "0")
+    ).strip().lower() in {"1", "true", "yes", "on"}
+    static_radix_upward_batched = str(
+        os.environ.get("JACCPOT_STATIC_RADIX_UPWARD_BATCHED", "0")
+    ).strip().lower() in {"1", "true", "yes", "on"}
+    static_radix_downward_batched = str(
+        os.environ.get("JACCPOT_STATIC_RADIX_DOWNWARD_BATCHED", "0")
+    ).strip().lower() in {"1", "true", "yes", "on"}
+    if strict_refresh_diag_mode == "integrator_only":
+        strict_refresh_diag_flags = (False, False, False, False)
+    elif strict_refresh_diag_mode == "eval_only":
+        strict_refresh_diag_flags = (False, False, False, True)
+    elif strict_refresh_diag_mode == "tree_only":
+        strict_refresh_diag_flags = (True, False, False, False)
+    elif strict_refresh_diag_mode == "upward_only":
+        strict_refresh_diag_flags = (True, True, False, False)
+    elif strict_refresh_diag_mode == "downward_only":
+        strict_refresh_diag_flags = (True, True, True, False)
+    else:
+        strict_refresh_diag_flags = (True, True, True, True)
+    (
+        strict_refresh_diag_tree_active,
+        strict_refresh_diag_upward_active,
+        strict_refresh_diag_downward_active,
+        strict_refresh_diag_eval_active,
+    ) = strict_refresh_diag_flags
     timing_stats.update(
         {
             "script_runtime_seconds": float(elapsed),
             "n_particles": int(n_particles),
             "num_steps": int(args.num_steps),
+            "t_end_gyr": float(args.t_end_gyr),
+            "t_end_code": float(t_end),
+            "dt_gyr": float(dt_gyr),
+            "dt_code": float(dt_code),
+            "perf_warmup_runs_requested": int(args.perf_warmup_runs),
+            "perf_measure_runs_requested": int(args.perf_measure_runs),
             "mode": str(args.mode),
+            "large_n_eval_diag_mode": str(large_n_eval_diag_mode),
+            "runtime_large_n_eval_diag_mode": str(large_n_eval_diag_mode),
+            "large_n_nearfield_diag_mode": str(large_n_nearfield_diag_mode),
+            "runtime_large_n_nearfield_diag_mode": str(large_n_nearfield_diag_mode),
+            "strict_refresh_diag_mode": str(strict_refresh_diag_mode),
+            "strict_refresh_diag_tree_active": bool(strict_refresh_diag_tree_active),
+            "strict_refresh_diag_upward_active": bool(strict_refresh_diag_upward_active),
+            "strict_refresh_diag_downward_active": bool(strict_refresh_diag_downward_active),
+            "strict_refresh_diag_eval_active": bool(strict_refresh_diag_eval_active),
+            "runtime_strict_refresh_diag_mode": str(strict_refresh_diag_mode),
+            "runtime_strict_refresh_diag_tree_active": bool(
+                strict_refresh_diag_tree_active
+            ),
+            "runtime_strict_refresh_diag_upward_active": bool(
+                strict_refresh_diag_upward_active
+            ),
+            "runtime_strict_refresh_diag_downward_active": bool(
+                strict_refresh_diag_downward_active
+            ),
+            "runtime_strict_refresh_diag_eval_active": bool(
+                strict_refresh_diag_eval_active
+            ),
+            "strict_refresh_detail_diag_mode": str(strict_refresh_detail_diag_mode),
+            "runtime_strict_refresh_detail_diag_mode": str(
+                strict_refresh_detail_diag_mode
+            ),
+            "runtime_static_radix_reuse_structures": bool(
+                static_radix_reuse_structures
+            ),
+            "runtime_static_radix_upward_batched": bool(
+                static_radix_upward_batched
+            ),
+            "runtime_static_radix_downward_batched": bool(
+                static_radix_downward_batched
+            ),
+            "fmm_integration_timestep_mode": (
+                "fixed" if bool(config.fixed_timestep) else "adaptive_diffrax"
+            ),
+            "state_dtype_requested": str(args.state_dtype),
+            "state_dtype": str(state0.dtype),
+            "mass_dtype": str(mass.dtype),
+            "initial_accel_report_enabled": bool(args.initial_accel_report),
+            "initial_accel_report_path": (
+                None if initial_accel_report_path is None else str(initial_accel_report_path)
+            ),
+            "disk_mass_msun": float(args.disk_mass_msun),
+            "disk_mass_code": float(total_mass),
+            "disk_radius_kpc": float(args.disk_radius_kpc),
+            "disk_radius_code": float(rd),
+            "disk_height_kpc": float(args.disk_height_kpc),
+            "disk_height_code": float(zd),
+            "runtime_external_potentials": "NFW_POTENTIAL",
+            "runtime_nfw_mvir_msun": 1.0e12,
+            "runtime_nfw_mvir_code": float(params.NFW_params.Mvir),
+            "runtime_nfw_rs_kpc": 20.0,
+            "runtime_nfw_rs_code": float(params.NFW_params.r_s),
             "fmm_preset_requested": str(args.fmm_preset),
             "fmm_runtime_path_requested": str(args.fmm_runtime_path),
             "fmm_theta_requested": float(args.fmm_theta),
@@ -1396,9 +2424,13 @@ def main() -> None:
                     fmm_preset=str(args.fmm_preset),
                 )
             ),
+            "fmm_large_n_environment_overrides_enabled": bool(
+                not args.no_fmm_large_n_environment_overrides
+            ),
             "fmm_prepare_stage_memory_split_enabled": (
                 config.fmm_prepare_stage_memory_split_enabled
             ),
+            "fmm_upward_leaf_batch_size": config.fmm_upward_leaf_batch_size,
             "fmm_enforce_static_shape_contract": bool(
                 args.fmm_enforce_static_shape_contract
             ),
@@ -1422,6 +2454,8 @@ def main() -> None:
             "output_file": str(args.output),
         }
     )
+    timing_stats.update(final_state_finite_stats)
+    timing_stats.update(ic_velocity_metadata)
     if timing_stats is not None:
         if bool(args.profile_breakdown):
             _check_timing_gates(args, timing_stats)
@@ -1449,6 +2483,29 @@ def main() -> None:
                 "script_runtime_seconds": float(elapsed),
                 "n_particles": int(n_particles),
                 "num_steps": int(args.num_steps),
+                "fmm_integration_timestep_mode": (
+                    "fixed" if bool(config.fixed_timestep) else "adaptive_diffrax"
+                ),
+                "state_dtype_requested": str(args.state_dtype),
+                "state_dtype": str(state0.dtype),
+                "mass_dtype": str(mass.dtype),
+                "initial_accel_report_enabled": bool(args.initial_accel_report),
+                "initial_accel_report_path": (
+                    None
+                    if initial_accel_report_path is None
+                    else str(initial_accel_report_path)
+                ),
+                "disk_mass_msun": float(args.disk_mass_msun),
+                "disk_mass_code": float(total_mass),
+                "disk_radius_kpc": float(args.disk_radius_kpc),
+                "disk_radius_code": float(rd),
+                "disk_height_kpc": float(args.disk_height_kpc),
+                "disk_height_code": float(zd),
+                "runtime_external_potentials": "NFW_POTENTIAL",
+                "runtime_nfw_mvir_msun": 1.0e12,
+                "runtime_nfw_mvir_code": float(params.NFW_params.Mvir),
+                "runtime_nfw_rs_kpc": 20.0,
+                "runtime_nfw_rs_code": float(params.NFW_params.r_s),
                 "fmm_preset_requested": str(args.fmm_preset),
                 "fmm_runtime_path_requested": str(args.fmm_runtime_path),
                 "fmm_theta_requested": float(args.fmm_theta),
@@ -1509,9 +2566,13 @@ def main() -> None:
                         fmm_preset=str(args.fmm_preset),
                     )
                 ),
+                "fmm_large_n_environment_overrides_enabled": bool(
+                    not args.no_fmm_large_n_environment_overrides
+                ),
                 "fmm_prepare_stage_memory_split_enabled": (
                     config.fmm_prepare_stage_memory_split_enabled
                 ),
+                "fmm_upward_leaf_batch_size": config.fmm_upward_leaf_batch_size,
                 "fmm_enforce_static_shape_contract": bool(
                     args.fmm_enforce_static_shape_contract
                 ),
@@ -1524,6 +2585,7 @@ def main() -> None:
                 "output_file": str(args.output),
             }
         )
+        conservation_stats.update(ic_velocity_metadata)
 
         if args.max_abs_de_over_e0 is not None and float(
             conservation_stats["max_abs_dE_over_E0"]

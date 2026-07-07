@@ -229,16 +229,26 @@ class SimulationConfig(NamedTuple):
     fmm_max_interactions_per_node: Optional[int] = None
     fmm_max_neighbors_per_leaf: Optional[int] = None
     fmm_prepare_stage_memory_split_enabled: Optional[bool] = None
+    fmm_upward_leaf_batch_size: Optional[int] = None
     fmm_auto_large_n_profile: bool = True
     fmm_large_n_min_particles: int = 200_000
     fmm_large_n_force_fp32: bool = True
     fmm_large_n_target_block_size: Optional[int] = None
     fmm_large_n_static_target_blocks: Optional[bool] = None
     fmm_large_n_static_target_blocks_max_per_leaf: Optional[int] = None
+    fmm_large_n_environment_overrides_enabled: bool = True
     # Static-shape/compile-stability experiment knobs.
     fmm_enforce_static_shape_contract: bool = False
     fmm_static_shape_warmup_prepares: int = 0
     fmm_rematerialize_between_refresh: bool = True
+    # Adaptive FMM (diffrax) controls.
+    fmm_adaptive_refresh_rhs_calls: int = 1
+    fmm_adaptive_refresh_displacement_threshold: Optional[float] = None
+    fmm_adaptive_max_dt: Optional[float] = None
+    fmm_adaptive_min_dt: Optional[float] = None
+    fmm_adaptive_rtol: float = 1e-3
+    fmm_adaptive_atol: float = 1e-6
+    fmm_adaptive_use_dense_output: bool = False
 
     batch_size: int = 10_000
 

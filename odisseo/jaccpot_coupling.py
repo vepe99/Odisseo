@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from contextlib import contextmanager
 from collections import Counter
+from dataclasses import dataclass
 from functools import partial
 import hashlib
 import inspect
@@ -11,11 +12,133 @@ from typing import Any, Callable, Optional
 
 import jax
 import jax.numpy as jnp
+import numpy as np
+import diffrax
+from jax.errors import UnexpectedTracerError
 
-from odisseo.option_classes import SimulationConfig, SimulationParams
+from odisseo.option_classes import (
+    DOPRI5,
+    DOPRI8,
+    LEAPFROGMIDPOINT,
+    REVERSIBLEHEUN,
+    SEMIIMPLICITEULER,
+    TSIT5,
+    SimulationConfig,
+    SimulationParams,
+)
 from odisseo.potentials import combined_external_acceleration_vmpa_switch
 
 
+def _contains_jax_tracer(value: Any) -> bool:
+    """Return True when any pytree leaf is a JAX tracer."""
+    try:
+        leaves = jax.tree_util.tree_leaves(value)
+    except Exception:
+        return False
+    return any(isinstance(leaf, jax.core.Tracer) for leaf in leaves)
+
+
+@dataclass(frozen=True)
+class JaccpotCoreKernelConfig:
+    """Static configuration payload for the shared core-kernel scaffold."""
+
+    mode: str
+    leaf_size: int
+    max_order: int
+    preset: str
+    runtime_path: str
+    tree_build_mode: str
+
+
+@dataclass(frozen=True)
+class JaccpotCoreKernelOutput:
+    """Return payload for the shared core-kernel scaffold."""
+
+    next_state: jnp.ndarray
+    acceleration: jnp.ndarray
+    prepared_state: Any
+    execute_count: int
+    prepare_count: int
+    refresh_count: int
+
+
+
+
+@dataclass
+class AdaptiveCoreRuntimeState:
+    """Mutable runtime state for adaptive core-kernel refresh cadence."""
+
+    rhs_calls: int = 0
+    prepared_state: Any = None
+    last_refresh_rhs_call: int = 0
+    last_refresh_positions: Any = None
+    refresh_cadence_skips_rhs_calls: int = 0
+    refresh_cadence_skips_displacement: int = 0
+    refresh_cadence_last_displacement: float = 0.0
+    prepared_drop_tracer: int = 0
+    prepared_non_large_n_seen: int = 0
+
+    def prepared_input(self, *, enabled: bool) -> Any:
+        return self.prepared_state if bool(enabled) else None
+
+    def should_refresh(
+        self,
+        *,
+        enabled: bool,
+        prepared_in: Any,
+        y_state: jnp.ndarray,
+        refresh_rhs_calls: int,
+        displacement_threshold: Optional[float],
+    ) -> bool:
+        if not bool(enabled):
+            return True
+        if prepared_in is None:
+            return True
+        if type(prepared_in).__name__ != "LargeNPreparedState":
+            self.prepared_non_large_n_seen += 1
+            return True
+
+        force_refresh = True
+        if int(refresh_rhs_calls) > 1:
+            since_refresh = int(self.rhs_calls) - int(self.last_refresh_rhs_call)
+            if since_refresh < int(refresh_rhs_calls):
+                force_refresh = False
+                self.refresh_cadence_skips_rhs_calls += 1
+        if displacement_threshold is not None and force_refresh:
+            if self.last_refresh_positions is not None:
+                disp = jnp.linalg.norm(y_state[:, 0, :] - self.last_refresh_positions, axis=1)
+                max_disp = float(jnp.max(disp))
+                self.refresh_cadence_last_displacement = max_disp
+                if max_disp < float(displacement_threshold):
+                    force_refresh = False
+                    self.refresh_cadence_skips_displacement += 1
+        return bool(force_refresh)
+
+    def update_prepared_state(
+        self,
+        *,
+        enabled: bool,
+        prepared_out: Any,
+        allow_tracer_prepared_cache: bool,
+    ) -> None:
+        if not bool(enabled):
+            self.prepared_state = None
+            return
+        if prepared_out is None:
+            self.prepared_state = None
+            return
+        if _contains_jax_tracer(prepared_out):
+            if bool(allow_tracer_prepared_cache):
+                self.prepared_state = prepared_out
+            else:
+                self.prepared_state = None
+                self.prepared_drop_tracer += 1
+            return
+        self.prepared_state = prepared_out
+
+    def mark_refreshed(self, *, y_state: jnp.ndarray) -> None:
+        self.last_refresh_rhs_call = int(self.rhs_calls)
+        self.last_refresh_positions = jnp.asarray(y_state[:, 0, :])
 def _large_n_environment_overrides(
     config: SimulationConfig,
     *,
@@ -56,7 +179,7 @@ def _large_n_environment_overrides(
         None,
     )
     if auto_static_target_blocks and static_target_blocks_cap is None:
-        static_target_blocks_cap = 16
+        static_target_blocks_cap = 32
     if static_target_blocks_cap is not None:
         overrides["JACCPOT_LARGE_N_STATIC_TARGET_BLOCKS_MAX_PER_LEAF"] = str(
             int(static_target_blocks_cap)
@@ -206,6 +329,178 @@ def _build_fmm_solver(
         # runtime leaf cap are tied to the same value.
         fixed_max_leaf_size=int(leaf_size),
     )
+
+
+def build_compiled_jaccpot_core_kernel(
+    config: SimulationConfig,
+    params: SimulationParams,
+    *,
+    mode: str,
+    leaf_size: int = 16,
+    max_order: int = 4,
+    dt: Optional[float] = None,
+    fmm_preset: str = "fast",
+    fmm_basis: str = "solidfmm",
+    fmm_theta: float = 0.6,
+    fmm_runtime_path: str = "auto",
+    fmm_working_dtype=None,
+    fmm_mac_type: str = "dehnen",
+    fmm_farfield_mode: str = "auto",
+    fmm_m2l_chunk_size: Optional[int] = None,
+    fmm_nearfield_mode: str = "auto",
+    fmm_nearfield_edge_chunk_size: int = 256,
+    fmm_tree_build_mode: str = "static_radix",
+    fmm_tree_leaf_target: int = 32,
+    fmm_fixed_order: Optional[int] = None,
+    fmm_jit_tree: Optional[bool] = None,
+    fmm_jit_traversal: Optional[bool] = True,
+    fmm_max_pair_queue: Optional[int] = None,
+    fmm_pair_process_block: Optional[int] = None,
+    fmm_max_interactions_per_node: Optional[int] = None,
+    fmm_max_neighbors_per_leaf: Optional[int] = None,
+    fmm_prepare_stage_memory_split_enabled: Optional[bool] = None,
+    fmm_upward_leaf_batch_size: Optional[int] = None,
+    outer_jit: bool = False,
+):
+    """Build a shared jaccpot core-kernel scaffold for fixed/adaptive migration.
+
+    Modes:
+    - ``rhs_only``: prepare/evaluate and return acceleration (for diffrax RHS).
+    - ``fixed_step_update``: same prepare/evaluate plus one explicit Euler update.
+
+    This is intentionally additive scaffold code and does not replace existing
+    production integration paths yet.
+    """
+    mode_norm = str(mode).strip().lower()
+    if mode_norm not in {"rhs_only", "fixed_step_update"}:
+        raise ValueError("mode must be one of {'rhs_only', 'fixed_step_update'}")
+    if mode_norm == "fixed_step_update" and dt is None:
+        raise ValueError("dt is required for mode='fixed_step_update'")
+
+    core_cfg = JaccpotCoreKernelConfig(
+        mode=mode_norm,
+        leaf_size=int(leaf_size),
+        max_order=int(max_order),
+        preset=str(fmm_preset),
+        runtime_path=str(fmm_runtime_path),
+        tree_build_mode=str(fmm_tree_build_mode),
+    )
+
+    solver = _build_fmm_solver(
+        working_dtype=(
+            jnp.dtype(fmm_working_dtype)
+            if fmm_working_dtype is not None
+            else None
+        ),
+        config=config,
+        params=params,
+        fmm_preset=fmm_preset,
+        fmm_basis=fmm_basis,
+        fmm_theta=fmm_theta,
+        fmm_runtime_path=fmm_runtime_path,
+        fmm_mac_type=fmm_mac_type,
+        fmm_farfield_mode=fmm_farfield_mode,
+        fmm_m2l_chunk_size=fmm_m2l_chunk_size,
+        fmm_nearfield_mode=fmm_nearfield_mode,
+        fmm_nearfield_edge_chunk_size=fmm_nearfield_edge_chunk_size,
+        fmm_tree_build_mode=fmm_tree_build_mode,
+        fmm_tree_leaf_target=fmm_tree_leaf_target,
+        fmm_fixed_order=fmm_fixed_order,
+        leaf_size=leaf_size,
+        fmm_jit_tree=fmm_jit_tree,
+        fmm_jit_traversal=fmm_jit_traversal,
+        fmm_max_pair_queue=fmm_max_pair_queue,
+        fmm_pair_process_block=fmm_pair_process_block,
+        fmm_max_interactions_per_node=fmm_max_interactions_per_node,
+        fmm_max_neighbors_per_leaf=fmm_max_neighbors_per_leaf,
+        fmm_prepare_stage_memory_split_enabled=(
+            fmm_prepare_stage_memory_split_enabled
+        ),
+        fmm_upward_leaf_batch_size=fmm_upward_leaf_batch_size,
+    )
+
+    def _eager(
+        state: jnp.ndarray,
+        mass: jnp.ndarray,
+        prepared_state: Optional[Any] = None,
+        *,
+        refresh_prepared: bool = True,
+    ) -> JaccpotCoreKernelOutput:
+        state_arr = jnp.asarray(state)
+        mass_arr = jnp.asarray(mass)
+        if fmm_working_dtype is None:
+            # Keep dtype alignment with caller state when dtype was not pinned.
+            solver.working_dtype = state_arr.dtype
+        refresh_count = 0
+        prepare_count = 0
+        prepared = None
+        refresh_fn = getattr(solver, "refresh_prepared_state", None)
+        prepared_type_name = (
+            type(prepared_state).__name__ if prepared_state is not None else ""
+        )
+        if prepared_state is not None and not bool(refresh_prepared):
+            prepared = prepared_state
+        can_try_refresh = (
+            prepared is None
+            and prepared_state is not None
+            and bool(refresh_prepared)
+            and callable(refresh_fn)
+            and prepared_type_name == "LargeNPreparedState"
+        )
+        if can_try_refresh:
+            with _temporary_large_n_environment(config, fmm_preset=fmm_preset):
+                try:
+                    prepared = refresh_fn(
+                        prepared_state,
+                        state_arr[:, 0, :],
+                        mass_arr,
+                        leaf_size=int(core_cfg.leaf_size),
+                        max_order=int(core_cfg.max_order),
+                    )
+                    refresh_count = 1
+                except (TypeError, NotImplementedError):
+                    try:
+                        prepared = refresh_fn(
+                            state_arr[:, 0, :],
+                            mass_arr,
+                            prepared_state,
+                            leaf_size=int(core_cfg.leaf_size),
+                            max_order=int(core_cfg.max_order),
+                        )
+                        refresh_count = 1
+                    except (TypeError, NotImplementedError):
+                        prepared = None
+        if prepared is None:
+            with _temporary_large_n_environment(config, fmm_preset=fmm_preset):
+                prepared = solver.prepare_state(
+                    state_arr[:, 0, :],
+                    mass_arr,
+                    leaf_size=int(core_cfg.leaf_size),
+                    max_order=int(core_cfg.max_order),
+                )
+            prepare_count = 1
+        acc = solver.evaluate_prepared_state(
+            prepared,
+            target_indices=None,
+            return_potential=False,
+        )
+        if core_cfg.mode == "fixed_step_update":
+            dt_arr = jnp.asarray(float(dt), dtype=state_arr.dtype)
+            pos_next = state_arr[:, 0, :] + state_arr[:, 1, :] * dt_arr
+            vel_next = state_arr[:, 1, :] + acc * dt_arr
+            next_state = jnp.stack((pos_next, vel_next), axis=1)
+        else:
+            next_state = state_arr
+        return JaccpotCoreKernelOutput(
+            next_state=next_state,
+            acceleration=acc,
+            prepared_state=prepared,
+            execute_count=1,
+            prepare_count=int(prepare_count),
+            refresh_count=int(refresh_count),
+        )
+
+    return (jax.jit(_eager) if bool(outer_jit) else _eager), core_cfg
 
 
 def _scatter_masked_vectors(
@@ -403,7 +698,7 @@ def integrate_leapfrog_jaccpot_active(
     fmm_m2l_chunk_size: Optional[int] = None,
     fmm_nearfield_mode: str = "auto",
     fmm_nearfield_edge_chunk_size: int = 256,
-    fmm_tree_build_mode: str = "lbvh",
+    fmm_tree_build_mode: str = "static_radix",
     fmm_tree_leaf_target: int = 32,
     fmm_fixed_order: Optional[int] = None,
     fmm_jit_tree: Optional[bool] = None,
@@ -418,6 +713,8 @@ def integrate_leapfrog_jaccpot_active(
     static_shape_warmup_prepares: int = 0,
     rematerialize_between_refresh: bool = True,
     return_history: bool = False,
+    perf_warmup_runs: int = 0,
+    perf_measure_runs: int = 1,
     timing_stats: Optional[dict] = None,
 ) -> jnp.ndarray:
     """Integrate with Jaccpot FMM using optional active-particle substeps.
@@ -446,6 +743,37 @@ def integrate_leapfrog_jaccpot_active(
         str(os.environ.get("ODISSEO_PROFILE_SYNC", "0")).strip().lower()
         in {"1", "true", "yes", "on"}
     )
+    strict_perf_progress = (
+        str(os.environ.get("ODISSEO_STRICT_PERF_PROGRESS", "0")).strip().lower()
+        in {"1", "true", "yes", "on"}
+    )
+    strict_timing_disable_external = (
+        str(
+            os.environ.get(
+                "ODISSEO_STRICT_DISABLE_EXTERNAL_FOR_TIMING",
+                "0",
+            )
+        )
+        .strip()
+        .lower()
+        in {"1", "true", "yes", "on"}
+    )
+    strict_timing_external_only = (
+        str(
+            os.environ.get(
+                "ODISSEO_STRICT_EXTERNAL_ONLY_FOR_TIMING",
+                "0",
+            )
+        )
+        .strip()
+        .lower()
+        in {"1", "true", "yes", "on"}
+    )
+    if bool(strict_timing_disable_external) and bool(strict_timing_external_only):
+        raise ValueError(
+            "ODISSEO_STRICT_DISABLE_EXTERNAL_FOR_TIMING and "
+            "ODISSEO_STRICT_EXTERNAL_ONLY_FOR_TIMING are mutually exclusive."
+        )
     strict_mode_env = str(
         os.environ.get("JACCPOT_STATIC_STRICT_GPU_MODE", "auto")
     ).strip().lower()
@@ -456,11 +784,17 @@ def integrate_leapfrog_jaccpot_active(
         and str(fmm_runtime_path).strip().lower() in {"large_n", "auto"}
         and str(fmm_tree_build_mode).strip().lower() == "static_radix"
     )
+    if strict_production_lane and int(refresh_every) != 1:
+        raise ValueError(
+            "strict static-radix production requires refresh_every=1 for "
+            "endpoint-correct velocity-Verlet self gravity"
+        )
     collect_shape_signatures = bool(profile or enforce_static_shape_contract)
     t_total_start = time.perf_counter() if profile else 0.0
     prepare_seconds = 0.0
     evaluate_seconds = 0.0
     update_seconds = 0.0
+    strict_runner_wall_seconds = 0.0
     warmup_seconds = 0.0
     prepare_calls = 0
     evaluate_calls = 0
@@ -547,6 +881,18 @@ def integrate_leapfrog_jaccpot_active(
     shape_checks_post_warmup = 0
     shape_signature_hashes_post_warmup: list[str] = []
     shape_signature_diff_post_warmup: list[dict[str, Any]] = []
+    perf_warmup_runs_i = 0
+    perf_measure_runs_i = 1
+    perf_warmup_run_seconds: list[float] = []
+    perf_measured_run_seconds: list[float] = []
+    strict_timing_mode = "full"
+    strict_effective_add_external = False
+    use_core_scaffold = (
+        os.environ.get("ODISSEO_FMM_USE_CORE_KERNEL_SCAFFOLD", "0").strip() == "1"
+    )
+    core_scaffold_exec_calls = 0
+    core_scaffold_prepare_calls = 0
+    core_scaffold_refresh_calls = 0
 
     def _record_shape_signature(prepared_state, *, warmup_phase: bool = False):
         nonlocal shape_signature_ref
@@ -629,6 +975,19 @@ def integrate_leapfrog_jaccpot_active(
                 runtime_diag = dict(get_diag())
             except Exception:
                 runtime_diag = {}
+        strict_refresh_total_seconds = float(runtime_diag.get("refresh_total_seconds", 0.0))
+        strict_refresh_component_sum = float(
+            runtime_diag.get("refresh_tree_upward_seconds", 0.0)
+            + runtime_diag.get("refresh_dual_downward_compute_seconds", 0.0)
+            + runtime_diag.get("refresh_nearfield_seconds", 0.0)
+            + runtime_diag.get("refresh_dual_artifact_build_seconds", 0.0)
+            + runtime_diag.get("refresh_dual_split_shared_far_near_seconds", 0.0)
+        )
+        strict_refresh_effective_seconds = float(
+            strict_refresh_total_seconds
+            if strict_refresh_total_seconds > 0.0
+            else strict_refresh_component_sum
+        )
         timing_stats.clear()
         timing_stats.update(
             {
@@ -639,9 +998,130 @@ def integrate_leapfrog_jaccpot_active(
                 "prepare_calls": int(prepare_calls),
                 "evaluate_calls": int(evaluate_calls),
                 "update_calls": int(update_calls),
+                "strict_production_lane_active": bool(strict_production_lane),
+                "strict_runner_wall_seconds": float(strict_runner_wall_seconds),
+                "perf_warmup_runs": int(perf_warmup_runs_i),
+                "perf_measure_runs": int(perf_measure_runs_i),
+                "perf_warmup_run_seconds": list(perf_warmup_run_seconds),
+                "perf_measured_run_seconds": list(perf_measured_run_seconds),
+                "perf_measured_median_seconds": float(
+                    np.median(
+                        np.asarray(
+                            perf_measured_run_seconds or [strict_runner_wall_seconds],
+                            dtype=np.float64,
+                        )
+                    )
+                ),
+                "perf_measured_median_step_seconds": float(
+                    np.median(
+                        np.asarray(
+                            perf_measured_run_seconds or [strict_runner_wall_seconds],
+                            dtype=np.float64,
+                        )
+                    )
+                    / max(1, int(num_steps))
+                ),
                 "num_steps": int(num_steps),
                 "refresh_every": int(refresh_every),
                 "used_external_potential": bool(add_external),
+                "strict_effective_external_potential": bool(
+                    strict_effective_add_external
+                ),
+                "strict_timing_mode": str(strict_timing_mode),
+                "strict_timing_disable_external": bool(
+                    strict_timing_disable_external
+                ),
+                "strict_timing_external_only": bool(strict_timing_external_only),
+                "large_n_eval_diag_mode": str(
+                    runtime_diag.get("large_n_eval_diag_mode", "full")
+                ),
+                "large_n_nearfield_diag_mode": str(
+                    runtime_diag.get("large_n_nearfield_diag_mode", "full")
+                ),
+                "large_n_eval_leaf_nodes_shape": tuple(
+                    runtime_diag.get("large_n_eval_leaf_nodes_shape", ())
+                ),
+                "large_n_eval_local_coefficients_shape": tuple(
+                    runtime_diag.get("large_n_eval_local_coefficients_shape", ())
+                ),
+                "large_n_eval_local_centers_shape": tuple(
+                    runtime_diag.get("large_n_eval_local_centers_shape", ())
+                ),
+                "large_n_eval_active_leaf_count": int(
+                    runtime_diag.get("large_n_eval_active_leaf_count", 0)
+                ),
+                "large_n_eval_max_leaf_size": int(
+                    runtime_diag.get("large_n_eval_max_leaf_size", 0)
+                ),
+                "large_n_eval_leaf_particle_slots": int(
+                    runtime_diag.get("large_n_eval_leaf_particle_slots", 0)
+                ),
+                "large_n_radix_payload_present": bool(
+                    runtime_diag.get("large_n_radix_payload_present", False)
+                ),
+                "large_n_radix_payload_source_particle_shape": tuple(
+                    runtime_diag.get("large_n_radix_payload_source_particle_shape", ())
+                ),
+                "large_n_radix_payload_source_particle_slots": int(
+                    runtime_diag.get("large_n_radix_payload_source_particle_slots", 0)
+                ),
+                "large_n_radix_payload_source_leaf_shape": tuple(
+                    runtime_diag.get("large_n_radix_payload_source_leaf_shape", ())
+                ),
+                "large_n_radix_payload_source_leaf_slots": int(
+                    runtime_diag.get("large_n_radix_payload_source_leaf_slots", 0)
+                ),
+                "large_n_target_block_source_leaf_padded_shape": tuple(
+                    runtime_diag.get("large_n_target_block_source_leaf_padded_shape", ())
+                ),
+                "strict_refresh_diag_mode": str(
+                    runtime_diag.get("strict_refresh_diag_mode", "full")
+                ),
+                "strict_refresh_diag_tree_active": bool(
+                    runtime_diag.get("strict_refresh_diag_tree_active", True)
+                ),
+                "strict_refresh_diag_upward_active": bool(
+                    runtime_diag.get("strict_refresh_diag_upward_active", True)
+                ),
+                "strict_refresh_diag_downward_active": bool(
+                    runtime_diag.get("strict_refresh_diag_downward_active", True)
+                ),
+                "strict_refresh_diag_eval_active": bool(
+                    runtime_diag.get("strict_refresh_diag_eval_active", True)
+                ),
+                "strict_refresh_detail_diag_mode": str(
+                    runtime_diag.get("strict_refresh_detail_diag_mode", "full")
+                ),
+                "static_radix_reuse_structures": bool(
+                    runtime_diag.get("static_radix_reuse_structures", False)
+                ),
+                "static_radix_upward_batched": bool(
+                    runtime_diag.get("static_radix_upward_batched", False)
+                ),
+                "static_radix_downward_batched": bool(
+                    runtime_diag.get("static_radix_downward_batched", False)
+                ),
+                "static_radix_compact_pair_reuse_hits": int(
+                    runtime_diag.get("static_radix_compact_pair_reuse_hits", 0)
+                ),
+                "static_radix_compact_pair_reuse_misses": int(
+                    runtime_diag.get("static_radix_compact_pair_reuse_misses", 0)
+                ),
+                "static_radix_tree_leaf_count": int(
+                    runtime_diag.get("static_radix_tree_leaf_count", 0)
+                ),
+                "static_radix_tree_node_count": int(
+                    runtime_diag.get("static_radix_tree_node_count", 0)
+                ),
+                "static_radix_far_pair_count": int(
+                    runtime_diag.get("static_radix_far_pair_count", 0)
+                ),
+                "static_radix_m2l_chunk_count": int(
+                    runtime_diag.get("static_radix_m2l_chunk_count", 0)
+                ),
+                "static_radix_l2l_edge_count": int(
+                    runtime_diag.get("static_radix_l2l_edge_count", 0)
+                ),
                 "used_schedule_scan_mode": bool(active_indices_schedule is not None),
                 "used_fast_full_scan_mode": bool(
                     active_indices_fn is None and not bool(refresh_after_position_update)
@@ -823,6 +1303,177 @@ def integrate_leapfrog_jaccpot_active(
                 "runtime_strict_v2_fail_fast_reject_count": int(
                     runtime_diag.get("strict_v2_fail_fast_reject_count", 0)
                 ),
+                "runtime_strict_fused_mode_active": bool(
+                    runtime_diag.get("strict_fused_mode_active", False)
+                ),
+                "runtime_strict_fused_compile_count": int(
+                    runtime_diag.get("strict_fused_compile_count", 0)
+                ),
+                "runtime_strict_fused_execute_count": int(
+                    runtime_diag.get("strict_fused_execute_count", 0)
+                ),
+                "runtime_strict_fused_profile_key_hits": int(
+                    runtime_diag.get("strict_fused_profile_key_hits", 0)
+                ),
+                "runtime_strict_fused_profile_key_misses": int(
+                    runtime_diag.get("strict_fused_profile_key_misses", 0)
+                ),
+                "runtime_strict_fused_fallback_count": int(
+                    runtime_diag.get("strict_fused_fallback_count", 0)
+                ),
+                "runtime_strict_fused_last_fallback_reason": str(
+                    runtime_diag.get("strict_fused_last_fallback_reason", "")
+                ),
+                "runtime_strict_fused_device_refresh_route_count": int(
+                    runtime_diag.get("strict_fused_device_refresh_route_count", 0)
+                ),
+                "runtime_strict_fused_planner_bypassed_count": int(
+                    runtime_diag.get("strict_fused_planner_bypassed_count", 0)
+                ),
+                "runtime_strict_velocity_verlet_acceleration_carry_active": bool(
+                    runtime_diag.get(
+                        "strict_velocity_verlet_acceleration_carry_active", False
+                    )
+                ),
+                "runtime_strict_self_force_bootstrap_evaluations": int(
+                    runtime_diag.get("strict_self_force_bootstrap_evaluations", 0)
+                ),
+                "runtime_strict_self_force_initial_full_fmm_evaluations": int(
+                    runtime_diag.get(
+                        "strict_self_force_initial_full_fmm_evaluations",
+                        runtime_diag.get("strict_self_force_bootstrap_evaluations", 0),
+                    )
+                ),
+                "runtime_strict_self_force_endpoint_evaluations": int(
+                    runtime_diag.get("strict_self_force_endpoint_evaluations", 0)
+                ),
+                "runtime_strict_external_bootstrap_evaluations": int(
+                    runtime_diag.get("strict_external_bootstrap_evaluations", 0)
+                ),
+                "runtime_strict_external_endpoint_evaluations": int(
+                    runtime_diag.get("strict_external_endpoint_evaluations", 0)
+                ),
+                "runtime_strict_static_target_block_capacity_ok": bool(
+                    runtime_diag.get("strict_static_target_block_capacity_ok", True)
+                ),
+                "runtime_large_n_radix_fast_occupancy_sort": bool(
+                    runtime_diag.get("large_n_radix_fast_occupancy_sort", True)
+                ),
+                "runtime_large_n_radix_fast_skip_empty_tiles": bool(
+                    runtime_diag.get("large_n_radix_fast_skip_empty_tiles", True)
+                ),
+                "runtime_large_n_eval_diag_mode": str(
+                    runtime_diag.get("large_n_eval_diag_mode", "full")
+                ),
+                "runtime_large_n_nearfield_diag_mode": str(
+                    runtime_diag.get("large_n_nearfield_diag_mode", "full")
+                ),
+                "runtime_large_n_eval_leaf_nodes_shape": tuple(
+                    runtime_diag.get("large_n_eval_leaf_nodes_shape", ())
+                ),
+                "runtime_large_n_eval_local_coefficients_shape": tuple(
+                    runtime_diag.get("large_n_eval_local_coefficients_shape", ())
+                ),
+                "runtime_large_n_eval_local_centers_shape": tuple(
+                    runtime_diag.get("large_n_eval_local_centers_shape", ())
+                ),
+                "runtime_large_n_eval_active_leaf_count": int(
+                    runtime_diag.get("large_n_eval_active_leaf_count", 0)
+                ),
+                "runtime_large_n_eval_max_leaf_size": int(
+                    runtime_diag.get("large_n_eval_max_leaf_size", 0)
+                ),
+                "runtime_large_n_eval_leaf_particle_slots": int(
+                    runtime_diag.get("large_n_eval_leaf_particle_slots", 0)
+                ),
+                "runtime_large_n_radix_payload_present": bool(
+                    runtime_diag.get("large_n_radix_payload_present", False)
+                ),
+                "runtime_large_n_radix_payload_source_particle_shape": tuple(
+                    runtime_diag.get("large_n_radix_payload_source_particle_shape", ())
+                ),
+                "runtime_large_n_radix_payload_source_particle_slots": int(
+                    runtime_diag.get("large_n_radix_payload_source_particle_slots", 0)
+                ),
+                "runtime_large_n_radix_payload_source_leaf_shape": tuple(
+                    runtime_diag.get("large_n_radix_payload_source_leaf_shape", ())
+                ),
+                "runtime_large_n_radix_payload_source_leaf_slots": int(
+                    runtime_diag.get("large_n_radix_payload_source_leaf_slots", 0)
+                ),
+                "runtime_large_n_target_block_source_leaf_padded_shape": tuple(
+                    runtime_diag.get("large_n_target_block_source_leaf_padded_shape", ())
+                ),
+                "runtime_strict_refresh_diag_mode": str(
+                    runtime_diag.get("strict_refresh_diag_mode", "full")
+                ),
+                "runtime_strict_refresh_diag_tree_active": bool(
+                    runtime_diag.get("strict_refresh_diag_tree_active", True)
+                ),
+                "runtime_strict_refresh_diag_upward_active": bool(
+                    runtime_diag.get("strict_refresh_diag_upward_active", True)
+                ),
+                "runtime_strict_refresh_diag_downward_active": bool(
+                    runtime_diag.get("strict_refresh_diag_downward_active", True)
+                ),
+                "runtime_strict_refresh_diag_eval_active": bool(
+                    runtime_diag.get("strict_refresh_diag_eval_active", True)
+                ),
+                "runtime_strict_refresh_detail_diag_mode": str(
+                    runtime_diag.get("strict_refresh_detail_diag_mode", "full")
+                ),
+                "runtime_static_radix_reuse_structures": bool(
+                    runtime_diag.get("static_radix_reuse_structures", False)
+                ),
+                "runtime_static_radix_upward_batched": bool(
+                    runtime_diag.get("static_radix_upward_batched", False)
+                ),
+                "runtime_static_radix_downward_batched": bool(
+                    runtime_diag.get("static_radix_downward_batched", False)
+                ),
+                "runtime_static_radix_compact_pair_reuse_hits": int(
+                    runtime_diag.get("static_radix_compact_pair_reuse_hits", 0)
+                ),
+                "runtime_static_radix_compact_pair_reuse_misses": int(
+                    runtime_diag.get("static_radix_compact_pair_reuse_misses", 0)
+                ),
+                "runtime_static_radix_tree_leaf_count": int(
+                    runtime_diag.get("static_radix_tree_leaf_count", 0)
+                ),
+                "runtime_static_radix_tree_node_count": int(
+                    runtime_diag.get("static_radix_tree_node_count", 0)
+                ),
+                "runtime_static_radix_far_pair_count": int(
+                    runtime_diag.get("static_radix_far_pair_count", 0)
+                ),
+                "runtime_static_radix_m2l_chunk_count": int(
+                    runtime_diag.get("static_radix_m2l_chunk_count", 0)
+                ),
+                "runtime_static_radix_l2l_edge_count": int(
+                    runtime_diag.get("static_radix_l2l_edge_count", 0)
+                ),
+                "runtime_strict_fused_fastlane_diag_enabled": bool(
+                    runtime_diag.get("strict_fused_fastlane_diag_enabled", False)
+                ),
+                "runtime_strict_fused_fastlane_attempts": int(
+                    runtime_diag.get("strict_fused_fastlane_attempts", 0)
+                ),
+                "runtime_strict_fused_fastlane_hits": int(
+                    runtime_diag.get("strict_fused_fastlane_hits", 0)
+                ),
+                "runtime_strict_fused_fastlane_misses": int(
+                    runtime_diag.get("strict_fused_fastlane_misses", 0)
+                ),
+                "runtime_strict_fused_fastlane_last_blockers": tuple(
+                    str(v)
+                    for v in runtime_diag.get("strict_fused_fastlane_last_blockers", tuple())
+                ),
+                "runtime_strict_fused_fastlane_block_counts": {
+                    str(k): int(v)
+                    for k, v in dict(
+                        runtime_diag.get("strict_fused_fastlane_block_counts", {})
+                    ).items()
+                },
                 "runtime_strict_profiled_max_pair_queue": int(
                     runtime_diag.get("strict_profiled_max_pair_queue", 0)
                 ),
@@ -1001,6 +1652,25 @@ def integrate_leapfrog_jaccpot_active(
                 "runtime_refresh_timing_calls": int(
                     runtime_diag.get("refresh_timing_calls", 0)
                 ),
+                "runtime_strict_unaccounted_seconds": float(
+                    max(
+                        0.0,
+                        float(strict_runner_wall_seconds)
+                        - strict_refresh_effective_seconds,
+                    )
+                ),
+                "runtime_strict_refresh_share_of_wall": float(
+                    (
+                        strict_refresh_effective_seconds
+                        / float(strict_runner_wall_seconds)
+                    )
+                    if float(strict_runner_wall_seconds) > 0.0
+                    else 0.0
+                ),
+                "core_scaffold_enabled": bool(use_core_scaffold),
+                "core_scaffold_exec_calls": int(core_scaffold_exec_calls),
+                "core_scaffold_prepare_calls": int(core_scaffold_prepare_calls),
+                "core_scaffold_refresh_calls": int(core_scaffold_refresh_calls),
             }
         )
         return out_arr
@@ -1027,7 +1697,9 @@ def integrate_leapfrog_jaccpot_active(
         fmm_tree_leaf_target=fmm_tree_leaf_target,
         fmm_fixed_order=fmm_fixed_order,
         leaf_size=leaf_size,
-        fmm_jit_tree=fmm_jit_tree,
+        # Adaptive diffrax RHS tracing currently cannot tolerate jaccpot's
+        # jitted tree-builder tracer leakage; force eager tree build here.
+        fmm_jit_tree=False,
         fmm_jit_traversal=fmm_jit_traversal,
         fmm_max_pair_queue=fmm_max_pair_queue,
         fmm_pair_process_block=fmm_pair_process_block,
@@ -1060,12 +1732,34 @@ def integrate_leapfrog_jaccpot_active(
 
     def _prepare_state(state_in: jnp.ndarray):
         with _temporary_large_n_environment(config, fmm_preset=fmm_preset):
-            return solver.prepare_state(
-                state_in[:, 0, :],
+            positions_in = state_in[:, 0, :]
+            prepared = solver.prepare_state(
+                positions_in,
                 mass_arr,
                 leaf_size=int(leaf_size),
                 max_order=int(max_order),
+                theta=float(fmm_theta),
+                fused_device_mode=True,
             )
+            if str(
+                os.environ.get(
+                    "JACCPOT_LARGE_N_RADIX_FAST_PAYLOAD_IN_FUSED",
+                    "1",
+                )
+            ).strip().lower() in {"1", "true", "yes", "on"}:
+                try:
+                    prepared = solver.refresh_prepared_state(
+                        prepared,
+                        positions_in,
+                        mass_arr,
+                        leaf_size=int(leaf_size),
+                        max_order=int(max_order),
+                        theta=float(fmm_theta),
+                        fused_device_mode=True,
+                    )
+                except TypeError:
+                    pass
+            return prepared
 
     def _prepare_or_refresh_state(
         state_in: jnp.ndarray,
@@ -1111,6 +1805,9 @@ def integrate_leapfrog_jaccpot_active(
                 # If signature drift occurs at runtime, re-resolve once.
                 refresh_call_mode_index = None
                 refresh_call_runner = None
+            except (NotImplementedError, RuntimeError, ValueError):
+                # Unsupported refresh path for this runtime/profile.
+                pass
 
         # Try several likely public API signatures while keeping behavior
         # backwards-compatible with older jaccpot builds.
@@ -1364,6 +2061,8 @@ def integrate_leapfrog_jaccpot_active(
                 return out
             except TypeError:
                 continue
+            except (NotImplementedError, RuntimeError, ValueError):
+                break
 
         refresh_prepare_fallbacks += 1
         full_prepare_calls += 1
@@ -1590,8 +2289,22 @@ def integrate_leapfrog_jaccpot_active(
         if not bool(return_history):
             # Tight strict lane: avoid generic per-segment profile/history
             # branching and keep host orchestration minimal.
+            strict_effective_add_external = bool(
+                add_external and not bool(strict_timing_disable_external)
+            )
+            if bool(strict_timing_external_only):
+                strict_effective_add_external = bool(add_external)
+            strict_timing_mode = (
+                "external_only"
+                if bool(strict_timing_external_only)
+                else (
+                    "jaccpot_self_only"
+                    if bool(strict_timing_disable_external)
+                    else "full"
+                )
+            )
             external_acc_fn = None
-            if add_external:
+            if strict_effective_add_external:
                 def _strict_external_acceleration(state_in: jnp.ndarray) -> jnp.ndarray:
                     return combined_external_acceleration_vmpa_switch(
                         state_in, config, params
@@ -1606,9 +2319,43 @@ def integrate_leapfrog_jaccpot_active(
                 except Exception:
                     pass
                 t0 = time.perf_counter()
-            try:
-                state_curr, _, hist_out = solver.strict_run_v2(
-                    state=state_curr,
+            perf_warmup_runs_i = max(0, int(perf_warmup_runs))
+            perf_measure_runs_i = max(1, int(perf_measure_runs))
+            perf_warmup_run_seconds = []
+            perf_measured_run_seconds = []
+            state_initial = state_curr
+            hist_out = None
+            prepared_initial = None
+            initial_self_acceleration = None
+            if not bool(return_history):
+                prepared_initial = _prepare_state(state_initial)
+                prepared_initial = jax.block_until_ready(prepared_initial)
+                strict_diag_mode = str(
+                    os.environ.get("JACCPOT_STRICT_REFRESH_DIAG_MODE", "full")
+                ).strip().lower()
+                strict_detail_mode = str(
+                    os.environ.get(
+                        "JACCPOT_STRICT_REFRESH_DETAIL_DIAG_MODE", "full"
+                    )
+                ).strip().lower()
+                eval_diag_mode = str(
+                    os.environ.get("JACCPOT_LARGE_N_EVAL_DIAG_MODE", "full")
+                ).strip().lower()
+                if (
+                    strict_diag_mode != "integrator_only"
+                    and strict_detail_mode == "full"
+                    and eval_diag_mode != "zero"
+                ):
+                    initial_self_acceleration = _eval_prepared(
+                        prepared_initial, active_indices=None
+                    )
+                    initial_self_acceleration = jax.block_until_ready(
+                        initial_self_acceleration
+                    )
+
+            def _run_strict_once(state_in: jnp.ndarray, prepared_state_in):
+                strict_kwargs = dict(
+                    state=state_in,
                     masses=mass_arr,
                     dt=float(dt_val),
                     num_steps=int(num_steps),
@@ -1616,15 +2363,88 @@ def integrate_leapfrog_jaccpot_active(
                     leaf_size=int(leaf_size),
                     max_order=int(max_order),
                     theta=float(fmm_theta),
-                    prepared_state=None,
+                    prepared_state=prepared_state_in,
+                    initial_self_acceleration=initial_self_acceleration,
                     jit_traversal=(
                         True if fmm_jit_traversal is None else bool(fmm_jit_traversal)
                     ),
-                    add_external=bool(add_external),
+                    add_external=bool(strict_effective_add_external),
                     external_acceleration_fn=external_acc_fn,
                     rematerialize_between_refresh=bool(rematerialize_between_refresh),
                     return_history=bool(return_history),
                 )
+                try:
+                    strict_kwargs["return_prepared_state"] = bool(return_history)
+                    return solver.strict_run_v2(**strict_kwargs)
+                except TypeError as exc:
+                    if "return_prepared_state" not in str(exc):
+                        raise
+                    strict_kwargs.pop("return_prepared_state", None)
+                    return solver.strict_run_v2(**strict_kwargs)
+
+            def _run_external_only_once(state_in: jnp.ndarray):
+                zero_self_acc = jnp.zeros_like(state_in[:, 0, :])
+                state_out, _ = _run_full_segment_scan(
+                    state_in,
+                    zero_self_acc,
+                    dt_arr,
+                    steps=int(num_steps),
+                    add_external=bool(add_external),
+                    config=config,
+                    params=params,
+                )
+                return state_out
+
+            try:
+                for idx in range(perf_warmup_runs_i):
+                    if strict_perf_progress:
+                        print(
+                            f"[odisseo.strict] warmup {idx + 1}/{perf_warmup_runs_i} start",
+                            flush=True,
+                        )
+                    tw = time.perf_counter()
+                    if bool(strict_timing_external_only):
+                        warm_state = _run_external_only_once(state_initial)
+                    else:
+                        warm_state, _, _ = _run_strict_once(
+                            state_initial,
+                            prepared_initial,
+                        )
+                    _ = jax.block_until_ready(warm_state)
+                    elapsed_warm = float(time.perf_counter() - tw)
+                    perf_warmup_run_seconds.append(elapsed_warm)
+                    if strict_perf_progress:
+                        print(
+                            f"[odisseo.strict] warmup {idx + 1}/{perf_warmup_runs_i} seconds={elapsed_warm:.6g}",
+                            flush=True,
+                        )
+                for idx in range(perf_measure_runs_i):
+                    if strict_perf_progress:
+                        print(
+                            f"[odisseo.strict] measure {idx + 1}/{perf_measure_runs_i} start",
+                            flush=True,
+                        )
+                    tm = time.perf_counter()
+                    if bool(strict_timing_external_only):
+                        state_curr = _run_external_only_once(state_initial)
+                        hist_out = None
+                    else:
+                        state_curr, _, hist_out = _run_strict_once(
+                            state_initial,
+                            prepared_initial,
+                        )
+                    _ = jax.block_until_ready(
+                        hist_out
+                        if bool(return_history) and hist_out is not None
+                        else state_curr
+                    )
+                    elapsed_measure = float(time.perf_counter() - tm)
+                    perf_measured_run_seconds.append(elapsed_measure)
+                    if strict_perf_progress:
+                        print(
+                            f"[odisseo.strict] measure {idx + 1}/{perf_measure_runs_i} seconds={elapsed_measure:.6g}",
+                            flush=True,
+                        )
             finally:
                 if profile:
                     try:
@@ -1632,13 +2452,61 @@ def integrate_leapfrog_jaccpot_active(
                     except Exception:
                         pass
             if profile:
-                if profile_sync:
-                    _ = jax.block_until_ready(state_curr)
-                update_seconds += time.perf_counter() - t0
+                strict_runner_wall_seconds = time.perf_counter() - t0
+                update_seconds += strict_runner_wall_seconds
                 update_calls += 1
             if bool(return_history) and hist_out is not None:
                 return _finalize(hist_out)
             return _finalize(state_curr)
+
+    if (
+        bool(use_core_scaffold)
+        and active_indices_fn is None
+        and active_indices_schedule is None
+        and not bool(return_history)
+        and not bool(add_external)
+        and not bool(refresh_after_position_update)
+    ):
+        core_kernel, _core_meta = build_compiled_jaccpot_core_kernel(
+            config,
+            params,
+            mode="fixed_step_update",
+            dt=float(dt_val),
+            leaf_size=int(leaf_size),
+            max_order=int(max_order),
+            fmm_preset=fmm_preset,
+            fmm_basis=fmm_basis,
+            fmm_theta=fmm_theta,
+            fmm_runtime_path=fmm_runtime_path,
+            fmm_working_dtype=fmm_working_dtype,
+            fmm_mac_type=fmm_mac_type,
+            fmm_farfield_mode=fmm_farfield_mode,
+            fmm_m2l_chunk_size=fmm_m2l_chunk_size,
+            fmm_nearfield_mode=fmm_nearfield_mode,
+            fmm_nearfield_edge_chunk_size=fmm_nearfield_edge_chunk_size,
+            fmm_tree_build_mode=fmm_tree_build_mode,
+            fmm_tree_leaf_target=fmm_tree_leaf_target,
+            fmm_fixed_order=fmm_fixed_order,
+            fmm_jit_tree=fmm_jit_tree,
+            fmm_jit_traversal=fmm_jit_traversal,
+            fmm_max_pair_queue=fmm_max_pair_queue,
+            fmm_pair_process_block=fmm_pair_process_block,
+            fmm_max_interactions_per_node=fmm_max_interactions_per_node,
+            fmm_max_neighbors_per_leaf=fmm_max_neighbors_per_leaf,
+            fmm_prepare_stage_memory_split_enabled=(
+                fmm_prepare_stage_memory_split_enabled
+            ),
+            fmm_upward_leaf_batch_size=fmm_upward_leaf_batch_size,
+        )
+        prepared_core = None
+        for _ in range(int(num_steps)):
+            out = core_kernel(state_curr, mass_arr, prepared_core)
+            state_curr = jnp.asarray(out.next_state)
+            prepared_core = out.prepared_state
+            core_scaffold_exec_calls += int(getattr(out, "execute_count", 1))
+            core_scaffold_prepare_calls += int(getattr(out, "prepare_count", 0))
+            core_scaffold_refresh_calls += int(getattr(out, "refresh_count", 0))
+        return _finalize(state_curr)
 
     if active_indices_schedule is not None:
         active_indices_schedule = jnp.asarray(active_indices_schedule, dtype=jnp.int32)
@@ -1986,6 +2854,461 @@ def integrate_leapfrog_jaccpot_active(
 
     out = jnp.stack(history, axis=0) if return_history else state_curr
     return _finalize(out)
+
+
+def integrate_diffrax_jaccpot_active(
+    state: jnp.ndarray,
+    mass: jnp.ndarray,
+    config: SimulationConfig,
+    params: SimulationParams,
+    *,
+    num_steps: int,
+    dt: Optional[float] = None,
+    active_indices_fn: Optional[
+        Callable[[int, jnp.ndarray, jnp.ndarray], jnp.ndarray]
+    ] = None,
+    active_indices_schedule: Optional[jnp.ndarray] = None,
+    active_mask_schedule: Optional[jnp.ndarray] = None,
+    refresh_every: int = 1,
+    refresh_after_position_update: bool = False,
+    leaf_size: int = 16,
+    max_order: int = 4,
+    fmm_preset: str = "fast",
+    fmm_basis: str = "solidfmm",
+    fmm_theta: float = 0.6,
+    fmm_runtime_path: str = "auto",
+    fmm_working_dtype=None,
+    fmm_mac_type: str = "dehnen",
+    fmm_farfield_mode: str = "auto",
+    fmm_m2l_chunk_size: Optional[int] = None,
+    fmm_nearfield_mode: str = "auto",
+    fmm_nearfield_edge_chunk_size: int = 256,
+    fmm_tree_build_mode: str = "lbvh",
+    fmm_tree_leaf_target: int = 32,
+    fmm_fixed_order: Optional[int] = None,
+    fmm_jit_tree: Optional[bool] = None,
+    fmm_jit_traversal: Optional[bool] = True,
+    fmm_max_pair_queue: Optional[int] = None,
+    fmm_pair_process_block: Optional[int] = None,
+    fmm_max_interactions_per_node: Optional[int] = None,
+    fmm_max_neighbors_per_leaf: Optional[int] = None,
+    fmm_prepare_stage_memory_split_enabled: Optional[bool] = None,
+    fmm_upward_leaf_batch_size: Optional[int] = None,
+    enforce_static_shape_contract: bool = False,
+    static_shape_warmup_prepares: int = 0,
+    rematerialize_between_refresh: bool = True,
+    return_history: bool = False,
+    timing_stats: Optional[dict] = None,
+) -> jnp.ndarray:
+    """Adaptive diffrax integration with FMM acceleration RHS."""
+    del refresh_every, rematerialize_between_refresh
+    if int(num_steps) <= 0:
+        raise ValueError("num_steps must be positive")
+    if active_indices_fn is not None or active_indices_schedule is not None or active_mask_schedule is not None:
+        raise NotImplementedError(
+            "Adaptive FMM currently supports full-particle updates only (no active-index schedules)."
+        )
+    if bool(refresh_after_position_update):
+        raise NotImplementedError("Adaptive FMM does not support refresh_after_position_update=True.")
+    if bool(enforce_static_shape_contract):
+        raise NotImplementedError("Adaptive FMM does not yet support enforce_static_shape_contract=True.")
+    if int(static_shape_warmup_prepares) > 0:
+        raise NotImplementedError("Adaptive FMM does not yet support static_shape_warmup_prepares>0.")
+
+    state_arr = jnp.asarray(state)
+    mass_arr = jnp.asarray(mass)
+    add_external = len(config.external_accelerations) > 0
+    dt_val = float(params.t_end) / float(num_steps) if dt is None else float(dt)
+
+    solver = _build_fmm_solver(
+        working_dtype=(
+            state_arr.dtype if fmm_working_dtype is None else jnp.dtype(fmm_working_dtype)
+        ),
+        config=config,
+        params=params,
+        fmm_preset=fmm_preset,
+        fmm_basis=fmm_basis,
+        fmm_theta=fmm_theta,
+        fmm_runtime_path=fmm_runtime_path,
+        fmm_mac_type=fmm_mac_type,
+        fmm_farfield_mode=fmm_farfield_mode,
+        fmm_m2l_chunk_size=fmm_m2l_chunk_size,
+        fmm_nearfield_mode=fmm_nearfield_mode,
+        fmm_nearfield_edge_chunk_size=fmm_nearfield_edge_chunk_size,
+        fmm_tree_build_mode=fmm_tree_build_mode,
+        fmm_tree_leaf_target=fmm_tree_leaf_target,
+        fmm_fixed_order=fmm_fixed_order,
+        leaf_size=leaf_size,
+        # Adaptive RHS currently runs inside outer JAX transforms (diffrax/equinox);
+        # keep tree build off the jitted LBVH fast path until jaccpot runtime
+        # exposes a tracer-safe prepared/evaluate API.
+        fmm_jit_tree=False,
+        fmm_jit_traversal=fmm_jit_traversal,
+        fmm_max_pair_queue=fmm_max_pair_queue,
+        fmm_pair_process_block=fmm_pair_process_block,
+        fmm_max_interactions_per_node=fmm_max_interactions_per_node,
+        fmm_max_neighbors_per_leaf=fmm_max_neighbors_per_leaf,
+        fmm_prepare_stage_memory_split_enabled=fmm_prepare_stage_memory_split_enabled,
+        fmm_upward_leaf_batch_size=fmm_upward_leaf_batch_size,
+    )
+    use_core_scaffold = (
+        os.environ.get("ODISSEO_FMM_USE_CORE_KERNEL_SCAFFOLD", "0").strip() == "1"
+    )
+    allow_tracer_prepared_cache = (
+        os.environ.get("ODISSEO_FMM_ALLOW_TRACER_PREPARED_CACHE", "0")
+        .strip()
+        .lower()
+        in {"1", "true", "yes", "on"}
+    )
+    adaptive_prepared_cache_mode = str(
+        os.environ.get("ODISSEO_FMM_ADAPTIVE_PREPARED_CACHE_MODE", "none")
+    ).strip().lower()
+    if adaptive_prepared_cache_mode not in {"none", "python"}:
+        raise ValueError(
+            "ODISSEO_FMM_ADAPTIVE_PREPARED_CACHE_MODE must be one of {'none', 'python'}"
+        )
+    adaptive_python_prepared_cache = adaptive_prepared_cache_mode == "python"
+    core_kernel = None
+    adaptive_refresh_rhs_calls = max(
+        1,
+        int(getattr(config, "fmm_adaptive_refresh_rhs_calls", 1)),
+    )
+    adaptive_refresh_displacement_threshold = getattr(
+        config,
+        "fmm_adaptive_refresh_displacement_threshold",
+        None,
+    )
+    if adaptive_refresh_displacement_threshold is not None:
+        adaptive_refresh_displacement_threshold = float(
+            adaptive_refresh_displacement_threshold
+        )
+    if use_core_scaffold:
+        core_kernel, _ = build_compiled_jaccpot_core_kernel(
+            config,
+            params,
+            mode="rhs_only",
+            leaf_size=leaf_size,
+            max_order=max_order,
+            fmm_preset=fmm_preset,
+            fmm_basis=fmm_basis,
+            fmm_theta=fmm_theta,
+            fmm_runtime_path=fmm_runtime_path,
+            fmm_working_dtype=fmm_working_dtype,
+            fmm_mac_type=fmm_mac_type,
+            fmm_farfield_mode=fmm_farfield_mode,
+            fmm_m2l_chunk_size=fmm_m2l_chunk_size,
+            fmm_nearfield_mode=fmm_nearfield_mode,
+            fmm_nearfield_edge_chunk_size=fmm_nearfield_edge_chunk_size,
+            fmm_tree_build_mode=fmm_tree_build_mode,
+            fmm_tree_leaf_target=fmm_tree_leaf_target,
+            fmm_fixed_order=fmm_fixed_order,
+            fmm_jit_tree=fmm_jit_tree,
+            fmm_jit_traversal=fmm_jit_traversal,
+            fmm_max_pair_queue=fmm_max_pair_queue,
+            fmm_pair_process_block=fmm_pair_process_block,
+            fmm_max_interactions_per_node=fmm_max_interactions_per_node,
+            fmm_max_neighbors_per_leaf=fmm_max_neighbors_per_leaf,
+            fmm_prepare_stage_memory_split_enabled=(
+                fmm_prepare_stage_memory_split_enabled
+            ),
+            fmm_upward_leaf_batch_size=fmm_upward_leaf_batch_size,
+        )
+
+    def _pick_diffrax_solver():
+        if int(config.diffrax_solver) == DOPRI5:
+            return diffrax.Dopri5()
+        if int(config.diffrax_solver) == TSIT5:
+            return diffrax.Tsit5()
+        if int(config.diffrax_solver) == DOPRI8:
+            return diffrax.Dopri8()
+        if int(config.diffrax_solver) == SEMIIMPLICITEULER:
+            return diffrax.SemiImplicitEuler()
+        if int(config.diffrax_solver) == REVERSIBLEHEUN:
+            return diffrax.ReversibleHeun()
+        if int(config.diffrax_solver) == LEAPFROGMIDPOINT:
+            return diffrax.LeapfrogMidpoint()
+        return diffrax.Dopri5()
+
+    # Keep RHS side-effect free under diffrax/equinox tracing.
+    # Prepared-state refresh caching can be reintroduced once jaccpot exposes
+    # a fully functional tracer-safe runtime-state API.
+    cache: dict[str, Any] = {
+        "full_prepare_calls": 0,
+        "refresh_prepare_calls": 0,
+        "core_exec_calls": 0,
+        "core_prepare_calls": 0,
+        "core_refresh_calls": 0,
+    }
+    adaptive_core_state = AdaptiveCoreRuntimeState()
+
+    def _prepare_full(y_state: jnp.ndarray):
+        with _temporary_large_n_environment(config, fmm_preset=fmm_preset):
+            try:
+                return solver.prepare_state(
+                    y_state[:, 0, :],
+                    mass_arr,
+                    leaf_size=int(leaf_size),
+                    max_order=int(max_order),
+                    cache_policy="stateless",
+                )
+            except TypeError:
+                return solver.prepare_state(
+                    y_state[:, 0, :],
+                    mass_arr,
+                    leaf_size=int(leaf_size),
+                    max_order=int(max_order),
+                )
+
+    def _rhs(t, y, args):
+        del t, args
+        adaptive_core_state.rhs_calls += 1
+        if core_kernel is not None:
+            prepared_in = adaptive_core_state.prepared_input(
+                enabled=adaptive_python_prepared_cache
+            )
+            force_refresh_prepared = adaptive_core_state.should_refresh(
+                enabled=adaptive_python_prepared_cache,
+                prepared_in=prepared_in,
+                y_state=y,
+                refresh_rhs_calls=adaptive_refresh_rhs_calls,
+                displacement_threshold=adaptive_refresh_displacement_threshold,
+            )
+            out = core_kernel(
+                y,
+                mass_arr,
+                prepared_in,
+                refresh_prepared=bool(force_refresh_prepared),
+            )
+            acc_self = out.acceleration
+            cache["full_prepare_calls"] += int(out.prepare_count)
+            cache["refresh_prepare_calls"] += int(out.refresh_count)
+            cache["core_exec_calls"] += int(getattr(out, "execute_count", 1))
+            cache["core_prepare_calls"] += int(getattr(out, "prepare_count", 0))
+            cache["core_refresh_calls"] += int(getattr(out, "refresh_count", 0))
+            prepared_out = getattr(out, "prepared_state", None)
+            adaptive_core_state.update_prepared_state(
+                enabled=adaptive_python_prepared_cache,
+                prepared_out=prepared_out,
+                allow_tracer_prepared_cache=allow_tracer_prepared_cache,
+            )
+            if int(getattr(out, "prepare_count", 0)) > 0 or int(
+                getattr(out, "refresh_count", 0)
+            ) > 0:
+                adaptive_core_state.mark_refreshed(y_state=y)
+        else:
+            cache["full_prepare_calls"] += 1
+            prepared = _prepare_full(y)
+            acc_self = solver.evaluate_prepared_state(
+                prepared,
+                target_indices=None,
+                return_potential=False,
+            )
+        if add_external:
+            acc = acc_self + combined_external_acceleration_vmpa_switch(y, config, params)
+        else:
+            acc = acc_self
+        return jnp.stack((y[:, 1, :], acc), axis=1)
+
+    t0 = 0.0
+    t1 = float(params.t_end)
+    dt0 = float(dt_val)
+    rtol = float(getattr(config, "fmm_adaptive_rtol", 1e-3))
+    atol = float(getattr(config, "fmm_adaptive_atol", 1e-6))
+    min_dt = getattr(config, "fmm_adaptive_min_dt", None)
+    max_dt = getattr(config, "fmm_adaptive_max_dt", None)
+    controller = diffrax.PIDController(
+        rtol=rtol,
+        atol=atol,
+        dtmin=(None if min_dt is None else float(min_dt)),
+        dtmax=(None if max_dt is None else float(max_dt)),
+    )
+    saveat = diffrax.SaveAt(
+        ts=(
+            jnp.linspace(t0, t1, int(config.num_timesteps), endpoint=True)
+            if bool(return_history)
+            else None
+        ),
+        t1=(not bool(return_history)),
+        steps=False,
+        dense=bool(getattr(config, "fmm_adaptive_use_dense_output", False)),
+    )
+    t_start = time.perf_counter()
+    try:
+        sol = diffrax.diffeqsolve(
+            terms=diffrax.ODETerm(_rhs),
+            solver=_pick_diffrax_solver(),
+            t0=t0,
+            t1=t1,
+            dt0=dt0,
+            y0=state_arr,
+            saveat=saveat,
+            stepsize_controller=controller,
+            max_steps=100_000,
+        )
+    except UnexpectedTracerError as exc:
+        raise NotImplementedError(
+            "Adaptive diffrax FMM hit a jaccpot tracer-leak boundary under JIT. "
+            "A pure-JAX prepared/evaluate runtime state API is required in jaccpot "
+            "before single-giant-jit adaptive integration can be enabled."
+        ) from exc
+    elapsed = time.perf_counter() - t_start
+    if timing_stats is not None:
+        runtime_diag = {}
+        get_diag = getattr(solver, "get_runtime_diagnostics", None)
+        if callable(get_diag):
+            try:
+                runtime_diag = dict(get_diag())
+            except Exception:
+                runtime_diag = {}
+        stats = dict(getattr(sol, "stats", {}) or {})
+        accepted = int(stats.get("num_accepted_steps", 0))
+        rejected = int(stats.get("num_rejected_steps", 0))
+        step_attempts = int(accepted + rejected)
+
+        def _normalize_stats_value(value: Any):
+            if isinstance(value, (bool, int, float, str)) or value is None:
+                return value
+            try:
+                return float(value)
+            except Exception:
+                return repr(value)
+
+        raw_stats_normalized = {
+            str(k): _normalize_stats_value(v) for k, v in stats.items()
+        }
+
+        timing_stats.clear()
+        timing_stats.update(
+            {
+                "integration_mode": "adaptive_diffrax_fmm",
+                "adaptive_seconds": float(elapsed),
+                "adaptive_num_accepted_steps": accepted,
+                "adaptive_num_rejected_steps": rejected,
+                "adaptive_total_steps": step_attempts,
+                "adaptive_step_attempts_estimate": step_attempts,
+                "adaptive_rhs_evals_estimate": step_attempts,
+                "adaptive_rhs_evals_estimate_deprecated": int(
+                    stats.get("num_steps", step_attempts)
+                ),
+                "adaptive_diffrax_stats_raw": raw_stats_normalized,
+                "adaptive_rejected_step_fraction": (
+                    float(rejected) / float(step_attempts)
+                    if step_attempts > 0
+                    else 0.0
+                ),
+                "adaptive_tracing_side_effect_counters_reliable": False,
+                "adaptive_refresh_hits": int(cache["full_prepare_calls"]),
+                "adaptive_refresh_misses": 0,
+                "adaptive_refresh_rhs_calls": 1,
+                "adaptive_full_prepare_calls": int(cache["full_prepare_calls"]),
+                "adaptive_refresh_prepare_calls": int(
+                    cache["refresh_prepare_calls"]
+                ),
+                "adaptive_tracing_prepare_counter_full": int(
+                    cache["full_prepare_calls"]
+                ),
+                "adaptive_tracing_prepare_counter_refresh": int(
+                    cache["refresh_prepare_calls"]
+                ),
+                "adaptive_profile_key_hits": int(accepted),
+                "adaptive_profile_key_misses": 0,
+                "adaptive_fail_fast_reject_count": 0,
+                "adaptive_rtol": float(rtol),
+                "adaptive_atol": float(atol),
+                "adaptive_dt0": float(dt0),
+                "adaptive_use_core_kernel_scaffold": bool(use_core_scaffold),
+                "adaptive_core_scaffold_exec_calls": int(
+                    cache["core_exec_calls"]
+                ),
+                "adaptive_core_scaffold_prepare_calls": int(
+                    cache["core_prepare_calls"]
+                ),
+                "adaptive_core_scaffold_refresh_calls": int(
+                    cache["core_refresh_calls"]
+                ),
+                "adaptive_core_prepared_drop_tracer": int(
+                    adaptive_core_state.prepared_drop_tracer
+                ),
+                "adaptive_allow_tracer_prepared_cache": bool(
+                    allow_tracer_prepared_cache
+                ),
+                "adaptive_prepared_cache_mode": str(adaptive_prepared_cache_mode),
+                "adaptive_python_prepared_cache_enabled": bool(
+                    adaptive_python_prepared_cache
+                ),
+                "adaptive_refresh_rhs_calls_target": int(
+                    adaptive_refresh_rhs_calls
+                ),
+                "adaptive_refresh_displacement_threshold": (
+                    None
+                    if adaptive_refresh_displacement_threshold is None
+                    else float(adaptive_refresh_displacement_threshold)
+                ),
+                "adaptive_core_refresh_cadence_skips_rhs_calls": int(
+                    adaptive_core_state.refresh_cadence_skips_rhs_calls
+                ),
+                "adaptive_core_refresh_cadence_skips_displacement": int(
+                    adaptive_core_state.refresh_cadence_skips_displacement
+                ),
+                "adaptive_core_refresh_cadence_last_displacement": float(
+                    adaptive_core_state.refresh_cadence_last_displacement
+                ),
+                "adaptive_core_prepared_non_large_n_seen": int(
+                    adaptive_core_state.prepared_non_large_n_seen
+                ),
+                "adaptive_runtime_refresh_total_seconds": float(
+                    runtime_diag.get("refresh_total_seconds", 0.0)
+                ),
+                "adaptive_runtime_refresh_input_seconds": float(
+                    runtime_diag.get("refresh_input_seconds", 0.0)
+                ),
+                "adaptive_runtime_refresh_tree_upward_seconds": float(
+                    runtime_diag.get("refresh_tree_upward_seconds", 0.0)
+                ),
+                "adaptive_runtime_refresh_nearfield_seconds": float(
+                    runtime_diag.get("refresh_nearfield_seconds", 0.0)
+                ),
+                "adaptive_runtime_refresh_compile_or_sync_suspect_seconds": float(
+                    runtime_diag.get("refresh_compile_or_sync_suspect_seconds", 0.0)
+                ),
+                "adaptive_runtime_refresh_timing_calls": int(
+                    runtime_diag.get("refresh_timing_calls", 0)
+                ),
+                "adaptive_runtime_strict_runner_compile_count": int(
+                    runtime_diag.get("strict_runner_compile_count", 0)
+                ),
+                "adaptive_runtime_strict_runner_execute_count": int(
+                    runtime_diag.get("strict_runner_execute_count", 0)
+                ),
+                "adaptive_runtime_strict_v2_compile_count": int(
+                    runtime_diag.get("strict_v2_compile_count", 0)
+                ),
+                "adaptive_runtime_strict_v2_execute_count": int(
+                    runtime_diag.get("strict_v2_execute_count", 0)
+                ),
+            }
+        )
+        try:
+            ts = jnp.asarray(sol.ts)
+            if ts.ndim == 1 and ts.size > 1:
+                dt_hist = jnp.diff(ts)
+                timing_stats.update(
+                    {
+                        "adaptive_dt_mean": float(jnp.nanmean(dt_hist)),
+                        "adaptive_dt_median": float(jnp.nanmedian(dt_hist)),
+                        "adaptive_dt_min": float(jnp.nanmin(dt_hist)),
+                        "adaptive_dt_max": float(jnp.nanmax(dt_hist)),
+                    }
+                )
+        except Exception:
+            pass
+
+    ys = jnp.asarray(sol.ys)
+    if bool(return_history):
+        return ys
+    if ys.ndim >= 1:
+        return jnp.asarray(ys[-1])
+    return ys
 
 
 def evaluate_acceleration_jaccpot(

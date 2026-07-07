@@ -2,9 +2,10 @@
 
 ## Scope
 
-Cross-repo checkpoint after reading:
+Cross-repo checkpoint for the static-radix production lane.
+For current handoff navigation, see:
 
-- `docs/STATIC_RADIX_TARGET_BLOCK_OVERFLOW_HANDOFF_2026-05-06.md`
+- `docs/STATIC_RADIX_HANDOFF_INDEX_2026-05-19.md`
 
 and scanning current `Odisseo`, `jaccpot`, and `yggdrax` branches.
 

@@ -1,3 +1,10 @@
+# ARCHIVED DOCUMENT
+
+This document is retained for historical context and is not the current source of truth.
+
+Current navigation:
+- `docs/STATIC_RADIX_HANDOFF_INDEX_2026-05-19.md`
+
 # Static-Radix Galaxy-Disk Memory Fit Results - 2026-05-06
 
 ## Summary

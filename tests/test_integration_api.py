@@ -128,10 +128,18 @@ def test_integrate_auto_selects_large_n_gpu_profile(monkeypatch):
 
 
 def test_integrate_fmm_requires_fixed_timestep():
-    from odisseo.integration_api import integrate
+    from odisseo import integration_api as api
 
     state = jnp.zeros((4, 2, 3), dtype=jnp.float32)
     mass = jnp.ones((4,), dtype=jnp.float32)
+    calls = {"adaptive": 0}
+
+    def fake_adaptive(*args, **kwargs):
+        calls["adaptive"] += 1
+        assert kwargs["num_steps"] == 4
+        return jnp.zeros_like(state)
+
+    api.integrate_diffrax_jaccpot_active = fake_adaptive
     cfg = SimulationConfig(
         N_particles=4,
         acceleration_scheme=FMM_ACC,
@@ -139,10 +147,6 @@ def test_integrate_fmm_requires_fixed_timestep():
         num_timesteps=4,
     )
     params = SimulationParams(G=1.0, t_end=1.0)
-
-    try:
-        integrate(state, mass, cfg, params)
-    except NotImplementedError:
-        pass
-    else:
-        raise AssertionError("Expected NotImplementedError for fixed_timestep=False")
+    out = api.integrate(state, mass, cfg, params)
+    assert out.shape == state.shape
+    assert calls["adaptive"] == 1
