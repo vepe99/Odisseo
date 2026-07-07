@@ -114,12 +114,45 @@ Its defensible advantage is the in-integrator strict fused static-shape
 zero-recompile full step, which jaxfmm's functional `eval_potential` does not
 itself provide.
 
+## GPU profiling + near-field optimization attempt (2026-07-07)
+
+Profiled the production device-resident `strict_run_v2` scan on RTX 2080 Ti
+(sm_75) via `jaccpot/bench/profile_fused_gpu_util.py` (nvidia-smi dmon) and nsys:
+
+- **The GPU is NOT idle-bound.** During execution SM occupancy is ~97-98%
+  (dmon); the fused lane keeps the GPU busy. There is a one-time ~29s compile per
+  `num_steps` profile (GPU idle then; amortized in production).
+- **The near-field is fragmented + inefficient.** nsys shows ~2,500 tiny
+  (~1-2us) fused kernels per step (`input_dynamic_slice_reduce`,
+  `loop_dynamic_slice`, `loop_add`) vs a handful of efficient GEMMs for the
+  far-field. The near-field runs at ~7% of FLOP peak: memory-bound, because XLA
+  materializes the WxW distance matrix to HBM.
+
+**Pure-JAX near-field restructure: no robust win.** `bench_fused_eval_vs_jaxfmm.py`
+and a formulation sweep (vectorized vs componentwise dense-block, batch 512-8192,
+all parity ~2e-7 vs the current near-field) cap at ~0.24s -- the same as the
+current ~0.267s within measurement error (the small apparent gain comes from
+pre-gathering positions outside the timed region). Pure JAX cannot escape the
+HBM-materialization ceiling; consistent with the archived "unroll knobs
+exhausted" note.
+
+**Pallas is blocked on this hardware.** A SRAM-tiling Pallas P2P kernel is the
+only lever that could reach jaxfmm-level near-field efficiency, but all available
+GPUs are RTX 2080 Ti = compute capability **7.5 (sm_75)**, and even a minimal
+Pallas/Triton kernel fails there:
+`'nvvm.cp.async.bulk.wait_group' op is not supported on sm_75`. jaccpot's own
+`pallas_nearfield_tile_pair_supported()` already guards `>= 8.0`. The kernel can
+be written but not run/validated/benchmarked without an Ampere+ (sm_80+) GPU.
+
 ## Next steps (deferred)
 
-1. **Pallas near-field P2P kernel** — the only remaining lever for the residual
-   ~2x eval gap; guarded/flagged with a pure-JAX fallback, parity-gated
-   (`tools/fused_payload_force_parity.py`), and kept only if it wins walltime
-   while preserving `fallback_count=0` and recompile-free.
+1. **Pallas near-field P2P kernel — requires Ampere+ (sm_80+) hardware.** On such
+   a GPU: extend `jaccpot/pallas/nearfield_tile_pair.py` into a full tiled
+   leaf-pair P2P (target tile in SRAM, stream neighbor source tiles, accumulate
+   in registers), flag-gated with the pure-JAX fallback, parity-gated
+   (`tools/fused_payload_force_parity.py`), kept only if it wins walltime while
+   preserving `fallback_count=0` and recompile-free. Expected upside: the
+   residual near-field gap to jaxfmm (~2x on potential; more on forces).
 2. Retire the deferred test debt above.
 
 ## Reproduce
