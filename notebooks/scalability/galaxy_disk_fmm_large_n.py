@@ -21,7 +21,6 @@ from odisseo.integration_api import integrate
 from odisseo.jaccpot_coupling import (
     _build_fmm_solver,
     _large_n_environment_overrides,
-    _run_full_segment_scan,
     _temporary_large_n_environment,
     integrate_diffrax_jaccpot_active,
     integrate_leapfrog_jaccpot_active,
@@ -47,9 +46,7 @@ jax.config.update("jax_enable_x64", True)
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument(
-        "--mode", choices=("perf", "render", "render_fused"), default="perf"
-    )
+    parser.add_argument("--mode", choices=("perf", "render"), default="perf")
     parser.add_argument("--n-particles", type=int, default=200_000)
     parser.add_argument("--num-steps", type=int, default=200)
     parser.add_argument("--t-end-gyr", type=float, default=2.0)
@@ -471,8 +468,7 @@ def parse_args() -> argparse.Namespace:
         help="Optional conservation gate for max center-of-mass drift.",
     )
 
-    # Render / snapshot controls.
-    parser.add_argument("--live", action="store_true", help="Play snapshots live after run.")
+    # Render controls (mode=render uses the fused callback path).
     parser.add_argument(
         "--movie-path",
         type=str,
@@ -485,20 +481,7 @@ def parse_args() -> argparse.Namespace:
         type=str,
         default="xy",
         choices=("xy", "xz", "yz"),
-        help="Projection used for live/movie rendering.",
-    )
-    parser.add_argument(
-        "--movie-projections",
-        type=str,
-        default=None,
-        help="Optional comma-separated projections to render from one run (e.g. xy,xz).",
-    )
-    parser.add_argument(
-        "--render-backend",
-        type=str,
-        default="density",
-        choices=("density", "scatter"),
-        help="Movie rendering backend. density streams raster frames with imageio.",
+        help="Projection used for movie rendering.",
     )
     parser.add_argument(
         "--render-resolution",
@@ -510,7 +493,7 @@ def parse_args() -> argparse.Namespace:
         "--render-stride",
         type=int,
         default=10,
-        help="mode=render_fused: emit one frame every N steps from inside the "
+        help="mode=render: emit one frame every N steps from inside the "
         "fused device-resident scan (via jax.debug.callback).",
     )
     parser.add_argument(
@@ -518,35 +501,6 @@ def parse_args() -> argparse.Namespace:
         type=str,
         default="magma",
         help="Matplotlib colormap used by the density renderer.",
-    )
-    parser.add_argument(
-        "--snapshot-stride",
-        type=int,
-        default=1,
-        help="Store every k-th integration step in render mode.",
-    )
-    parser.add_argument(
-        "--snapshot-chunk-steps",
-        type=int,
-        default=20,
-        help="Integrate this many steps per chunk in render mode.",
-    )
-    parser.add_argument(
-        "--snapshot-max-particles",
-        type=int,
-        default=50_000,
-        help="Max particles stored/rendered per snapshot (deterministic subsample).",
-    )
-    parser.add_argument(
-        "--save-snapshots",
-        action="store_true",
-        help="Include sampled snapshots in output NPZ.",
-    )
-    parser.add_argument(
-        "--snapshot-output",
-        type=str,
-        default=None,
-        help="Optional dedicated snapshot NPZ output path.",
     )
     return parser.parse_args()
 
@@ -882,145 +836,6 @@ def _write_initial_acceleration_report(
     return json_path
 
 
-def _projection_axes(projection: str) -> tuple[int, int, str, str]:
-    if projection == "xy":
-        return 0, 1, "x [code]", "y [code]"
-    if projection == "xz":
-        return 0, 2, "x [code]", "z [code]"
-    return 1, 2, "y [code]", "z [code]"
-
-
-def render_positions(
-    positions_frames: np.ndarray,
-    times: np.ndarray,
-    *,
-    projection: str,
-    live: bool,
-    movie_path: str | None,
-    movie_fps: int,
-    backend: str = "density",
-    resolution: int = 900,
-    cmap_name: str = "magma",
-) -> None:
-    """Render sampled snapshot positions live and/or save as movie."""
-    if not live and movie_path is None:
-        return
-
-    import matplotlib.pyplot as plt
-
-    n_frames = positions_frames.shape[0]
-    i0, i1, xlabel, ylabel = _projection_axes(projection)
-    x_all = positions_frames[:, :, i0]
-    y_all = positions_frames[:, :, i1]
-
-    finite_xy = np.concatenate(
-        (
-            x_all[np.isfinite(x_all)].ravel(),
-            y_all[np.isfinite(y_all)].ravel(),
-        )
-    )
-    extent = float(np.percentile(np.abs(finite_xy), 99.5)) if finite_xy.size else 1.0
-    extent = max(extent, 1e-6)
-
-    if str(backend).strip().lower() == "density" and movie_path is not None:
-        try:
-            import imageio.v2 as imageio
-        except Exception:
-            imageio = None
-
-        if imageio is not None:
-            movie_path_obj = pathlib.Path(movie_path)
-            movie_path_obj.parent.mkdir(parents=True, exist_ok=True)
-            fps = max(1, int(movie_fps))
-            res = max(64, int(resolution))
-            cmap = plt.get_cmap(str(cmap_name))
-            writer_kwargs = {"mode": "I", "fps": fps}
-            if movie_path_obj.suffix.lower() == ".gif":
-                writer_kwargs = {"mode": "I", "duration": 1.0 / float(fps), "loop": 0}
-
-            def _frame_rgb(frame: int) -> np.ndarray:
-                x_frame = x_all[frame]
-                y_frame = y_all[frame]
-                mask = np.isfinite(x_frame) & np.isfinite(y_frame)
-                hist, _, _ = np.histogram2d(
-                    y_frame[mask],
-                    x_frame[mask],
-                    bins=res,
-                    range=[[-extent, extent], [-extent, extent]],
-                )
-                image = np.log1p(hist)
-                nonzero = image[image > 0]
-                scale = (
-                    float(np.percentile(nonzero, 99.7))
-                    if nonzero.size
-                    else 1.0
-                )
-                image = np.clip(image / max(scale, 1e-6), 0.0, 1.0)
-                rgba = cmap(image)
-                return (np.asarray(rgba[:, :, :3]) * 255.0).astype(np.uint8)
-
-            with imageio.get_writer(str(movie_path_obj), **writer_kwargs) as writer:
-                for frame in range(n_frames):
-                    writer.append_data(_frame_rgb(frame))
-            print(f"Saved movie: {movie_path_obj}")
-
-            if live:
-                fig, ax = plt.subplots(figsize=(7, 7))
-                ax.imshow(_frame_rgb(0), origin="lower")
-                ax.set_axis_off()
-                plt.show()
-            return
-
-    from matplotlib import animation
-
-    fig, ax = plt.subplots(figsize=(7, 7))
-    ax.set_xlim(-extent, extent)
-    ax.set_ylim(-extent, extent)
-    ax.set_xlabel(xlabel)
-    ax.set_ylabel(ylabel)
-    ax.set_aspect("equal", "box")
-    ax.grid(alpha=0.2)
-
-    def _finite_offsets(frame: int) -> np.ndarray:
-        x_frame = x_all[frame]
-        y_frame = y_all[frame]
-        mask = np.isfinite(x_frame) & np.isfinite(y_frame)
-        return np.column_stack((x_frame[mask], y_frame[mask]))
-
-    scat = ax.scatter(*_finite_offsets(0).T, s=0.6, alpha=0.6, linewidths=0)
-    title = ax.set_title(f"Galaxy disk evolution: t={times[0]:.3f}")
-
-    def _update(frame: int):
-        scat.set_offsets(_finite_offsets(frame))
-        title.set_text(f"Galaxy disk evolution: t={times[frame]:.3f}")
-        return scat, title
-
-    ani = animation.FuncAnimation(
-        fig,
-        _update,
-        frames=n_frames,
-        interval=max(1, int(1000 / max(1, movie_fps))),
-        blit=False,
-        repeat=False,
-    )
-
-    if movie_path is not None:
-        movie_path_obj = pathlib.Path(movie_path)
-        movie_path_obj.parent.mkdir(parents=True, exist_ok=True)
-        suffix = movie_path_obj.suffix.lower()
-        if suffix == ".gif":
-            writer = animation.PillowWriter(fps=max(1, movie_fps))
-        else:
-            writer = animation.FFMpegWriter(fps=max(1, movie_fps), bitrate=1800)
-        ani.save(str(movie_path_obj), writer=writer)
-        print(f"Saved movie: {movie_path_obj}")
-
-    if live:
-        plt.show()
-    else:
-        plt.close(fig)
-
-
 def _resolve_fmm_profile(config: SimulationConfig) -> tuple[str, str, jnp.dtype]:
     on_gpu = str(jax.default_backend()).strip().lower() == "gpu"
     large_n = (
@@ -1176,7 +991,7 @@ def _run_perf_mode(
 _PROJECTION_AXES = {"xy": (0, 1), "xz": (0, 2), "yz": (1, 2)}
 
 
-def _run_render_fused_mode(
+def _run_render_mode(
     state0: jnp.ndarray,
     mass: jnp.ndarray,
     config: SimulationConfig,
@@ -1492,377 +1307,6 @@ def _write_conservation_report(
                 writer.writerow({"metric": str(k), "value": v})
 
     return json_path, csv_path
-
-
-def _run_render_mode(
-    state0: jnp.ndarray,
-    mass: jnp.ndarray,
-    config: SimulationConfig,
-    params: SimulationParams,
-    *,
-    snapshot_stride: int,
-    snapshot_chunk_steps: int,
-    snapshot_max_particles: int,
-    profile_breakdown: bool,
-) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, float, dict | None]:
-    """Persistent static-radix integration with efficient snapshot collection.
-
-    Returns
-    -------
-    final_state, sampled_positions, sampled_times, sample_indices, elapsed_seconds, timing_stats
-    """
-    if str(config.fmm_tree_build_mode).strip().lower() != "static_radix":
-        raise ValueError("render mode requires fmm_tree_build_mode='static_radix'")
-    if str(config.fmm_runtime_path).strip().lower() not in {"large_n", "auto"}:
-        raise ValueError("render mode requires the jaccpot large-N runtime path")
-
-    n = int(config.N_particles)
-    stride = max(1, int(snapshot_stride))
-    chunk_steps = max(1, int(snapshot_chunk_steps))
-    sample_cap = max(1, int(snapshot_max_particles))
-    step_particles = max(1, n // sample_cap)
-    sample_indices_np = np.arange(0, n, step_particles, dtype=np.int64)
-    sample_indices = jnp.asarray(sample_indices_np, dtype=jnp.int32)
-
-    fmm_preset, fmm_runtime_path, fmm_dtype = _resolve_fmm_profile(config)
-
-    if not bool(config.fixed_timestep):
-        # Adaptive fallback path: integrate full history and subsample snapshots.
-        timing_stats = {} if bool(profile_breakdown) else None
-        t0 = time.time()
-        hist = jax.block_until_ready(
-            integrate_diffrax_jaccpot_active(
-                state0,
-                mass,
-                config,
-                params,
-                num_steps=int(config.num_timesteps),
-                refresh_every=int(config.fmm_refresh_every),
-                leaf_size=int(config.fmm_leaf_size),
-                max_order=int(config.fmm_max_order),
-                fmm_preset=fmm_preset,
-                fmm_runtime_path=fmm_runtime_path,
-                fmm_working_dtype=fmm_dtype,
-                fmm_basis=str(config.fmm_basis),
-                fmm_theta=float(config.fmm_theta),
-                fmm_mac_type=str(config.fmm_mac_type),
-                fmm_farfield_mode=str(config.fmm_farfield_mode),
-                fmm_m2l_chunk_size=config.fmm_m2l_chunk_size,
-                fmm_nearfield_mode=str(config.fmm_nearfield_mode),
-                fmm_nearfield_edge_chunk_size=int(config.fmm_nearfield_edge_chunk_size),
-                fmm_tree_build_mode=str(config.fmm_tree_build_mode),
-                fmm_tree_leaf_target=int(config.fmm_tree_leaf_target),
-                fmm_fixed_order=config.fmm_fixed_order,
-                fmm_jit_tree=config.fmm_jit_tree,
-                fmm_jit_traversal=config.fmm_jit_traversal,
-                fmm_max_pair_queue=config.fmm_max_pair_queue,
-                fmm_pair_process_block=config.fmm_pair_process_block,
-                fmm_max_interactions_per_node=config.fmm_max_interactions_per_node,
-                fmm_max_neighbors_per_leaf=config.fmm_max_neighbors_per_leaf,
-                fmm_prepare_stage_memory_split_enabled=(
-                    config.fmm_prepare_stage_memory_split_enabled
-                ),
-                rematerialize_between_refresh=bool(config.fmm_rematerialize_between_refresh),
-                return_history=True,
-                timing_stats=timing_stats,
-            )
-        )
-        elapsed = time.time() - t0
-        hist_np = np.asarray(hist)
-        num_steps = int(config.num_timesteps)
-        t_end = float(params.t_end)
-        frames = [np.asarray(state0[sample_indices, 0, :], dtype=np.float32)]
-        frame_times = [0.0]
-        for i in range(hist_np.shape[0]):
-            global_step = i + 1
-            if (global_step % stride) == 0 or global_step == num_steps:
-                frames.append(np.asarray(hist_np[i, sample_indices_np, 0, :], dtype=np.float32))
-                frame_times.append((global_step / max(1, num_steps)) * t_end)
-        if timing_stats is None:
-            timing_stats = {}
-        timing_stats.update(
-            {
-                "integration_mode": "adaptive_diffrax_fmm",
-                "used_persistent_static_solver": False,
-                "num_steps": int(num_steps),
-                "refresh_every": int(config.fmm_refresh_every),
-                "snapshot_stride": int(stride),
-                "sampled_particles": int(sample_indices_np.shape[0]),
-                "total_seconds": float(elapsed),
-            }
-        )
-        return (
-            np.asarray(hist_np[-1]),
-            np.asarray(frames, dtype=np.float32),
-            np.asarray(frame_times, dtype=np.float64),
-            sample_indices_np,
-            float(elapsed),
-            timing_stats,
-        )
-
-    state_curr = jnp.asarray(state0)
-    mass_arr = jnp.asarray(mass)
-    frames = []
-    frame_times = []
-
-    # Include initial frame.
-    frames.append(np.asarray(state_curr[sample_indices, 0, :], dtype=np.float32))
-    frame_times.append(0.0)
-
-    timing_stats = {} if bool(profile_breakdown) else None
-    cumulative: dict[str, object] = {
-        "total_seconds": 0.0,
-        "prepare_seconds": 0.0,
-        "evaluate_seconds": 0.0,
-        "update_seconds": 0.0,
-        "prepare_calls": 0,
-        "evaluate_calls": 0,
-        "update_calls": 0,
-    }
-
-    solver = _build_fmm_solver(
-        working_dtype=jnp.dtype(fmm_dtype),
-        config=config,
-        params=params,
-        fmm_preset=fmm_preset,
-        fmm_basis=str(config.fmm_basis),
-        fmm_theta=float(config.fmm_theta),
-        fmm_runtime_path=fmm_runtime_path,
-        fmm_mac_type=str(config.fmm_mac_type),
-        fmm_farfield_mode=str(config.fmm_farfield_mode),
-        fmm_m2l_chunk_size=config.fmm_m2l_chunk_size,
-        fmm_nearfield_mode=str(config.fmm_nearfield_mode),
-        fmm_nearfield_edge_chunk_size=int(config.fmm_nearfield_edge_chunk_size),
-        fmm_tree_build_mode=str(config.fmm_tree_build_mode),
-        fmm_tree_leaf_target=int(config.fmm_tree_leaf_target),
-        fmm_fixed_order=config.fmm_fixed_order,
-        leaf_size=int(config.fmm_leaf_size),
-        fmm_jit_tree=config.fmm_jit_tree,
-        fmm_jit_traversal=config.fmm_jit_traversal,
-        fmm_max_pair_queue=config.fmm_max_pair_queue,
-        fmm_pair_process_block=config.fmm_pair_process_block,
-        fmm_max_interactions_per_node=config.fmm_max_interactions_per_node,
-        fmm_max_neighbors_per_leaf=config.fmm_max_neighbors_per_leaf,
-        fmm_prepare_stage_memory_split_enabled=(
-            config.fmm_prepare_stage_memory_split_enabled
-        ),
-        fmm_upward_leaf_batch_size=config.fmm_upward_leaf_batch_size,
-    )
-
-    def _prepare_state(state_in: jnp.ndarray):
-        with _temporary_large_n_environment(config, fmm_preset=fmm_preset):
-            return solver.prepare_state(
-                state_in[:, 0, :],
-                mass_arr,
-                leaf_size=int(config.fmm_leaf_size),
-                max_order=int(config.fmm_max_order),
-            )
-
-    def _refresh_state(prev_prepared_state, state_in: jnp.ndarray):
-        refresh_fn = getattr(solver, "refresh_prepared_state", None)
-        if not callable(refresh_fn):
-            raise RuntimeError("static-radix render mode requires refresh_prepared_state")
-        pos = state_in[:, 0, :]
-        attempts = [
-            (
-                (prev_prepared_state, pos, mass_arr),
-                {"leaf_size": int(config.fmm_leaf_size), "max_order": int(config.fmm_max_order)},
-            ),
-            (
-                (pos, mass_arr, prev_prepared_state),
-                {"leaf_size": int(config.fmm_leaf_size), "max_order": int(config.fmm_max_order)},
-            ),
-            (
-                (),
-                {
-                    "prepared_state": prev_prepared_state,
-                    "positions": pos,
-                    "masses": mass_arr,
-                    "leaf_size": int(config.fmm_leaf_size),
-                    "max_order": int(config.fmm_max_order),
-                },
-            ),
-            (
-                (),
-                {
-                    "previous_prepared_state": prev_prepared_state,
-                    "positions": pos,
-                    "masses": mass_arr,
-                    "leaf_size": int(config.fmm_leaf_size),
-                    "max_order": int(config.fmm_max_order),
-                },
-            ),
-            ((prev_prepared_state, pos, mass_arr), {}),
-            ((pos, mass_arr, prev_prepared_state), {}),
-        ]
-        for args, kwargs in attempts:
-            try:
-                with _temporary_large_n_environment(config, fmm_preset=fmm_preset):
-                    if kwargs:
-                        sig = inspect.signature(refresh_fn)
-                        params_sig = sig.parameters
-                        accepts_var_kw = any(
-                            p.kind == inspect.Parameter.VAR_KEYWORD
-                            for p in params_sig.values()
-                        )
-                        call_kwargs = (
-                            kwargs
-                            if accepts_var_kw
-                            else {k: v for k, v in kwargs.items() if k in params_sig}
-                        )
-                        return refresh_fn(*args, **call_kwargs)
-                    return refresh_fn(*args)
-            except TypeError:
-                continue
-            except (NotImplementedError, RuntimeError, ValueError):
-                break
-        raise RuntimeError("refresh_prepared_state signature was not recognized")
-
-    t0 = time.time()
-    num_steps = int(config.num_timesteps)
-    t_end = float(params.t_end)
-    dt_arr = jnp.asarray(float(params.t_end) / float(num_steps), dtype=state_curr.dtype)
-    add_external = len(config.external_accelerations) > 0
-
-    done = 0
-    prepared_state = None
-    while done < num_steps:
-        seg = min(max(1, int(config.fmm_refresh_every)), chunk_steps, num_steps - done)
-        prepare_t0 = time.perf_counter()
-        if prepared_state is None:
-            prepared_state = _prepare_state(state_curr)
-            cumulative["full_prepare_calls"] = int(cumulative.get("full_prepare_calls", 0)) + 1
-            last_prepare_path = "full"
-        else:
-            prepared_state = _refresh_state(prepared_state, state_curr)
-            cumulative["refresh_prepare_successes"] = int(
-                cumulative.get("refresh_prepare_successes", 0)
-            ) + 1
-            last_prepare_path = "refresh"
-        prepared_state = jax.block_until_ready(prepared_state)
-        cumulative["prepare_seconds"] = float(cumulative["prepare_seconds"]) + (
-            time.perf_counter() - prepare_t0
-        )
-        cumulative["prepare_calls"] = int(cumulative["prepare_calls"]) + 1
-
-        eval_t0 = time.perf_counter()
-        acc_self_full = solver.evaluate_prepared_state(
-            prepared_state,
-            target_indices=None,
-            return_potential=False,
-        )
-        acc_self_full = jax.block_until_ready(acc_self_full)
-        cumulative["evaluate_seconds"] = float(cumulative["evaluate_seconds"]) + (
-            time.perf_counter() - eval_t0
-        )
-        cumulative["evaluate_calls"] = int(cumulative["evaluate_calls"]) + 1
-
-        update_t0 = time.perf_counter()
-        state_curr, hist = _run_full_segment_scan(
-            state_curr,
-            acc_self_full,
-            dt_arr,
-            steps=int(seg),
-            add_external=add_external,
-            config=config,
-            params=params,
-        )
-        state_curr, hist = jax.block_until_ready((state_curr, hist))
-        if bool(config.fmm_rematerialize_between_refresh):
-            state_curr = jnp.asarray(state_curr, dtype=state_curr.dtype)
-        cumulative["update_seconds"] = float(cumulative["update_seconds"]) + (
-            time.perf_counter() - update_t0
-        )
-        cumulative["update_calls"] = int(cumulative["update_calls"]) + 1
-
-        # Pull only sampled positions for this chunk to host.
-        pos_chunk = np.asarray(hist[:, sample_indices, 0, :], dtype=np.float32)
-
-        for local in range(seg):
-            global_step = done + local + 1
-            if (global_step % stride) == 0 or global_step == num_steps:
-                frames.append(pos_chunk[local])
-                frame_times.append((global_step / num_steps) * t_end)
-
-        state_curr = hist[-1]
-        done += seg
-
-    elapsed = time.time() - t0
-
-    runtime_diag = {}
-    get_diag = getattr(solver, "get_runtime_diagnostics", None)
-    if callable(get_diag):
-        try:
-            runtime_diag = dict(get_diag())
-        except Exception:
-            runtime_diag = {}
-    timing_stats = dict(cumulative)
-    timing_stats["total_seconds"] = float(elapsed)
-    timing_stats["render_chunk_count"] = int(np.ceil(num_steps / max(1, int(chunk_steps))))
-    timing_stats.update(
-        {
-            "num_steps": num_steps,
-            "refresh_every": int(config.fmm_refresh_every),
-            "used_external_potential": bool(add_external),
-            "used_persistent_static_solver": True,
-            "last_prepare_path": str(last_prepare_path),
-            "chunk_steps": int(chunk_steps),
-            "snapshot_stride": int(stride),
-            "sampled_particles": int(sample_indices_np.shape[0]),
-            "runtime_static_radix_refresh_hits": int(
-                runtime_diag.get("static_radix_refresh_hits", 0)
-            ),
-            "runtime_static_radix_refresh_misses": int(
-                runtime_diag.get("static_radix_refresh_misses", 0)
-            ),
-            "runtime_large_n_same_topology_refresh_hits": int(
-                runtime_diag.get("large_n_same_topology_refresh_hits", 0)
-            ),
-            "runtime_large_n_same_topology_refresh_misses": int(
-                runtime_diag.get("large_n_same_topology_refresh_misses", 0)
-            ),
-            "runtime_compiled_profile_transitions": int(
-                runtime_diag.get("compiled_profile_transitions", 0)
-            ),
-            "runtime_large_n_overflow_profile_reprofiles": int(
-                runtime_diag.get("large_n_overflow_profile_reprofiles", 0)
-            ),
-            "runtime_large_n_neighbor_edges_profile_reprofiles": int(
-                runtime_diag.get("large_n_neighbor_edges_profile_reprofiles", 0)
-            ),
-            "runtime_strict_fused_fastlane_diag_enabled": bool(
-                runtime_diag.get("strict_fused_fastlane_diag_enabled", False)
-            ),
-            "runtime_strict_fused_fastlane_attempts": int(
-                runtime_diag.get("strict_fused_fastlane_attempts", 0)
-            ),
-            "runtime_strict_fused_fastlane_hits": int(
-                runtime_diag.get("strict_fused_fastlane_hits", 0)
-            ),
-            "runtime_strict_fused_fastlane_misses": int(
-                runtime_diag.get("strict_fused_fastlane_misses", 0)
-            ),
-            "runtime_strict_fused_fastlane_last_blockers": tuple(
-                str(v)
-                for v in runtime_diag.get("strict_fused_fastlane_last_blockers", tuple())
-            ),
-            "runtime_strict_fused_fastlane_block_counts": {
-                str(k): int(v)
-                for k, v in dict(
-                    runtime_diag.get("strict_fused_fastlane_block_counts", {})
-                ).items()
-            },
-        }
-    )
-
-    return (
-        np.asarray(state_curr),
-        np.asarray(frames, dtype=np.float32),
-        np.asarray(frame_times, dtype=np.float64),
-        sample_indices_np,
-        float(elapsed),
-        timing_stats,
-    )
 
 
 def _finite_norm_stats(prefix: str, values: np.ndarray) -> dict[str, object]:
@@ -2183,9 +1627,6 @@ def main() -> None:
                 ic_velocity_metadata=ic_velocity_metadata,
             )
 
-    sampled_positions = None
-    sampled_times = None
-    sample_indices = None
     history = None
     initial_accel_report_path = None
 
@@ -2204,9 +1645,9 @@ def main() -> None:
         )
         print(f"Saved initial acceleration report JSON: {initial_accel_report_path}")
 
-    if args.mode == "render_fused":
-        out_path = str(args.movie_path or "./galaxy_render_fused.gif")
-        final_state, elapsed, n_frames = _run_render_fused_mode(
+    if args.mode == "render":
+        out_path = str(args.movie_path or "./galaxy_render.gif")
+        final_state, elapsed, n_frames = _run_render_mode(
             state0,
             mass,
             config,
@@ -2224,72 +1665,28 @@ def main() -> None:
         )
         return
 
-    if args.mode == "perf":
-        if args.live or args.movie_path:
-            print("[info] perf mode ignores --live/--movie-path. Use --mode render for visualization.")
-        if bool(args.conservation_report):
-            final_state, history, elapsed, timing_stats = _run_perf_mode_with_history(
-                state0,
-                mass,
-                config,
-                params,
-                profile_breakdown=bool(args.profile_breakdown),
-            )
-        else:
-            final_state, history, elapsed, timing_stats = _run_perf_mode(
-                state0,
-                mass,
-                config,
-                params,
-                profile_breakdown=bool(args.profile_breakdown),
-                warmup_runs=int(args.perf_warmup_runs),
-                measure_runs=int(args.perf_measure_runs),
-            )
-    else:
-        (
-            final_state,
-            sampled_positions,
-            sampled_times,
-            sample_indices,
-            elapsed,
-            timing_stats,
-        ) = _run_render_mode(
+    # Only perf mode reaches here (mode=render returns above via the fused
+    # callback render path).
+    if args.movie_path:
+        print("[info] perf mode ignores --movie-path; use --mode render to render a movie.")
+    if bool(args.conservation_report):
+        final_state, history, elapsed, timing_stats = _run_perf_mode_with_history(
             state0,
             mass,
             config,
             params,
-            snapshot_stride=int(args.snapshot_stride),
-            snapshot_chunk_steps=int(args.snapshot_chunk_steps),
-            snapshot_max_particles=int(args.snapshot_max_particles),
             profile_breakdown=bool(args.profile_breakdown),
         )
-
-        projections = [str(args.projection)]
-        if args.movie_projections is not None:
-            parsed = [p.strip().lower() for p in str(args.movie_projections).split(",") if p.strip()]
-            valid = {"xy", "xz", "yz"}
-            bad = [p for p in parsed if p not in valid]
-            if bad:
-                raise ValueError(f"Invalid --movie-projections values: {bad}; valid={sorted(valid)}")
-            if parsed:
-                projections = parsed
-
-        for i, proj in enumerate(projections):
-            movie_path_proj = args.movie_path
-            if args.movie_path is not None and len(projections) > 1:
-                mp = pathlib.Path(str(args.movie_path))
-                movie_path_proj = str(mp.with_name(f"{mp.stem}_{proj}{mp.suffix}"))
-            render_positions(
-                sampled_positions,
-                sampled_times,
-                projection=proj,
-                live=bool(args.live) and i == 0,
-                movie_path=movie_path_proj,
-                movie_fps=int(args.movie_fps),
-                backend=str(args.render_backend),
-                resolution=int(args.render_resolution),
-                cmap_name=str(args.render_cmap),
-            )
+    else:
+        final_state, history, elapsed, timing_stats = _run_perf_mode(
+            state0,
+            mass,
+            config,
+            params,
+            profile_breakdown=bool(args.profile_breakdown),
+            warmup_runs=int(args.perf_warmup_runs),
+            measure_runs=int(args.perf_measure_runs),
+        )
 
     final_state_np = np.asarray(final_state)
     dt_code = float(t_end) / float(int(args.num_steps)) if int(args.num_steps) > 0 else float("nan")
@@ -2313,23 +1710,9 @@ def main() -> None:
         "mass_dtype": np.asarray(str(mass.dtype)),
     }
 
-    if bool(args.save_snapshots) and sampled_positions is not None:
-        payload["snapshot_positions"] = sampled_positions
-        payload["snapshot_times"] = sampled_times
-        payload["snapshot_particle_indices"] = sample_indices
-
     np.savez(args.output, **payload)
     print(f"Saved {args.output}")
     print(f"Runtime: {elapsed:.3f} s")
-
-    if bool(args.save_snapshots) and sampled_positions is not None and args.snapshot_output is not None:
-        np.savez_compressed(
-            args.snapshot_output,
-            snapshot_positions=sampled_positions,
-            snapshot_times=sampled_times,
-            snapshot_particle_indices=sample_indices,
-        )
-        print(f"Saved snapshots: {args.snapshot_output}")
 
     timing_stats = {} if timing_stats is None else dict(timing_stats)
     large_n_eval_diag_mode = str(
@@ -2555,16 +1938,9 @@ def main() -> None:
                 not args.no_fmm_rematerialize_between_refresh
             ),
             "conservation_report_enabled": bool(args.conservation_report),
-            "used_visualization": bool(
-                args.mode == "render" and (args.live or args.movie_path is not None)
-            ),
-            "render_backend": str(args.render_backend),
             "render_resolution": int(args.render_resolution),
             "render_cmap": str(args.render_cmap),
             "movie_path": None if args.movie_path is None else str(args.movie_path),
-            "snapshot_stride": int(args.snapshot_stride),
-            "snapshot_chunk_steps": int(args.snapshot_chunk_steps),
-            "snapshot_max_particles": int(args.snapshot_max_particles),
             "output_file": str(args.output),
         }
     )
