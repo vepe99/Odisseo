@@ -247,6 +247,16 @@ def _build_fmm_solver(
     )
     from yggdrax.interactions import DualTreeTraversalConfig
 
+    # Opt-in fused Pallas near-field/M2L kernels (Ampere+/sm_80+ GPUs). Default
+    # off keeps the pure-JAX paths; the solver still falls back automatically on
+    # unsupported hardware via jaccpot's `pallas_*_supported()` guards.
+    use_pallas = os.environ.get("ODISSEO_FMM_USE_PALLAS", "0").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
     traversal_config = None
     if (
         fmm_max_interactions_per_node is not None
@@ -280,6 +290,7 @@ def _build_fmm_solver(
         G=float(params.G),
         softening=float(config.softening),
         working_dtype=working_dtype,
+        use_pallas=bool(use_pallas),
         advanced=FMMAdvancedConfig(
             tree=TreeConfig(
                 mode=str(fmm_tree_build_mode),

@@ -179,24 +179,33 @@ and the `*_pallas_*` tests in `tests/unit/core/test_near_field.py`.
 **Performance (A100, same-process warm min-of-25, 200k, p=4, theta=0.6,
 leaf=256, fp32, near-field-only force eval):**
 
-| near-field force P2P | time | speedup |
-| --- | --- | --- |
-| pure-JAX radix fast lane | 0.219 s | 1.0x |
-| fused Pallas leaf-pair (subtile 32) | 0.055 s | **4.0x** |
+| force eval (200k, leaf=256) | pure-JAX | fused Pallas | speedup |
+| --- | --- | --- | --- |
+| near-field-only P2P | 0.219 s | 0.055 s | **4.0x** |
+| full fused eval (near + far) | 0.217 s | 0.055 s | **3.9x** |
 
-The near-field was ~98% of the fused eval, so this collapses the dominant cost
-(jaxfmm potential eval on the same box is ~0.013 s; the residual gap is
-force-vs-potential + the small far-field). Benchmark:
-`jaccpot/bench/bench_fused_eval_vs_jaxfmm.py --use-pallas both --near-only`
-(now uses `autocvd --gpu-select free` to pin an uncontended GPU — timing on a
-shared/contended GPU is meaningless and produced the earlier noisy baselines).
+The near-field was ~98% of the fused eval, so the full-eval and near-only gains
+track each other (far-field ~0.006 s). Both runs were same-process warm min-of-25
+on an uncontended A100 (min ≈ mean). jaxfmm potential eval on the same box is
+~0.013 s; the residual gap to it is force-vs-potential (jaccpot returns 3-vector
+forces) plus the small far-field. Benchmark:
+`jaccpot/bench/bench_fused_eval_vs_jaxfmm.py --use-pallas both [--near-only]`
+(uses `autocvd --gpu-select {free,least-used}` to pin an uncontended GPU — timing
+on a shared/contended GPU is meaningless and produced the earlier noisy baselines).
+
+**Odisseo production wiring:** `odisseo/jaccpot_coupling.py::_build_fmm_solver`
+threads `use_pallas` into the solver from `ODISSEO_FMM_USE_PALLAS` (default off;
+set `1`/`true` to enable on Ampere+). The solver still auto-falls back to pure
+JAX on unsupported hardware. Verified: the flag propagates to
+`solver._impl.use_pallas`.
 
 ## Next steps (deferred)
 
-1. Enable `use_pallas` on the Odisseo→jaccpot production coupling path and
-   re-baseline the full strict-fused step (this status recorded the isolated
-   near-field eval; the end-to-end `strict_run_v2` step gain is pending a clean
-   uncontended run).
+1. `use_pallas` is now wired into the Odisseo coupling (`ODISSEO_FMM_USE_PALLAS`)
+   and the full fused *eval* is re-baselined above (3.9x). Still pending: a clean
+   end-to-end `strict_run_v2` *step* wall-time A/B (refresh + upward + M2L +
+   downward + eval + velocity-Verlet) with the flag on, via
+   `Odisseo/tools/walltime_ab_compare.py`, on an uncontended GPU.
 2. Optional: a potential-only kernel variant (skips the 3-vector accumulation)
    for jaxfmm potential-to-potential parity; tune num_stages/subtile per leaf
    size; extend the leaf-pair kernel to the overflow/target-block payloads.
