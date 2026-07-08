@@ -6,7 +6,6 @@ import os
 import time
 from collections import Counter
 from contextlib import contextmanager
-from dataclasses import dataclass
 from functools import partial
 from typing import Any, Callable, Optional
 
@@ -27,118 +26,6 @@ from odisseo.option_classes import (
     SimulationParams,
 )
 from odisseo.potentials import combined_external_acceleration_vmpa_switch
-
-
-def _contains_jax_tracer(value: Any) -> bool:
-    """Return True when any pytree leaf is a JAX tracer."""
-    try:
-        leaves = jax.tree_util.tree_leaves(value)
-    except Exception:
-        return False
-    return any(isinstance(leaf, jax.core.Tracer) for leaf in leaves)
-
-
-@dataclass(frozen=True)
-class JaccpotCoreKernelConfig:
-    """Static configuration payload for the shared core-kernel scaffold."""
-
-    mode: str
-    leaf_size: int
-    max_order: int
-    preset: str
-    runtime_path: str
-    tree_build_mode: str
-
-
-@dataclass(frozen=True)
-class JaccpotCoreKernelOutput:
-    """Return payload for the shared core-kernel scaffold."""
-
-    next_state: jnp.ndarray
-    acceleration: jnp.ndarray
-    prepared_state: Any
-    execute_count: int
-    prepare_count: int
-    refresh_count: int
-
-
-@dataclass
-class AdaptiveCoreRuntimeState:
-    """Mutable runtime state for adaptive core-kernel refresh cadence."""
-
-    rhs_calls: int = 0
-    prepared_state: Any = None
-    last_refresh_rhs_call: int = 0
-    last_refresh_positions: Any = None
-    refresh_cadence_skips_rhs_calls: int = 0
-    refresh_cadence_skips_displacement: int = 0
-    refresh_cadence_last_displacement: float = 0.0
-    prepared_drop_tracer: int = 0
-    prepared_non_large_n_seen: int = 0
-
-    def prepared_input(self, *, enabled: bool) -> Any:
-        return self.prepared_state if bool(enabled) else None
-
-    def should_refresh(
-        self,
-        *,
-        enabled: bool,
-        prepared_in: Any,
-        y_state: jnp.ndarray,
-        refresh_rhs_calls: int,
-        displacement_threshold: Optional[float],
-    ) -> bool:
-        if not bool(enabled):
-            return True
-        if prepared_in is None:
-            return True
-        if type(prepared_in).__name__ != "LargeNPreparedState":
-            self.prepared_non_large_n_seen += 1
-            return True
-
-        force_refresh = True
-        if int(refresh_rhs_calls) > 1:
-            since_refresh = int(self.rhs_calls) - int(self.last_refresh_rhs_call)
-            if since_refresh < int(refresh_rhs_calls):
-                force_refresh = False
-                self.refresh_cadence_skips_rhs_calls += 1
-        if displacement_threshold is not None and force_refresh:
-            if self.last_refresh_positions is not None:
-                disp = jnp.linalg.norm(
-                    y_state[:, 0, :] - self.last_refresh_positions, axis=1
-                )
-                max_disp = float(jnp.max(disp))
-                self.refresh_cadence_last_displacement = max_disp
-                if max_disp < float(displacement_threshold):
-                    force_refresh = False
-                    self.refresh_cadence_skips_displacement += 1
-        return bool(force_refresh)
-
-    def update_prepared_state(
-        self,
-        *,
-        enabled: bool,
-        prepared_out: Any,
-        allow_tracer_prepared_cache: bool,
-    ) -> None:
-        if not bool(enabled):
-            self.prepared_state = None
-            return
-        if prepared_out is None:
-            self.prepared_state = None
-            return
-        if _contains_jax_tracer(prepared_out):
-            if bool(allow_tracer_prepared_cache):
-                self.prepared_state = prepared_out
-            else:
-                self.prepared_state = None
-                self.prepared_drop_tracer += 1
-            return
-        self.prepared_state = prepared_out
-
-    def mark_refreshed(self, *, y_state: jnp.ndarray) -> None:
-        self.last_refresh_rhs_call = int(self.rhs_calls)
-        self.last_refresh_positions = jnp.asarray(y_state[:, 0, :])
 
 
 def _large_n_environment_overrides(
@@ -345,174 +232,6 @@ def _build_fmm_solver(
         # runtime leaf cap are tied to the same value.
         fixed_max_leaf_size=int(leaf_size),
     )
-
-
-def build_compiled_jaccpot_core_kernel(
-    config: SimulationConfig,
-    params: SimulationParams,
-    *,
-    mode: str,
-    leaf_size: int = 16,
-    max_order: int = 4,
-    dt: Optional[float] = None,
-    fmm_preset: str = "fast",
-    fmm_basis: str = "solidfmm",
-    fmm_theta: float = 0.6,
-    fmm_runtime_path: str = "auto",
-    fmm_working_dtype=None,
-    fmm_mac_type: str = "dehnen",
-    fmm_farfield_mode: str = "auto",
-    fmm_m2l_chunk_size: Optional[int] = None,
-    fmm_nearfield_mode: str = "auto",
-    fmm_nearfield_edge_chunk_size: int = 256,
-    fmm_tree_build_mode: str = "static_radix",
-    fmm_tree_leaf_target: int = 32,
-    fmm_fixed_order: Optional[int] = None,
-    fmm_jit_tree: Optional[bool] = None,
-    fmm_jit_traversal: Optional[bool] = True,
-    fmm_max_pair_queue: Optional[int] = None,
-    fmm_pair_process_block: Optional[int] = None,
-    fmm_max_interactions_per_node: Optional[int] = None,
-    fmm_max_neighbors_per_leaf: Optional[int] = None,
-    fmm_prepare_stage_memory_split_enabled: Optional[bool] = None,
-    fmm_upward_leaf_batch_size: Optional[int] = None,
-    outer_jit: bool = False,
-):
-    """Build a shared jaccpot core-kernel scaffold for fixed/adaptive migration.
-
-    Modes:
-    - ``rhs_only``: prepare/evaluate and return acceleration (for diffrax RHS).
-    - ``fixed_step_update``: same prepare/evaluate plus one explicit Euler update.
-
-    This is intentionally additive scaffold code and does not replace existing
-    production integration paths yet.
-    """
-    mode_norm = str(mode).strip().lower()
-    if mode_norm not in {"rhs_only", "fixed_step_update"}:
-        raise ValueError("mode must be one of {'rhs_only', 'fixed_step_update'}")
-    if mode_norm == "fixed_step_update" and dt is None:
-        raise ValueError("dt is required for mode='fixed_step_update'")
-
-    core_cfg = JaccpotCoreKernelConfig(
-        mode=mode_norm,
-        leaf_size=int(leaf_size),
-        max_order=int(max_order),
-        preset=str(fmm_preset),
-        runtime_path=str(fmm_runtime_path),
-        tree_build_mode=str(fmm_tree_build_mode),
-    )
-
-    solver = _build_fmm_solver(
-        working_dtype=(
-            jnp.dtype(fmm_working_dtype) if fmm_working_dtype is not None else None
-        ),
-        config=config,
-        params=params,
-        fmm_preset=fmm_preset,
-        fmm_basis=fmm_basis,
-        fmm_theta=fmm_theta,
-        fmm_runtime_path=fmm_runtime_path,
-        fmm_mac_type=fmm_mac_type,
-        fmm_farfield_mode=fmm_farfield_mode,
-        fmm_m2l_chunk_size=fmm_m2l_chunk_size,
-        fmm_nearfield_mode=fmm_nearfield_mode,
-        fmm_nearfield_edge_chunk_size=fmm_nearfield_edge_chunk_size,
-        fmm_tree_build_mode=fmm_tree_build_mode,
-        fmm_tree_leaf_target=fmm_tree_leaf_target,
-        fmm_fixed_order=fmm_fixed_order,
-        leaf_size=leaf_size,
-        fmm_jit_tree=fmm_jit_tree,
-        fmm_jit_traversal=fmm_jit_traversal,
-        fmm_max_pair_queue=fmm_max_pair_queue,
-        fmm_pair_process_block=fmm_pair_process_block,
-        fmm_max_interactions_per_node=fmm_max_interactions_per_node,
-        fmm_max_neighbors_per_leaf=fmm_max_neighbors_per_leaf,
-        fmm_prepare_stage_memory_split_enabled=(fmm_prepare_stage_memory_split_enabled),
-        fmm_upward_leaf_batch_size=fmm_upward_leaf_batch_size,
-    )
-
-    def _eager(
-        state: jnp.ndarray,
-        mass: jnp.ndarray,
-        prepared_state: Optional[Any] = None,
-        *,
-        refresh_prepared: bool = True,
-    ) -> JaccpotCoreKernelOutput:
-        state_arr = jnp.asarray(state)
-        mass_arr = jnp.asarray(mass)
-        if fmm_working_dtype is None:
-            # Keep dtype alignment with caller state when dtype was not pinned.
-            solver.working_dtype = state_arr.dtype
-        refresh_count = 0
-        prepare_count = 0
-        prepared = None
-        refresh_fn = getattr(solver, "refresh_prepared_state", None)
-        prepared_type_name = (
-            type(prepared_state).__name__ if prepared_state is not None else ""
-        )
-        if prepared_state is not None and not bool(refresh_prepared):
-            prepared = prepared_state
-        can_try_refresh = (
-            prepared is None
-            and prepared_state is not None
-            and bool(refresh_prepared)
-            and callable(refresh_fn)
-            and prepared_type_name == "LargeNPreparedState"
-        )
-        if can_try_refresh:
-            with _temporary_large_n_environment(config, fmm_preset=fmm_preset):
-                try:
-                    prepared = refresh_fn(
-                        prepared_state,
-                        state_arr[:, 0, :],
-                        mass_arr,
-                        leaf_size=int(core_cfg.leaf_size),
-                        max_order=int(core_cfg.max_order),
-                    )
-                    refresh_count = 1
-                except (TypeError, NotImplementedError):
-                    try:
-                        prepared = refresh_fn(
-                            state_arr[:, 0, :],
-                            mass_arr,
-                            prepared_state,
-                            leaf_size=int(core_cfg.leaf_size),
-                            max_order=int(core_cfg.max_order),
-                        )
-                        refresh_count = 1
-                    except (TypeError, NotImplementedError):
-                        prepared = None
-        if prepared is None:
-            with _temporary_large_n_environment(config, fmm_preset=fmm_preset):
-                prepared = solver.prepare_state(
-                    state_arr[:, 0, :],
-                    mass_arr,
-                    leaf_size=int(core_cfg.leaf_size),
-                    max_order=int(core_cfg.max_order),
-                )
-            prepare_count = 1
-        acc = solver.evaluate_prepared_state(
-            prepared,
-            target_indices=None,
-            return_potential=False,
-        )
-        if core_cfg.mode == "fixed_step_update":
-            dt_arr = jnp.asarray(float(dt), dtype=state_arr.dtype)
-            pos_next = state_arr[:, 0, :] + state_arr[:, 1, :] * dt_arr
-            vel_next = state_arr[:, 1, :] + acc * dt_arr
-            next_state = jnp.stack((pos_next, vel_next), axis=1)
-        else:
-            next_state = state_arr
-        return JaccpotCoreKernelOutput(
-            next_state=next_state,
-            acceleration=acc,
-            prepared_state=prepared,
-            execute_count=1,
-            prepare_count=int(prepare_count),
-            refresh_count=int(refresh_count),
-        )
-
-    return (jax.jit(_eager) if bool(outer_jit) else _eager), core_cfg
 
 
 def _scatter_masked_vectors(
@@ -931,12 +650,6 @@ def integrate_leapfrog_jaccpot_active(
     perf_measured_run_seconds: list[float] = []
     strict_timing_mode = "full"
     strict_effective_add_external = False
-    use_core_scaffold = (
-        os.environ.get("ODISSEO_FMM_USE_CORE_KERNEL_SCAFFOLD", "0").strip() == "1"
-    )
-    core_scaffold_exec_calls = 0
-    core_scaffold_prepare_calls = 0
-    core_scaffold_refresh_calls = 0
 
     def _record_shape_signature(prepared_state, *, warmup_phase: bool = False):
         nonlocal shape_signature_ref
@@ -1722,10 +1435,6 @@ def integrate_leapfrog_jaccpot_active(
                     if float(strict_runner_wall_seconds) > 0.0
                     else 0.0
                 ),
-                "core_scaffold_enabled": bool(use_core_scaffold),
-                "core_scaffold_exec_calls": int(core_scaffold_exec_calls),
-                "core_scaffold_prepare_calls": int(core_scaffold_prepare_calls),
-                "core_scaffold_refresh_calls": int(core_scaffold_refresh_calls),
             }
         )
         return out_arr
@@ -2525,55 +2234,6 @@ def integrate_leapfrog_jaccpot_active(
                 return _finalize(hist_out)
             return _finalize(state_curr)
 
-    if (
-        bool(use_core_scaffold)
-        and active_indices_fn is None
-        and active_indices_schedule is None
-        and not bool(return_history)
-        and not bool(add_external)
-        and not bool(refresh_after_position_update)
-    ):
-        core_kernel, _core_meta = build_compiled_jaccpot_core_kernel(
-            config,
-            params,
-            mode="fixed_step_update",
-            dt=float(dt_val),
-            leaf_size=int(leaf_size),
-            max_order=int(max_order),
-            fmm_preset=fmm_preset,
-            fmm_basis=fmm_basis,
-            fmm_theta=fmm_theta,
-            fmm_runtime_path=fmm_runtime_path,
-            fmm_working_dtype=fmm_working_dtype,
-            fmm_mac_type=fmm_mac_type,
-            fmm_farfield_mode=fmm_farfield_mode,
-            fmm_m2l_chunk_size=fmm_m2l_chunk_size,
-            fmm_nearfield_mode=fmm_nearfield_mode,
-            fmm_nearfield_edge_chunk_size=fmm_nearfield_edge_chunk_size,
-            fmm_tree_build_mode=fmm_tree_build_mode,
-            fmm_tree_leaf_target=fmm_tree_leaf_target,
-            fmm_fixed_order=fmm_fixed_order,
-            fmm_jit_tree=fmm_jit_tree,
-            fmm_jit_traversal=fmm_jit_traversal,
-            fmm_max_pair_queue=fmm_max_pair_queue,
-            fmm_pair_process_block=fmm_pair_process_block,
-            fmm_max_interactions_per_node=fmm_max_interactions_per_node,
-            fmm_max_neighbors_per_leaf=fmm_max_neighbors_per_leaf,
-            fmm_prepare_stage_memory_split_enabled=(
-                fmm_prepare_stage_memory_split_enabled
-            ),
-            fmm_upward_leaf_batch_size=fmm_upward_leaf_batch_size,
-        )
-        prepared_core = None
-        for _ in range(int(num_steps)):
-            out = core_kernel(state_curr, mass_arr, prepared_core)
-            state_curr = jnp.asarray(out.next_state)
-            prepared_core = out.prepared_state
-            core_scaffold_exec_calls += int(getattr(out, "execute_count", 1))
-            core_scaffold_prepare_calls += int(getattr(out, "prepare_count", 0))
-            core_scaffold_refresh_calls += int(getattr(out, "refresh_count", 0))
-        return _finalize(state_curr)
-
     if active_indices_schedule is not None:
         active_indices_schedule = jnp.asarray(active_indices_schedule, dtype=jnp.int32)
         if active_indices_schedule.ndim != 2:
@@ -3031,67 +2691,6 @@ def integrate_diffrax_jaccpot_active(
         fmm_prepare_stage_memory_split_enabled=fmm_prepare_stage_memory_split_enabled,
         fmm_upward_leaf_batch_size=fmm_upward_leaf_batch_size,
     )
-    use_core_scaffold = (
-        os.environ.get("ODISSEO_FMM_USE_CORE_KERNEL_SCAFFOLD", "0").strip() == "1"
-    )
-    allow_tracer_prepared_cache = os.environ.get(
-        "ODISSEO_FMM_ALLOW_TRACER_PREPARED_CACHE", "0"
-    ).strip().lower() in {"1", "true", "yes", "on"}
-    adaptive_prepared_cache_mode = (
-        str(os.environ.get("ODISSEO_FMM_ADAPTIVE_PREPARED_CACHE_MODE", "none"))
-        .strip()
-        .lower()
-    )
-    if adaptive_prepared_cache_mode not in {"none", "python"}:
-        raise ValueError(
-            "ODISSEO_FMM_ADAPTIVE_PREPARED_CACHE_MODE must be one of {'none', 'python'}"
-        )
-    adaptive_python_prepared_cache = adaptive_prepared_cache_mode == "python"
-    core_kernel = None
-    adaptive_refresh_rhs_calls = max(
-        1,
-        int(getattr(config, "fmm_adaptive_refresh_rhs_calls", 1)),
-    )
-    adaptive_refresh_displacement_threshold = getattr(
-        config,
-        "fmm_adaptive_refresh_displacement_threshold",
-        None,
-    )
-    if adaptive_refresh_displacement_threshold is not None:
-        adaptive_refresh_displacement_threshold = float(
-            adaptive_refresh_displacement_threshold
-        )
-    if use_core_scaffold:
-        core_kernel, _ = build_compiled_jaccpot_core_kernel(
-            config,
-            params,
-            mode="rhs_only",
-            leaf_size=leaf_size,
-            max_order=max_order,
-            fmm_preset=fmm_preset,
-            fmm_basis=fmm_basis,
-            fmm_theta=fmm_theta,
-            fmm_runtime_path=fmm_runtime_path,
-            fmm_working_dtype=fmm_working_dtype,
-            fmm_mac_type=fmm_mac_type,
-            fmm_farfield_mode=fmm_farfield_mode,
-            fmm_m2l_chunk_size=fmm_m2l_chunk_size,
-            fmm_nearfield_mode=fmm_nearfield_mode,
-            fmm_nearfield_edge_chunk_size=fmm_nearfield_edge_chunk_size,
-            fmm_tree_build_mode=fmm_tree_build_mode,
-            fmm_tree_leaf_target=fmm_tree_leaf_target,
-            fmm_fixed_order=fmm_fixed_order,
-            fmm_jit_tree=fmm_jit_tree,
-            fmm_jit_traversal=fmm_jit_traversal,
-            fmm_max_pair_queue=fmm_max_pair_queue,
-            fmm_pair_process_block=fmm_pair_process_block,
-            fmm_max_interactions_per_node=fmm_max_interactions_per_node,
-            fmm_max_neighbors_per_leaf=fmm_max_neighbors_per_leaf,
-            fmm_prepare_stage_memory_split_enabled=(
-                fmm_prepare_stage_memory_split_enabled
-            ),
-            fmm_upward_leaf_batch_size=fmm_upward_leaf_batch_size,
-        )
 
     def _pick_diffrax_solver():
         if int(config.diffrax_solver) == DOPRI5:
@@ -3114,11 +2713,7 @@ def integrate_diffrax_jaccpot_active(
     cache: dict[str, Any] = {
         "full_prepare_calls": 0,
         "refresh_prepare_calls": 0,
-        "core_exec_calls": 0,
-        "core_prepare_calls": 0,
-        "core_refresh_calls": 0,
     }
-    adaptive_core_state = AdaptiveCoreRuntimeState()
 
     def _prepare_full(y_state: jnp.ndarray):
         with _temporary_large_n_environment(config, fmm_preset=fmm_preset):
@@ -3140,49 +2735,13 @@ def integrate_diffrax_jaccpot_active(
 
     def _rhs(t, y, args):
         del t, args
-        adaptive_core_state.rhs_calls += 1
-        if core_kernel is not None:
-            prepared_in = adaptive_core_state.prepared_input(
-                enabled=adaptive_python_prepared_cache
-            )
-            force_refresh_prepared = adaptive_core_state.should_refresh(
-                enabled=adaptive_python_prepared_cache,
-                prepared_in=prepared_in,
-                y_state=y,
-                refresh_rhs_calls=adaptive_refresh_rhs_calls,
-                displacement_threshold=adaptive_refresh_displacement_threshold,
-            )
-            out = core_kernel(
-                y,
-                mass_arr,
-                prepared_in,
-                refresh_prepared=bool(force_refresh_prepared),
-            )
-            acc_self = out.acceleration
-            cache["full_prepare_calls"] += int(out.prepare_count)
-            cache["refresh_prepare_calls"] += int(out.refresh_count)
-            cache["core_exec_calls"] += int(getattr(out, "execute_count", 1))
-            cache["core_prepare_calls"] += int(getattr(out, "prepare_count", 0))
-            cache["core_refresh_calls"] += int(getattr(out, "refresh_count", 0))
-            prepared_out = getattr(out, "prepared_state", None)
-            adaptive_core_state.update_prepared_state(
-                enabled=adaptive_python_prepared_cache,
-                prepared_out=prepared_out,
-                allow_tracer_prepared_cache=allow_tracer_prepared_cache,
-            )
-            if (
-                int(getattr(out, "prepare_count", 0)) > 0
-                or int(getattr(out, "refresh_count", 0)) > 0
-            ):
-                adaptive_core_state.mark_refreshed(y_state=y)
-        else:
-            cache["full_prepare_calls"] += 1
-            prepared = _prepare_full(y)
-            acc_self = solver.evaluate_prepared_state(
-                prepared,
-                target_indices=None,
-                return_potential=False,
-            )
+        cache["full_prepare_calls"] += 1
+        prepared = _prepare_full(y)
+        acc_self = solver.evaluate_prepared_state(
+            prepared,
+            target_indices=None,
+            return_potential=False,
+        )
         if add_external:
             acc = acc_self + combined_external_acceleration_vmpa_switch(
                 y, config, params
@@ -3294,42 +2853,6 @@ def integrate_diffrax_jaccpot_active(
                 "adaptive_rtol": float(rtol),
                 "adaptive_atol": float(atol),
                 "adaptive_dt0": float(dt0),
-                "adaptive_use_core_kernel_scaffold": bool(use_core_scaffold),
-                "adaptive_core_scaffold_exec_calls": int(cache["core_exec_calls"]),
-                "adaptive_core_scaffold_prepare_calls": int(
-                    cache["core_prepare_calls"]
-                ),
-                "adaptive_core_scaffold_refresh_calls": int(
-                    cache["core_refresh_calls"]
-                ),
-                "adaptive_core_prepared_drop_tracer": int(
-                    adaptive_core_state.prepared_drop_tracer
-                ),
-                "adaptive_allow_tracer_prepared_cache": bool(
-                    allow_tracer_prepared_cache
-                ),
-                "adaptive_prepared_cache_mode": str(adaptive_prepared_cache_mode),
-                "adaptive_python_prepared_cache_enabled": bool(
-                    adaptive_python_prepared_cache
-                ),
-                "adaptive_refresh_rhs_calls_target": int(adaptive_refresh_rhs_calls),
-                "adaptive_refresh_displacement_threshold": (
-                    None
-                    if adaptive_refresh_displacement_threshold is None
-                    else float(adaptive_refresh_displacement_threshold)
-                ),
-                "adaptive_core_refresh_cadence_skips_rhs_calls": int(
-                    adaptive_core_state.refresh_cadence_skips_rhs_calls
-                ),
-                "adaptive_core_refresh_cadence_skips_displacement": int(
-                    adaptive_core_state.refresh_cadence_skips_displacement
-                ),
-                "adaptive_core_refresh_cadence_last_displacement": float(
-                    adaptive_core_state.refresh_cadence_last_displacement
-                ),
-                "adaptive_core_prepared_non_large_n_seen": int(
-                    adaptive_core_state.prepared_non_large_n_seen
-                ),
                 "adaptive_runtime_refresh_total_seconds": float(
                     runtime_diag.get("refresh_total_seconds", 0.0)
                 ),
