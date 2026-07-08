@@ -472,6 +472,8 @@ def integrate_leapfrog_jaccpot_active(
     static_shape_warmup_prepares: int = 0,
     rematerialize_between_refresh: bool = True,
     return_history: bool = False,
+    step_callback: Optional[Callable[[jnp.ndarray, jnp.ndarray], None]] = None,
+    step_callback_stride: int = 1,
     perf_warmup_runs: int = 0,
     perf_measure_runs: int = 1,
     timing_stats: Optional[dict] = None,
@@ -2138,6 +2140,8 @@ def integrate_leapfrog_jaccpot_active(
                     external_acceleration_fn=external_acc_fn,
                     rematerialize_between_refresh=bool(rematerialize_between_refresh),
                     return_history=bool(return_history),
+                    step_callback=step_callback,
+                    step_callback_stride=int(step_callback_stride),
                 )
                 # Keep the large-N env overrides (e.g. target-block size, static
                 # target-block cap) active while strict_run_v2 traces/compiles the
