@@ -24,11 +24,18 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--leaf-size", type=int, default=256)
     p.add_argument("--top-k-render", type=int, default=2)
     p.add_argument("--disk-radial-grid", type=str, default="0.20,0.24,0.28")
-    p.add_argument("--sigma-r0-grid", type=str, default="0.085,0.102,0.120")
-    p.add_argument("--sigma-z0-grid", type=str, default="0.050,0.068,0.085")
-    p.add_argument("--df-rsigmar", type=float, default=1.0)
-    p.add_argument("--df-rsigmaz", type=float, default=1.0)
-    p.add_argument("--reference-snapshots", type=str, default="/tmp/galaxy_strict_v2_200k_40_snapshots.npz")
+    # Disk warmth is set by the exponential-DF action scales (fractions of jphi0);
+    # these are the knobs that actually change Toomre Q (Q ~ sqrt(jr0)). The old
+    # --sigma-r0/--qmin grids were silent no-ops (the exponential DF ignores them).
+    p.add_argument("--jr0-factor-grid", type=str, default="0.30,0.38,0.46")
+    p.add_argument("--jz0-factor-grid", type=str, default="0.08,0.10,0.12")
+    p.add_argument("--iterations", type=int, default=8,
+                   help="SCM self-consistent equilibration iterations (removes "
+                        "out-of-equilibrium radial breathing / rings).")
+    p.add_argument("--t-end-gyr", type=float, default=3.0)
+    p.add_argument("--render-stride", type=int, default=5)
+    p.add_argument("--render-resolution", type=int, default=400)
+    p.add_argument("--reference-snapshots", type=str, default="")
     p.add_argument("--strict-exact-cap-match", action="store_true")
     return p.parse_args()
 
@@ -236,20 +243,25 @@ def main() -> None:
     env = os.environ.copy()
     env.update(
         {
+            "JAX_ENABLE_X64": "1",
+            # Engage the fused device-resident lane for --mode render (the render
+            # path now runs on the fused scan + jax.debug.callback).
             "JACCPOT_STATIC_STRICT_GPU_MODE": "on",
-            "JACCPOT_STATIC_STRICT_CAP_PROFILE_PATH": "/tmp/jaccpot_static_strict_caps.json",
-            "JACCPOT_STATIC_STRICT_CAP_RECORD": "0",
-            "JACCPOT_STATIC_STRICT_REQUIRE_EXACT_CAP_PROFILE_MATCH": "1"
-            if args.strict_exact_cap_match
-            else "0",
+            "JACCPOT_STATIC_STRICT_FUSED_MODE": "on",
+            "JACCPOT_STATIC_STRICT_FUSED_PROFILE_SET": str(int(args.n_particles)),
+            "JACCPOT_LARGE_N_STATIC_TARGET_BLOCKS_MAX_PER_LEAF": "64",
+            "JACCPOT_LARGE_N_NEIGHBOR_EDGE_PROFILE_FIXED_CAP": "2097152",
+            "JACCPOT_STATIC_STRICT_REQUIRE_EXACT_CAP_PROFILE_MATCH": (
+                "1" if args.strict_exact_cap_match else "0"
+            ),
         }
     )
 
     rows: list[dict[str, float | str]] = []
     for rd in _listf(args.disk_radial_grid):
-        for sr in _listf(args.sigma_r0_grid):
-            for sz in _listf(args.sigma_z0_grid):
-                tag = f"rd{rd:.3f}_sr{sr:.3f}_sz{sz:.3f}".replace(".", "p")
+        for jr in _listf(args.jr0_factor_grid):
+            for jz in _listf(args.jz0_factor_grid):
+                tag = f"rd{rd:.3f}_jr{jr:.3f}_jz{jz:.3f}".replace(".", "p")
                 print(f"[sweep] {tag}", flush=True)
                 ic_path = workdir / f"ic_{tag}.npz"
                 out_npz = workdir / f"run_{tag}.npz"
@@ -271,10 +283,13 @@ def main() -> None:
                         str(int(args.seed)),
                         "--rdisk-code",
                         str(rd),
-                        "--qmin",
-                        str(max(1.2, 1.0 + 3.0 * sr)),
-                        "--rsigmar-code",
-                        str(max(0.3, float(args.df_rsigmar) * rd)),
+                        "--jr0-factor",
+                        str(jr),
+                        "--jz0-factor",
+                        str(jz),
+                        "--iterations",
+                        str(int(args.iterations)),
+                        "--allow-scm-fallback",
                     ],
                     check=True,
                     cwd=str(repo),
@@ -311,15 +326,18 @@ def main() -> None:
                         "--ic-input-path",
                         str(ic_path),
                         "--no-ic-require-runtime-potential-match",
+                        "--t-end-gyr",
+                        str(float(args.t_end_gyr)),
+                        "--render-stride",
+                        str(int(args.render_stride)),
+                        "--render-resolution",
+                        str(int(args.render_resolution)),
+                        "--movie-path",
+                        str(workdir / f"movie_{tag}.gif"),
+                        "--render-snapshot-output",
+                        str(snap_npz),
                         "--output",
                         str(out_npz),
-                        "--save-snapshots",
-                        "--snapshot-output",
-                        str(snap_npz),
-                        "--snapshot-stride",
-                        "1",
-                        "--snapshot-chunk-steps",
-                        "1",
                     ],
                     check=True,
                     cwd=str(repo),
@@ -341,8 +359,8 @@ def main() -> None:
                 row = {
                     "tag": tag,
                     "disk_radial_scale_code": rd,
-                    "sigma_r0_code": sr,
-                    "sigma_z0_code": sz,
+                    "jr0_factor": jr,
+                    "jz0_factor": jz,
                     "ic_path": str(ic_path),
                     "run_path": str(out_npz),
                     "snap_path": str(snap_npz),
@@ -362,7 +380,7 @@ def main() -> None:
     for i, row in enumerate(rows[: max(0, int(args.top_k_render))], start=1):
         tag = str(row["tag"])
         ic_path = str(row["ic_path"])
-        out_base = workdir / f"movie_top{i}_{tag}.mp4"
+        out_base = workdir / f"movie_top{i}_{tag}.gif"
         print(f"[render-top] {tag}", flush=True)
         subprocess.run(
             [
@@ -396,20 +414,16 @@ def main() -> None:
                 "--no-ic-require-runtime-potential-match",
                 "--output",
                 str(workdir / f"movie_top{i}_{tag}.npz"),
+                "--t-end-gyr",
+                str(float(args.t_end_gyr)),
                 "--movie-path",
                 str(out_base),
-                "--movie-projections",
-                "xy,xz",
                 "--movie-fps",
                 "20",
-                "--render-backend",
-                "density",
+                "--render-stride",
+                str(int(args.render_stride)),
                 "--render-resolution",
                 "768",
-                "--snapshot-stride",
-                "1",
-                "--snapshot-chunk-steps",
-                "1",
             ],
             check=True,
             cwd=str(repo),

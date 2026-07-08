@@ -502,6 +502,14 @@ def parse_args() -> argparse.Namespace:
         "fused device-resident scan (via jax.debug.callback).",
     )
     parser.add_argument(
+        "--render-snapshot-output",
+        type=str,
+        default=None,
+        help="mode=render: optional NPZ to save the streamed subsampled particle "
+        "positions (snapshot_positions [T,Ns,3], snapshot_times [T]) for analysis "
+        "/ ring scoring (e.g. the AGAMA IC sweep).",
+    )
+    parser.add_argument(
         "--render-cmap",
         type=str,
         default="magma",
@@ -1008,6 +1016,7 @@ def _run_render_mode(
     cmap: str,
     out_path: str,
     fps: int,
+    snapshot_output: str | None = None,
 ) -> tuple[np.ndarray, float, int]:
     """Render on the high-performance fused lane via a jax.debug.callback hook.
 
@@ -1091,6 +1100,18 @@ def _run_render_mode(
             f"rms_end={ring['ring_rms_end']:.4f} "
             f"growth={ring['ring_rms_end'] / max(ring['ring_rms_start'], 1e-9):.2f}x "
             f"r99_growth={ring['r99_growth']:.3f}"
+        )
+    if snapshot_output and len(psink.positions) >= 1:
+        steps_arr, pos_arr = psink.stack()  # pos_arr: [T, Ns, 3]
+        dt_gyr = (
+            float(params.t_end) / float(config.num_timesteps)
+            if int(config.num_timesteps) > 0
+            else 1.0
+        )
+        np.savez_compressed(
+            snapshot_output,
+            snapshot_positions=pos_arr.astype(np.float32),
+            snapshot_times=(steps_arr.astype(np.float64) * dt_gyr),
         )
     if n_frames:
         sink.encode(out_path, fps=int(fps), cmap=str(cmap))
@@ -1683,6 +1704,7 @@ def main() -> None:
             cmap=str(args.render_cmap),
             out_path=out_path,
             fps=int(args.movie_fps),
+            snapshot_output=args.render_snapshot_output,
         )
         print(
             f"Runtime: {elapsed:.3f} s | frames: {n_frames} "
