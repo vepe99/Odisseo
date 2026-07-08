@@ -174,7 +174,18 @@ radix fast lane in jaccpot (branch `feat/pallas-nearfield-fused`):
 **Correctness:** the Pallas paths match the pure-JAX baselines and a brute-force
 direct sum to **~1e-15 (fp64) / ~1e-6 (fp32)** for both acceleration and
 potential — see `jaccpot/tests/unit/operators/test_pallas_nearfield_fused.py`
-and the `*_pallas_*` tests in `tests/unit/core/test_near_field.py`.
+and the `*_pallas_*` tests in `tests/unit/core/test_near_field.py`. At
+production scale (200k, leaf=256) the full fused-eval acceleration matches the
+pure-JAX path to **rel-L2 3.5e-6** (median 2.6e-6).
+
+**Reproducibility note:** the Pallas kernel accumulates in a sequential register
+loop, XLA uses a tree reduction — so results are **not bit-identical** (they
+differ at the fp32 ~1e-6 level). In a live N-body integration that per-step
+difference amplifies chaotically: a 10-step (2 Gyr) `strict_run_v2` A/B diverged
+by rel-L2 ~0.19 in the final state. This is expected float32 chaos (both
+trajectories are equally valid), not a correctness defect — confirmed by the
+tight per-step accel parity above. Use fp64 if bitwise trajectory reproducibility
+against the JAX path is required.
 
 **Performance (A100, same-process warm min-of-25, 200k, p=4, theta=0.6,
 leaf=256, fp32, near-field-only force eval):**
@@ -201,11 +212,15 @@ JAX on unsupported hardware. Verified: the flag propagates to
 
 ## Next steps (deferred)
 
-1. `use_pallas` is now wired into the Odisseo coupling (`ODISSEO_FMM_USE_PALLAS`)
-   and the full fused *eval* is re-baselined above (3.9x). Still pending: a clean
-   end-to-end `strict_run_v2` *step* wall-time A/B (refresh + upward + M2L +
-   downward + eval + velocity-Verlet) with the flag on, via
-   `Odisseo/tools/walltime_ab_compare.py`, on an uncontended GPU.
+1. `use_pallas` is wired into the Odisseo coupling (`ODISSEO_FMM_USE_PALLAS`);
+   the full fused *eval* is re-baselined above (3.9x). An end-to-end 10-step
+   `strict_run_v2` A/B (via `tools/walltime_ab_compare.py`, `--variant-env
+   JACCPOT_STATIC_STRICT_FUSED_MODE=on --variant-env ODISSEO_FMM_USE_PALLAS=1`)
+   ran clean (final state all-finite, physical). It is compile/IO-dominated at
+   10 steps (whole-process wall only ~1.08x), so it is *not* a per-step
+   throughput measure — the isolated self-force eval (3.9x) is. A longer-horizon
+   step-throughput A/B (many steps, or reading the simulator's measured median
+   rather than process wall) remains a nice-to-have.
 2. Optional: a potential-only kernel variant (skips the 3-vector accumulation)
    for jaxfmm potential-to-potential parity; tune num_stages/subtile per leaf
    size; extend the leaf-pair kernel to the overflow/target-block payloads.
