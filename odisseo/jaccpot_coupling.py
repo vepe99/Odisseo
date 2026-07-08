@@ -687,6 +687,30 @@ def _run_active_segment_scan(
     )
 
 
+def _default_fused_neighbor_edge_cap(n_particles: int) -> int:
+    """Generous up-front neighbor-edge fixed cap for the fused static-radix lane.
+
+    The fused lane sizes the near-field neighbor-edge list to a fixed cap. Its
+    N-based bootstrap (~1 edge/particle) underestimates centrally-concentrated
+    ICs — a 200k Agama disk has ~4 edges/particle (dense inner leaves are "near"
+    almost every other leaf). The cap cannot grow inside the device-resident
+    scan (it would break the fixed-shape ``lax.scan`` carry), so it must be set
+    before the initial state is built. The neighbor-edge list is just int edge
+    ids (~4-8 bytes each), so a generous cap is cheap: the default 16 edges/
+    particle (=3.2M / ~26 MB at 200k) covers realistic concentrated disks with
+    margin. Tunable via ``ODISSEO_FMM_NEIGHBOR_EDGE_PER_PARTICLE_CAP``; extreme
+    ICs can also set ``JACCPOT_LARGE_N_NEIGHBOR_EDGE_PROFILE_FIXED_CAP`` directly.
+    """
+    try:
+        per_particle = int(
+            os.environ.get("ODISSEO_FMM_NEIGHBOR_EDGE_PER_PARTICLE_CAP", "16")
+        )
+    except Exception:
+        per_particle = 16
+    per_particle = max(1, per_particle)
+    return int(per_particle) * int(max(1, n_particles)) + 1
+
+
 def integrate_leapfrog_jaccpot_active(
     state: jnp.ndarray,
     mass: jnp.ndarray,
@@ -795,6 +819,19 @@ def integrate_leapfrog_jaccpot_active(
         raise ValueError(
             "strict static-radix production requires refresh_every=1 for "
             "endpoint-correct velocity-Verlet self gravity"
+        )
+    # Size the fused neighbor-edge fixed cap generously up front (before any
+    # prepare caches the env-config), so concentrated ICs fit. It cannot grow
+    # inside the device-resident scan, and the edge list is cheap (int ids), so
+    # over-provisioning is fine. See _default_fused_neighbor_edge_cap.
+    if (
+        strict_production_lane
+        and os.environ.get("ODISSEO_FMM_NEIGHBOR_EDGE_AUTOSIZE", "1").strip().lower()
+        in {"1", "true", "yes", "on"}
+        and "JACCPOT_LARGE_N_NEIGHBOR_EDGE_PROFILE_FIXED_CAP" not in os.environ
+    ):
+        os.environ["JACCPOT_LARGE_N_NEIGHBOR_EDGE_PROFILE_FIXED_CAP"] = str(
+            _default_fused_neighbor_edge_cap(int(state.shape[0]))
         )
     collect_shape_signatures = bool(profile or enforce_static_shape_contract)
     t_total_start = time.perf_counter() if profile else 0.0

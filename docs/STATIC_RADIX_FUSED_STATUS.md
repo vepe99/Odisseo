@@ -242,18 +242,28 @@ Result: the concentrated Agama IC now prepares and runs on the **fast fused
 lane** (~0.4 s/step once compiled, vs the ~9 s/step non-static dynamic fallback);
 pallas engages (final-state A/B differs). Verified 4–40 step runs.
 
-**Known follow-up — neighbor-edge cap (not yet auto-sized):** a *second*
-fixed-shape cap, the neighbor-edge profile cap, also underestimates concentrated
-ICs (its N-based bootstrap gave 209648 vs the disk's ~800768 active edges) and
-must currently be set up front: `JACCPOT_LARGE_N_NEIGHBOR_EDGE_PROFILE_FIXED_CAP`
-(e.g. `2097152` for 200k). Auto-sizing it cannot be done mid-scan (growing the
-refresh output breaks the fixed-shape `lax.scan` carry vs the initial state);
-it needs an up-front IC-measurement preflight or a larger bootstrap — deferred.
+**Neighbor-edge cap — auto-sized up front (2026-07-08).** A *second* fixed-shape
+cap, the neighbor-edge profile cap, also underestimated concentrated ICs (its
+N-based bootstrap gave 209648 vs the disk's ~800768 active edges). Key findings:
+it cannot grow mid-scan (the eager prepare builds the bootstrap-sized initial
+carry while the traced refresh builds the full list → growing the refresh breaks
+the `lax.scan` carry), and it cannot be measured via a separate yggdrax
+`build_leaf_neighbor_lists` (that counts leaf-neighbours, ~6x fewer than
+jaccpot's dual-tree traversal edges). But the neighbor-edge list is just int
+edge ids (~6 MB at 800768), so over-provisioning is cheap. Fix
+(`jaccpot_coupling.py::_default_fused_neighbor_edge_cap`): the coupling sets
+`JACCPOT_LARGE_N_NEIGHBOR_EDGE_PROFILE_FIXED_CAP` **generously up front** (before
+any prepare caches the env-config) — default 16 edges/particle (3.2M / ~26 MB at
+200k), tunable via `ODISSEO_FMM_NEIGHBOR_EDGE_PER_PARTICLE_CAP`; extreme ICs can
+still set the jaccpot env directly. Result: the 200k Agama disk now runs the
+**fast fused lane fully automatically** (no manual caps).
 
 ## Next steps (deferred)
 
-0. Auto-size the **neighbor-edge** profile cap for concentrated ICs (see above)
-   via an up-front preflight so no manual env is needed.
+0. (done 2026-07-08) The **neighbor-edge** profile cap is now auto-sized up front
+   for concentrated ICs (generous `edges/particle` default; see above). A future
+   refinement could measure the exact count via jaccpot's own traversal instead
+   of a generous heuristic, but the heuristic is cheap and covers realistic disks.
 1. `use_pallas` is wired into the Odisseo coupling (`ODISSEO_FMM_USE_PALLAS`);
    the full fused *eval* is re-baselined above (3.9x). An end-to-end 10-step
    `strict_run_v2` A/B (via `tools/walltime_ab_compare.py`, `--variant-env
