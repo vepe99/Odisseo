@@ -30,11 +30,17 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--hdisk-code", type=float, default=0.03)
     p.add_argument("--qmin", type=float, default=1.6)
     p.add_argument("--rsigmar-code", type=float, default=0.48)
-    p.add_argument("--iterations", type=int, default=0)
+    p.add_argument("--iterations", type=int, default=8)
     p.add_argument("--disk-df-type", type=str, default="exponential", choices=("exponential", "quasiisothermal"))
     p.add_argument("--jr0-code", type=float, default=None)
     p.add_argument("--jz0-code", type=float, default=None)
     p.add_argument("--jphi0-code", type=float, default=None)
+    # Relative warmth knobs for the exponential DF (radial/vertical action scale
+    # as a fraction of jphi0). Larger jr0 -> hotter disk -> higher Toomre Q ->
+    # suppresses ring/axisymmetric instabilities (Q ~ sqrt(jr0)). Used only when
+    # the absolute --jr0-code/--jz0-code are not given.
+    p.add_argument("--jr0-factor", type=float, default=0.38)
+    p.add_argument("--jz0-factor", type=float, default=0.10)
     p.add_argument("--require-scm-convergence", action="store_true", default=True)
     p.add_argument("--allow-scm-fallback", action="store_true", default=False)
     p.add_argument("--min-prograde-frac", type=float, default=0.90)
@@ -125,8 +131,8 @@ def main() -> None:
         # Prograde-only exponential DF following AGAMA's MW example pattern.
         v_circ_ref = float(np.sqrt(max(1e-12, -rdisk * pottotal.force(rdisk, 0.0, 0.0)[0])))
         jphi0 = float(args.jphi0_code) if args.jphi0_code is not None else max(1e-4, rdisk * v_circ_ref)
-        jr0 = float(args.jr0_code) if args.jr0_code is not None else 0.18 * jphi0
-        jz0 = float(args.jz0_code) if args.jz0_code is not None else 0.06 * jphi0
+        jr0 = float(args.jr0_code) if args.jr0_code is not None else float(args.jr0_factor) * jphi0
+        jz0 = float(args.jz0_code) if args.jz0_code is not None else float(args.jz0_factor) * jphi0
         dfdisk = _make_prograde_exponential_df(
             mass=float(agama.Density(diskparams).totalMass()),
             jr0=jr0,

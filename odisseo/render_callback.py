@@ -66,6 +66,47 @@ class FrameSink:
         self.steps.append(int(step_index))
         self.frames.append(np.asarray(grid, dtype=np.float32))
 
+    def _radial_profile(self, grid: np.ndarray, nbins: int = 80):
+        """Azimuthally-averaged surface density Sigma(R) from a density grid.
+
+        Bins pixels by distance from the density centroid; divides by annulus
+        area. Returns (centers, Sigma)."""
+        res = grid.shape[0]
+        yy, xx = np.mgrid[0:res, 0:res].astype(np.float64)
+        total = float(grid.sum()) or 1.0
+        cx = float((grid * xx).sum() / total)
+        cy = float((grid * yy).sum() / total)
+        rr = np.sqrt((xx - cx) ** 2 + (yy - cy) ** 2).ravel()
+        w = grid.ravel().astype(np.float64)
+        rmax = float(np.percentile(rr, 99.0))
+        bins = np.linspace(0.0, max(rmax, 1e-6), nbins + 1)
+        centers = 0.5 * (bins[:-1] + bins[1:])
+        area = np.pi * (bins[1:] ** 2 - bins[:-1] ** 2)
+        h, _ = np.histogram(rr, bins=bins, weights=w)
+        return centers, h / np.maximum(area, 1e-12)
+
+    def ring_metric(self) -> dict:
+        """Quantify radial ring structure from the density grids.
+
+        Mirrors the sweep tool's ring score: RMS of the fractional residual of
+        Sigma(R) about a smoothed profile, over a mid-radius band, for the first
+        and last frame. Rising ring_rms_end indicates rings forming."""
+        if len(self.frames) < 2:
+            raise RuntimeError("need >=2 frames for ring_metric")
+        order = np.argsort(self.steps)
+
+        def frame_ring(grid: np.ndarray) -> float:
+            centers, prof = self._radial_profile(grid)
+            smooth = np.convolve(prof, np.ones(9) / 9.0, mode="same")
+            resid = (prof - smooth) / np.maximum(smooth, 1e-12)
+            rmax = centers[-1]
+            mask = (centers > 0.15 * rmax) & (centers < 0.85 * rmax)
+            return float(np.sqrt(np.mean(resid[mask] ** 2)))
+
+        start = frame_ring(self.frames[order[0]])
+        end = frame_ring(self.frames[order[-1]])
+        return {"ring_rms_start": start, "ring_rms_end": end}
+
     def to_rgb(self, cmap: str = "magma", percentile: float = 99.5) -> np.ndarray:
         """Return time-ordered ``(frames, res, res, 3)`` uint8 RGB (log1p+percentile)."""
         if not self.frames:
@@ -110,6 +151,69 @@ class FrameSink:
 
             iio.imwrite(path, list(rgb), fps=fps)
         return path
+
+
+class PositionSink:
+    """Host buffer of subsampled particle positions per emitted step.
+
+    Particle-based (not grid-based), so azimuthal density profiles are far less
+    shot-noise-limited than a sparse density grid -- suitable for a reliable ring
+    metric and for repairing the sweep's snapshot-based scoring on the fused lane."""
+
+    def __init__(self) -> None:
+        self.steps: list[int] = []
+        self.positions: list[np.ndarray] = []
+
+    def push(self, step_index, pos) -> None:
+        self.steps.append(int(step_index))
+        self.positions.append(np.asarray(pos, dtype=np.float32))
+
+    def stack(self) -> tuple[np.ndarray, np.ndarray]:
+        order = np.argsort(self.steps)
+        return (
+            np.asarray([self.steps[i] for i in order]),
+            np.stack([self.positions[i] for i in order]),
+        )
+
+    def ring_metric(self, nbins: int = 161) -> dict:
+        """RMS fractional residual of Sigma(R) (mirrors the sweep scorer), for the
+        first and last emitted frame, from the actual particle radii."""
+        if len(self.positions) < 2:
+            raise RuntimeError("need >=2 frames for ring_metric")
+        _, sp = self.stack()  # [T, Ns, 3]
+        rxy = np.linalg.norm(sp[:, :, :2], axis=2)
+        rmax = float(np.percentile(rxy[0], 99.9))
+        bins = np.linspace(0.0, max(rmax, 1e-6), nbins)
+        centers = 0.5 * (bins[:-1] + bins[1:])
+        area = np.pi * (bins[1:] ** 2 - bins[:-1] ** 2)
+        mask = (centers > 0.3 * rmax) & (centers < 0.95 * rmax)
+
+        def frame_ring(rt: np.ndarray) -> float:
+            h, _ = np.histogram(rt, bins=bins)
+            prof = h / np.maximum(area, 1e-12)
+            smooth = np.convolve(prof, np.ones(9) / 9.0, mode="same")
+            resid = (prof - smooth) / np.maximum(smooth, 1e-12)
+            return float(np.sqrt(np.mean(resid[mask] ** 2)))
+
+        start = frame_ring(rxy[0])
+        end = frame_ring(rxy[-1])
+        r99_growth = float(
+            np.percentile(rxy[-1], 99) / max(np.percentile(rxy[0], 99), 1e-12)
+        )
+        return {"ring_rms_start": start, "ring_rms_end": end, "r99_growth": r99_growth}
+
+
+def make_position_step_callback(
+    sink: PositionSink,
+    sample_indices,
+) -> Callable[[jnp.ndarray, jnp.ndarray], None]:
+    """Traced step_callback shipping only subsampled particle positions to host."""
+    idx = jnp.asarray(sample_indices, dtype=jnp.int32)
+
+    def _step_callback(step_index: jnp.ndarray, state: jnp.ndarray) -> None:
+        jax.debug.callback(sink.push, step_index, state[idx, 0, :])
+
+    return _step_callback
 
 
 def make_density_step_callback(

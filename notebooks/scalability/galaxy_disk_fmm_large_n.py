@@ -25,7 +25,12 @@ from odisseo.jaccpot_coupling import (
     integrate_diffrax_jaccpot_active,
     integrate_leapfrog_jaccpot_active,
 )
-from odisseo.render_callback import FrameSink, make_density_step_callback
+from odisseo.render_callback import (
+    FrameSink,
+    PositionSink,
+    make_density_step_callback,
+    make_position_step_callback,
+)
 from odisseo.option_classes import (
     FMM_ACC,
     NFW_POTENTIAL,
@@ -1020,9 +1025,21 @@ def _run_render_mode(
     # pad by 2% so edge particles aren't clipped as the system evolves
     pad = 0.02 * (bmax - bmin + 1e-6)
     sink = FrameSink()
-    step_cb = make_density_step_callback(
+    density_cb = make_density_step_callback(
         sink, bmin - pad, bmax + pad, res=int(res), axes=axes
     )
+    # Also stream subsampled particle positions for a low-noise (particle-based)
+    # ring metric -- a sparse density grid is shot-noise-limited. One combined
+    # fire-and-forget callback keeps it single-hook and minimal-sync.
+    n_all = int(pos0.shape[0])
+    n_samp = min(n_all, 20000)
+    sample_idx = np.linspace(0, n_all - 1, n_samp, dtype=np.int64)
+    psink = PositionSink()
+    position_cb = make_position_step_callback(psink, sample_idx)
+
+    def step_cb(step_index, state):
+        density_cb(step_index, state)
+        position_cb(step_index, state)
 
     t0 = time.perf_counter()
     final_state = jax.block_until_ready(
@@ -1067,6 +1084,14 @@ def _run_render_mode(
     )
     elapsed = float(time.perf_counter() - t0)
     n_frames = len(sink.frames)
+    if len(psink.positions) >= 2:
+        ring = psink.ring_metric()
+        print(
+            f"[ring] rms_start={ring['ring_rms_start']:.4f} "
+            f"rms_end={ring['ring_rms_end']:.4f} "
+            f"growth={ring['ring_rms_end'] / max(ring['ring_rms_start'], 1e-9):.2f}x "
+            f"r99_growth={ring['r99_growth']:.3f}"
+        )
     if n_frames:
         sink.encode(out_path, fps=int(fps), cmap=str(cmap))
     return np.asarray(final_state), elapsed, n_frames
