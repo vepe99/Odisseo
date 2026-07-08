@@ -1002,6 +1002,7 @@ def _run_perf_mode(
 
 
 _PROJECTION_AXES = {"xy": (0, 1), "xz": (0, 2), "yz": (1, 2)}
+_AXIS_NAMES = ("x", "y", "z")
 
 
 def _run_render_mode(
@@ -1017,6 +1018,8 @@ def _run_render_mode(
     out_path: str,
     fps: int,
     snapshot_output: str | None = None,
+    length_kpc: float = 10.0,
+    time_per_step_gyr: float | None = None,
 ) -> tuple[np.ndarray, float, int]:
     """Render on the high-performance fused lane via a jax.debug.callback hook.
 
@@ -1114,7 +1117,31 @@ def _run_render_mode(
             snapshot_times=(steps_arr.astype(np.float64) * dt_gyr),
         )
     if n_frames:
-        sink.encode(out_path, fps=int(fps), cmap=str(cmap))
+        # Scientific frames: kpc axes, colorbar, per-frame time stamp.
+        ax0, ax1 = axes
+        extent_kpc = [
+            float((bmin[ax0] - pad[ax0]) * length_kpc),
+            float((bmax[ax0] + pad[ax0]) * length_kpc),
+            float((bmin[ax1] - pad[ax1]) * length_kpc),
+            float((bmax[ax1] + pad[ax1]) * length_kpc),
+        ]
+        dt_step_gyr = time_per_step_gyr
+        if dt_step_gyr is None:
+            dt_step_gyr = (
+                float(params.t_end) / float(config.num_timesteps)
+                if int(config.num_timesteps) > 0
+                else None
+            )
+        sink.encode(
+            out_path,
+            fps=int(fps),
+            cmap=str(cmap),
+            extent=extent_kpc,
+            xlabel=f"{_AXIS_NAMES[ax0]} [kpc]",
+            ylabel=f"{_AXIS_NAMES[ax1]} [kpc]",
+            dt_time=dt_step_gyr,
+            time_label="Gyr",
+        )
     return np.asarray(final_state), elapsed, n_frames
 
 
@@ -1705,6 +1732,12 @@ def main() -> None:
             out_path=out_path,
             fps=int(args.movie_fps),
             snapshot_output=args.render_snapshot_output,
+            length_kpc=float((1.0 * code_units.code_length).to(u.kpc).value),
+            time_per_step_gyr=(
+                float(args.t_end_gyr) / float(args.num_steps)
+                if int(args.num_steps) > 0
+                else None
+            ),
         )
         print(
             f"Runtime: {elapsed:.3f} s | frames: {n_frames} "

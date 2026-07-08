@@ -121,24 +121,12 @@ class FrameSink:
         colormap = cm.get_cmap(cmap)
         return (colormap(norm)[..., :3] * 255).astype(np.uint8)
 
-    def encode(
-        self,
-        path: str,
-        fps: int = 30,
-        cmap: str = "magma",
-        percentile: float = 99.5,
-    ) -> str:
-        """Encode buffered density grids to a GIF (log1p + percentile norm).
-
-        Uses Pillow (always available) for GIF; falls back to imageio for other
-        containers (e.g. .mp4) when installed.
-        """
-        rgb = self.to_rgb(cmap=cmap, percentile=percentile)
+    def _save_gif(self, path: str, frames_rgb: list, fps: int) -> str:
         duration_ms = int(1000 / max(fps, 1))
         if path.lower().endswith(".gif"):
             from PIL import Image
 
-            imgs = [Image.fromarray(frame) for frame in rgb]
+            imgs = [Image.fromarray(f) for f in frames_rgb]
             imgs[0].save(
                 path,
                 save_all=True,
@@ -149,8 +137,82 @@ class FrameSink:
         else:
             import imageio.v3 as iio
 
-            iio.imwrite(path, list(rgb), fps=fps)
+            iio.imwrite(path, list(frames_rgb), fps=fps)
         return path
+
+    def encode(
+        self,
+        path: str,
+        fps: int = 30,
+        cmap: str = "magma",
+        percentile: float = 99.5,
+        *,
+        extent: Sequence[float] | None = None,
+        xlabel: str = "x",
+        ylabel: str = "y",
+        dt_time: float | None = None,
+        time_label: str = "",
+        cbar_label: str = "log$_{10}$(1 + N per cell)",
+        title: str | None = None,
+        dpi: int = 110,
+    ) -> str:
+        """Encode buffered density grids to a movie (GIF via Pillow; other
+        containers via imageio if installed).
+
+        With ``extent`` (x0, x1, y0, y1 in display units, e.g. kpc) the frames are
+        rendered scientifically via matplotlib: labelled axes, a colorbar, and a
+        per-frame time stamp (``t = step * dt_time`` with ``time_label``). Without
+        ``extent`` it falls back to bare colormapped rasters."""
+        if not self.frames:
+            raise RuntimeError("FrameSink is empty; nothing to encode")
+        if extent is None:
+            return self._save_gif(
+                path, list(self.to_rgb(cmap=cmap, percentile=percentile)), fps
+            )
+
+        import matplotlib
+
+        matplotlib.use("Agg")
+        import matplotlib.pyplot as plt
+
+        order = np.argsort(self.steps)
+        # Consistent log-density normalization across frames (no flicker).
+        logs = [np.log10(1.0 + self.frames[i]) for i in order]
+        vmax = float(np.percentile(np.stack(logs), percentile)) or 1.0
+        times = None
+        if dt_time is not None:
+            times = [float(self.steps[i]) * float(dt_time) for i in order]
+
+        frames_rgb: list[np.ndarray] = []
+        for k, lg in enumerate(logs):
+            fig, ax = plt.subplots(figsize=(5.2, 4.4), dpi=dpi)
+            # grid[i, j] = density at (x-bin i, y-bin j); transpose so x is
+            # horizontal, y vertical, with origin at lower-left.
+            im = ax.imshow(
+                lg.T,
+                origin="lower",
+                extent=list(extent),
+                cmap=cmap,
+                vmin=0.0,
+                vmax=vmax,
+                aspect="equal",
+                interpolation="nearest",
+            )
+            ax.set_xlabel(xlabel)
+            ax.set_ylabel(ylabel)
+            ttl = title or ""
+            if times is not None:
+                ttl = (ttl + "   " if ttl else "") + f"t = {times[k]:.2f} {time_label}"
+            if ttl:
+                ax.set_title(ttl.strip())
+            cb = fig.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
+            cb.set_label(cbar_label)
+            fig.tight_layout()
+            fig.canvas.draw()
+            buf = np.asarray(fig.canvas.buffer_rgba())[..., :3].copy()
+            frames_rgb.append(buf)
+            plt.close(fig)
+        return self._save_gif(path, frames_rgb, fps)
 
 
 class PositionSink:
