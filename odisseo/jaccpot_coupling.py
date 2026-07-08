@@ -1,19 +1,19 @@
 from __future__ import annotations
 
-from contextlib import contextmanager
-from collections import Counter
-from dataclasses import dataclass
-from functools import partial
 import hashlib
 import inspect
 import os
 import time
+from collections import Counter
+from contextlib import contextmanager
+from dataclasses import dataclass
+from functools import partial
 from typing import Any, Callable, Optional
 
+import diffrax
 import jax
 import jax.numpy as jnp
 import numpy as np
-import diffrax
 from jax.errors import UnexpectedTracerError
 
 from odisseo.option_classes import (
@@ -62,8 +62,6 @@ class JaccpotCoreKernelOutput:
     refresh_count: int
 
 
-
-
 @dataclass
 class AdaptiveCoreRuntimeState:
     """Mutable runtime state for adaptive core-kernel refresh cadence."""
@@ -106,7 +104,9 @@ class AdaptiveCoreRuntimeState:
                 self.refresh_cadence_skips_rhs_calls += 1
         if displacement_threshold is not None and force_refresh:
             if self.last_refresh_positions is not None:
-                disp = jnp.linalg.norm(y_state[:, 0, :] - self.last_refresh_positions, axis=1)
+                disp = jnp.linalg.norm(
+                    y_state[:, 0, :] - self.last_refresh_positions, axis=1
+                )
                 max_disp = float(jnp.max(disp))
                 self.refresh_cadence_last_displacement = max_disp
                 if max_disp < float(displacement_threshold):
@@ -139,6 +139,8 @@ class AdaptiveCoreRuntimeState:
     def mark_refreshed(self, *, y_state: jnp.ndarray) -> None:
         self.last_refresh_rhs_call = int(self.rhs_calls)
         self.last_refresh_positions = jnp.asarray(y_state[:, 0, :])
+
+
 def _large_n_environment_overrides(
     config: SimulationConfig,
     *,
@@ -179,10 +181,15 @@ def _large_n_environment_overrides(
         None,
     )
     if auto_static_target_blocks and static_target_blocks_cap is None:
-        static_target_blocks_cap = 32
+        # Data-driven cap: jaccpot auto-sizes the static target-block payload to
+        # the densest leaf at prepare time. A fixed small cap (previously 32)
+        # fails for centrally-concentrated ICs whose inner leaves have very high
+        # near-neighbour counts.
+        static_target_blocks_cap = "auto"
     if static_target_blocks_cap is not None:
-        overrides["JACCPOT_LARGE_N_STATIC_TARGET_BLOCKS_MAX_PER_LEAF"] = str(
-            int(static_target_blocks_cap)
+        cap_raw = str(static_target_blocks_cap).strip().lower()
+        overrides["JACCPOT_LARGE_N_STATIC_TARGET_BLOCKS_MAX_PER_LEAF"] = (
+            "auto" if cap_raw == "auto" else str(int(static_target_blocks_cap))
         )
     return overrides
 
@@ -238,9 +245,9 @@ def _build_fmm_solver(
     fmm_upward_leaf_batch_size: Optional[int],
 ):
     from jaccpot import (
-        FMMAdvancedConfig,
         FarFieldConfig,
         FastMultipoleMethod,
+        FMMAdvancedConfig,
         NearFieldConfig,
         RuntimePolicyConfig,
         TreeConfig,
@@ -333,9 +340,7 @@ def _build_fmm_solver(
             ),
             mac_type=str(fmm_mac_type),
         ),
-        fixed_order=(
-            None if fmm_fixed_order is None else int(fmm_fixed_order)
-        ),
+        fixed_order=(None if fmm_fixed_order is None else int(fmm_fixed_order)),
         # Keep one global leaf-size contract per simulation: tree target and
         # runtime leaf cap are tied to the same value.
         fixed_max_leaf_size=int(leaf_size),
@@ -399,9 +404,7 @@ def build_compiled_jaccpot_core_kernel(
 
     solver = _build_fmm_solver(
         working_dtype=(
-            jnp.dtype(fmm_working_dtype)
-            if fmm_working_dtype is not None
-            else None
+            jnp.dtype(fmm_working_dtype) if fmm_working_dtype is not None else None
         ),
         config=config,
         params=params,
@@ -424,9 +427,7 @@ def build_compiled_jaccpot_core_kernel(
         fmm_pair_process_block=fmm_pair_process_block,
         fmm_max_interactions_per_node=fmm_max_interactions_per_node,
         fmm_max_neighbors_per_leaf=fmm_max_neighbors_per_leaf,
-        fmm_prepare_stage_memory_split_enabled=(
-            fmm_prepare_stage_memory_split_enabled
-        ),
+        fmm_prepare_stage_memory_split_enabled=(fmm_prepare_stage_memory_split_enabled),
         fmm_upward_leaf_batch_size=fmm_upward_leaf_batch_size,
     )
 
@@ -627,7 +628,9 @@ def _leapfrog_step_active_const_self(
     acc_self_active = acc_self_full[safe_idx]
 
     if add_external:
-        ext_full = combined_external_acceleration_vmpa_switch(state_curr, config, params)
+        ext_full = combined_external_acceleration_vmpa_switch(
+            state_curr, config, params
+        )
         acc_1 = acc_self_active + ext_full[safe_idx]
     else:
         acc_1 = acc_self_active
@@ -637,7 +640,9 @@ def _leapfrog_step_active_const_self(
     state_pos = state_curr.at[:, 0].set(pos_new)
 
     if add_external:
-        ext_full_2 = combined_external_acceleration_vmpa_switch(state_pos, config, params)
+        ext_full_2 = combined_external_acceleration_vmpa_switch(
+            state_pos, config, params
+        )
         acc_2 = acc_self_active + ext_full_2[safe_idx]
     else:
         acc_2 = acc_self_active
@@ -750,44 +755,35 @@ def integrate_leapfrog_jaccpot_active(
     state_curr = jnp.asarray(state)
     mass_arr = jnp.asarray(mass)
     profile = timing_stats is not None
-    profile_sync = (
-        str(os.environ.get("ODISSEO_PROFILE_SYNC", "0")).strip().lower()
-        in {"1", "true", "yes", "on"}
-    )
-    strict_perf_progress = (
-        str(os.environ.get("ODISSEO_STRICT_PERF_PROGRESS", "0")).strip().lower()
-        in {"1", "true", "yes", "on"}
-    )
-    strict_timing_disable_external = (
-        str(
-            os.environ.get(
-                "ODISSEO_STRICT_DISABLE_EXTERNAL_FOR_TIMING",
-                "0",
-            )
+    profile_sync = str(os.environ.get("ODISSEO_PROFILE_SYNC", "0")).strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+    strict_perf_progress = str(
+        os.environ.get("ODISSEO_STRICT_PERF_PROGRESS", "0")
+    ).strip().lower() in {"1", "true", "yes", "on"}
+    strict_timing_disable_external = str(
+        os.environ.get(
+            "ODISSEO_STRICT_DISABLE_EXTERNAL_FOR_TIMING",
+            "0",
         )
-        .strip()
-        .lower()
-        in {"1", "true", "yes", "on"}
-    )
-    strict_timing_external_only = (
-        str(
-            os.environ.get(
-                "ODISSEO_STRICT_EXTERNAL_ONLY_FOR_TIMING",
-                "0",
-            )
+    ).strip().lower() in {"1", "true", "yes", "on"}
+    strict_timing_external_only = str(
+        os.environ.get(
+            "ODISSEO_STRICT_EXTERNAL_ONLY_FOR_TIMING",
+            "0",
         )
-        .strip()
-        .lower()
-        in {"1", "true", "yes", "on"}
-    )
+    ).strip().lower() in {"1", "true", "yes", "on"}
     if bool(strict_timing_disable_external) and bool(strict_timing_external_only):
         raise ValueError(
             "ODISSEO_STRICT_DISABLE_EXTERNAL_FOR_TIMING and "
             "ODISSEO_STRICT_EXTERNAL_ONLY_FOR_TIMING are mutually exclusive."
         )
-    strict_mode_env = str(
-        os.environ.get("JACCPOT_STATIC_STRICT_GPU_MODE", "auto")
-    ).strip().lower()
+    strict_mode_env = (
+        str(os.environ.get("JACCPOT_STATIC_STRICT_GPU_MODE", "auto")).strip().lower()
+    )
     strict_mode_requested = strict_mode_env in {"on", "auto"}
     strict_production_lane = bool(
         strict_mode_requested
@@ -885,9 +881,9 @@ def integrate_leapfrog_jaccpot_active(
     shape_signature_ref_post_warmup: Optional[
         tuple[tuple[str, tuple[int, ...]], ...]
     ] = None
-    shape_signature_unique_post_warmup: set[
-        tuple[tuple[str, tuple[int, ...]], ...]
-    ] = set()
+    shape_signature_unique_post_warmup: set[tuple[tuple[str, tuple[int, ...]], ...]] = (
+        set()
+    )
     shape_drift_events_post_warmup = 0
     shape_checks_post_warmup = 0
     shape_signature_hashes_post_warmup: list[str] = []
@@ -956,9 +952,13 @@ def integrate_leapfrog_jaccpot_active(
             added = []
             removed = []
             for key, count in (cur_counter - ref_counter).items():
-                added.append({"dtype": key[0], "shape": list(key[1]), "count": int(count)})
+                added.append(
+                    {"dtype": key[0], "shape": list(key[1]), "count": int(count)}
+                )
             for key, count in (ref_counter - cur_counter).items():
-                removed.append({"dtype": key[0], "shape": list(key[1]), "count": int(count)})
+                removed.append(
+                    {"dtype": key[0], "shape": list(key[1]), "count": int(count)}
+                )
             shape_signature_diff_post_warmup = [
                 {"added": added[:12], "removed": removed[:12]}
             ]
@@ -986,7 +986,9 @@ def integrate_leapfrog_jaccpot_active(
                 runtime_diag = dict(get_diag())
             except Exception:
                 runtime_diag = {}
-        strict_refresh_total_seconds = float(runtime_diag.get("refresh_total_seconds", 0.0))
+        strict_refresh_total_seconds = float(
+            runtime_diag.get("refresh_total_seconds", 0.0)
+        )
         strict_refresh_component_sum = float(
             runtime_diag.get("refresh_tree_upward_seconds", 0.0)
             + runtime_diag.get("refresh_dual_downward_compute_seconds", 0.0)
@@ -1039,9 +1041,7 @@ def integrate_leapfrog_jaccpot_active(
                     strict_effective_add_external
                 ),
                 "strict_timing_mode": str(strict_timing_mode),
-                "strict_timing_disable_external": bool(
-                    strict_timing_disable_external
-                ),
+                "strict_timing_disable_external": bool(strict_timing_disable_external),
                 "strict_timing_external_only": bool(strict_timing_external_only),
                 "large_n_eval_diag_mode": str(
                     runtime_diag.get("large_n_eval_diag_mode", "full")
@@ -1083,7 +1083,9 @@ def integrate_leapfrog_jaccpot_active(
                     runtime_diag.get("large_n_radix_payload_source_leaf_slots", 0)
                 ),
                 "large_n_target_block_source_leaf_padded_shape": tuple(
-                    runtime_diag.get("large_n_target_block_source_leaf_padded_shape", ())
+                    runtime_diag.get(
+                        "large_n_target_block_source_leaf_padded_shape", ()
+                    )
                 ),
                 "strict_refresh_diag_mode": str(
                     runtime_diag.get("strict_refresh_diag_mode", "full")
@@ -1135,7 +1137,8 @@ def integrate_leapfrog_jaccpot_active(
                 ),
                 "used_schedule_scan_mode": bool(active_indices_schedule is not None),
                 "used_fast_full_scan_mode": bool(
-                    active_indices_fn is None and not bool(refresh_after_position_update)
+                    active_indices_fn is None
+                    and not bool(refresh_after_position_update)
                 ),
                 "shape_contract_enforced": bool(enforce_static_shape_contract),
                 "shape_signature_checks": int(shape_checks),
@@ -1413,7 +1416,9 @@ def integrate_leapfrog_jaccpot_active(
                     runtime_diag.get("large_n_radix_payload_source_leaf_slots", 0)
                 ),
                 "runtime_large_n_target_block_source_leaf_padded_shape": tuple(
-                    runtime_diag.get("large_n_target_block_source_leaf_padded_shape", ())
+                    runtime_diag.get(
+                        "large_n_target_block_source_leaf_padded_shape", ()
+                    )
                 ),
                 "runtime_strict_refresh_diag_mode": str(
                     runtime_diag.get("strict_refresh_diag_mode", "full")
@@ -1477,7 +1482,9 @@ def integrate_leapfrog_jaccpot_active(
                 ),
                 "runtime_strict_fused_fastlane_last_blockers": tuple(
                     str(v)
-                    for v in runtime_diag.get("strict_fused_fastlane_last_blockers", tuple())
+                    for v in runtime_diag.get(
+                        "strict_fused_fastlane_last_blockers", tuple()
+                    )
                 ),
                 "runtime_strict_fused_fastlane_block_counts": {
                     str(k): int(v)
@@ -1691,7 +1698,9 @@ def integrate_leapfrog_jaccpot_active(
 
     solver = _build_fmm_solver(
         working_dtype=(
-            state_curr.dtype if fmm_working_dtype is None else jnp.dtype(fmm_working_dtype)
+            state_curr.dtype
+            if fmm_working_dtype is None
+            else jnp.dtype(fmm_working_dtype)
         ),
         config=config,
         params=params,
@@ -1716,9 +1725,7 @@ def integrate_leapfrog_jaccpot_active(
         fmm_pair_process_block=fmm_pair_process_block,
         fmm_max_interactions_per_node=fmm_max_interactions_per_node,
         fmm_max_neighbors_per_leaf=fmm_max_neighbors_per_leaf,
-        fmm_prepare_stage_memory_split_enabled=(
-            fmm_prepare_stage_memory_split_enabled
-        ),
+        fmm_prepare_stage_memory_split_enabled=(fmm_prepare_stage_memory_split_enabled),
         fmm_upward_leaf_batch_size=(
             getattr(config, "fmm_upward_leaf_batch_size", None)
             if fmm_upward_leaf_batch_size is None
@@ -1736,8 +1743,7 @@ def integrate_leapfrog_jaccpot_active(
     refresh_fn_accepts_var_kw = bool(
         refresh_fn_signature is not None
         and any(
-            p.kind == inspect.Parameter.VAR_KEYWORD
-            for p in refresh_fn_params.values()
+            p.kind == inspect.Parameter.VAR_KEYWORD for p in refresh_fn_params.values()
         )
     )
 
@@ -2052,20 +2058,16 @@ def integrate_leapfrog_jaccpot_active(
 
                             refresh_call_runner = _run_idx3
                     elif idx == 4:
-                        refresh_call_runner = (
-                            lambda prepared, positions: refresh_fn(
-                                prepared,
-                                positions,
-                                mass_arr,
-                            )
+                        refresh_call_runner = lambda prepared, positions: refresh_fn(
+                            prepared,
+                            positions,
+                            mass_arr,
                         )
                     else:
-                        refresh_call_runner = (
-                            lambda prepared, positions: refresh_fn(
-                                positions,
-                                mass_arr,
-                                prepared,
-                            )
+                        refresh_call_runner = lambda prepared, positions: refresh_fn(
+                            positions,
+                            mass_arr,
+                            prepared,
                         )
                 refresh_prepare_successes += 1
                 last_prepare_path = "refresh"
@@ -2088,10 +2090,7 @@ def integrate_leapfrog_jaccpot_active(
             runtime_diag = dict(get_diag())
         except Exception:
             return {}
-        return {
-            key: float(runtime_diag.get(key, 0.0))
-            for key in prepare_stage_keys
-        }
+        return {key: float(runtime_diag.get(key, 0.0)) for key in prepare_stage_keys}
 
     def _profiled_prepare_call(
         state_in: jnp.ndarray,
@@ -2127,8 +2126,7 @@ def integrate_leapfrog_jaccpot_active(
         stage_delta = {
             key: float(stage_after.get(key, 0.0) - stage_before.get(key, 0.0))
             for key in prepare_stage_keys
-            if abs(float(stage_after.get(key, 0.0) - stage_before.get(key, 0.0)))
-            > 0.0
+            if abs(float(stage_after.get(key, 0.0) - stage_before.get(key, 0.0))) > 0.0
         }
         return prepared_out, float(elapsed), stage_delta
 
@@ -2150,8 +2148,7 @@ def integrate_leapfrog_jaccpot_active(
         }
         if stage_delta:
             event["stage_seconds"] = {
-                str(key): float(value)
-                for key, value in sorted(stage_delta.items())
+                str(key): float(value) for key, value in sorted(stage_delta.items())
             }
         profiled_prepare_events.append(event)
         if last_prepare_path == "refresh":
@@ -2316,14 +2313,18 @@ def integrate_leapfrog_jaccpot_active(
             )
             external_acc_fn = None
             if strict_effective_add_external:
+
                 def _strict_external_acceleration(state_in: jnp.ndarray) -> jnp.ndarray:
                     return combined_external_acceleration_vmpa_switch(
                         state_in, config, params
                     )
+
                 external_acc_fn = _strict_external_acceleration
 
             timing_target = getattr(solver, "_impl", solver)
-            old_timing_active = bool(getattr(timing_target, "_refresh_timing_active", False))
+            old_timing_active = bool(
+                getattr(timing_target, "_refresh_timing_active", False)
+            )
             if profile:
                 try:
                     setattr(timing_target, "_refresh_timing_active", True)
@@ -2341,17 +2342,25 @@ def integrate_leapfrog_jaccpot_active(
             if not bool(return_history):
                 prepared_initial = _prepare_state(state_initial)
                 prepared_initial = jax.block_until_ready(prepared_initial)
-                strict_diag_mode = str(
-                    os.environ.get("JACCPOT_STRICT_REFRESH_DIAG_MODE", "full")
-                ).strip().lower()
-                strict_detail_mode = str(
-                    os.environ.get(
-                        "JACCPOT_STRICT_REFRESH_DETAIL_DIAG_MODE", "full"
+                strict_diag_mode = (
+                    str(os.environ.get("JACCPOT_STRICT_REFRESH_DIAG_MODE", "full"))
+                    .strip()
+                    .lower()
+                )
+                strict_detail_mode = (
+                    str(
+                        os.environ.get(
+                            "JACCPOT_STRICT_REFRESH_DETAIL_DIAG_MODE", "full"
+                        )
                     )
-                ).strip().lower()
-                eval_diag_mode = str(
-                    os.environ.get("JACCPOT_LARGE_N_EVAL_DIAG_MODE", "full")
-                ).strip().lower()
+                    .strip()
+                    .lower()
+                )
+                eval_diag_mode = (
+                    str(os.environ.get("JACCPOT_LARGE_N_EVAL_DIAG_MODE", "full"))
+                    .strip()
+                    .lower()
+                )
                 if (
                     strict_diag_mode != "integrator_only"
                     and strict_detail_mode == "full"
@@ -2384,14 +2393,21 @@ def integrate_leapfrog_jaccpot_active(
                     rematerialize_between_refresh=bool(rematerialize_between_refresh),
                     return_history=bool(return_history),
                 )
-                try:
-                    strict_kwargs["return_prepared_state"] = bool(return_history)
-                    return solver.strict_run_v2(**strict_kwargs)
-                except TypeError as exc:
-                    if "return_prepared_state" not in str(exc):
-                        raise
-                    strict_kwargs.pop("return_prepared_state", None)
-                    return solver.strict_run_v2(**strict_kwargs)
+                # Keep the large-N env overrides (e.g. target-block size, static
+                # target-block cap) active while strict_run_v2 traces/compiles the
+                # device-resident scan, so the traced refresh resolves the SAME
+                # fixed-shape config as the eager prepare. Otherwise the transient
+                # overrides expire before compilation and the fused static
+                # target-block preflight fails (block_size / cap mismatch).
+                with _temporary_large_n_environment(config, fmm_preset=fmm_preset):
+                    try:
+                        strict_kwargs["return_prepared_state"] = bool(return_history)
+                        return solver.strict_run_v2(**strict_kwargs)
+                    except TypeError as exc:
+                        if "return_prepared_state" not in str(exc):
+                            raise
+                        strict_kwargs.pop("return_prepared_state", None)
+                        return solver.strict_run_v2(**strict_kwargs)
 
             def _run_external_only_once(state_in: jnp.ndarray):
                 zero_self_acc = jnp.zeros_like(state_in[:, 0, :])
@@ -2459,7 +2475,9 @@ def integrate_leapfrog_jaccpot_active(
             finally:
                 if profile:
                     try:
-                        setattr(timing_target, "_refresh_timing_active", old_timing_active)
+                        setattr(
+                            timing_target, "_refresh_timing_active", old_timing_active
+                        )
                     except Exception:
                         pass
             if profile:
@@ -2522,9 +2540,13 @@ def integrate_leapfrog_jaccpot_active(
     if active_indices_schedule is not None:
         active_indices_schedule = jnp.asarray(active_indices_schedule, dtype=jnp.int32)
         if active_indices_schedule.ndim != 2:
-            raise ValueError("active_indices_schedule must have shape (num_steps, max_active)")
+            raise ValueError(
+                "active_indices_schedule must have shape (num_steps, max_active)"
+            )
         if int(active_indices_schedule.shape[0]) != int(num_steps):
-            raise ValueError("active_indices_schedule first dimension must equal num_steps")
+            raise ValueError(
+                "active_indices_schedule first dimension must equal num_steps"
+            )
 
         if active_mask_schedule is None:
             active_mask_schedule = jnp.ones_like(active_indices_schedule, dtype=bool)
@@ -2715,9 +2737,7 @@ def integrate_leapfrog_jaccpot_active(
                 acc_1 = acc_self
 
             pos_new = (
-                state_curr[:, 0]
-                + state_curr[:, 1] * dt_arr
-                + 0.5 * acc_1 * (dt_arr**2)
+                state_curr[:, 0] + state_curr[:, 1] * dt_arr + 0.5 * acc_1 * (dt_arr**2)
             )
             state_pos = state_curr.at[:, 0].set(pos_new)
         else:
@@ -2915,16 +2935,26 @@ def integrate_diffrax_jaccpot_active(
     del refresh_every, rematerialize_between_refresh
     if int(num_steps) <= 0:
         raise ValueError("num_steps must be positive")
-    if active_indices_fn is not None or active_indices_schedule is not None or active_mask_schedule is not None:
+    if (
+        active_indices_fn is not None
+        or active_indices_schedule is not None
+        or active_mask_schedule is not None
+    ):
         raise NotImplementedError(
             "Adaptive FMM currently supports full-particle updates only (no active-index schedules)."
         )
     if bool(refresh_after_position_update):
-        raise NotImplementedError("Adaptive FMM does not support refresh_after_position_update=True.")
+        raise NotImplementedError(
+            "Adaptive FMM does not support refresh_after_position_update=True."
+        )
     if bool(enforce_static_shape_contract):
-        raise NotImplementedError("Adaptive FMM does not yet support enforce_static_shape_contract=True.")
+        raise NotImplementedError(
+            "Adaptive FMM does not yet support enforce_static_shape_contract=True."
+        )
     if int(static_shape_warmup_prepares) > 0:
-        raise NotImplementedError("Adaptive FMM does not yet support static_shape_warmup_prepares>0.")
+        raise NotImplementedError(
+            "Adaptive FMM does not yet support static_shape_warmup_prepares>0."
+        )
 
     state_arr = jnp.asarray(state)
     mass_arr = jnp.asarray(mass)
@@ -2933,7 +2963,9 @@ def integrate_diffrax_jaccpot_active(
 
     solver = _build_fmm_solver(
         working_dtype=(
-            state_arr.dtype if fmm_working_dtype is None else jnp.dtype(fmm_working_dtype)
+            state_arr.dtype
+            if fmm_working_dtype is None
+            else jnp.dtype(fmm_working_dtype)
         ),
         config=config,
         params=params,
@@ -2965,15 +2997,14 @@ def integrate_diffrax_jaccpot_active(
     use_core_scaffold = (
         os.environ.get("ODISSEO_FMM_USE_CORE_KERNEL_SCAFFOLD", "0").strip() == "1"
     )
-    allow_tracer_prepared_cache = (
-        os.environ.get("ODISSEO_FMM_ALLOW_TRACER_PREPARED_CACHE", "0")
+    allow_tracer_prepared_cache = os.environ.get(
+        "ODISSEO_FMM_ALLOW_TRACER_PREPARED_CACHE", "0"
+    ).strip().lower() in {"1", "true", "yes", "on"}
+    adaptive_prepared_cache_mode = (
+        str(os.environ.get("ODISSEO_FMM_ADAPTIVE_PREPARED_CACHE_MODE", "none"))
         .strip()
         .lower()
-        in {"1", "true", "yes", "on"}
     )
-    adaptive_prepared_cache_mode = str(
-        os.environ.get("ODISSEO_FMM_ADAPTIVE_PREPARED_CACHE_MODE", "none")
-    ).strip().lower()
     if adaptive_prepared_cache_mode not in {"none", "python"}:
         raise ValueError(
             "ODISSEO_FMM_ADAPTIVE_PREPARED_CACHE_MODE must be one of {'none', 'python'}"
@@ -3102,9 +3133,10 @@ def integrate_diffrax_jaccpot_active(
                 prepared_out=prepared_out,
                 allow_tracer_prepared_cache=allow_tracer_prepared_cache,
             )
-            if int(getattr(out, "prepare_count", 0)) > 0 or int(
-                getattr(out, "refresh_count", 0)
-            ) > 0:
+            if (
+                int(getattr(out, "prepare_count", 0)) > 0
+                or int(getattr(out, "refresh_count", 0)) > 0
+            ):
                 adaptive_core_state.mark_refreshed(y_state=y)
         else:
             cache["full_prepare_calls"] += 1
@@ -3115,7 +3147,9 @@ def integrate_diffrax_jaccpot_active(
                 return_potential=False,
             )
         if add_external:
-            acc = acc_self + combined_external_acceleration_vmpa_switch(y, config, params)
+            acc = acc_self + combined_external_acceleration_vmpa_switch(
+                y, config, params
+            )
         else:
             acc = acc_self
         return jnp.stack((y[:, 1, :], acc), axis=1)
@@ -3203,18 +3237,14 @@ def integrate_diffrax_jaccpot_active(
                 ),
                 "adaptive_diffrax_stats_raw": raw_stats_normalized,
                 "adaptive_rejected_step_fraction": (
-                    float(rejected) / float(step_attempts)
-                    if step_attempts > 0
-                    else 0.0
+                    float(rejected) / float(step_attempts) if step_attempts > 0 else 0.0
                 ),
                 "adaptive_tracing_side_effect_counters_reliable": False,
                 "adaptive_refresh_hits": int(cache["full_prepare_calls"]),
                 "adaptive_refresh_misses": 0,
                 "adaptive_refresh_rhs_calls": 1,
                 "adaptive_full_prepare_calls": int(cache["full_prepare_calls"]),
-                "adaptive_refresh_prepare_calls": int(
-                    cache["refresh_prepare_calls"]
-                ),
+                "adaptive_refresh_prepare_calls": int(cache["refresh_prepare_calls"]),
                 "adaptive_tracing_prepare_counter_full": int(
                     cache["full_prepare_calls"]
                 ),
@@ -3228,9 +3258,7 @@ def integrate_diffrax_jaccpot_active(
                 "adaptive_atol": float(atol),
                 "adaptive_dt0": float(dt0),
                 "adaptive_use_core_kernel_scaffold": bool(use_core_scaffold),
-                "adaptive_core_scaffold_exec_calls": int(
-                    cache["core_exec_calls"]
-                ),
+                "adaptive_core_scaffold_exec_calls": int(cache["core_exec_calls"]),
                 "adaptive_core_scaffold_prepare_calls": int(
                     cache["core_prepare_calls"]
                 ),
@@ -3247,9 +3275,7 @@ def integrate_diffrax_jaccpot_active(
                 "adaptive_python_prepared_cache_enabled": bool(
                     adaptive_python_prepared_cache
                 ),
-                "adaptive_refresh_rhs_calls_target": int(
-                    adaptive_refresh_rhs_calls
-                ),
+                "adaptive_refresh_rhs_calls_target": int(adaptive_refresh_rhs_calls),
                 "adaptive_refresh_displacement_threshold": (
                     None
                     if adaptive_refresh_displacement_threshold is None
@@ -3358,7 +3384,9 @@ def evaluate_acceleration_jaccpot(
     mass_arr = jnp.asarray(mass)
     solver = _build_fmm_solver(
         working_dtype=(
-            state_arr.dtype if fmm_working_dtype is None else jnp.dtype(fmm_working_dtype)
+            state_arr.dtype
+            if fmm_working_dtype is None
+            else jnp.dtype(fmm_working_dtype)
         ),
         config=config,
         params=params,
@@ -3381,9 +3409,7 @@ def evaluate_acceleration_jaccpot(
         fmm_pair_process_block=fmm_pair_process_block,
         fmm_max_interactions_per_node=fmm_max_interactions_per_node,
         fmm_max_neighbors_per_leaf=fmm_max_neighbors_per_leaf,
-        fmm_prepare_stage_memory_split_enabled=(
-            fmm_prepare_stage_memory_split_enabled
-        ),
+        fmm_prepare_stage_memory_split_enabled=(fmm_prepare_stage_memory_split_enabled),
         fmm_upward_leaf_batch_size=(
             getattr(config, "fmm_upward_leaf_batch_size", None)
             if fmm_upward_leaf_batch_size is None

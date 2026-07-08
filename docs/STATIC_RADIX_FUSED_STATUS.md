@@ -210,8 +210,50 @@ set `1`/`true` to enable on Ampere+). The solver still auto-falls back to pure
 JAX on unsupported hardware. Verified: the flag propagates to
 `solver._impl.use_pallas`.
 
+## Fused lane on concentrated galaxy ICs — static-block cap auto-size (2026-07-08)
+
+Running the 200k **Agama disk** on the fast fused lane exposed a prepare-side
+blocker independent of the Pallas kernel: the fused near-field packs each target
+leaf's neighbour source leaves into a fixed-shape `(num_leaves,
+max_blocks_per_leaf, block_size)` **static-target-block** payload, and the cap
+was a fixed int (default 32, ladder 8..128) with no data-driven sizing. A
+centrally-concentrated disk has dense inner leaves with huge near-neighbour
+counts (measured: the central leaf is "near" **781 of 782** leaves at theta=0.6),
+so prepare raised `static target-block cap exceeded` at every ladder value.
+(Uniform-random points — as in the eval benchmark — have bounded degree and fit
+cap 64, which is why the 3.9x eval held there.)
+
+Fixes:
+- **jaccpot** (`runtime/_large_n_pipeline.py`): the cap auto-sizes to the densest
+  leaf at eager prepare (`ceil(max_leaf_degree/block_size)*headroom`, from an
+  extended caps ladder), supports `JACCPOT_LARGE_N_STATIC_TARGET_BLOCKS_MAX_PER_LEAF=auto`,
+  and caches the resolved cap so the traced strict refresh reuses the same fixed
+  shape (zero-recompile). At leaf=256 the cap auto-sizes 32→256 (~0.8 GB payload).
+  Unit test: `jaccpot/tests/unit/test_static_target_blocks_cap.py`.
+- **Odisseo** (`jaccpot_coupling.py`): the coupling defaults the static-block cap
+  to `auto`; and — the second half of the fix — wraps the `strict_run_v2` call in
+  `_temporary_large_n_environment` so the large-N env (notably `TARGET_BLOCK_SIZE`)
+  stays active while the device-resident scan is **traced/compiled**, not just
+  during the eager prepare. Without this the traced refresh re-resolved
+  `block_size` to its default (4→32) and the fused static-target-block preflight
+  mismatched.
+
+Result: the concentrated Agama IC now prepares and runs on the **fast fused
+lane** (~0.4 s/step once compiled, vs the ~9 s/step non-static dynamic fallback);
+pallas engages (final-state A/B differs). Verified 4–40 step runs.
+
+**Known follow-up — neighbor-edge cap (not yet auto-sized):** a *second*
+fixed-shape cap, the neighbor-edge profile cap, also underestimates concentrated
+ICs (its N-based bootstrap gave 209648 vs the disk's ~800768 active edges) and
+must currently be set up front: `JACCPOT_LARGE_N_NEIGHBOR_EDGE_PROFILE_FIXED_CAP`
+(e.g. `2097152` for 200k). Auto-sizing it cannot be done mid-scan (growing the
+refresh output breaks the fixed-shape `lax.scan` carry vs the initial state);
+it needs an up-front IC-measurement preflight or a larger bootstrap — deferred.
+
 ## Next steps (deferred)
 
+0. Auto-size the **neighbor-edge** profile cap for concentrated ICs (see above)
+   via an up-front preflight so no manual env is needed.
 1. `use_pallas` is wired into the Odisseo coupling (`ODISSEO_FMM_USE_PALLAS`);
    the full fused *eval* is re-baselined above (3.9x). An end-to-end 10-step
    `strict_run_v2` A/B (via `tools/walltime_ab_compare.py`, `--variant-env
