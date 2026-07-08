@@ -26,6 +26,7 @@ from odisseo.jaccpot_coupling import (
     integrate_diffrax_jaccpot_active,
     integrate_leapfrog_jaccpot_active,
 )
+from odisseo.render_callback import FrameSink, make_density_step_callback
 from odisseo.option_classes import (
     FMM_ACC,
     NFW_POTENTIAL,
@@ -46,7 +47,9 @@ jax.config.update("jax_enable_x64", True)
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--mode", choices=("perf", "render"), default="perf")
+    parser.add_argument(
+        "--mode", choices=("perf", "render", "render_fused"), default="perf"
+    )
     parser.add_argument("--n-particles", type=int, default=200_000)
     parser.add_argument("--num-steps", type=int, default=200)
     parser.add_argument("--t-end-gyr", type=float, default=2.0)
@@ -502,6 +505,13 @@ def parse_args() -> argparse.Namespace:
         type=int,
         default=900,
         help="Square pixel resolution for density-rendered movie frames.",
+    )
+    parser.add_argument(
+        "--render-stride",
+        type=int,
+        default=10,
+        help="mode=render_fused: emit one frame every N steps from inside the "
+        "fused device-resident scan (via jax.debug.callback).",
     )
     parser.add_argument(
         "--render-cmap",
@@ -1161,6 +1171,90 @@ def _run_perf_mode(
         elapsed = float(timing_stats["perf_measured_median_seconds"])
         timing_stats["perf_total_wall_seconds_including_warmup"] = float(total_elapsed)
     return np.asarray(final_state_jax), history, float(elapsed), timing_stats
+
+
+_PROJECTION_AXES = {"xy": (0, 1), "xz": (0, 2), "yz": (1, 2)}
+
+
+def _run_render_fused_mode(
+    state0: jnp.ndarray,
+    mass: jnp.ndarray,
+    config: SimulationConfig,
+    params: SimulationParams,
+    *,
+    res: int,
+    stride: int,
+    projection: str,
+    cmap: str,
+    out_path: str,
+    fps: int,
+) -> tuple[np.ndarray, float, int]:
+    """Render on the high-performance fused lane via a jax.debug.callback hook.
+
+    Runs the fused device-resident velocity-Verlet scan (``return_history=False``)
+    and streams frames out with ``step_callback``: the 2D density projection is
+    computed on-device and only that small grid crosses to the host every
+    ``stride`` steps (fire-and-forget), so the GPU is not stalled. Frames are
+    encoded to a movie after ``block_until_ready`` flushes the callbacks.
+    """
+    fmm_preset, fmm_runtime_path, fmm_dtype = _resolve_fmm_profile(config)
+    axes = _PROJECTION_AXES.get(str(projection).lower(), (0, 1))
+    pos0 = state0[:, 0, :]
+    bmin = np.asarray(jax.device_get(jnp.min(pos0, axis=0)), dtype=np.float64)
+    bmax = np.asarray(jax.device_get(jnp.max(pos0, axis=0)), dtype=np.float64)
+    # pad by 2% so edge particles aren't clipped as the system evolves
+    pad = 0.02 * (bmax - bmin + 1e-6)
+    sink = FrameSink()
+    step_cb = make_density_step_callback(
+        sink, bmin - pad, bmax + pad, res=int(res), axes=axes
+    )
+
+    t0 = time.perf_counter()
+    final_state = jax.block_until_ready(
+        integrate_leapfrog_jaccpot_active(
+            state0,
+            mass,
+            config,
+            params,
+            num_steps=int(config.num_timesteps),
+            refresh_every=int(config.fmm_refresh_every),
+            leaf_size=int(config.fmm_leaf_size),
+            max_order=int(config.fmm_max_order),
+            fmm_preset=fmm_preset,
+            fmm_runtime_path=fmm_runtime_path,
+            fmm_working_dtype=fmm_dtype,
+            fmm_basis=str(config.fmm_basis),
+            fmm_theta=float(config.fmm_theta),
+            fmm_mac_type=str(config.fmm_mac_type),
+            fmm_farfield_mode=str(config.fmm_farfield_mode),
+            fmm_m2l_chunk_size=config.fmm_m2l_chunk_size,
+            fmm_nearfield_mode=str(config.fmm_nearfield_mode),
+            fmm_nearfield_edge_chunk_size=int(config.fmm_nearfield_edge_chunk_size),
+            fmm_tree_build_mode=str(config.fmm_tree_build_mode),
+            fmm_tree_leaf_target=int(config.fmm_tree_leaf_target),
+            fmm_fixed_order=config.fmm_fixed_order,
+            fmm_jit_tree=config.fmm_jit_tree,
+            fmm_jit_traversal=config.fmm_jit_traversal,
+            fmm_max_pair_queue=config.fmm_max_pair_queue,
+            fmm_pair_process_block=config.fmm_pair_process_block,
+            fmm_max_interactions_per_node=config.fmm_max_interactions_per_node,
+            fmm_max_neighbors_per_leaf=config.fmm_max_neighbors_per_leaf,
+            fmm_prepare_stage_memory_split_enabled=(
+                config.fmm_prepare_stage_memory_split_enabled
+            ),
+            rematerialize_between_refresh=bool(
+                config.fmm_rematerialize_between_refresh
+            ),
+            return_history=False,
+            step_callback=step_cb,
+            step_callback_stride=int(stride),
+        )
+    )
+    elapsed = float(time.perf_counter() - t0)
+    n_frames = len(sink.frames)
+    if n_frames:
+        sink.encode(out_path, fps=int(fps), cmap=str(cmap))
+    return np.asarray(final_state), elapsed, n_frames
 
 
 def _run_perf_mode_with_history(
@@ -2109,6 +2203,26 @@ def main() -> None:
             accel_stats=accel_stats,
         )
         print(f"Saved initial acceleration report JSON: {initial_accel_report_path}")
+
+    if args.mode == "render_fused":
+        out_path = str(args.movie_path or "./galaxy_render_fused.gif")
+        final_state, elapsed, n_frames = _run_render_fused_mode(
+            state0,
+            mass,
+            config,
+            params,
+            res=int(args.render_resolution),
+            stride=int(args.render_stride),
+            projection=str(args.projection),
+            cmap=str(args.render_cmap),
+            out_path=out_path,
+            fps=int(args.movie_fps),
+        )
+        print(
+            f"Runtime: {elapsed:.3f} s | frames: {n_frames} "
+            f"(every {int(args.render_stride)} steps) | movie: {out_path}"
+        )
+        return
 
     if args.mode == "perf":
         if args.live or args.movie_path:
