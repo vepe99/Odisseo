@@ -4,7 +4,9 @@ Single source of truth for the jaccpot FMM ↔ Odisseo strict fused static-radix
 work. Supersedes the dated handoff/status/plan notes now under
 [`docs/archive/`](archive/) (kept for provenance).
 
-_Last updated: 2026-07-07._
+_Last updated: 2026-07-08 — fused Pallas near-field P2P kernel implemented on
+A100 (sm_80): 4.0x on the near-field force eval. See
+[Pallas near-field P2P kernel — IMPLEMENTED](#pallas-near-field-p2p-kernel--implemented-2026-07-08-a100-sm_80)._
 
 ## Goal
 
@@ -136,24 +138,72 @@ pre-gathering positions outside the timed region). Pure JAX cannot escape the
 HBM-materialization ceiling; consistent with the archived "unroll knobs
 exhausted" note.
 
-**Pallas is blocked on this hardware.** A SRAM-tiling Pallas P2P kernel is the
-only lever that could reach jaxfmm-level near-field efficiency, but all available
-GPUs are RTX 2080 Ti = compute capability **7.5 (sm_75)**, and even a minimal
-Pallas/Triton kernel fails there:
-`'nvvm.cp.async.bulk.wait_group' op is not supported on sm_75`. jaccpot's own
-`pallas_nearfield_tile_pair_supported()` already guards `>= 8.0`. The kernel can
-be written but not run/validated/benchmarked without an Ampere+ (sm_80+) GPU.
+**On sm_75 the Pallas lane was blocked** — a SRAM-tiling Pallas P2P kernel is the
+only lever that reaches better near-field efficiency, and on the RTX 2080 Ti
+cluster (compute capability **7.5 / sm_75**) even a minimal Pallas/Triton kernel
+fails: `'nvvm.cp.async.bulk.wait_group' op is not supported on sm_75`. jaccpot's
+`pallas_nearfield_*_supported()` guards `>= 8.0`. **This is a hardware property,
+not a code limitation** — see the update below.
+
+## Pallas near-field P2P kernel — IMPLEMENTED (2026-07-08, A100 sm_80)
+
+**Hardware correction:** the sm_75 blocker above does *not* apply to every
+machine. The development host used here has **8x NVIDIA A100-PCIE-40GB, compute
+capability 8.0 (sm_80)**, jax/jaxlib 0.9.0. Pallas/Triton compiles and runs
+here; `pallas_nearfield_fused_supported()` returns `True`.
+
+A fused tiled Pallas near-field P2P kernel now exists and is wired into the
+radix fast lane in jaccpot (branch `feat/pallas-nearfield-fused`):
+
+- `jaccpot/pallas/nearfield_fused_leaf.py` provides two register-blocked kernels
+  that keep the `W_t x W_s` distance products in registers (never HBM) and emit
+  **acceleration + potential** leaf-major:
+  - `nearfield_fused_leaf_*` for the materialized per-particle source payload;
+  - `nearfield_leafpair_*` for the **compact prepacked source-leaf-id layout the
+    production fused lane actually uses** — source leaves are gathered by id from
+    the small `leaf_positions` table inside the kernel and invalid slots are
+    skipped with `lax.cond`, avoiding the multi-GB dense source materialization
+    (the materialized `(num_leaves, ~2048, W)` payload OOMs at leaf=256).
+- Gated by `use_pallas` + `pallas_nearfield_fused_supported()` with the pure-JAX
+  paths as fallback (unchanged default behavior; CPU/CI use interpret mode via
+  `JACCPOT_NEARFIELD_PALLAS_INTERPRET=1`). `return_potential=True` on the fast
+  lane is now implemented (was `NotImplementedError`).
+- Tunables: `JACCPOT_NEARFIELD_PALLAS_{TARGET_SUBTILE,NUM_WARPS,NUM_STAGES}`;
+  default target-subtile 32 (power-of-two, best A100 occupancy).
+
+**Correctness:** the Pallas paths match the pure-JAX baselines and a brute-force
+direct sum to **~1e-15 (fp64) / ~1e-6 (fp32)** for both acceleration and
+potential — see `jaccpot/tests/unit/operators/test_pallas_nearfield_fused.py`
+and the `*_pallas_*` tests in `tests/unit/core/test_near_field.py`.
+
+**Performance (A100, same-process warm min-of-25, 200k, p=4, theta=0.6,
+leaf=256, fp32, near-field-only force eval):**
+
+| near-field force P2P | time | speedup |
+| --- | --- | --- |
+| pure-JAX radix fast lane | 0.219 s | 1.0x |
+| fused Pallas leaf-pair (subtile 32) | 0.055 s | **4.0x** |
+
+The near-field was ~98% of the fused eval, so this collapses the dominant cost
+(jaxfmm potential eval on the same box is ~0.013 s; the residual gap is
+force-vs-potential + the small far-field). Benchmark:
+`jaccpot/bench/bench_fused_eval_vs_jaxfmm.py --use-pallas both --near-only`
+(now uses `autocvd --gpu-select free` to pin an uncontended GPU — timing on a
+shared/contended GPU is meaningless and produced the earlier noisy baselines).
 
 ## Next steps (deferred)
 
-1. **Pallas near-field P2P kernel — requires Ampere+ (sm_80+) hardware.** On such
-   a GPU: extend `jaccpot/pallas/nearfield_tile_pair.py` into a full tiled
-   leaf-pair P2P (target tile in SRAM, stream neighbor source tiles, accumulate
-   in registers), flag-gated with the pure-JAX fallback, parity-gated
-   (`tools/fused_payload_force_parity.py`), kept only if it wins walltime while
-   preserving `fallback_count=0` and recompile-free. Expected upside: the
-   residual near-field gap to jaxfmm (~2x on potential; more on forces).
-2. Retire the deferred test debt above.
+1. Enable `use_pallas` on the Odisseo→jaccpot production coupling path and
+   re-baseline the full strict-fused step (this status recorded the isolated
+   near-field eval; the end-to-end `strict_run_v2` step gain is pending a clean
+   uncontended run).
+2. Optional: a potential-only kernel variant (skips the 3-vector accumulation)
+   for jaxfmm potential-to-potential parity; tune num_stages/subtile per leaf
+   size; extend the leaf-pair kernel to the overflow/target-block payloads.
+3. Retire the deferred test debt above. Note: 9 pre-existing
+   `test_solver_api.py` / `test_large_n_fast_path_policy.py` failures are stale
+   solver-policy default expectations (block_size 32 vs 8, traversal caps),
+   unrelated to this work and present on the base branch.
 
 ## Reproduce
 
