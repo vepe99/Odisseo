@@ -175,6 +175,13 @@ class FrameSink:
         matplotlib.use("Agg")
         import matplotlib.pyplot as plt
 
+        # Colormap copy with empty (zero-density) cells drawn white.
+        try:
+            cmap_obj = matplotlib.colormaps[cmap].copy()
+        except Exception:
+            cmap_obj = plt.get_cmap(cmap).copy()
+        cmap_obj.set_bad("white")
+
         order = np.argsort(self.steps)
         # Consistent log-density normalization across frames (no flicker).
         logs = [np.log10(1.0 + self.frames[i]) for i in order]
@@ -187,12 +194,13 @@ class FrameSink:
         for k, lg in enumerate(logs):
             fig, ax = plt.subplots(figsize=(5.2, 4.4), dpi=dpi)
             # grid[i, j] = density at (x-bin i, y-bin j); transpose so x is
-            # horizontal, y vertical, with origin at lower-left.
+            # horizontal, y vertical, origin lower-left. Empty cells (N=0) are
+            # masked so they render white instead of the colormap's dark low end.
             im = ax.imshow(
-                lg.T,
+                np.ma.masked_less_equal(lg.T, 0.0),
                 origin="lower",
                 extent=list(extent),
-                cmap=cmap,
+                cmap=cmap_obj,
                 vmin=0.0,
                 vmax=vmax,
                 aspect="equal",
