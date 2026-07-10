@@ -78,6 +78,44 @@ def _large_n_environment_overrides(
         overrides["JACCPOT_LARGE_N_STATIC_TARGET_BLOCKS_MAX_PER_LEAF"] = (
             "auto" if cap_raw == "auto" else str(int(static_target_blocks_cap))
         )
+
+    # Device-only fused fast-lane (WS0 finding, 2026-07-09). Without these flags
+    # the strict fused lane runs a ~10x slower path (the device-only streamed
+    # fast-lane never fires: fastlane_attempts=0). This verified-parity set drops
+    # 200k from ~1224 ms/step to ~119 ms/step with BIT-IDENTICAL energy/Lz
+    # conservation (max|dE/E0| 8.415e-04 both ways). It is the same set that
+    # benchmark_a100/env_fused.sh sources by hand; wiring it here makes the fast
+    # lane the built-in default for the large_n_gpu static-radix regime instead
+    # of a knob that has to be remembered. Anything already set in the process
+    # environment wins (explicit shell override / opt-out), and the whole block
+    # is gated by fmm_large_n_environment_overrides_enabled above.
+    fast_lane_regime = (
+        str(getattr(config, "fmm_tree_build_mode", "")).strip().lower()
+        == "static_radix"
+        and str(fmm_preset or getattr(config, "fmm_preset", "")).strip().lower()
+        == "large_n_gpu"
+        and int(getattr(config, "N_particles", 0))
+        >= int(getattr(config, "fmm_large_n_min_particles", 200_000))
+    )
+    if fast_lane_regime:
+        n_particles = int(getattr(config, "N_particles", 0))
+        fast_lane_overrides = {
+            "JACCPOT_STATIC_STRICT_GPU_MODE": "on",
+            "JACCPOT_STATIC_STRICT_FUSED_MODE": "on",
+            "JACCPOT_STATIC_STRICT_FUSED_DEVICE_ONLY": "1",
+            "JACCPOT_STATIC_STRICT_FUSED_DISALLOW_HOST_SEGMENT_FALLBACK": "1",
+            "JACCPOT_STATIC_STRICT_FUSED_FLAT_COMPACT_FAR_PAIRS": "1",
+            # Sized for ~200k (far_pair_count ~65k << 131072); raise via the
+            # shell for substantially larger N.
+            "JACCPOT_STATIC_STRICT_FUSED_COMPACT_FAR_PAIR_CAP": "131072",
+            "JACCPOT_STATIC_STRICT_FUSED_PROFILE_SET": str(n_particles),
+            "JACCPOT_STATIC_STRICT_REQUIRE_EXACT_CAP_PROFILE_MATCH": "0",
+            "JACCPOT_LARGE_N_COMPILED_STATE_MODE": "on",
+            "JACCPOT_LARGE_N_RADIX_FAST_PAYLOAD_IN_FUSED": "1",
+        }
+        for key, value in fast_lane_overrides.items():
+            if key not in os.environ:
+                overrides.setdefault(key, value)
     return overrides
 
 
@@ -140,6 +178,17 @@ def _build_fmm_solver(
         TreeConfig,
     )
     from yggdrax.interactions import DualTreeTraversalConfig
+
+    # Apply the large-N env overrides (including the device-only fused fast-lane)
+    # before constructing the solver. Several strict-fused knobs -- notably
+    # JACCPOT_STATIC_STRICT_REQUIRE_EXACT_CAP_PROFILE_MATCH and the DEVICE_ONLY
+    # gate -- are read in FastMultipoleMethod.__init__ and captured as instance
+    # state, so the temporary context wrapped around the *run* is too late for
+    # them. setdefault keeps any explicit shell override (or opt-out) winning.
+    for _env_key, _env_value in _large_n_environment_overrides(
+        config, fmm_preset=fmm_preset
+    ).items():
+        os.environ.setdefault(_env_key, _env_value)
 
     # Opt-in fused Pallas near-field/M2L kernels (Ampere+/sm_80+ GPUs). Default
     # off keeps the pure-JAX paths; the solver still falls back automatically on
