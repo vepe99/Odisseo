@@ -1,0 +1,66 @@
+{
+  "plummer": {
+    "direct/leapfrog": {
+      "rel_dE": 0.01711871531576097,
+      "r95": 5.697042821567575,
+      "finite": true
+    },
+    "direct/hermite4": {
+      "rel_dE": 0.01712516922272385,
+      "r95": 5.697042831666704,
+      "finite": true
+    },
+    "fmm_theta0.6/leapfrog": {
+      "rel_dE": 0.006200587674356891,
+      "r95": 5.6970975042855345,
+      "finite": true
+    },
+    "fmm_theta0.6/hermite4": {
+      "rel_dE": 14.944703423604002,
+      "r95": 8.70306726222829,
+      "finite": true
+    },
+    "fmm_theta0.3/hermite4": {
+      "rel_dE": 0.017125169222723727,
+      "r95": 5.697042831666704,
+      "finite": true
+    },
+    "fmm_theta0.15/hermite4": {
+      "rel_dE": 0.017125169222723727,
+      "r95": 5.697042831666704,
+      "finite": true
+    }
+  },
+  "disk_in_halo": {
+    "direct/leapfrog": {
+      "rel_dE": 0.007669006665672734,
+      "r95": 0.9695668110477951,
+      "finite": true
+    },
+    "direct/hermite4": {
+      "rel_dE": 0.007664634817055469,
+      "r95": 0.969543157532043,
+      "finite": true
+    },
+    "fmm_theta0.6/leapfrog": {
+      "rel_dE": 0.010846127950295506,
+      "r95": 0.9721842770783278,
+      "finite": true
+    },
+    "fmm_theta0.6/hermite4": {
+      "rel_dE": 4.4455642131951,
+      "r95": 3.787557227094903,
+      "finite": true
+    },
+    "fmm_theta0.3/hermite4": {
+      "rel_dE": 0.007664634817055469,
+      "r95": 0.969543157532043,
+      "finite": true
+    },
+    "fmm_theta0.15/hermite4": {
+      "rel_dE": 0.007664634817055469,
+      "r95": 0.969543157532043,
+      "finite": true
+    }
+  }
+}
