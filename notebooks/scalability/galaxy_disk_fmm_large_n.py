@@ -58,6 +58,26 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--disk-radius-kpc", type=float, default=12.0)
     parser.add_argument("--disk-height-kpc", type=float, default=0.3)
     parser.add_argument("--disk-mass-msun", type=float, default=6.0e10)
+    parser.add_argument(
+        "--disk-toomre-q",
+        type=float,
+        default=0.0,
+        help="If > 0 (analytic --ic-source generate), build a WARM, equilibrated "
+        "exponential disk: radial dispersion from this Toomre Q, vertical "
+        "dispersion from the isothermal sheet, azimuthal dispersion via the "
+        "epicyclic relation, and a mean rotation reduced by asymmetric drift. "
+        "Requires a disk-inclusive --ic-velocity-potential (not 'nfw') so the "
+        "circular speed includes disk self-gravity. Q=0 keeps the cold "
+        "circular-only IC (vR=vz=0).",
+    )
+    parser.add_argument(
+        "--softening-kpc",
+        type=float,
+        default=0.02,
+        help="Plummer softening length in kpc (default 0.02). Larger values "
+        "(e.g. 0.05) cushion vertical two-body/collective heating once a bar "
+        "forms.",
+    )
     parser.add_argument("--seed", type=int, default=7)
     parser.add_argument("--output", type=str, default="./galaxy_disk_fmm_large_n.npz")
     parser.add_argument(
@@ -561,6 +581,98 @@ def build_quasi_circular_velocities(
 
     vel_xy = e_phi * v_c[:, None]
     return jnp.concatenate((vel_xy, jnp.zeros((position.shape[0], 1))), axis=1)
+
+
+def build_warm_disk_velocities(
+    key: jax.Array,
+    position: jnp.ndarray,
+    config: SimulationConfig,
+    params: SimulationParams,
+    *,
+    disk_mass: float,
+    radial_scale: float,
+    vertical_scale: float,
+    toomre_q: float,
+    g_const: float = 1.0,
+) -> jnp.ndarray:
+    """Warm, approximately-equilibrated exponential-disk velocities.
+
+    Assigns Gaussian (v_R, v_phi, v_z) instead of the cold circular-only IC:
+      * sigma_R from the Toomre criterion  Q = sigma_R kappa / (3.36 G Sigma),
+      * sigma_phi from the epicyclic relation sigma_phi^2 = sigma_R^2 kappa^2/(4 Omega^2),
+      * sigma_z from the isothermal sheet   sigma_z^2 = pi G Sigma z0,
+      * mean rotation <v_phi> = v_c reduced by the asymmetric drift so the disk
+        is in radial equilibrium despite the pressure support.
+    v_c (and hence kappa) come from the supplied IC potential's radial
+    acceleration, which must include the disk (do NOT use --ic-velocity-potential
+    nfw), so the circular speed reflects disk self-gravity + halo. All the
+    radius-dependent profiles are built on a 1-D radial grid and interpolated to
+    the particles (host/NumPy; this is one-off IC construction).
+    """
+    x = np.asarray(position[:, 0], dtype=np.float64)
+    y = np.asarray(position[:, 1], dtype=np.float64)
+    radius = np.sqrt(x * x + y * y + 1e-12)
+
+    # Radial grid for v_c(R) and the derived epicyclic / dispersion profiles.
+    r_max = float(np.percentile(radius, 99.9)) * 1.2 + 1e-3
+    r_min = max(1e-4, float(radius.min()) * 0.5)
+    r_grid = np.linspace(r_min, r_max, 1024)
+    grid_pos = np.stack(
+        [r_grid, np.zeros_like(r_grid), np.zeros_like(r_grid)], axis=1
+    )
+    grid_state = construct_initial_state(
+        jnp.asarray(grid_pos, dtype=position.dtype),
+        jnp.zeros((r_grid.shape[0], 3), dtype=position.dtype),
+    )
+    acc_grid = np.asarray(
+        combined_external_acceleration_vmpa_switch(grid_state, config, params),
+        dtype=np.float64,
+    )
+    a_r = acc_grid[:, 0]  # radial (+x) acceleration on the x-axis
+    vc2 = np.maximum(0.0, -r_grid * a_r)
+    vc = np.sqrt(vc2)
+    omega = vc / np.maximum(r_grid, 1e-6)
+    dvc_dr = np.gradient(vc, r_grid)
+    # kappa^2 = 2 (vc/R) (vc/R + dvc/dR)
+    kappa2 = np.maximum(1e-12, 2.0 * omega * (omega + dvc_dr))
+    kappa = np.sqrt(kappa2)
+
+    sigma0 = float(disk_mass) / (2.0 * np.pi * float(radial_scale) ** 2)
+    sigma_surf = sigma0 * np.exp(-r_grid / float(radial_scale))
+    sigma_R = float(toomre_q) * 3.36 * g_const * sigma_surf / np.maximum(kappa, 1e-8)
+    sigma_phi2 = sigma_R**2 * kappa2 / np.maximum(4.0 * omega**2, 1e-12)
+    sigma_z = np.sqrt(np.maximum(1e-12, np.pi * g_const * sigma_surf * float(vertical_scale)))
+
+    # Asymmetric drift: v_a = sigma_R^2/(2 vc) [ sigma_phi^2/sigma_R^2 - 1
+    #                                            - d ln(Sigma sigma_R^2)/d ln R ]
+    ln_ssr = np.log(np.maximum(sigma_surf * sigma_R**2, 1e-30))
+    ln_r = np.log(np.maximum(r_grid, 1e-8))
+    dln = np.gradient(ln_ssr, ln_r)
+    v_a = (sigma_R**2 / (2.0 * np.maximum(vc, 1e-6))) * (
+        sigma_phi2 / np.maximum(sigma_R**2, 1e-12) - 1.0 - dln
+    )
+    vphi_mean = np.maximum(0.0, vc - v_a)
+
+    # Interpolate the profiles onto each particle's cylindrical radius.
+    sR = np.interp(radius, r_grid, sigma_R)
+    sphi = np.interp(radius, r_grid, np.sqrt(sigma_phi2))
+    sz = np.interp(radius, r_grid, sigma_z)
+    vphi = np.interp(radius, r_grid, vphi_mean)
+
+    k1, k2, k3 = jax.random.split(key, 3)
+    n = position.shape[0]
+    nR = np.asarray(jax.random.normal(k1, (n,)), dtype=np.float64)
+    nphi = np.asarray(jax.random.normal(k2, (n,)), dtype=np.float64)
+    nz = np.asarray(jax.random.normal(k3, (n,)), dtype=np.float64)
+    v_R = sR * nR
+    v_phi = vphi + sphi * nphi
+    v_z = sz * nz
+
+    e_r = np.stack([x / radius, y / radius], axis=1)
+    e_phi = np.stack([-y / radius, x / radius], axis=1)
+    vel_xy = v_R[:, None] * e_r + v_phi[:, None] * e_phi
+    vel = np.concatenate([vel_xy, v_z[:, None]], axis=1)
+    return jnp.asarray(vel, dtype=position.dtype)
 
 
 def build_ic_velocity_potential(
@@ -1556,7 +1668,7 @@ def main() -> None:
         num_timesteps=int(args.num_steps),
         return_snapshots=False,
         external_accelerations=(NFW_POTENTIAL,),
-        softening=(0.02 * u.kpc).to(code_units.code_length).value,
+        softening=(float(args.softening_kpc) * u.kpc).to(code_units.code_length).value,
         fmm_preset=str(args.fmm_preset),
         fmm_auto_large_n_profile=True,
         fmm_large_n_min_particles=100_000,
@@ -1687,7 +1799,27 @@ def main() -> None:
             params,
             total_mass=total_mass,
         )
-        vel = build_quasi_circular_velocities(pos, ic_config, ic_params)
+        toomre_q = float(getattr(args, "disk_toomre_q", 0.0) or 0.0)
+        if toomre_q > 0.0:
+            if str(args.ic_velocity_potential).strip().lower() == "nfw":
+                raise ValueError(
+                    "--disk-toomre-q > 0 needs a disk-inclusive --ic-velocity-potential "
+                    "(not 'nfw'), so the circular speed includes disk self-gravity for "
+                    "a warm, equilibrated disk."
+                )
+            vel = build_warm_disk_velocities(
+                jax.random.fold_in(key, 1),
+                pos,
+                ic_config,
+                ic_params,
+                disk_mass=float(total_mass),
+                radial_scale=float(rd),
+                vertical_scale=float(zd),
+                toomre_q=toomre_q,
+            )
+            ic_velocity_metadata["disk_toomre_q"] = toomre_q
+        else:
+            vel = build_quasi_circular_velocities(pos, ic_config, ic_params)
         state0 = construct_initial_state(pos.astype(state_dtype), vel.astype(state_dtype))
         ic_velocity_metadata["ic_source"] = "generate"
         if args.ic_output_path is not None:
