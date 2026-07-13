@@ -263,6 +263,14 @@ def parse_args() -> argparse.Namespace:
         help="FMM multipole acceptance criterion.",
     )
     parser.add_argument(
+        "--fmm-basis",
+        type=str,
+        default="solidfmm",
+        choices=("solidfmm", "complex", "real"),
+        help="FMM expansion basis: solidfmm/complex spherical harmonics, or real "
+        "(Dehnen) harmonics. 'real' routes M2L/L2L/L2P through the real-basis path.",
+    )
+    parser.add_argument(
         "--fmm-leaf-size",
         type=int,
         default=256,
@@ -1676,6 +1684,7 @@ def main() -> None:
         fmm_runtime_path=str(args.fmm_runtime_path),
         fmm_theta=float(args.fmm_theta),
         fmm_mac_type=str(args.fmm_mac_type),
+        fmm_basis=str(args.fmm_basis),
         fmm_refresh_every=int(args.fmm_refresh_every),
         fmm_leaf_size=int(args.fmm_leaf_size),
         fmm_tree_build_mode=str(args.fmm_tree_build_mode),
