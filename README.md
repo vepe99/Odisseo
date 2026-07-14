@@ -62,10 +62,12 @@ radix fast lane (`"large_n_gpu"` preset + `"large_n"` runtime path) when
 > (`JACCPOT_STATIC_STRICT_FUSED_TREECODE_WALK=1`) must use bounding-**sphere**
 > MAC extents (`JACCPOT_STATIC_STRICT_FUSED_TREECODE_MAC=dual`, the default) for
 > time integration. The cheaper axis-aligned box (`bh`) extents are only
-> statically accurate: they under-bound the source multipole radius and, in the
-> frozen-topology fast lane, inject a non-conservative per-step force error that
-> heats the system and blows the run up over ~tens of steps. Use `bh` only for
-> single-shot force evaluations. See
+> statically accurate: the box extent systematically under-bounds the source
+> multipole radius, so the MAC effectively runs at a coarser opening angle than
+> the requested θ and injects a coherent non-conservative force bias that
+> velocity-Verlet accumulates into secular heating, blowing the run up over ~tens
+> of steps. (Geometry is recomputed each step — this is a bound-tightness issue,
+> not stale geometry.) Use `bh` only for single-shot force evaluations. See
 > [`docs/STATIC_RADIX_FUSED_STATUS.md`](docs/STATIC_RADIX_FUSED_STATUS.md) and
 > jaccpot's `docs/treecode_mac_stability.md`.
 
