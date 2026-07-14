@@ -57,6 +57,18 @@ radix fast lane (`"large_n_gpu"` preset + `"large_n"` runtime path) when
 `fmm_auto_large_n_profile=True` and particle count exceeds
 `fmm_large_n_min_particles`.
 
+> **Multi-step accuracy note (device-resident treecode walk).** The optional
+> device-resident treecode far/near builder
+> (`JACCPOT_STATIC_STRICT_FUSED_TREECODE_WALK=1`) must use bounding-**sphere**
+> MAC extents (`JACCPOT_STATIC_STRICT_FUSED_TREECODE_MAC=dual`, the default) for
+> time integration. The cheaper axis-aligned box (`bh`) extents are only
+> statically accurate: they under-bound the source multipole radius and, in the
+> frozen-topology fast lane, inject a non-conservative per-step force error that
+> heats the system and blows the run up over ~tens of steps. Use `bh` only for
+> single-shot force evaluations. See
+> [`docs/STATIC_RADIX_FUSED_STATUS.md`](docs/STATIC_RADIX_FUSED_STATUS.md) and
+> jaccpot's `docs/treecode_mac_stability.md`.
+
 Example:
 
 ```python
