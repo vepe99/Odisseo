@@ -4,8 +4,17 @@ Single source of truth for the jaccpot FMM ↔ Odisseo strict fused static-radix
 work. Supersedes the dated handoff/status/plan notes now under
 [`docs/archive/`](archive/) (kept for provenance).
 
-_Last updated: 2026-07-08 — fused Pallas near-field P2P kernel implemented on
-A100 (sm_80): 4.0x on the near-field force eval. See
+_Last updated: 2026-07-18 — the real-harmonics radix fast lane is now the sole
+production default (jaccpot `basis="real"`, ODISSEO `fmm_basis="real"` +
+`fmm_tree_build_mode="static_radix"` + `fmm_use_pallas=None` auto). The fast lane
+runs pure-real end to end (native real upward P2M/M2M; no complex↔real
+conversion), and the fused production lane now HARD-ERRORS instead of silently
+falling back (goal "no fallback to slow paths" is now enforced, not just
+intended). A100 200k A/B: Pallas real 108.6 ms/step (fastest cell), pure-JAX real
+≥ complex. See [`benchmark_a100/REAL_DEFAULT_SUMMARY.md`](../benchmark_a100/REAL_DEFAULT_SUMMARY.md)._
+
+_2026-07-08 — fused Pallas near-field P2P kernel implemented on A100 (sm_80):
+4.0x on the near-field force eval. See
 [Pallas near-field P2P kernel — IMPLEMENTED](#pallas-near-field-p2p-kernel--implemented-2026-07-08-a100-sm_80)._
 
 ## Goal
@@ -68,6 +77,48 @@ Odisseo drives it from the strict lane in `jaccpot_coupling.py`.
   `execute_count=2` (no per-step recompile), 0 overflow/neighbor reprofiles,
   all-finite. ~0.78 s/step with `--profile-breakdown` diagnostics on (slower,
   weaker GPU; not comparable to the 0.31 s reference figure).
+
+## Treecode device-resident walk — MAC choice & multi-step stability (2026-07-14)
+
+The opt-in device-resident per-leaf **treecode walk**
+(`JACCPOT_STATIC_STRICT_FUSED_TREECODE_WALK=1`) replaces the host-iterated yggdrax
+dual-tree walk (kills its launch storm) and is the intended high-performance far/near
+builder. Its acceptance criterion (MAC) can use two per-node extent recipes, selected by
+`JACCPOT_STATIC_STRICT_FUSED_TREECODE_MAC`:
+
+Note the fast lane recomputes **all node geometry every step** — particles are
+re-Morton-sorted (fresh leaf membership) and node centers/bounding-sphere radii/box
+extents/multipoles/interaction lists are rebuilt from the current positions; only the
+tree *shape* (node index-ranges, leaf count, buffer capacities) is frozen (to avoid
+recompilation). So the choice below is a bound-*tightness* issue, not stale geometry.
+
+- **`bh`** — axis-aligned box `max_extent` (half-width). Cheaper (accepts fewer
+  far/M2L pairs → faster) and *statically* as accurate as the sphere (t=0 force parity
+  vs the dual walk ~0.03 %). **But dynamically UNSTABLE**: the box `max_extent`
+  systematically *under-bounds* the true source multipole radius (the bounding sphere
+  circumscribes the box, ≈√3× larger isotropic, more when anisotropic). Feeding the
+  smaller extent makes the MAC accept far pairs at smaller `d` than the sphere would →
+  **`bh` effectively runs at a coarser opening angle than the requested θ**, systematically
+  under-resolving the far field. Instantaneously tiny (~0.03 %), but it is a *coherent,
+  non-gradient* force bias, and velocity-Verlet does not conserve energy under a
+  non-conservative force → it **accumulates into secular heating** and blows up
+  (200k/order-4/real: max|v| 7 → 20 → 142 → >10³ over 300 steps; total energy diverges).
+  Not an overflow effect (huge caps don't fix it).
+- **`dual`** (**DEFAULT since 2026-07-14**) — reproduce the configured dual-tree MAC
+  extents (dehnen bounding-**sphere** radius for the large-N preset). This is the correct
+  multipole-radius bound, keeps every accepted pair inside the θ budget, and gives
+  **accuracy-profile parity** with the validated dual walk. Stable: over 300 steps
+  `max|v|` 7.34, `dKE/KE0` 5.6e-2, `|dLz/Lz0|` 1.9e-3 — matching the dual-walk baseline
+  (7.33 / 5.6e-2 / 2.2e-3) in both the complex and real (Dehnen) bases.
+
+**Cost of the fix:** dehnen accepts deeper → more M2L pairs → ~16 % slower per step
+(200k/order-4/real, A100: ~58 ms/step `dual` vs ~50 ms/step `bh`), still launch-storm-free.
+
+**Guidance:** use the default `dual` for any multi-step integration; `bh` is safe only
+for single-shot/static force evaluations. Full write-up:
+`jaccpot/docs/treecode_mac_stability.md`; code in
+`jaccpot/runtime/_interaction_cache.py` (`_build_treecode_artifacts_strict_streamed`,
+`_treecode_mac_extents`) and `jaccpot/experimental/treecode_walk.py` (`_mac_ok`).
 
 ## Deferred test debt (pre-existing; tracked, not blocking)
 
