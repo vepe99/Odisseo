@@ -211,7 +211,10 @@ class SimulationConfig(NamedTuple):
 
     # Jaccpot solver tuning knobs exposed to ODISSEO.
     fmm_preset: str = "fast"
-    fmm_basis: str = "solidfmm"
+    # Real (Dehnen) harmonics is the production default: the radix large-N fast
+    # lane runs pure-real end to end (no complex<->real conversion). Use
+    # "solidfmm"/"complex" only for cross-checking.
+    fmm_basis: str = "real"
     fmm_theta: float = 0.6
     fmm_runtime_path: str = "auto"
     fmm_mac_type: str = "dehnen"
@@ -219,8 +222,12 @@ class SimulationConfig(NamedTuple):
     fmm_m2l_chunk_size: Optional[int] = None
     fmm_nearfield_mode: str = "auto"
     fmm_nearfield_edge_chunk_size: int = 256
-    fmm_tree_build_mode: str = "lbvh"
+    # static_radix is the production tree build for the large-N GPU fast lane.
+    fmm_tree_build_mode: str = "static_radix"
     fmm_tree_leaf_target: int = 32
+    # Pallas fused near-field/M2L kernels. None => auto (ON for Ampere sm_80+,
+    # pure-JAX on sm_75/CPU). The ODISSEO_FMM_USE_PALLAS env var overrides this.
+    fmm_use_pallas: Optional[bool] = None
     fmm_fixed_order: Optional[int] = None
     fmm_jit_tree: Optional[bool] = None
     fmm_jit_traversal: Optional[bool] = True

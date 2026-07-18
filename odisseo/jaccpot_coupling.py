@@ -190,15 +190,24 @@ def _build_fmm_solver(
     ).items():
         os.environ.setdefault(_env_key, _env_value)
 
-    # Opt-in fused Pallas near-field/M2L kernels (Ampere+/sm_80+ GPUs). Default
-    # off keeps the pure-JAX paths; the solver still falls back automatically on
-    # unsupported hardware via jaccpot's `pallas_*_supported()` guards.
-    use_pallas = os.environ.get("ODISSEO_FMM_USE_PALLAS", "0").strip().lower() in {
-        "1",
-        "true",
-        "yes",
-        "on",
-    }
+    # Fused Pallas near-field/M2L kernels (Ampere+/sm_80+ GPUs). Resolution order:
+    #   1. ODISSEO_FMM_USE_PALLAS env var (explicit override), else
+    #   2. config.fmm_use_pallas (True/False), else
+    #   3. None -> jaccpot auto-detects: ON for Ampere sm_80+, pure-JAX on
+    #      sm_75/CPU. jaccpot also falls back automatically on unsupported
+    #      hardware via its `pallas_*_supported()` guards.
+    _pallas_env = os.environ.get("ODISSEO_FMM_USE_PALLAS")
+    if _pallas_env is not None and _pallas_env.strip() != "":
+        use_pallas: Optional[bool] = _pallas_env.strip().lower() in {
+            "1",
+            "true",
+            "yes",
+            "on",
+        }
+    elif config.fmm_use_pallas is not None:
+        use_pallas = bool(config.fmm_use_pallas)
+    else:
+        use_pallas = None  # jaccpot auto-detects Ampere
 
     traversal_config = None
     if (
@@ -233,7 +242,7 @@ def _build_fmm_solver(
         G=float(params.G),
         softening=float(config.softening),
         working_dtype=working_dtype,
-        use_pallas=bool(use_pallas),
+        use_pallas=use_pallas,
         advanced=FMMAdvancedConfig(
             tree=TreeConfig(
                 mode=str(fmm_tree_build_mode),
