@@ -4,8 +4,17 @@ Single source of truth for the jaccpot FMM ↔ Odisseo strict fused static-radix
 work. Supersedes the dated handoff/status/plan notes now under
 [`docs/archive/`](archive/) (kept for provenance).
 
-_Last updated: 2026-07-08 — fused Pallas near-field P2P kernel implemented on
-A100 (sm_80): 4.0x on the near-field force eval. See
+_Last updated: 2026-07-18 — the real-harmonics radix fast lane is now the sole
+production default (jaccpot `basis="real"`, ODISSEO `fmm_basis="real"` +
+`fmm_tree_build_mode="static_radix"` + `fmm_use_pallas=None` auto). The fast lane
+runs pure-real end to end (native real upward P2M/M2M; no complex↔real
+conversion), and the fused production lane now HARD-ERRORS instead of silently
+falling back (goal "no fallback to slow paths" is now enforced, not just
+intended). A100 200k A/B: Pallas real 108.6 ms/step (fastest cell), pure-JAX real
+≥ complex. See [`benchmark_a100/REAL_DEFAULT_SUMMARY.md`](../benchmark_a100/REAL_DEFAULT_SUMMARY.md)._
+
+_2026-07-08 — fused Pallas near-field P2P kernel implemented on A100 (sm_80):
+4.0x on the near-field force eval. See
 [Pallas near-field P2P kernel — IMPLEMENTED](#pallas-near-field-p2p-kernel--implemented-2026-07-08-a100-sm_80)._
 
 ## Goal
