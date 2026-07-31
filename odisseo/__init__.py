@@ -44,3 +44,15 @@ from odisseo.jaccpot_coupling import (
 )
 
 from odisseo.integration_api import integrate
+
+# Gradients through the FMM lane -- onto external-potential parameters, the
+# initial state and masses. See docs/source/differentiable_fmm.md.
+from odisseo.differentiable import (
+    DifferentiableFMMPlan,
+    differentiable_fmm_self_acceleration,
+    differentiable_total_acceleration,
+    integrate_diffrax_differentiable,
+    integrate_leapfrog_differentiable,
+    prepare_differentiable_fmm,
+    topology_drift,
+)

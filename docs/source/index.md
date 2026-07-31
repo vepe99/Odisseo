@@ -13,6 +13,7 @@ first_simulation.md
 conservation.md
 units.md
 parallelism.md
+differentiable_fmm.md
 ```
 
 `odisseo` differentiable direct Nbody written in `JAX`.
@@ -106,6 +107,7 @@ apidocs/odisseo/odisseo
 - [x] Implement simple `initial_conditions` (two body, self gravitating Plummer sphere )
 - [x] Implement units conversion
 - [x] Implement gradient through the `time_integration` 
+- [x] Implement gradient through the FMM acceleration scheme, onto external-potential parameters, the initial state and masses ([details](./differentiable_fmm.md))
 - [x] Implement diffrax backend for integrators
 - [ ] Implement sphere sky projection
 - [x] Implement key `external_potential` for disrupted dwarf galaxies scenarios (Navarro-Frank-White halo, Miyamoto-Nagai disk)

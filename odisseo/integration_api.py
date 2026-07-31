@@ -64,6 +64,7 @@ def integrate(
     ] = None,
     active_indices_schedule: Optional[jnp.ndarray] = None,
     active_mask_schedule: Optional[jnp.ndarray] = None,
+    fmm_plan: Optional[object] = None,
 ):
     """Unified integration API across direct and Jaccpot-FMM backends.
 
@@ -72,8 +73,22 @@ def integrate(
     ``config.acceleration_scheme``:
     - direct schemes (`DIRECT_ACC`, `DIRECT_ACC_LAXMAP`, `DIRECT_ACC_MATRIX`,
       `DIRECT_ACC_FOR_LOOP`, `DIRECT_ACC_SHARDING`, `NO_SELF_GRAVITY`)
-      route to legacy ``time_integration``.
-    - ``FMM_ACC`` routes to the Jaccpot coupler workflow.
+      route to legacy ``time_integration``. Those are already differentiable in
+      ``params``.
+    - ``FMM_ACC`` routes to the Jaccpot coupler workflow -- or, with
+      ``config.fmm_differentiable=True``, to the differentiable FMM lane in
+      :mod:`odisseo.differentiable`, which supports ``jax.grad`` with respect to
+      external-potential parameters, the initial state and masses.
+
+    Parameters
+    ----------
+    fmm_plan:
+        Optional :class:`~odisseo.differentiable.DifferentiableFMMPlan`, honoured
+        only by the differentiable FMM lane. Build it once with
+        ``prepare_differentiable_fmm`` outside the differentiated function and
+        pass it here; otherwise the lane builds one per call, which requires
+        concrete ``primitive_state``/``mass`` and repeats the tree build on every
+        gradient evaluation.
     """
     direct_schemes = {
         DIRECT_ACC,
@@ -88,6 +103,20 @@ def integrate(
         return time_integration(primitive_state, mass, config, params)
 
     if int(config.acceleration_scheme) == int(FMM_ACC):
+        if bool(getattr(config, "fmm_differentiable", False)):
+            return _integrate_fmm_differentiable(
+                primitive_state,
+                mass,
+                config,
+                params,
+                active_indices_fn=active_indices_fn,
+                active_indices_schedule=active_indices_schedule,
+                active_mask_schedule=active_mask_schedule,
+                fmm_plan=fmm_plan,
+            )
+
+        _reject_traced_forward_fmm_inputs(primitive_state, mass, params)
+
         fmm_preset, fmm_runtime_path, fmm_working_dtype = _resolve_fmm_runtime_profile(
             primitive_state,
             config,
@@ -195,3 +224,100 @@ def integrate(
     raise ValueError(
         "acceleration_scheme must be a direct scheme or FMM_ACC"
     )
+
+
+def _reject_traced_forward_fmm_inputs(
+    primitive_state: jnp.ndarray,
+    mass: jnp.ndarray,
+    params: SimulationParams,
+) -> None:
+    """Fail loudly when a gradient is attempted on the forward FMM lane.
+
+    The forward coupler passes ``params`` as a *static* jit argument and drives
+    jaccpot's host-side ``prepare_state``/``evaluate_prepared_state`` pair, which
+    reads prebaked expansions. Under ``jax.grad`` that produces either an opaque
+    "non-hashable static argument" error or -- worse -- a self-gravity term with
+    no sensitivity at all. Point at the differentiable lane instead.
+    """
+    from odisseo.differentiable import _contains_tracer
+
+    traced_params = _contains_tracer(params)
+    traced_state = _contains_tracer(primitive_state) or _contains_tracer(mass)
+    if not (traced_params or traced_state):
+        return
+
+    traced_what = ", ".join(
+        part
+        for part, hit in (("params", traced_params), ("state/mass", traced_state))
+        if hit
+    )
+    raise NotImplementedError(
+        f"traced {traced_what} reached the forward FMM lane, which cannot be "
+        "differentiated: it passes params as a static jit argument and evaluates "
+        "jaccpot's PREBAKED prepared-state expansions, so a gradient would "
+        "either fail on hashing or come back with no self-gravity sensitivity. "
+        "Set config.fmm_differentiable=True (and pass a plan from "
+        "odisseo.differentiable.prepare_differentiable_fmm) to differentiate the "
+        "FMM lane, or use a direct acceleration scheme."
+    )
+
+
+def _integrate_fmm_differentiable(
+    primitive_state: jnp.ndarray,
+    mass: jnp.ndarray,
+    config: SimulationConfig,
+    params: SimulationParams,
+    *,
+    active_indices_fn,
+    active_indices_schedule,
+    active_mask_schedule,
+    fmm_plan,
+):
+    """Run the differentiable FMM lane and package snapshots like the forward one."""
+    from odisseo.differentiable import (
+        integrate_diffrax_differentiable,
+        integrate_leapfrog_differentiable,
+    )
+
+    if (
+        active_indices_fn is not None
+        or active_indices_schedule is not None
+        or active_mask_schedule is not None
+    ):
+        raise NotImplementedError(
+            "the differentiable FMM lane integrates all particles every step; "
+            "active-particle scheduling is a forward-throughput optimisation "
+            "and is not wired into the gradient path."
+        )
+
+    return_history = bool(config.return_snapshots)
+    if bool(config.fixed_timestep):
+        out = integrate_leapfrog_differentiable(
+            primitive_state,
+            mass,
+            config,
+            params,
+            plan=fmm_plan,
+            return_history=return_history,
+        )
+    else:
+        out = integrate_diffrax_differentiable(
+            primitive_state,
+            mass,
+            config,
+            params,
+            plan=fmm_plan,
+            return_history=return_history,
+        )
+
+    if not return_history:
+        return out
+
+    states = jnp.asarray(out)
+    target_snaps = int(config.num_snapshots)
+    if target_snaps <= 0:
+        raise ValueError("num_snapshots must be positive")
+    stride = max(1, int(states.shape[0]) // target_snaps)
+    snap_states = states[::stride][:target_snaps]
+    times = jnp.linspace(0.0, params.t_end, snap_states.shape[0], endpoint=True)
+    return SnapshotData(times=times, states=snap_states)
