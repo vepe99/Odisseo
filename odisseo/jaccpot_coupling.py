@@ -168,6 +168,7 @@ def _build_fmm_solver(
     fmm_max_neighbors_per_leaf: Optional[int],
     fmm_prepare_stage_memory_split_enabled: Optional[bool],
     fmm_upward_leaf_batch_size: Optional[int],
+    retain_far_pairs_for_grad: bool = False,
 ):
     from jaccpot import (
         FarFieldConfig,
@@ -234,6 +235,20 @@ def _build_fmm_solver(
             max_neighbors_per_leaf=int(fmm_max_neighbors_per_leaf),
         )
 
+    # The frozen M2L pair list is discarded by default (the large-N preset targets
+    # minimum memory). The differentiable lane needs it retained to re-run the
+    # downward sweep against it, so the knob is only passed when requested --
+    # keeping the forward production lane byte-for-byte as it was, and keeping
+    # this call compatible with a jaccpot that has no such field.
+    farfield_kwargs: dict[str, Any] = dict(
+        mode=str(fmm_farfield_mode),
+        m2l_chunk_size=(
+            None if fmm_m2l_chunk_size is None else int(fmm_m2l_chunk_size)
+        ),
+    )
+    if bool(retain_far_pairs_for_grad):
+        farfield_kwargs["retain_far_pairs_for_grad"] = True
+
     return FastMultipoleMethod(
         preset=str(fmm_preset),
         basis=str(fmm_basis),
@@ -248,12 +263,7 @@ def _build_fmm_solver(
                 mode=str(fmm_tree_build_mode),
                 leaf_target=int(fmm_tree_leaf_target),
             ),
-            farfield=FarFieldConfig(
-                mode=str(fmm_farfield_mode),
-                m2l_chunk_size=(
-                    None if fmm_m2l_chunk_size is None else int(fmm_m2l_chunk_size)
-                ),
-            ),
+            farfield=FarFieldConfig(**farfield_kwargs),
             nearfield=NearFieldConfig(
                 mode=str(fmm_nearfield_mode),
                 edge_chunk_size=int(fmm_nearfield_edge_chunk_size),

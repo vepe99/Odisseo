@@ -248,6 +248,17 @@ class SimulationConfig(NamedTuple):
     fmm_enforce_static_shape_contract: bool = False
     fmm_static_shape_warmup_prepares: int = 0
     fmm_rematerialize_between_refresh: bool = True
+    # Differentiable FMM: gradients w.r.t. external-potential parameters, the
+    # initial state and masses. Routes FMM_ACC through odisseo.differentiable
+    # instead of the forward-throughput coupler -- the tree topology is frozen
+    # for the whole call and self-gravity is re-evaluated from the live
+    # positions, so jax.grad flows. See odisseo/differentiable.py.
+    fmm_differentiable: bool = False
+    # jaccpot GradConfig knobs worth surfacing here. "auto" takes the bucketed
+    # near-field reverse below 100k particles and the leaf-major fast lane at or
+    # above it (the bucketed reverse OOMs at galaxy scale).
+    fmm_grad_nearfield_lane: str = "auto"
+    fmm_grad_fused_m2l_pallas: Optional[bool] = None
     # Adaptive FMM (diffrax) controls.
     fmm_adaptive_refresh_rhs_calls: int = 1
     fmm_adaptive_refresh_displacement_threshold: Optional[float] = None
