@@ -45,6 +45,20 @@ from odisseo.jaccpot_coupling import (
 
 from odisseo.integration_api import integrate
 
+# Momentum-conserving individual timesteps (Nornax block-step KDK + Jaccpot's
+# mutual FMM). A separate lane from the shared-timestep coupler above, not a
+# replacement for it. Nornax and jaccpot are imported lazily inside the module,
+# so this costs nothing when the lane is unused.
+# See docs/source/blockstep_fmm.md.
+from odisseo.blockstep_coupling import (
+    BlockStepOptions,
+    BlockStepResult,
+    assert_fused_boundary_selected,
+    blockstep_total_acceleration,
+    build_blockstep_force,
+    integrate_blockstep_jaccpot,
+)
+
 # Gradients through the FMM lane -- onto external-potential parameters, the
 # initial state and masses. See docs/source/differentiable_fmm.md.
 from odisseo.differentiable import (

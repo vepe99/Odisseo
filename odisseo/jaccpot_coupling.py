@@ -1590,7 +1590,15 @@ def integrate_leapfrog_jaccpot_active(
                         theta=float(fmm_theta),
                         fused_device_mode=True,
                     )
-                except TypeError:
+                except (TypeError, NotImplementedError, RuntimeError, ValueError):
+                    # The payload refresh is an optimisation on top of an already
+                    # valid prepared state, so an unsupported runtime profile must
+                    # fall through rather than abort the run. jaccpot supports it
+                    # only for preset='large_n_gpu' + radix + solidfmm and raises
+                    # NotImplementedError elsewhere -- catching TypeError alone let
+                    # that escape and killed any run at another preset/basis. This
+                    # matches the exception set _prepare_or_refresh_state already
+                    # tolerates on the same call below.
                     pass
             return prepared
 
