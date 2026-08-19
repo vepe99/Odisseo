@@ -41,6 +41,13 @@ tests = [
     "nbval",
 ]
 
+# Higher-order Hermite integrators (used when config.integrator == HERMITE).
+# See odisseo/nornax_coupling.py. Install from a checkout or from git:
+#   pip install git+https://github.com/TobiBu/nornax
+hermite = [
+    "nornax",
+]
+
 docs = [
     "sphinx",
     "sphinxcontrib-apidoc",

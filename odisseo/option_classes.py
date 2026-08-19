@@ -12,6 +12,7 @@ BACKWARDS = 1
 LEAPFROG = 0
 RK4 = 1
 DIFFRAX_BACKEND = 2
+HERMITE = 3  # nornax higher-order Hermite integrators (see odisseo.nornax_coupling)
 
 #diffrax solvers
 DOPRI5 = 0
@@ -202,6 +203,18 @@ class SimulationConfig(NamedTuple):
     diffrax_solver: int = DOPRI5
     
     acceleration_scheme: int = DIRECT_ACC
+
+    # nornax Hermite integrator tuning (used when integrator == HERMITE).
+    # The self-gravity backend is chosen by acceleration_scheme: FMM_ACC uses
+    # jaccpot's FMM (forward-only), any direct scheme uses nornax's
+    # differentiable DirectSumGravity. hermite_order 6/8 requires the
+    # direct-sum backend today (jaccpot adapter is capped at order 4).
+    hermite_order: int = 4
+    hermite_eta: float = 0.02
+    hermite_atol: float = 1e-5
+    hermite_min_dt: float = 1e-8
+    hermite_max_dt: float = 1e-1
+    hermite_jerk_mode: str = "fast_approx"
 
     # Jaccpot-FMM backend tuning (used by integrate API).
     fmm_refresh_every: int = 1

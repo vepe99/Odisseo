@@ -16,6 +16,7 @@ from odisseo.option_classes import (
     DIRECT_ACC_MATRIX,
     DIRECT_ACC_SHARDING,
     FMM_ACC,
+    HERMITE,
     NO_SELF_GRAVITY,
     SimulationConfig,
     SimulationParams,
@@ -90,6 +91,28 @@ def integrate(
         concrete ``primitive_state``/``mass`` and repeats the tree build on every
         gradient evaluation.
     """
+    # The nornax Hermite integrator owns its own time loop (like the diffrax
+    # and jaccpot backends), so it is routed here rather than through
+    # time_integration's per-step leapfrog/RK4 dispatch. It works with any
+    # acceleration_scheme, which selects its self-gravity backend.
+    if int(config.integrator) == int(HERMITE):
+        from odisseo.nornax_coupling import integrate_hermite_nornax
+
+        result = integrate_hermite_nornax(
+            primitive_state,
+            mass,
+            config,
+            params,
+            return_history=bool(config.return_snapshots),
+        )
+        if bool(config.return_snapshots):
+            snap_states = jnp.asarray(result)
+            times = jnp.linspace(
+                0.0, params.t_end, snap_states.shape[0], endpoint=True
+            )
+            return SnapshotData(times=times, states=snap_states)
+        return result
+
     direct_schemes = {
         DIRECT_ACC,
         DIRECT_ACC_LAXMAP,
