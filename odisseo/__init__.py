@@ -27,46 +27,10 @@ def construct_initial_state(position, velocity):
     Returns:
         jnp.ndarray: The initial state containing positions and velocities.
     """
-    state_dtype = jnp.result_type(position, velocity)
-    state = jnp.zeros((position.shape[0], 2, position.shape[1]), dtype=state_dtype)
+    state = jnp.zeros((position.shape[0], 2, position.shape[1]))
     state = state.at[:, 0, :].set(position)
     state = state.at[:, 1, :].set(velocity)
     
     return state
 
     
-
-from odisseo.jaccpot_coupling import (
-    build_jitted_leapfrog_jaccpot_active,
-    build_jitted_jaccpot_acceleration,
-    evaluate_acceleration_jaccpot,
-    integrate_leapfrog_jaccpot_active,
-)
-
-from odisseo.integration_api import integrate
-
-# Momentum-conserving individual timesteps (Nornax block-step KDK + Jaccpot's
-# mutual FMM). A separate lane from the shared-timestep coupler above, not a
-# replacement for it. Nornax and jaccpot are imported lazily inside the module,
-# so this costs nothing when the lane is unused.
-# See docs/source/blockstep_fmm.md.
-from odisseo.blockstep_coupling import (
-    BlockStepOptions,
-    BlockStepResult,
-    assert_fused_boundary_selected,
-    blockstep_total_acceleration,
-    build_blockstep_force,
-    integrate_blockstep_jaccpot,
-)
-
-# Gradients through the FMM lane -- onto external-potential parameters, the
-# initial state and masses. See docs/source/differentiable_fmm.md.
-from odisseo.differentiable import (
-    DifferentiableFMMPlan,
-    differentiable_fmm_self_acceleration,
-    differentiable_total_acceleration,
-    integrate_diffrax_differentiable,
-    integrate_leapfrog_differentiable,
-    prepare_differentiable_fmm,
-    topology_drift,
-)

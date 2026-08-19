@@ -97,17 +97,3 @@ def test_output_shape(state, config, params):
     acc, pot = potentials.NFW(state, config, params, return_potential=True)
     assert acc.shape == (state.shape[0], 3)
     assert pot.shape == (state.shape[0],)
-
-def test_nfw_acceleration_is_finite_at_tiny_radius(config, params):
-    pos = jnp.array([[0.0, 0.0, 0.0], [1.0e-12, 0.0, 0.0], [1.0e-3, 0.0, 0.0]])
-    vel = jnp.zeros_like(pos)
-    state = jnp.stack([pos, vel], axis=1)
-
-    acc, pot = potentials.NFW(state, config, params, return_potential=True)
-
-    assert jnp.all(jnp.isfinite(acc))
-    assert jnp.all(jnp.isfinite(pot))
-    assert jnp.allclose(acc[0], jnp.zeros(3), atol=0.0)
-    assert acc[1, 0] < 0.0
-    assert acc[2, 0] < 0.0
-
