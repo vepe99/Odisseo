@@ -20,6 +20,23 @@ from odisseo.option_classes import DIRECT_ACC, DIRECT_ACC_LAXMAP, DIRECT_ACC_MAT
 
 
 
+def _resolve_batch_size(raw_batch_size) -> int:
+    """Normalize lax.map batch_size to a positive Python int."""
+    if isinstance(raw_batch_size, tuple):
+        if len(raw_batch_size) != 1:
+            raise ValueError(f"batch_size tuple must have length 1, got {raw_batch_size}")
+        raw_batch_size = raw_batch_size[0]
+    if isinstance(raw_batch_size, list):
+        if len(raw_batch_size) != 1:
+            raise ValueError(f"batch_size list must have length 1, got {raw_batch_size}")
+        raw_batch_size = raw_batch_size[0]
+
+    batch_size = int(raw_batch_size)
+    if batch_size <= 0:
+        raise ValueError(f"batch_size must be positive, got {batch_size}")
+    return batch_size
+
+
 @partial(jax.jit, static_argnames=['config'])
 @jaxtyped(typechecker=typechecker)
 def single_body_acc(particle_i: jnp.ndarray, 
@@ -45,14 +62,20 @@ def single_body_acc(particle_i: jnp.ndarray,
 
     r_ij = jax.lax.stop_gradient(particle_i[0, :] - particle_j[0, :])
     condtion = jnp.all(r_ij == 0.0)
+    dtype = r_ij.dtype
+    g_const = jnp.asarray(params.G, dtype=dtype)
+    softening_sq = jnp.asarray(config.softening, dtype=dtype) ** 2
 
     def same_position():
-        return jnp.zeros(3), 0.0
+        return jnp.zeros((3,), dtype=dtype), jnp.asarray(0.0, dtype=dtype)
+
     def different_position():
         r_mag = jnp.linalg.norm(r_ij)
-        acc = - params.G * mass_j * (r_ij/(r_mag**2 + config.softening**2)**(3/2))
-        pot = - params.G * mass_j / (r_mag**2 + config.softening**2)**(1/2)
+        denom = (r_mag**2 + softening_sq) ** (jnp.asarray(1.5, dtype=dtype))
+        acc = -g_const * mass_j * (r_ij / denom)
+        pot = -g_const * mass_j / jnp.sqrt(r_mag**2 + softening_sq)
         return acc, pot
+
     return jax.lax.cond(condtion, same_position, different_position)
     
     
@@ -114,6 +137,8 @@ def direct_acc_laxmap(state: jnp.ndarray,
         Array of shape (N,) containing the potential energy of the particles, if return_potential is True.
     """
 
+    batch_size = _resolve_batch_size(config.batch_size)
+
     def net_force_on_body(state_and_mass):
         particle_i, mass_i = state_and_mass
 
@@ -122,7 +147,7 @@ def direct_acc_laxmap(state: jnp.ndarray,
             def single_body_acc_lax(state_and_mass_j):
                 particle_j, mass_j = state_and_mass_j
                 return single_body_acc(particle_i, particle_j, mass_i, mass_j, config, params)
-            acc, potential = jax.lax.map(single_body_acc_lax, (state, mass), batch_size=config.batch_size)
+            acc, potential = jax.lax.map(single_body_acc_lax, (state, mass), batch_size=batch_size)
         else:
             acc, potential = vmap(lambda particle_j, mass_j: single_body_acc(particle_i, particle_j, mass_i, mass_j, config, params))(state, mass)
 
@@ -131,7 +156,7 @@ def direct_acc_laxmap(state: jnp.ndarray,
         else:
             return jnp.sum(acc, axis=0)
 
-    return jax.lax.map(net_force_on_body, (state, mass), batch_size=config.batch_size)
+    return jax.lax.map(net_force_on_body, (state, mass), batch_size=batch_size)
 
 
 @eqx.filter_jit(donate='all')
@@ -252,6 +277,7 @@ def direct_acc_sharding(state: jnp.ndarray,
         Array of shape (N,) containing the potential energy of the particles, if return_potential is True.
     """
     
+    batch_size = _resolve_batch_size(config.batch_size)
     pos = state[:, 0]
     # Create a mesh from all devices
     devices = jax.devices()
@@ -270,7 +296,7 @@ def direct_acc_sharding(state: jnp.ndarray,
         return pos[0, None] - pos_sharded
     @jit
     def lax_map_pairwise_diff(pos):
-        return jax.lax.map(pairwise_diff, pos, batch_size=config.batch_size)
+        return jax.lax.map(pairwise_diff, pos, batch_size=batch_size)
     dpos = jax.lax.stop_gradient(shard_map(lax_map_pairwise_diff, 
                                            mesh=mesh, 
                                            in_specs=in_specs, 
@@ -312,9 +338,3 @@ def no_self_gravity(state: jnp.ndarray,
         return jnp.zeros((config.N_particles, 3)), jnp.zeros((config.N_particles,))
     else:
         return jnp.zeros((config.N_particles, 3))
-
-
-
-
-
-

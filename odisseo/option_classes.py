@@ -1,4 +1,4 @@
-from typing import NamedTuple
+from typing import NamedTuple, Optional
 from astropy import units as u
 from astropy import constants as c
 from math import log
@@ -32,6 +32,7 @@ DIRECT_ACC_MATRIX = 2
 DIRECT_ACC_FOR_LOOP = 3
 DIRECT_ACC_SHARDING = 4
 NO_SELF_GRAVITY = 5
+FMM_ACC = 6
 
 #external potential 
 NFW_POTENTIAL = 0
@@ -202,6 +203,71 @@ class SimulationConfig(NamedTuple):
     
     acceleration_scheme: int = DIRECT_ACC
 
+    # Jaccpot-FMM backend tuning (used by integrate API).
+    fmm_refresh_every: int = 1
+    fmm_leaf_size: int = 16
+    fmm_max_order: int = 4
+    fmm_refresh_after_position_update: bool = False
+
+    # Jaccpot solver tuning knobs exposed to ODISSEO.
+    fmm_preset: str = "fast"
+    # Real (Dehnen) harmonics is the production default: the radix large-N fast
+    # lane runs pure-real end to end (no complex<->real conversion). Use
+    # "solidfmm"/"complex" only for cross-checking.
+    fmm_basis: str = "real"
+    fmm_theta: float = 0.6
+    fmm_runtime_path: str = "auto"
+    fmm_mac_type: str = "dehnen"
+    fmm_farfield_mode: str = "auto"
+    fmm_m2l_chunk_size: Optional[int] = None
+    fmm_nearfield_mode: str = "auto"
+    fmm_nearfield_edge_chunk_size: int = 256
+    # static_radix is the production tree build for the large-N GPU fast lane.
+    fmm_tree_build_mode: str = "static_radix"
+    fmm_tree_leaf_target: int = 32
+    # Pallas fused near-field/M2L kernels. None => auto (ON for Ampere sm_80+,
+    # pure-JAX on sm_75/CPU). The ODISSEO_FMM_USE_PALLAS env var overrides this.
+    fmm_use_pallas: Optional[bool] = None
+    fmm_fixed_order: Optional[int] = None
+    fmm_jit_tree: Optional[bool] = None
+    fmm_jit_traversal: Optional[bool] = True
+    fmm_max_pair_queue: Optional[int] = None
+    fmm_pair_process_block: Optional[int] = None
+    fmm_max_interactions_per_node: Optional[int] = None
+    fmm_max_neighbors_per_leaf: Optional[int] = None
+    fmm_prepare_stage_memory_split_enabled: Optional[bool] = None
+    fmm_upward_leaf_batch_size: Optional[int] = None
+    fmm_auto_large_n_profile: bool = True
+    fmm_large_n_min_particles: int = 200_000
+    fmm_large_n_force_fp32: bool = True
+    fmm_large_n_target_block_size: Optional[int] = None
+    fmm_large_n_static_target_blocks: Optional[bool] = None
+    fmm_large_n_static_target_blocks_max_per_leaf: Optional[int] = None
+    fmm_large_n_environment_overrides_enabled: bool = True
+    # Static-shape/compile-stability experiment knobs.
+    fmm_enforce_static_shape_contract: bool = False
+    fmm_static_shape_warmup_prepares: int = 0
+    fmm_rematerialize_between_refresh: bool = True
+    # Differentiable FMM: gradients w.r.t. external-potential parameters, the
+    # initial state and masses. Routes FMM_ACC through odisseo.differentiable
+    # instead of the forward-throughput coupler -- the tree topology is frozen
+    # for the whole call and self-gravity is re-evaluated from the live
+    # positions, so jax.grad flows. See odisseo/differentiable.py.
+    fmm_differentiable: bool = False
+    # jaccpot GradConfig knobs worth surfacing here. "auto" takes the bucketed
+    # near-field reverse below 100k particles and the leaf-major fast lane at or
+    # above it (the bucketed reverse OOMs at galaxy scale).
+    fmm_grad_nearfield_lane: str = "auto"
+    fmm_grad_fused_m2l_pallas: Optional[bool] = None
+    # Adaptive FMM (diffrax) controls.
+    fmm_adaptive_refresh_rhs_calls: int = 1
+    fmm_adaptive_refresh_displacement_threshold: Optional[float] = None
+    fmm_adaptive_max_dt: Optional[float] = None
+    fmm_adaptive_min_dt: Optional[float] = None
+    fmm_adaptive_rtol: float = 1e-3
+    fmm_adaptive_atol: float = 1e-6
+    fmm_adaptive_use_dense_output: bool = False
+
     batch_size: int = 10_000
 
     double_map: bool = False
@@ -223,4 +289,3 @@ class SimulationConfig(NamedTuple):
     MN3_positive_density: bool = True  #whether to enforce positive density everywhere for MN3 disk potential
 
     glorder: int = 50 #order of Gauss-Legendre quadrature for MN3 disk potential
-
