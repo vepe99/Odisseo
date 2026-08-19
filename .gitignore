@@ -11,8 +11,3 @@ odisseo.egg-info/
 
 #pickle data
 *.pkl
-
-# Scalability benchmark artifacts (generated run outputs, reports, IC caches)
-notebooks/scalability/runs/
-notebooks/scalability/reports/
-notebooks/scalability/ic_cache/

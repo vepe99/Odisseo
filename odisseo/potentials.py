@@ -38,61 +38,38 @@ def combined_external_acceleration_vmpa_switch(state: jnp.ndarray,
 
     """
 
-    dtype = state.dtype
-    total_external_acceleration = jnp.zeros_like(state[:, 0], dtype=dtype)
-    total_external_potential = jnp.zeros((state.shape[0],), dtype=dtype)
+    total_external_acceleration = jnp.zeros_like(state[:, 0])
+    total_external_potential = jnp.zeros_like(config.N_particles)
+    state_tobe_vmap  = jnp.repeat(state[jnp.newaxis, ...], repeats=len(config.external_accelerations), axis=0)
     if return_potential:
-        def _cast_acc_pot(fn):
-            def _wrapped(s):
-                acc, pot = fn(s)
-                return jnp.asarray(acc, dtype=dtype), jnp.asarray(pot, dtype=dtype)
-            return _wrapped
-
         # The POTENTIAL_LIST NEEDS TO BE IN THE SAME ORDER AS THE INTEGER VALUES 
-        POTENTIAL_LIST = [_cast_acc_pot(lambda state: NFW(state, config=config, params=params, return_potential=True)),
-                          _cast_acc_pot(lambda state: point_mass(state, config=config, params=params, return_potential=True)),
-                          _cast_acc_pot(lambda state: MyamotoNagai(state, config=config, params=params, return_potential=True)),
-                          _cast_acc_pot(lambda state: PowerSphericalPotentialwCutoff(state, config=config, params=params, return_potential=True)),
-                          _cast_acc_pot(lambda state: logarithmic_potential(state, config=config, params=params, return_potential=True)),
-                          _cast_acc_pot(lambda state: TriaxialNFW(state, config=config, params=params, return_potential=True)),
-                          _cast_acc_pot(lambda state: Thin_MN3DiskPotential(state, config=config, params=params, return_potential=True)),
-                          _cast_acc_pot(lambda state: Thick_MN3DiskPotential(state, config=config, params=params, return_potential=True)),
-                          _cast_acc_pot(lambda state: TwoPowerTriaxialPotential(state, config=config, params=params, return_potential=True)),
+        POTENTIAL_LIST = [lambda state: NFW(state, config=config, params=params, return_potential=True), 
+                          lambda state: point_mass(state, config=config, params=params, return_potential=True),
+                          lambda state: MyamotoNagai(state, config=config, params=params, return_potential=True),
+                          lambda state: PowerSphericalPotentialwCutoff(state, config=config, params=params, return_potential=True), 
+                          lambda state: logarithmic_potential(state, config=config, params=params, return_potential=True),
+                          lambda state: TriaxialNFW(state, config=config, params=params, return_potential=True),
+                          lambda state: Thin_MN3DiskPotential(state, config=config, params=params, return_potential=True),
+                          lambda state: Thick_MN3DiskPotential(state, config=config, params=params, return_potential=True),
+                          lambda state: TwoPowerTriaxialPotential(state, config=config, params=params, return_potential=True),
 
                           ]  
-        if len(config.external_accelerations) == 1:
-            return POTENTIAL_LIST[int(config.external_accelerations[0])](state)
-        state_tobe_vmap = jnp.repeat(
-            state[jnp.newaxis, ...],
-            repeats=len(config.external_accelerations),
-            axis=0,
-        )
         vmap_function = vmap(lambda i, state: lax.switch(i, POTENTIAL_LIST, state))
         external_acc, external_pot = vmap_function(jnp.array(config.external_accelerations), state_tobe_vmap)
         total_external_acceleration = jnp.sum(external_acc, axis=0)
         total_external_potential = jnp.sum(external_pot, axis=0)
         return total_external_acceleration, total_external_potential
     else:
-        def _cast_acc(fn):
-            return lambda s: jnp.asarray(fn(s), dtype=dtype)
-
-        POTENTIAL_LIST = [_cast_acc(lambda state: NFW(state, config=config, params=params, return_potential=False)),
-                          _cast_acc(lambda state: point_mass(state, config=config, params=params, return_potential=False)),
-                          _cast_acc(lambda state: MyamotoNagai(state, config=config, params=params, return_potential=False)),
-                          _cast_acc(lambda state: PowerSphericalPotentialwCutoff(state, config=config, params=params, return_potential=False)),
-                          _cast_acc(lambda state: logarithmic_potential(state, config=config, params=params, return_potential=False)),
-                          _cast_acc(lambda state: TriaxialNFW(state, config=config, params=params, return_potential=False)),
-                          _cast_acc(lambda state: Thin_MN3DiskPotential(state, config=config, params=params, return_potential=False)),
-                          _cast_acc(lambda state: Thick_MN3DiskPotential(state, config=config, params=params, return_potential=False)),
-                          _cast_acc(lambda state: TwoPowerTriaxialPotential(state, config=config, params=params, return_potential=False)),
+        POTENTIAL_LIST = [lambda state: NFW(state, config=config, params=params, return_potential=False),
+                          lambda state: point_mass(state, config=config, params=params, return_potential=False),
+                          lambda state: MyamotoNagai(state, config=config, params=params, return_potential=False),
+                          lambda state: PowerSphericalPotentialwCutoff(state, config=config, params=params, return_potential=False),
+                          lambda state: logarithmic_potential(state, config=config, params=params, return_potential=False),
+                          lambda state: TriaxialNFW(state, config=config, params=params, return_potential=False),
+                          lambda state: Thin_MN3DiskPotential(state, config=config, params=params, return_potential=False),
+                          lambda state: Thick_MN3DiskPotential(state, config=config, params=params, return_potential=False),
+                          lambda state: TwoPowerTriaxialPotential(state, config=config, params=params, return_potential=False),
                           ]  
-        if len(config.external_accelerations) == 1:
-            return POTENTIAL_LIST[int(config.external_accelerations[0])](state)
-        state_tobe_vmap = jnp.repeat(
-            state[jnp.newaxis, ...],
-            repeats=len(config.external_accelerations),
-            axis=0,
-        )
         vmap_function = vmap(lambda i, state: lax.switch(i, POTENTIAL_LIST, state))
         external_acc = vmap_function(jnp.array(config.external_accelerations), state_tobe_vmap)
         total_external_acceleration = jnp.sum(external_acc, axis=0)
@@ -146,10 +123,7 @@ def NFW(state: jnp.ndarray,
     M = params_NFW.Mvir
     r_s = params_NFW.r_s
 
-    pos = state[:, 0]
-    r = jnp.linalg.norm(pos, axis=1)
-    x = r / r_s
-    small_x = x < jnp.asarray(1.0e-3, dtype=x.dtype)
+    r = jnp.linalg.norm(state[:, 0], axis=1)
 
     @jit
     def potential(r):
@@ -160,32 +134,27 @@ def NFW(state: jnp.ndarray,
         where $m$ is the characteristic mass and $r_s$ is the scale radius.
 
         """
-        x_local = r / r_s
-        small = x_local < jnp.asarray(1.0e-3, dtype=x_local.dtype)
-        log1p_over_x = jnp.where(
-            small,
-            1.0 - 0.5 * x_local + (x_local * x_local) / 3.0,
-            jnp.log1p(x_local) / x_local,
-        )
-        log1p_over_x = jnp.where(x_local == 0.0, 1.0, log1p_over_x)
+        x = r / r_s
         phi0 = -params.G * M / r_s
-        return phi0 * log1p_over_x
-
+        return phi0 * jnp.log(1 + x) / x
+    
     @jit
-    def enclosed_mass_factor_over_x2(x_value):
-        r"""Return ``(log1p(x) - x / (1 + x)) / x**2`` stably."""
-        small = x_value < jnp.asarray(1.0e-3, dtype=x_value.dtype)
-        series = 0.5 - (2.0 / 3.0) * x_value + 0.75 * x_value * x_value
-        direct = (jnp.log1p(x_value) - x_value / (1.0 + x_value)) / (x_value * x_value)
-        ratio = jnp.where(small, series, direct)
-        return jnp.where(x_value == 0.0, 0.5, ratio)
+    def mass_enclosed(r):
+        r"""Enclosed mass for the NFW model.
 
-    @jit
+        $$ M(<r) = \frac{m}{\ln(1 + x) - \frac{x}{1 + x}} $$
+
+        where $x = r / r_s$ is the dimensionless radius and $m$ is the
+        characteristic mass.
+
+        """
+        x = r / r_s
+        return M * (jnp.log(1 + x) - x / (1 + x))
+    
+    @jit 
     def acceleration(r):
-        direction = jnp.where(r[:, None] > 0.0, pos / r[:, None], jnp.zeros_like(pos))
-        acc_mag = -params.G * M / (r_s * r_s) * enclosed_mass_factor_over_x2(x)
-        return acc_mag[:, None] * direction
-
+        return - params.G * mass_enclosed(r)[:, None] * state[:, 0] / (r**3)[:, None] 
+    
     # @jit
     # def acceleration(r):
     #     rad = jnp.linalg.norm(state[:, 0], axis=1)
@@ -890,3 +859,5 @@ def TwoPowerTriaxialPotential(state: jnp.ndarray,
         return acc, pot
     else:
         return acc
+
+
