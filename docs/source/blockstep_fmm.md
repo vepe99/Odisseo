@@ -129,6 +129,37 @@ that takes `block_state`, `record_every` and `progress` -- those exist because i
 re-enters the host once per base step, which is precisely what the jitted lane
 removes, so passing them with a device backend raises rather than being ignored.
 
+### Leaf size, and why it decides which optimisation matters
+
+`leaf_size` defaults to **64**, which is measured rather than conventional. A full
+mutual traversal is a U-curve in leaf size (A100, fp64, θ=0.7, order 4, device
+topology, Hernquist; absolutes contention-soft ~1.4×, shape reproduced at three
+sizes):
+
+| leaf | N=2e4 | N=1e5 | N=1e6 | near, M2L @1e6 | force err @1e5 |
+|---|---|---|---|---|---|
+| 16 | — | 396.9 ms | 5987 ms | 17.8%, 68.7% | 2.34e-3 |
+| 32 | 40.5 ms | 237.8 ms | 3846 ms | 31.7%, 53.2% | 2.28e-3 |
+| **64** | 28.8 ms | **193.1 ms** | **3037 ms** | 59.0%, 31.1% | **2.10e-3** |
+| 128 | 28.3 ms | 338.0 ms | 4808 ms | 80.4%, 10.8% | 1.78e-3 |
+| 256 | — | 527.6 ms | 8401 ms | 94.7%, 2.5% | 8.27e-4 |
+
+Leaf 64 is the minimum at every size (64 and 128 tie at N=2e4) **and** more
+accurate than 32 or 16 — the accuracy gradient runs *with* leaf size, because a
+bigger leaf resolves more pairs by exact near-field summation rather than by a
+multipole approximation. So 16 and 32 were paying on both axes. Above 64 the curve
+buys accuracy with time at roughly a linear rate (leaf 256: 2.54× better force
+error for 2.77× the time), so raise it deliberately for an accuracy-led run and do
+not lower it below 64.
+
+The last two columns are the part worth remembering. **M2L is 2.5% of a traversal
+at leaf 256 and 68.7% at leaf 16; the near field is 94.7% and 17.8%.** Which stage
+"is the hotspot" is a property of this knob, not of the code — so a profile quoted
+without its leaf size says very little.
+
+Note the tables further down this page were measured at leaf 32, the old default,
+and are labelled as such; they are records of those runs, not of today's default.
+
 ### Through the unified `integrate()`
 
 `integrate()` reaches this lane too, selected the same way the differentiable FMM

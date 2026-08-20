@@ -227,7 +227,9 @@ def main() -> int:
     ap.add_argument("--eta", type=float, default=0.1, help="rung criterion accuracy")
     ap.add_argument("--theta", type=float, default=0.7, help="mutual MAC parameter")
     ap.add_argument("--order", type=int, default=4, help="multipole order")
-    ap.add_argument("--leaf-size", type=int, default=32)
+    # 64 is the measured optimum for this lane at every N tested; see
+    # BlockStepOptions.leaf_size.
+    ap.add_argument("--leaf-size", type=int, default=64)
     ap.add_argument("--softening", type=float, default=1.0e-3)
     ap.add_argument("--backend", choices=("jax", "pallas"), default="jax")
     ap.add_argument("--rebuild-every", type=int, default=1)

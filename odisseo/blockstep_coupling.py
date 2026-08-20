@@ -182,12 +182,29 @@ class BlockStepOptions:
     max_order:
         Multipole expansion order.
     leaf_size:
-        Target particles per leaf.
+        Target particles per leaf. Default 64, matching jaccpot's measured optimum
+        for this lane -- see ``BlockStepFMM``'s class docstring for the curve. In
+        short: a full traversal is a U-curve in leaf size whose minimum is 64 at
+        N = 2e4, 1e5 and 1e6 alike, and the previous default of 32 was 1.23-1.41x
+        slower *and* less accurate, because a bigger leaf resolves more pairs by
+        exact near-field summation instead of by a multipole approximation. Above
+        64 the curve buys accuracy with time at roughly a linear rate (leaf 256 is
+        2.54x better force error for 2.77x the time), so raise it deliberately for
+        an accuracy-led run; do not lower it below 64.
     backend:
         ``"jax"`` for the pure-JAX kernels, ``"pallas"`` to route the mutual
-        near field through jaccpot's Pallas kernel on Ampere+ GPUs (measured
-        2.2--3.6x forward on the near field, ~1.2x on the whole force). Falls
-        back to pure JAX where the hardware cannot run it.
+        near field through jaccpot's Pallas kernel on Ampere+ GPUs. Falls back
+        to pure JAX where the hardware cannot run it.
+
+        **The 2.2--3.6x this used to quote is not this lane's number.** Those are
+        jaccpot's published near-field figures, measured unweighted and not on the
+        mutual restructure. Measured here, on the device mutual lane at N = 2e4 on
+        an A100, ``"pallas"`` is selected (sm_80,
+        ``mutual_nearfield_pallas_active`` true, so not a silent fallback), is
+        numerically correct, and runs **~10% SLOWER** than ``"jax"`` -- 0.0441 s
+        against 0.0395 s. Unexplained, and it matters more than it looks: the near
+        field is 59% of a traversal at the default leaf size and 95% at leaf 256.
+        Leave this on ``"jax"`` until it is resolved.
 
         .. warning::
 
@@ -336,7 +353,7 @@ class BlockStepOptions:
     rung_eps: Optional[float] = None
     theta: float = 0.6
     max_order: int = 4
-    leaf_size: int = 32
+    leaf_size: int = 64
     backend: str = "jax"
     near_chunk_size: Optional[int] = None
     pallas_interpret: bool = False
