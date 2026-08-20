@@ -56,7 +56,10 @@ from odisseo.blockstep_coupling import (
     assert_fused_boundary_selected,
     blockstep_total_acceleration,
     build_blockstep_force,
+    device_topology_available,
     integrate_blockstep_jaccpot,
+    integrate_blockstep_jitted,
+    resolve_topology_backend,
 )
 
 # Gradients through the FMM lane -- onto external-potential parameters, the

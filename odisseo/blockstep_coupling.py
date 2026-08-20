@@ -347,8 +347,16 @@ class BlockStepOptions:
     checkpoint_substeps: bool = False
     reassign_rungs: bool = True
     jit_force: bool = False
-    topology_backend: str = "host"
-    """Where the mutual topology is built: ``"host"`` or ``"device"``.
+    topology_backend: str = "auto"
+    """Where the mutual topology is built: ``"auto"``, ``"host"`` or ``"device"``.
+
+    ``"auto"`` (the default) is ``"device"`` when the installed jaccpot has the
+    device topology and ``"host"`` when it does not. That split is the point of
+    having three values rather than two: the fast lane is what you get without
+    asking, while an explicit ``"device"`` still *raises* on a jaccpot that cannot
+    provide it. A default that silently degraded would be the worse failure --
+    the host lane is ~17x slower per base step at N = 20 000, which reads as a
+    slow machine rather than as a missing dependency.
 
     ``"host"`` runs jaccpot's NumPy dual-tree traversal, which cannot be traced
     and so costs a device-to-host round trip per rebuild -- measured **23.1 s** at
@@ -408,9 +416,17 @@ class BlockStepOptions:
 
     @property
     def use_static_shapes(self) -> bool:
-        """Resolve ``static_shapes``; ``None`` follows ``jit_force``."""
+        """Resolve ``static_shapes``; ``None`` follows ``jit_force``.
+
+        An explicit ``topology_backend="device"`` implies it -- every device
+        output shape comes from the capacities. ``"auto"`` is deliberately NOT
+        resolved here, because resolving needs jaccpot imported and the answer
+        would not change anything: jaccpot's own constructor forces static shapes
+        whenever the device backend is selected, so the only lane whose behaviour
+        this property actually decides is the host one.
+        """
         if self.static_shapes is None:
-            return bool(self.jit_force)
+            return bool(self.jit_force) or self.topology_backend == "device"
         return bool(self.static_shapes)
 
     @property
@@ -734,6 +750,55 @@ def _static_shape_kwargs(options: BlockStepOptions) -> dict:
     return {}
 
 
+def device_topology_available() -> bool:
+    """Whether the installed jaccpot can build the mutual topology on device."""
+    import inspect
+
+    from jaccpot import BlockStepFMM
+
+    return "topology_backend" in inspect.signature(BlockStepFMM).parameters
+
+
+def resolve_topology_backend(options: "BlockStepOptions") -> str:
+    """Resolve ``options.topology_backend`` to ``"host"`` or ``"device"``.
+
+    Parameters
+    ----------
+    options : BlockStepOptions
+        The options whose ``topology_backend`` to resolve.
+
+    Returns
+    -------
+    str
+        ``"device"`` or ``"host"``, never ``"auto"``.
+
+    Raises
+    ------
+    RuntimeError
+        If ``"device"`` was asked for explicitly and the installed jaccpot
+        cannot provide it. ``"auto"`` falls back to ``"host"`` instead.
+    ValueError
+        If the value is not one of ``"auto"``, ``"host"``, ``"device"``.
+    """
+    backend = str(getattr(options, "topology_backend", "auto"))
+    if backend == "host":
+        return "host"
+    if backend == "auto":
+        return "device" if device_topology_available() else "host"
+    if backend != "device":
+        raise ValueError(
+            f"topology_backend must be 'auto', 'host' or 'device'; got {backend!r}"
+        )
+    if not device_topology_available():
+        raise RuntimeError(
+            "options.topology_backend='device' needs a jaccpot whose "
+            "BlockStepFMM accepts topology_backend; the installed one does not. "
+            "See docs/source/blockstep_fmm.md for the required ref. Use "
+            "topology_backend='auto' to fall back to the host lane instead."
+        )
+    return "device"
+
+
 def _topology_backend_kwargs(options: "BlockStepOptions") -> dict:
     """``topology_backend`` for a jaccpot that supports it; nothing otherwise.
 
@@ -741,20 +806,9 @@ def _topology_backend_kwargs(options: "BlockStepOptions") -> dict:
     predates the device topology, rather than failing at construction with an
     unexpected-keyword error.
     """
-    from jaccpot import BlockStepFMM
-
-    backend = str(getattr(options, "topology_backend", "host"))
-    if backend == "host":
+    if resolve_topology_backend(options) == "host":
         return {}
-    import inspect
-
-    if "topology_backend" not in inspect.signature(BlockStepFMM).parameters:
-        raise RuntimeError(
-            "options.topology_backend='device' needs a jaccpot whose "
-            "BlockStepFMM accepts topology_backend; the installed one does not. "
-            "See docs/source/blockstep_fmm.md for the required ref."
-        )
-    return {"topology_backend": backend}
+    return {"topology_backend": "device"}
 
 
 def _reject_external_potentials(config: SimulationConfig) -> None:
@@ -969,6 +1023,37 @@ def blockstep_total_acceleration(
         force = build_blockstep_force(config, params, options)
     positions = jnp.asarray(state)[:, 0, :]
     mass = jnp.asarray(mass)
+
+    if resolve_topology_backend(options) == "device":
+        # `force.total_accelerations` would silently fall back to the HOST build
+        # here. The device `rebuild_state` *returns* its state rather than
+        # stashing it -- threading a state through a `lax.scan` needs it returned
+        # -- so jaccpot's `_require_state` finds nothing cached and rebuilds
+        # host-side: 23.1 s at N = 20 000, and not usable at all at N = 1e6. Go
+        # through the device path explicitly.
+        from jaccpot.mutual.force import mutual_weighted_accelerations
+
+        if prepare or getattr(force, "capacities", None) is None:
+            force.freeze_template(positions, mass)
+
+        # Cached on the force object for the reason spelled out in
+        # `integrate_blockstep_jitted`: `jax.jit` keys on the function object, so
+        # a closure built per call recompiles the whole traversal every time.
+        cache = getattr(force, "_odisseo_total_acc_cache", None)
+        if cache is None:
+            cache = {}
+            force._odisseo_total_acc_cache = cache
+        key = (tuple(positions.shape), str(positions.dtype))
+        evaluate = cache.get(key)
+        if evaluate is None:
+
+            def evaluate(p, m):
+                return mutual_weighted_accelerations(force.rebuild_state(p, m), p, m)
+
+            evaluate = jax.jit(evaluate)
+            cache[key] = evaluate
+        return evaluate(positions, mass)
+
     if prepare or force.state is None:
         force.prepare(positions, mass)
     return force.total_accelerations(positions, mass)
@@ -1146,6 +1231,46 @@ def integrate_blockstep_jaccpot(
     _reject_external_potentials(config)
     if int(n_base) < 1:
         raise ValueError(f"n_base must be >= 1; got {n_base!r}")
+
+    # One front door: the device backend routes to the fully jitted lane rather
+    # than making the caller pick a function. The host lane below stays reachable
+    # -- `topology_backend="host"` -- because it is the only one that works on a
+    # jaccpot without the device topology, and `"auto"` resolves to it there.
+    #
+    # The three kwargs below are host-lane concepts and are rejected rather than
+    # ignored. `progress` and `record_every` exist because that lane is a Python
+    # loop with a host round trip per base step, which is exactly what the jitted
+    # lane removes: there is no per-step host callback to hang them off, since the
+    # whole rollout is one `lax.scan`. Accepting and dropping them would silently
+    # stop a caller's diagnostics.
+    if resolve_topology_backend(options) == "device":
+        host_only = [
+            name
+            for name, value, default in (
+                ("block_state", block_state, None),
+                ("record_every", int(record_every), 1),
+                ("progress", progress, None),
+            )
+            if value != default
+        ]
+        if host_only:
+            raise ValueError(
+                f"{', '.join(host_only)} only applies to the host lane, and "
+                "options.topology_backend resolves to 'device'. The jitted lane is "
+                "one `lax.scan` with no per-base-step host re-entry to call back "
+                "into. Pass topology_backend='host' to use them, or drop them."
+            )
+        return integrate_blockstep_jitted(
+            state,
+            mass,
+            config,
+            params,
+            options=options,
+            n_base=n_base,
+            force=force,
+            track_energy=track_energy,
+            energy_chunk=energy_chunk,
+        )
 
     mass = jnp.asarray(mass)
     if force is None:
@@ -1368,7 +1493,7 @@ def integrate_blockstep_jitted(
     from nornax.blockstep.schedule import boundary_weight_table, n_sub
 
     _reject_external_potentials(config)
-    if str(getattr(options, "topology_backend", "host")) != "device":
+    if resolve_topology_backend(options) != "device":
         raise ValueError(
             "integrate_blockstep_jitted needs options.topology_backend='device'; "
             "the host traversal cannot be traced, so it cannot live inside the "

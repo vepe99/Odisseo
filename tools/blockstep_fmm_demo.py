@@ -260,7 +260,7 @@ def main() -> int:
     ap.add_argument(
         "--lane",
         choices=("host", "jitted"),
-        default="host",
+        default="jitted",
         help=(
             "'host' drives nornax's block_kdk_rollout with a host-built tree per "
             "base step. 'jitted' builds the topology on device inside one "
@@ -306,9 +306,11 @@ def main() -> int:
     from odisseo.blockstep_coupling import (
         BlockStepOptions,
         assert_fused_boundary_selected,
+        blockstep_total_acceleration,
         build_blockstep_force,
         chunked_potential_energy,
         integrate_blockstep_jaccpot,
+        resolve_topology_backend,
         total_linear_momentum,
     )
     from odisseo.option_classes import SimulationConfig, SimulationParams
@@ -351,14 +353,39 @@ def main() -> int:
         traced_boundary_weights=scan_map[args.traced_boundary_weights],
         jit_force=bool(args.jit_force),
     )
+    # The demo's `--lane` decides where the topology is built. Ask for it
+    # explicitly rather than leaning on the default, so `--lane host` really does
+    # exercise the host lane.
+    options = dataclasses.replace(
+        options,
+        topology_backend="device" if args.lane == "jitted" else "host",
+    )
     force = build_blockstep_force(config, params, options)
+    backend = resolve_topology_backend(options)
 
+    # This probe used to be an unconditional HOST build, which is the wrong
+    # default now and was actively prohibitive at large N -- the host traversal is
+    # 23.1 s at N = 20 000 and is what made an N = 1e6 run impossible to even set
+    # up. Route it the same way the run itself is routed.
     t0 = time.perf_counter()
-    force.prepare(positions, mass)
-    acc0 = jax.block_until_ready(force.total_accelerations(positions, mass))
+    if backend == "device":
+        force.freeze_template(positions, mass)
+        state_dev = jax.block_until_ready(
+            jax.jit(force.rebuild_state)(positions, mass)
+        )
+        acc0 = jax.block_until_ready(
+            blockstep_total_acceleration(
+                state, mass, config, params, options, force=force, prepare=False
+            )
+        )
+        num_far = int(state_dev.num_far_pairs)
+        num_near = int(state_dev.num_near_pairs)
+    else:
+        force.prepare(positions, mass)
+        acc0 = jax.block_until_ready(force.total_accelerations(positions, mass))
+        num_far = int(force.state.far_a.shape[0])
+        num_near = int(force.state.near_a.shape[0])
     t_prepare = time.perf_counter() - t0
-    num_far = int(force.state.far_a.shape[0])
-    num_near = int(force.state.near_a.shape[0])
     print(
         f"topology          : {num_far:,} far pairs, {num_near:,} leaf pairs, "
         f"{t_prepare:.2f} s to build + first force"
@@ -425,7 +452,7 @@ def main() -> int:
             mass,
             config,
             params,
-            options=dataclasses.replace(options, topology_backend="device"),
+            options=options,
             n_base=int(args.n_base),
             track_energy=not args.no_energy,
             energy_chunk=min(4096, n),
