@@ -1,4 +1,4 @@
-from typing import NamedTuple, Optional
+from typing import Any, NamedTuple, Optional
 from astropy import units as u
 from astropy import constants as c
 from math import log
@@ -289,3 +289,27 @@ class SimulationConfig(NamedTuple):
     MN3_positive_density: bool = True  #whether to enforce positive density everywhere for MN3 disk potential
 
     glorder: int = 50 #order of Gauss-Legendre quadrature for MN3 disk potential
+
+    # Momentum-conserving individual timesteps (block-step KDK on jaccpot's mutual
+    # FMM). Routes FMM_ACC through odisseo.blockstep_coupling, the same way
+    # `fmm_differentiable` above routes it through odisseo.differentiable.
+    #
+    # Appended at the END of this NamedTuple on purpose: inserting next to the
+    # other fmm_* fields would shift the positional index of everything after it,
+    # and a NamedTuple's field order is part of its constructor.
+    #
+    # NOTE ON num_timesteps: this lane counts BASE steps, and one base step
+    # contains 2**k_max sub-steps. `num_timesteps` is therefore read as the number
+    # of base steps, NOT as a count of force evaluations or of dt_max advances --
+    # 32 base steps at k_max=3 is 32*8 sub-steps of the finest rung. The wall-clock
+    # per unit of simulated time is what it is; only the accounting differs.
+    fmm_blockstep: bool = False
+    # A `BlockStepOptions`, REQUIRED when fmm_blockstep is True. Typed loosely
+    # because importing it here would be circular -- blockstep_coupling imports
+    # SimulationConfig from this module.
+    #
+    # There is deliberately no default: BlockStepOptions has no default dt_max,
+    # and a dt_max below every particle's own criterion puts the whole system on
+    # rung 0, collapsing the block scheme to a shared timestep without any
+    # symptom. Better to ask than to guess that.
+    blockstep_options: Optional[Any] = None

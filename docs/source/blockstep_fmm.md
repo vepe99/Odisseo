@@ -68,6 +68,8 @@ Two consequences, both acted on here:
 
 ## Quick start
 
+One entry point, and the fast lane by default:
+
 ```python
 from odisseo import construct_initial_state
 from odisseo.blockstep_coupling import BlockStepOptions, integrate_blockstep_jaccpot
@@ -85,23 +87,91 @@ print(result.energy_drift[-1])        # bounded, oscillating
 print(result.seconds_per_base_step)
 ```
 
-For anything but a like-for-like comparison against the historical host numbers,
-prefer the **jitted lane**: the topology is built on device inside one `lax.scan`
-over the whole rollout, which is 56x per base step at N = 20 000 and 96x at
-N = 100 000, with the same momentum residual.
+`options.topology_backend` defaults to `"auto"`, which is `"device"` wherever the
+installed jaccpot can build the topology in JAX. `integrate_blockstep_jaccpot`
+then **routes to the fully jitted lane**: the topology is rebuilt on device inside
+one `lax.scan` over the whole rollout, so there is no host round trip anywhere in
+the loop. That is 56x per base step at N = 20 000 and 96x at N = 100 000 against
+the host lane, with the same momentum residual.
+
+The three values are not interchangeable:
+
+| `topology_backend` | behaviour |
+|---|---|
+| `"auto"` (default) | `"device"` if jaccpot provides it, else `"host"` |
+| `"device"` | device, and **raises** if jaccpot cannot provide it |
+| `"host"` | the NumPy dual-tree traversal, a Python loop with a host round trip per base step |
+
+`"auto"` and `"device"` differ in exactly one way, and it is the one that matters:
+`"auto"` may quietly fall back, `"device"` may not. A silent fallback presents as
+a slow machine, not as a missing dependency.
+
+Call `integrate_blockstep_jitted` directly if you want to be explicit, or to reach
+`time_steady_state=True` (report the warm timing rather than the compile):
 
 ```python
 from odisseo.blockstep_coupling import integrate_blockstep_jitted
 
-options = BlockStepOptions(
-    dt_max=4.3e-2, k_max=3, theta=0.7, max_order=4,
-    topology_backend="device",          # required by this lane
-)
 result = integrate_blockstep_jitted(
-    state, mass, config, params, options=options, n_base=32,
-    time_steady_state=True,             # report the warm timing, not the compile
+    state, mass, config, params,
+    options=BlockStepOptions(
+        dt_max=4.3e-2, k_max=3, theta=0.7, max_order=4,
+        topology_backend="device",
+    ),
+    n_base=32,
+    time_steady_state=True,
 )
 ```
+
+The host lane stays reachable with `topology_backend="host"`, and is the only one
+that works against a jaccpot without the device topology. It is also the only lane
+that takes `block_state`, `record_every` and `progress` -- those exist because it
+re-enters the host once per base step, which is precisely what the jitted lane
+removes, so passing them with a device backend raises rather than being ignored.
+
+### Through the unified `integrate()`
+
+`integrate()` reaches this lane too, selected the same way the differentiable FMM
+lane is:
+
+```python
+from odisseo.integration_api import integrate
+from odisseo.option_classes import FMM_ACC
+
+config = SimulationConfig(
+    N_particles=n, softening=1e-3,
+    acceleration_scheme=FMM_ACC,
+    fmm_blockstep=True,                        # the selector
+    blockstep_options=BlockStepOptions(...),   # required: no default dt_max
+    num_timesteps=32,                          # BASE steps -- see below
+)
+final_state = integrate(state, mass, config, params)
+```
+
+Two things to know before using it.
+
+**`blockstep_options` is required.** There is no default, because
+`BlockStepOptions` has no default `dt_max`, and a `dt_max` below every
+particle's own criterion puts the whole system on rung 0 -- the block scheme
+then collapses to a shared timestep with no symptom at all. Size it from the
+acceleration distribution; `tools/blockstep_fmm_demo.py` takes the 90th
+percentile of `eta*sqrt(softening/|a_i|)`.
+
+**`num_timesteps` counts base steps here**, and one base step contains `2**k_max`
+sub-steps of the finest rung. At `k_max=3`, `num_timesteps=32` is 32 base steps,
+not 32 force evaluations and not 32 advances of `dt_max`. Nothing about the physics
+changes; the accounting does, and it is the one thing that does not carry over from
+the other lanes.
+
+**It returns a plain final state**, like every other `integrate()` lane, so a
+caller never has to branch on the config to know what it was handed. That means the
+per-base-step diagnostics -- momentum and energy drift, the rung histograms, the
+timings -- are *dropped*, and they cannot be recovered from the state afterwards.
+Call `integrate_blockstep_jaccpot` directly whenever you want them; it is the
+richer interface, not a lower-level one.
+
+`fmm_blockstep` takes precedence over `fmm_differentiable`, and the external
+potential guard still applies -- this lane is self-gravity only.
 
 A worked example with both lanes side by side, a Plummer or Hernquist IC, and
 the full diagnostic table:
@@ -109,7 +179,7 @@ the full diagnostic table:
 ```bash
 python tools/blockstep_fmm_demo.py --n 100000 --k-max 3 --n-base 12
 python tools/blockstep_fmm_demo.py --n 20000 --ic hernquist --backend pallas
-python tools/blockstep_fmm_demo.py --n 100000 --lane jitted --no-shared
+python tools/blockstep_fmm_demo.py --n 100000 --lane host --no-shared
 ```
 
 ## Which nornax this needs

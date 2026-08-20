@@ -79,6 +79,16 @@ def integrate(
       ``config.fmm_differentiable=True``, to the differentiable FMM lane in
       :mod:`odisseo.differentiable`, which supports ``jax.grad`` with respect to
       external-potential parameters, the initial state and masses.
+    - ``FMM_ACC`` with ``config.fmm_blockstep=True`` routes to the
+      momentum-conserving individual-timestep lane in
+      :mod:`odisseo.blockstep_coupling`, configured by
+      ``config.blockstep_options``, which is **required** (there is no default
+      ``dt_max``). ``config.num_timesteps`` is read as the number
+      of **base steps** there, each containing ``2**k_max`` sub-steps. It returns a
+      plain final state like every other lane, so the per-base-step diagnostics
+      (momentum and energy drift, rung histograms, timings) are dropped -- call
+      ``integrate_blockstep_jaccpot`` directly if you need them.
+      ``fmm_blockstep`` takes precedence over ``fmm_differentiable``.
 
     Parameters
     ----------
@@ -103,6 +113,9 @@ def integrate(
         return time_integration(primitive_state, mass, config, params)
 
     if int(config.acceleration_scheme) == int(FMM_ACC):
+        if bool(getattr(config, "fmm_blockstep", False)):
+            return _integrate_fmm_blockstep(primitive_state, mass, config, params)
+
         if bool(getattr(config, "fmm_differentiable", False)):
             return _integrate_fmm_differentiable(
                 primitive_state,
@@ -224,6 +237,80 @@ def integrate(
     raise ValueError(
         "acceleration_scheme must be a direct scheme or FMM_ACC"
     )
+
+
+def _integrate_fmm_blockstep(primitive_state, mass, config, params):
+    """Run the block-step lane and return a plain final state.
+
+    Returns the same shape as every other :func:`integrate` lane rather than the
+    richer ``BlockStepResult``, so a caller does not have to branch on the config
+    to know what it was handed. The diagnostics that are dropped here -- momentum
+    and energy drift per base step, the rung histograms, the per-step timings --
+    are not recoverable from the state, so anything that needs them should call
+    ``integrate_blockstep_jaccpot`` directly.
+
+    ``config.num_timesteps`` is the number of **base steps**; see the note on
+    ``SimulationConfig.fmm_blockstep``.
+
+    Parameters
+    ----------
+    primitive_state:
+        ``(N, 2, 3)`` positions and velocities.
+    mass:
+        ``(N,)`` particle masses.
+    config:
+        Must carry ``fmm_blockstep=True`` and a ``blockstep_options``.
+    params:
+        Simulation parameters; ``params.G`` is used.
+
+    Returns
+    -------
+    The final ``(N, 2, 3)`` state.
+    """
+    from odisseo.blockstep_coupling import (
+        BlockStepOptions,
+        integrate_blockstep_jaccpot,
+    )
+
+    options = getattr(config, "blockstep_options", None)
+    if options is None:
+        raise ValueError(
+            "config.fmm_blockstep=True needs config.blockstep_options set; there "
+            "is no default, because BlockStepOptions has no default dt_max and "
+            "picking one here would be the worst kind of guess. A dt_max below "
+            "every particle's own criterion puts the whole system on rung 0, and "
+            "the block scheme then silently collapses to a shared timestep -- a "
+            "run that looks healthy while exercising none of this lane. Size it "
+            "from the acceleration distribution, e.g. a high percentile of "
+            "eta*sqrt(softening/|a_i|); tools/blockstep_fmm_demo.py does exactly "
+            "that."
+        )
+    if not isinstance(options, BlockStepOptions):
+        raise TypeError(
+            "config.blockstep_options must be a BlockStepOptions or None; got "
+            f"{type(options).__name__}"
+        )
+
+    n_base = int(config.num_timesteps)
+    if n_base < 1:
+        raise ValueError(
+            "config.num_timesteps is the number of base steps for the block-step "
+            f"lane and must be >= 1; got {n_base!r}"
+        )
+
+    # `track_energy=False`: the energy diagnostic is an exact O(N^2) pair sum, and
+    # this entry point discards it anyway, so computing it would be pure cost --
+    # 34.6 s per evaluation at N = 1e6.
+    result = integrate_blockstep_jaccpot(
+        primitive_state,
+        mass,
+        config,
+        params,
+        options=options,
+        n_base=n_base,
+        track_energy=False,
+    )
+    return result.state
 
 
 def _reject_traced_forward_fmm_inputs(

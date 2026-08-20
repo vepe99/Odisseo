@@ -194,12 +194,24 @@ def params():
 
 
 def _options(**kw):
+    """Options for the HOST lane, which is what most of this module tests.
+
+    `topology_backend` is pinned rather than left to the default, and that is
+    deliberate: the default is `"auto"`, which resolves to `"device"` wherever the
+    installed jaccpot can provide it, and `integrate_blockstep_jaccpot` then routes
+    to the jitted lane. Most tests below are *about* the host lane -- the nornax
+    fusion switches, `rebuild_every`, `scan_base_steps`, the per-step `progress`
+    callback -- so letting the default carry them onto the other lane would leave
+    those behaviours untested while still passing. The device lane has its own
+    tests further down; pass `topology_backend="device"` (or "auto") to reach it.
+    """
     base = dict(
         dt_max=DT_MAX,
         k_max=K_MAX,
         theta=THETA,
         max_order=MAX_ORDER,
         leaf_size=LEAF_SIZE,
+        topology_backend="host",
     )
     base.update(kw)
     return BlockStepOptions(**base)
@@ -1181,9 +1193,12 @@ def test_the_jitted_lane_refuses_the_host_topology_backend(system, config, param
     with pytest.raises(ValueError, match="topology_backend='device'"):
         integrate_blockstep_jitted(
             state, mass, config, params,
+            # Asked for explicitly. This used to rely on `"host"` being the
+            # default; it is `"auto"` now, which resolves to `"device"` here and
+            # would make this raise nothing at all.
             options=BlockStepOptions(
                 dt_max=DT_MAX, k_max=K_MAX, theta=THETA, max_order=MAX_ORDER,
-                leaf_size=LEAF_SIZE,
+                leaf_size=LEAF_SIZE, topology_backend="host",
             ),
             n_base=1,
         )
@@ -1219,7 +1234,180 @@ def test_the_device_topology_backend_actually_reaches_the_model(config, params):
         config, params,
         BlockStepOptions(
             dt_max=DT_MAX, k_max=K_MAX, theta=THETA, max_order=MAX_ORDER,
-            leaf_size=LEAF_SIZE,
+            leaf_size=LEAF_SIZE, topology_backend="host",
         ),
     )
     assert getattr(host, "topology_backend", "host") == "host"
+
+
+# --------------------------------------------------------------------------
+# one front door: the default resolves to the fast lane, and the host entry
+# point dispatches to it
+# --------------------------------------------------------------------------
+
+
+def test_auto_resolves_to_device_when_jaccpot_can_and_host_when_it_cannot(
+    monkeypatch,
+):
+    """``"auto"`` is the whole reason the default can be fast AND safe."""
+    import odisseo.blockstep_coupling as bc
+
+    options = _options(topology_backend="auto")
+
+    monkeypatch.setattr(bc, "device_topology_available", lambda: True)
+    assert bc.resolve_topology_backend(options) == "device"
+
+    monkeypatch.setattr(bc, "device_topology_available", lambda: False)
+    assert bc.resolve_topology_backend(options) == "host"
+
+
+def test_an_explicit_device_request_raises_rather_than_degrading(monkeypatch):
+    """The point of three values: `"auto"` may fall back, `"device"` may not.
+
+    A default that silently degraded would present as a slow machine rather than
+    as a missing dependency -- the host lane is ~17x slower per base step at
+    N = 20 000, which is easy to misread as anything else.
+    """
+    import odisseo.blockstep_coupling as bc
+
+    monkeypatch.setattr(bc, "device_topology_available", lambda: False)
+    with pytest.raises(RuntimeError, match="needs a jaccpot"):
+        bc.resolve_topology_backend(_options(topology_backend="device"))
+    # ...and the fallback is still available by name.
+    assert bc.resolve_topology_backend(_options(topology_backend="auto")) == "host"
+
+
+def test_an_unknown_topology_backend_is_rejected():
+    import odisseo.blockstep_coupling as bc
+
+    with pytest.raises(ValueError, match="must be 'auto', 'host' or 'device'"):
+        bc.resolve_topology_backend(_options(topology_backend="gpu"))
+
+
+@device_lane
+def test_the_host_entry_point_dispatches_to_the_jitted_lane(system, config, params):
+    """``integrate_blockstep_jaccpot`` is the front door for BOTH lanes.
+
+    Routing rather than asking the caller to pick a function: with the device
+    backend it must produce exactly what calling the jitted lane directly does,
+    not merely something similar.
+    """
+    state, mass = system
+    common = dict(
+        dt_max=DT_MAX, k_max=K_MAX, theta=THETA, max_order=MAX_ORDER,
+        leaf_size=LEAF_SIZE, topology_backend="device",
+    )
+    through_front_door = integrate_blockstep_jaccpot(
+        state, mass, config, params,
+        options=BlockStepOptions(**common), n_base=2, track_energy=False,
+    )
+    direct = integrate_blockstep_jitted(
+        state, mass, config, params,
+        options=BlockStepOptions(**common), n_base=2, track_energy=False,
+    )
+    assert jnp.allclose(through_front_door.state, direct.state, rtol=0, atol=0), (
+        "the front door must dispatch to the jitted lane, not re-implement it"
+    )
+    assert jnp.array_equal(
+        through_front_door.rung_histogram, direct.rung_histogram
+    )
+
+
+@device_lane
+def test_host_only_kwargs_are_rejected_on_the_device_lane(system, config, params):
+    """Dropping them silently would kill a caller's diagnostics without a word.
+
+    `progress` and `record_every` exist because the host lane is a Python loop
+    with a host round trip per base step -- exactly what the jitted lane removes.
+    There is no per-step re-entry to call back into, so they cannot be honoured.
+    """
+    state, mass = system
+    options = BlockStepOptions(
+        dt_max=DT_MAX, k_max=K_MAX, theta=THETA, max_order=MAX_ORDER,
+        leaf_size=LEAF_SIZE, topology_backend="device",
+    )
+    for kwargs in ({"record_every": 2}, {"progress": lambda i, rec: None}):
+        with pytest.raises(ValueError, match="only applies to the host lane"):
+            integrate_blockstep_jaccpot(
+                state, mass, config, params, options=options, n_base=1, **kwargs
+            )
+
+
+# --------------------------------------------------------------------------
+# the unified integrate() API reaches this lane
+# --------------------------------------------------------------------------
+
+
+def test_integrate_reaches_the_blockstep_lane(system, config, params):
+    """``integrate()`` must route FMM_ACC + fmm_blockstep here, not elsewhere.
+
+    Pinned against calling the lane directly rather than merely checking the
+    shape: a selector that fell through to the forward coupler would still return
+    a plausible ``(N, 2, 3)`` state, and that is precisely the failure this has to
+    catch.
+    """
+    from odisseo.integration_api import integrate
+    from odisseo.option_classes import FMM_ACC
+
+    state, mass = system
+    options = _options()
+    cfg = config._replace(
+        acceleration_scheme=FMM_ACC,
+        fmm_blockstep=True,
+        blockstep_options=options,
+        num_timesteps=2,
+    )
+    through_integrate = integrate(state, mass, cfg, params)
+    direct = integrate_blockstep_jaccpot(
+        state, mass, config, params, options=options, n_base=2, track_energy=False
+    )
+    assert through_integrate.shape == state.shape
+    assert jnp.allclose(through_integrate, direct.state, rtol=0, atol=0), (
+        "integrate() did not dispatch to the block-step lane"
+    )
+
+
+def test_integrate_requires_blockstep_options(system, config, params):
+    """``blockstep_options=None`` must raise, not be defaulted.
+
+    Written the other way round first, asserting that None meant "the defaults".
+    It does not and must not: ``BlockStepOptions`` has no default ``dt_max``, and a
+    ``dt_max`` below every particle's own criterion puts the whole system on rung 0,
+    collapsing the block scheme to a shared timestep with no symptom -- a run that
+    passes while exercising none of this lane. So the absence of a default is the
+    feature, and this pins the error message that explains it.
+    """
+    from odisseo.integration_api import integrate
+    from odisseo.option_classes import FMM_ACC
+
+    state, mass = system
+    cfg = config._replace(
+        acceleration_scheme=FMM_ACC,
+        fmm_blockstep=True,
+        blockstep_options=None,
+        num_timesteps=1,
+    )
+    with pytest.raises(ValueError, match="needs config.blockstep_options"):
+        integrate(state, mass, cfg, params)
+
+
+def test_integrate_rejects_a_bad_blockstep_config(system, config, params):
+    from odisseo.integration_api import integrate
+    from odisseo.option_classes import FMM_ACC
+
+    state, mass = system
+    base = config._replace(acceleration_scheme=FMM_ACC, fmm_blockstep=True)
+
+    with pytest.raises(TypeError, match="must be a BlockStepOptions"):
+        integrate(
+            state, mass,
+            base._replace(blockstep_options={"k_max": 2}, num_timesteps=1),
+            params,
+        )
+
+    with pytest.raises(ValueError, match="number of base steps"):
+        integrate(
+            state, mass,
+            base._replace(blockstep_options=_options(), num_timesteps=0),
+            params,
+        )
