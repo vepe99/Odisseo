@@ -53,6 +53,60 @@ def _resolve_fmm_runtime_profile(
     return preset, runtime_path, effective_dtype
 
 
+#: The lane names :func:`resolve_lane` can return, in dispatch-precedence order.
+INTEGRATION_LANES = (
+    "direct",
+    "fmm_blockstep",
+    "fmm_differentiable",
+    "fmm_forward",
+)
+
+
+def resolve_lane(config: SimulationConfig) -> str:
+    """Name the lane :func:`integrate` will dispatch this config to.
+
+    :func:`integrate` returns a plain state on every lane, deliberately, so the
+    return value cannot tell a caller which one ran -- and a selector that fell
+    through to the wrong lane still returns a plausible ``(N, 2, 3)``. This is
+    the single source of truth for that decision: ``integrate`` dispatches on it
+    rather than re-deriving the conditions, so what is reported here cannot drift
+    from what actually runs.
+
+    Pure and cheap -- it reads flags and integrates nothing, so it is also the way
+    to check what a config would do before committing to a long run.
+
+    Parameters
+    ----------
+    config:
+        The configuration to resolve.
+
+    Returns
+    -------
+    str
+        One of :data:`INTEGRATION_LANES`.
+    """
+    direct_schemes = {
+        DIRECT_ACC,
+        DIRECT_ACC_LAXMAP,
+        DIRECT_ACC_MATRIX,
+        DIRECT_ACC_FOR_LOOP,
+        DIRECT_ACC_SHARDING,
+        NO_SELF_GRAVITY,
+    }
+    if int(config.acceleration_scheme) in direct_schemes:
+        return "direct"
+    if int(config.acceleration_scheme) == int(FMM_ACC):
+        # fmm_blockstep takes precedence over fmm_differentiable.
+        if bool(getattr(config, "fmm_blockstep", False)):
+            return "fmm_blockstep"
+        if bool(getattr(config, "fmm_differentiable", False)):
+            return "fmm_differentiable"
+        return "fmm_forward"
+    raise ValueError(
+        f"unknown acceleration_scheme {int(config.acceleration_scheme)}"
+    )
+
+
 def integrate(
     primitive_state: jnp.ndarray,
     mass: jnp.ndarray,
@@ -65,6 +119,7 @@ def integrate(
     active_indices_schedule: Optional[jnp.ndarray] = None,
     active_mask_schedule: Optional[jnp.ndarray] = None,
     fmm_plan: Optional[object] = None,
+    return_lane: bool = False,
 ):
     """Unified integration API across direct and Jaccpot-FMM backends.
 
@@ -92,6 +147,19 @@ def integrate(
 
     Parameters
     ----------
+    return_lane:
+        When ``True``, return ``(result, lane)`` instead of bare ``result``,
+        where ``lane`` is the :func:`resolve_lane` name of the lane that ran.
+        Off by default so the return type is unchanged for existing callers.
+
+        Every lane returns a plain state, so the result alone cannot tell you
+        which one ran, and a selector that fell through to the wrong lane still
+        returns a plausible ``(N, 2, 3)``. This is how a caller -- or a test --
+        pins dispatch on something exact and integer-like rather than by
+        comparing float arrays, which cannot distinguish two lanes on GPU at any
+        tolerance (see the control measurement in
+        ``tests/test_blockstep_fmm.py``).
+
     fmm_plan:
         Optional :class:`~odisseo.differentiable.DifferentiableFMMPlan`, honoured
         only by the differentiable FMM lane. Build it once with
@@ -100,24 +168,22 @@ def integrate(
         concrete ``primitive_state``/``mass`` and repeats the tree build on every
         gradient evaluation.
     """
-    direct_schemes = {
-        DIRECT_ACC,
-        DIRECT_ACC_LAXMAP,
-        DIRECT_ACC_MATRIX,
-        DIRECT_ACC_FOR_LOOP,
-        DIRECT_ACC_SHARDING,
-        NO_SELF_GRAVITY,
-    }
+    lane = resolve_lane(config)
 
-    if int(config.acceleration_scheme) in direct_schemes:
-        return time_integration(primitive_state, mass, config, params)
+    def _tagged(value):
+        return (value, lane) if return_lane else value
 
-    if int(config.acceleration_scheme) == int(FMM_ACC):
-        if bool(getattr(config, "fmm_blockstep", False)):
-            return _integrate_fmm_blockstep(primitive_state, mass, config, params)
+    if lane == "direct":
+        return _tagged(time_integration(primitive_state, mass, config, params))
 
-        if bool(getattr(config, "fmm_differentiable", False)):
-            return _integrate_fmm_differentiable(
+    if lane == "fmm_blockstep":
+        return _tagged(
+            _integrate_fmm_blockstep(primitive_state, mass, config, params)
+        )
+
+    if lane == "fmm_differentiable":
+        return _tagged(
+            _integrate_fmm_differentiable(
                 primitive_state,
                 mass,
                 config,
@@ -127,116 +193,116 @@ def integrate(
                 active_mask_schedule=active_mask_schedule,
                 fmm_plan=fmm_plan,
             )
-
-        _reject_traced_forward_fmm_inputs(primitive_state, mass, params)
-
-        fmm_preset, fmm_runtime_path, fmm_working_dtype = _resolve_fmm_runtime_profile(
-            primitive_state,
-            config,
         )
 
-        common_kwargs = dict(
-            state=primitive_state,
-            mass=mass,
-            config=config,
-            params=params,
-            num_steps=int(config.num_timesteps),
-            active_indices_fn=active_indices_fn,
-            active_indices_schedule=active_indices_schedule,
-            active_mask_schedule=active_mask_schedule,
-            refresh_every=int(config.fmm_refresh_every),
-            refresh_after_position_update=bool(
-                config.fmm_refresh_after_position_update
-            ),
-            leaf_size=int(config.fmm_leaf_size),
-            max_order=int(config.fmm_max_order),
-            fmm_preset=str(fmm_preset),
-            fmm_basis=str(config.fmm_basis),
-            fmm_theta=float(config.fmm_theta),
-            fmm_runtime_path=str(fmm_runtime_path),
-            fmm_working_dtype=fmm_working_dtype,
-            fmm_mac_type=str(config.fmm_mac_type),
-            fmm_farfield_mode=str(config.fmm_farfield_mode),
-            fmm_m2l_chunk_size=(
-                None
-                if config.fmm_m2l_chunk_size is None
-                else int(config.fmm_m2l_chunk_size)
-            ),
-            fmm_nearfield_mode=str(config.fmm_nearfield_mode),
-            fmm_nearfield_edge_chunk_size=int(config.fmm_nearfield_edge_chunk_size),
-            fmm_tree_build_mode=str(config.fmm_tree_build_mode),
-            fmm_tree_leaf_target=int(config.fmm_tree_leaf_target),
-            fmm_fixed_order=(
-                None if config.fmm_fixed_order is None else int(config.fmm_fixed_order)
-            ),
-            fmm_jit_tree=(
-                None if config.fmm_jit_tree is None else bool(config.fmm_jit_tree)
-            ),
-            fmm_jit_traversal=(
-                None
-                if config.fmm_jit_traversal is None
-                else bool(config.fmm_jit_traversal)
-            ),
-            fmm_max_pair_queue=(
-                None
-                if config.fmm_max_pair_queue is None
-                else int(config.fmm_max_pair_queue)
-            ),
-            fmm_pair_process_block=(
-                None
-                if config.fmm_pair_process_block is None
-                else int(config.fmm_pair_process_block)
-            ),
-            fmm_max_interactions_per_node=(
-                None
-                if config.fmm_max_interactions_per_node is None
-                else int(config.fmm_max_interactions_per_node)
-            ),
-            fmm_max_neighbors_per_leaf=(
-                None
-                if config.fmm_max_neighbors_per_leaf is None
-                else int(config.fmm_max_neighbors_per_leaf)
-            ),
-            fmm_prepare_stage_memory_split_enabled=(
-                None
-                if config.fmm_prepare_stage_memory_split_enabled is None
-                else bool(config.fmm_prepare_stage_memory_split_enabled)
-            ),
-            enforce_static_shape_contract=bool(
-                config.fmm_enforce_static_shape_contract
-            ),
-            static_shape_warmup_prepares=int(
-                config.fmm_static_shape_warmup_prepares
-            ),
-            rematerialize_between_refresh=bool(
-                config.fmm_rematerialize_between_refresh
-            ),
-            return_history=bool(config.return_snapshots),
-        )
+    # lane == "fmm_forward" -- resolve_lane raises on anything else.
+    _reject_traced_forward_fmm_inputs(primitive_state, mass, params)
 
-        if bool(config.fixed_timestep):
-            states_or_final = integrate_leapfrog_jaccpot_active(**common_kwargs)
-        else:
-            states_or_final = integrate_diffrax_jaccpot_active(**common_kwargs)
+    fmm_preset, fmm_runtime_path, fmm_working_dtype = _resolve_fmm_runtime_profile(
+        primitive_state,
+        config,
+    )
 
-        if bool(config.return_snapshots):
-            states = jnp.asarray(states_or_final)
-            target_snaps = int(config.num_snapshots)
-            if target_snaps <= 0:
-                raise ValueError("num_snapshots must be positive")
-            stride = max(1, int(states.shape[0]) // target_snaps)
-            snap_states = states[::stride][:target_snaps]
-            times = jnp.linspace(0.0, params.t_end, snap_states.shape[0], endpoint=True)
-            return SnapshotData(
+    common_kwargs = dict(
+        state=primitive_state,
+        mass=mass,
+        config=config,
+        params=params,
+        num_steps=int(config.num_timesteps),
+        active_indices_fn=active_indices_fn,
+        active_indices_schedule=active_indices_schedule,
+        active_mask_schedule=active_mask_schedule,
+        refresh_every=int(config.fmm_refresh_every),
+        refresh_after_position_update=bool(
+            config.fmm_refresh_after_position_update
+        ),
+        leaf_size=int(config.fmm_leaf_size),
+        max_order=int(config.fmm_max_order),
+        fmm_preset=str(fmm_preset),
+        fmm_basis=str(config.fmm_basis),
+        fmm_theta=float(config.fmm_theta),
+        fmm_runtime_path=str(fmm_runtime_path),
+        fmm_working_dtype=fmm_working_dtype,
+        fmm_mac_type=str(config.fmm_mac_type),
+        fmm_farfield_mode=str(config.fmm_farfield_mode),
+        fmm_m2l_chunk_size=(
+            None
+            if config.fmm_m2l_chunk_size is None
+            else int(config.fmm_m2l_chunk_size)
+        ),
+        fmm_nearfield_mode=str(config.fmm_nearfield_mode),
+        fmm_nearfield_edge_chunk_size=int(config.fmm_nearfield_edge_chunk_size),
+        fmm_tree_build_mode=str(config.fmm_tree_build_mode),
+        fmm_tree_leaf_target=int(config.fmm_tree_leaf_target),
+        fmm_fixed_order=(
+            None if config.fmm_fixed_order is None else int(config.fmm_fixed_order)
+        ),
+        fmm_jit_tree=(
+            None if config.fmm_jit_tree is None else bool(config.fmm_jit_tree)
+        ),
+        fmm_jit_traversal=(
+            None
+            if config.fmm_jit_traversal is None
+            else bool(config.fmm_jit_traversal)
+        ),
+        fmm_max_pair_queue=(
+            None
+            if config.fmm_max_pair_queue is None
+            else int(config.fmm_max_pair_queue)
+        ),
+        fmm_pair_process_block=(
+            None
+            if config.fmm_pair_process_block is None
+            else int(config.fmm_pair_process_block)
+        ),
+        fmm_max_interactions_per_node=(
+            None
+            if config.fmm_max_interactions_per_node is None
+            else int(config.fmm_max_interactions_per_node)
+        ),
+        fmm_max_neighbors_per_leaf=(
+            None
+            if config.fmm_max_neighbors_per_leaf is None
+            else int(config.fmm_max_neighbors_per_leaf)
+        ),
+        fmm_prepare_stage_memory_split_enabled=(
+            None
+            if config.fmm_prepare_stage_memory_split_enabled is None
+            else bool(config.fmm_prepare_stage_memory_split_enabled)
+        ),
+        enforce_static_shape_contract=bool(
+            config.fmm_enforce_static_shape_contract
+        ),
+        static_shape_warmup_prepares=int(
+            config.fmm_static_shape_warmup_prepares
+        ),
+        rematerialize_between_refresh=bool(
+            config.fmm_rematerialize_between_refresh
+        ),
+        return_history=bool(config.return_snapshots),
+    )
+
+    if bool(config.fixed_timestep):
+        states_or_final = integrate_leapfrog_jaccpot_active(**common_kwargs)
+    else:
+        states_or_final = integrate_diffrax_jaccpot_active(**common_kwargs)
+
+    if bool(config.return_snapshots):
+        states = jnp.asarray(states_or_final)
+        target_snaps = int(config.num_snapshots)
+        if target_snaps <= 0:
+            raise ValueError("num_snapshots must be positive")
+        stride = max(1, int(states.shape[0]) // target_snaps)
+        snap_states = states[::stride][:target_snaps]
+        times = jnp.linspace(0.0, params.t_end, snap_states.shape[0], endpoint=True)
+        return _tagged(
+            SnapshotData(
                 times=times,
                 states=snap_states,
             )
+        )
 
-        return states_or_final
-
-    raise ValueError(
-        "acceleration_scheme must be a direct scheme or FMM_ACC"
-    )
+    return _tagged(states_or_final)
 
 
 def _integrate_fmm_blockstep(primitive_state, mass, config, params):

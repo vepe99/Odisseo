@@ -768,12 +768,38 @@ def _static_shape_kwargs(options: BlockStepOptions) -> dict:
 
 
 def device_topology_available() -> bool:
-    """Whether the installed jaccpot can build the mutual topology on device."""
+    """Whether the installed stack can build the mutual topology on device.
+
+    The device lane needs BOTH halves, and they live in different repositories:
+    a jaccpot whose ``BlockStepFMM`` accepts ``topology_backend``, and a yggdrax
+    exporting the traversal that :mod:`jaccpot.mutual.device_topology` imports
+    lazily, inside the function body, at call time.
+
+    Probing only jaccpot made this return ``True`` against an older yggdrax, so
+    ``"auto"`` resolved to ``"device"`` and the run then died with an
+    ``ImportError`` from inside the force build -- which is precisely the
+    outcome ``"auto"`` exists to prevent -- while an explicit ``"device"`` got
+    that same late ImportError instead of the actionable ``RuntimeError``
+    :func:`resolve_topology_backend` raises. Check both halves.
+
+    Scope, so a ``False`` here is not over-read: this answers "can the DEVICE
+    lane run", and ``False`` is not a promise that the host lane will. The tree
+    rebuild is shared by both lanes and imports
+    ``yggdrax._tree_impl.rebuild_static_radix_tree_from_template``
+    (``jaccpot/nornax_adapter.py:396,701``), so a yggdrax old enough to lack
+    that breaks the host lane too and no fallback rescues it.
+    """
     import inspect
 
     from jaccpot import BlockStepFMM
 
-    return "topology_backend" in inspect.signature(BlockStepFMM).parameters
+    if "topology_backend" not in inspect.signature(BlockStepFMM).parameters:
+        return False
+    try:
+        from yggdrax.interactions import dual_tree_walk_mutual  # noqa: F401
+    except ImportError:
+        return False
+    return True
 
 
 def resolve_topology_backend(options: "BlockStepOptions") -> str:
@@ -809,7 +835,8 @@ def resolve_topology_backend(options: "BlockStepOptions") -> str:
     if not device_topology_available():
         raise RuntimeError(
             "options.topology_backend='device' needs a jaccpot whose "
-            "BlockStepFMM accepts topology_backend; the installed one does not. "
+            "BlockStepFMM accepts topology_backend AND a yggdrax exporting "
+            "interactions.dual_tree_walk_mutual; the installed pair does not. "
             "See docs/source/blockstep_fmm.md for the required ref. Use "
             "topology_backend='auto' to fall back to the host lane instead."
         )

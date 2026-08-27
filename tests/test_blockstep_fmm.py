@@ -1277,6 +1277,72 @@ def test_an_explicit_device_request_raises_rather_than_degrading(monkeypatch):
     assert bc.resolve_topology_backend(_options(topology_backend="auto")) == "host"
 
 
+def test_resolve_lane_names_every_lane_and_rejects_the_unknown(config):
+    """The selector's decision, pinned as a value rather than inferred from output.
+
+    Every lane returns a plain state, so before this existed the only way to
+    check dispatch was to compare float arrays against a reference call -- which
+    a same-input control shows cannot distinguish two lanes on GPU at any
+    tolerance. A lane NAME is exact on every platform.
+    """
+    from odisseo.integration_api import INTEGRATION_LANES, resolve_lane
+    from odisseo.option_classes import DIRECT_ACC, FMM_ACC
+
+    base = config
+
+    assert resolve_lane(base._replace(acceleration_scheme=DIRECT_ACC)) == "direct"
+
+    fmm = base._replace(acceleration_scheme=FMM_ACC)
+    assert resolve_lane(fmm) == "fmm_forward"
+    assert resolve_lane(fmm._replace(fmm_differentiable=True)) == "fmm_differentiable"
+    assert resolve_lane(fmm._replace(fmm_blockstep=True)) == "fmm_blockstep"
+    # Precedence is documented on integrate(); pin it rather than trust the order.
+    assert (
+        resolve_lane(fmm._replace(fmm_blockstep=True, fmm_differentiable=True))
+        == "fmm_blockstep"
+    )
+
+    # Every name it can return is declared, so a new lane cannot be added
+    # without appearing in the published tuple.
+    for cfg in (
+        base._replace(acceleration_scheme=DIRECT_ACC),
+        fmm,
+        fmm._replace(fmm_differentiable=True),
+        fmm._replace(fmm_blockstep=True),
+    ):
+        assert resolve_lane(cfg) in INTEGRATION_LANES
+
+    with pytest.raises(ValueError, match="unknown acceleration_scheme"):
+        resolve_lane(base._replace(acceleration_scheme=9999))
+
+
+def test_the_availability_probe_checks_yggdrax_and_not_only_jaccpot(monkeypatch):
+    """The device lane's two halves live in two repositories, so probe both.
+
+    Every other test here monkeypatches ``device_topology_available`` itself,
+    which is exactly how this went unnoticed: the resolver was covered and the
+    probe never was. It inspected only ``BlockStepFMM``'s signature, so against
+    a yggdrax predating ``dual_tree_walk_mutual`` it still answered ``True``,
+    ``"auto"`` resolved to ``"device"``, and the run died with an ``ImportError``
+    raised by the function-local import in ``jaccpot.mutual.device_topology`` --
+    the late failure ``"auto"`` exists to prevent.
+    """
+    import yggdrax.interactions as yi
+
+    import odisseo.blockstep_coupling as bc
+
+    assert bc.device_topology_available() is True, (
+        "guard: this environment must HAVE the device lane, or the test below "
+        "passes vacuously"
+    )
+
+    monkeypatch.delattr(yi, "dual_tree_walk_mutual")
+    assert bc.device_topology_available() is False
+    assert bc.resolve_topology_backend(_options(topology_backend="auto")) == "host"
+    with pytest.raises(RuntimeError, match="yggdrax"):
+        bc.resolve_topology_backend(_options(topology_backend="device"))
+
+
 def test_an_unknown_topology_backend_is_rejected():
     import odisseo.blockstep_coupling as bc
 
@@ -1289,8 +1355,11 @@ def test_the_host_entry_point_dispatches_to_the_jitted_lane(system, config, para
     """``integrate_blockstep_jaccpot`` is the front door for BOTH lanes.
 
     Routing rather than asking the caller to pick a function: with the device
-    backend it must produce exactly what calling the jitted lane directly does,
-    not merely something similar.
+    backend it must produce what calling the jitted lane directly does, not
+    merely something similar. "What it produces" is carried by exact equality on
+    the structural diagnostics; the state gets only a coarse bound, because a
+    same-input control shows a bitwise state comparison cannot distinguish the
+    two lanes on GPU at any tolerance. See the measured note at the assertion.
     """
     state, mass = system
     common = dict(
@@ -1305,12 +1374,49 @@ def test_the_host_entry_point_dispatches_to_the_jitted_lane(system, config, para
         state, mass, config, params,
         options=BlockStepOptions(**common), n_base=2, track_energy=False,
     )
-    assert jnp.allclose(through_front_door.state, direct.state, rtol=0, atol=0), (
-        "the front door must dispatch to the jitted lane, not re-implement it"
-    )
+    # The "same lane" claim is carried EXACTLY by the structural diagnostics --
+    # a front door that dropped an option (topology_backend has regressed that
+    # way once) builds a different topology and moves these, and they are
+    # integers, so no floating-point caveat applies to them.
+    assert through_front_door.num_far_pairs == direct.num_far_pairs
+    assert through_front_door.num_near_pairs == direct.num_near_pairs
+    assert through_front_door.fused == direct.fused
+    assert through_front_door.scanned_boundaries == direct.scanned_boundaries
     assert jnp.array_equal(
         through_front_door.rung_histogram, direct.rung_histogram
     )
+    # The state comparison below is a COARSE not-a-different-lane check. It is
+    # deliberately NOT the evidence for dispatch, and it must not be tightened
+    # into looking like it is: it was rtol=0 and was red on an A100 while green
+    # on CPU, and a same-input control says no threshold can rescue that. Run on
+    # one A100, 2 base steps, comparing this test's own quantities:
+    #
+    #   A-vs-A (front door called TWICE)   abs 8.882e-16  rel 2.599e-15  28/1536
+    #   A-vs-B (front door vs direct)      abs 8.882e-16  rel 2.599e-15  26/1536
+    #
+    # Read the ABSOLUTE column; the relative one is only trustworthy here by
+    # luck. 8.882e-16 is exactly 2 ULP at the largest state element, one rung of
+    # an exact 2/4/6/8 ULP ladder these deviations land on. A per-element
+    # relative statistic is the wrong tool on a state spanning four orders of
+    # magnitude -- it reports which near-zero element won the argmax, not any
+    # deviation (jaccpot's equivalent test has its max-rel at |x| = 9.5e-05 with
+    # a one-ULP deviation, giving a 79x spread that is pure denominator). Ours
+    # happens to sit at |x| = 0.342, an ordinary magnitude, so it is not
+    # contaminated -- but do not reuse the relative figure without checking that.
+    #
+    # Identical to four significant figures. Calling the same entry point twice
+    # differs as much as the two entry points differ, so the state comparison
+    # carries no information about which lane ran, at any tolerance. (An earlier
+    # single measurement of A-vs-B gave 2.8e-17 -- 30x smaller. The quantity is
+    # not stable run to run, which is the same finding again: one draw is not a
+    # bound. Do not re-derive a tolerance from a single run.)
+    #
+    # What DOES carry the claim is the integer block above. The bound here is
+    # ~1e7 below a re-implementation, which differs at O(1e-2) or worse, so it
+    # still catches a genuinely different lane -- and nothing finer.
+    assert jnp.allclose(
+        through_front_door.state, direct.state, rtol=1e-9, atol=1e-12
+    ), "the front door must dispatch to the jitted lane, not re-implement it"
 
 
 @device_lane
@@ -1357,14 +1463,33 @@ def test_integrate_reaches_the_blockstep_lane(system, config, params):
         blockstep_options=options,
         num_timesteps=2,
     )
-    through_integrate = integrate(state, mass, cfg, params)
+    # Ask integrate() which lane it took. This is the EXACT half of the claim --
+    # a string, so it is deterministic on every platform -- and it is what makes
+    # this test as strong as its front-door sibling. Without it the only evidence
+    # was a float comparison that a same-input control shows cannot distinguish
+    # two lanes at any tolerance.
+    from odisseo.integration_api import resolve_lane
+
+    assert resolve_lane(cfg) == "fmm_blockstep"
+    through_integrate, lane = integrate(state, mass, cfg, params, return_lane=True)
+    assert lane == "fmm_blockstep", (
+        "integrate() ran a different lane than resolve_lane() reports -- the "
+        "dispatch and the report have drifted apart"
+    )
+
     direct = integrate_blockstep_jaccpot(
         state, mass, config, params, options=options, n_base=2, track_energy=False
     )
     assert through_integrate.shape == state.shape
-    assert jnp.allclose(through_integrate, direct.state, rtol=0, atol=0), (
-        "integrate() did not dispatch to the block-step lane"
-    )
+    # Coarse check, not rtol=0 -- see the measured control in the front-door
+    # test above. This is now a corroborating check rather than the whole one:
+    # the lane assertion above carries the claim exactly. It still adds
+    # something -- it catches a lane that reports "fmm_blockstep" but computes
+    # something else -- and a selector falling through to the forward coupler
+    # differs at O(1), not at 1e-15.
+    assert jnp.allclose(
+        through_integrate, direct.state, rtol=1e-9, atol=1e-12
+    ), "integrate() did not dispatch to the block-step lane"
 
 
 def test_integrate_requires_blockstep_options(system, config, params):
