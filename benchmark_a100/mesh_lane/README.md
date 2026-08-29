@@ -15,10 +15,13 @@ single-GPU `strict_run_v2` scan. This is the missing loop plus the renderer that
 |---|---|
 | 262 144 / 2 cards / 40 steps, leaf 64, θ 0.7, order 6, fp32 | dL/L **2.4e-06**, COM drift 3.3e-04, zero overflow flags, **1.06 s/step** (`val262k.log`) |
 | 20 971 520 / 5 cards, leaf 512, θ 0.7, order 6, fp32 | first force clean, no overflow; self_near 23 089 698, cross_near 30 131 451 (`probe21m.log`) |
-| 20 971 520 / 5 cards, 125 steps with rendering | dL/L **2.6e-06**, COM drift 5.1e-05, **median 69.2 s/step** (min 55.4, max 80.9) (`run21m.log`) |
+| 20 971 520 / 5 cards, 127 steps with rendering | dL/L **2.7e-06**, COM drift 5.2e-05, **median 69.47 s/step** = 301 877 particles/s, 65 frames (`run21m.log`) |
 
-The 21 M rows are a snapshot of a run stopped on its `--max-hours` budget, not a completed
-integration. Seconds on this box carry ~20 % spread — the cards are shared. Pair counts, overflow
+The 21 M run stopped cleanly on its `--max-hours` budget after 127 steps (9078.4 s), which is a
+budget stop and not a completed integration -- 127 steps at dt 5e-4 is ~0.064 code time units
+against an orbital period of ~1.09 at the half-mass radius, so this shows stability, not evolution.
+The 65 rendered frames are 42 MB and are NOT committed; they are cached at
+`notebooks/scalability/ic_cache/run21m_frames.npz` (gitignored). Seconds on this box carry ~20 % spread — the cards are shared. Pair counts, overflow
 flags and the conservation figures are contention-independent.
 
 ## Two traps this file already solves. Preserve both.

@@ -33,3 +33,7 @@
   step    115  t=0.1150    74.39s  dL/L=2.215e-06  com=4.704e-05  KE=3.014209e+01
   step    120  t=0.1200    78.86s  dL/L=2.490e-06  com=4.901e-05  KE=3.018200e+01
   step    125  t=0.1250    75.03s  dL/L=2.626e-06  com=5.098e-05  KE=3.022326e+01
+# wall-clock budget reached after 127 steps -- stopping cleanly
+# 127 steps in 9078.4 s, median 69.470 s/step (301,877 particles/s)
+# wrote /tmp/claude-2701/-export-home-tbuck-Odisseo/0f399f0e-a4f5-4537-a919-ec493a526c94/scratchpad/run21m_diag.json
+# wrote /tmp/claude-2701/-export-home-tbuck-Odisseo/0f399f0e-a4f5-4537-a919-ec493a526c94/scratchpad/run21m_frames.npz  (65 frames)
