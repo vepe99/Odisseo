@@ -1,0 +1,18 @@
+# N=20,971,520 ndev=5 leaf=512 theta=0.7 order=6 dtype=float32
+# G=1.0 halo_mass=100.0 halo_rs=2.0 rdisk=0.24 softening=0.0082864
+# dt=0.0005 steps=6 devices=['NVIDIA A100-PCIE-40GB', 'NVIDIA A100-PCIE-40GB', 'NVIDIA A100-PCIE-40GB', 'NVIDIA A100-PCIE-40GB', 'NVIDIA A100-PCIE-40GB']
+# evaluator built in 0.1 s
+/tmp/claude-2701/-export-home-tbuck-Odisseo/0f399f0e-a4f5-4537-a919-ec493a526c94/scratchpad/mesh_galaxy_run.py:211: DeprecationWarning: jax.experimental.shard_map is deprecated in v0.8.0. Used jax.shard_map instead.
+  from jax.experimental.shard_map import shard_map
+# first force (compile incl.) 112.4 s
+# realignment verified against scatter_to_input_order (3.7 s)
+# self_near=23,089,698 cross_near=30,131,451 overflow={'cross_queue_overflow': 0.0, 'cross_far_overflow': 0.0, 'cross_near_overflow': 0.0, 'self_queue_overflow': 0.0, 'self_far_overflow': 0.0, 'self_near_overflow': 0.0, 'l2l_level_overflow': 0.0}
+# t=0  |L|=8.218492e+00  KE=2.968078e+01  com=[-2.1e-05 -2.0e-06  1.8e-05]
+  step      1  t=0.0005    59.19s  dL/L=5.329e-08  com=2.175e-07  KE=2.968080e+01
+  step      2  t=0.0010    55.68s  dL/L=1.455e-07  com=4.123e-07  KE=2.968084e+01
+  step      3  t=0.0015    55.43s  dL/L=1.425e-07  com=6.155e-07  KE=2.968090e+01
+  step      4  t=0.0020    55.30s  dL/L=2.539e-07  com=8.258e-07  KE=2.968097e+01
+  step      5  t=0.0025    55.49s  dL/L=2.968e-07  com=1.022e-06  KE=2.968106e+01
+  step      6  t=0.0030    55.03s  dL/L=2.964e-07  com=1.205e-06  KE=2.968117e+01
+# 6 steps in 352.4 s, median 55.458 s/step (378,151 particles/s)
+# wrote /tmp/claude-2701/-export-home-tbuck-Odisseo/0f399f0e-a4f5-4537-a919-ec493a526c94/scratchpad/probe21m_diag.json

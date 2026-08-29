@@ -1,0 +1,33 @@
+{
+ "n_total": 10485760,
+ "ndev": 5,
+ "leaf": 512,
+ "cap": 2097152,
+ "num_leaves": 4096,
+ "leaf_dims_median": [
+  0.9093,
+  0.8709,
+  0.0151
+ ],
+ "ratios": {
+  "r_box/r_com_median": 0.9700889220434078,
+  "r_box/r_true_median": 1.0199355487423245,
+  "r_box/r_rms_median": 1.7715154330021687
+ },
+ "near_pairs": {
+  "0.4": {
+   "r_box(SHIPPED)": 5846444,
+   "r_true_boxcentre": 5639982,
+   "r_com": 6534670,
+   "r_rms_com": 2276712,
+   "half_max_box": 4122326
+  },
+  "0.7": {
+   "r_box(SHIPPED)": 2339130,
+   "r_true_boxcentre": 2284386,
+   "r_com": 2807424,
+   "r_rms_com": 894176,
+   "half_max_box": 1674068
+  }
+ }
+}

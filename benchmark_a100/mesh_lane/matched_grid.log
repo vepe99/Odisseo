@@ -1,0 +1,39 @@
+# ndev=5 leaf=512 order=3 theta=0.4 mac=dehnen nearfield=auto devices=['NVIDIA A100-PCIE-40GB', 'NVIDIA A100-PCIE-40GB', 'NVIDIA A100-PCIE-40GB', 'NVIDIA A100-PCIE-40GB', 'NVIDIA A100-PCIE-40GB']
+E0829 09:27:20.159516   46413 cuda_executor.cc:1182] [0] Failed to allocate device memory of 21.72GiB (23324524544 bytes): RESOURCE_EXHAUSTED: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+E0829 09:27:20.159981   46413 cuda_executor.cc:1182] [0] Failed to allocate device memory of 19.55GiB (20992071680 bytes): RESOURCE_EXHAUSTED: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+E0829 09:27:20.160243   46413 cuda_executor.cc:1182] [0] Failed to allocate device memory of 17.59GiB (18892863488 bytes): RESOURCE_EXHAUSTED: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+E0829 09:27:20.160467   46413 cuda_executor.cc:1182] [0] Failed to allocate device memory of 15.83GiB (17003576320 bytes): RESOURCE_EXHAUSTED: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+E0829 09:27:20.160697   46413 cuda_executor.cc:1182] [0] Failed to allocate device memory of 14.25GiB (15303218176 bytes): RESOURCE_EXHAUSTED: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+E0829 09:27:20.160945   46413 cuda_executor.cc:1182] [0] Failed to allocate device memory of 12.83GiB (13772896256 bytes): RESOURCE_EXHAUSTED: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+E0829 09:27:20.161167   46413 cuda_executor.cc:1182] [0] Failed to allocate device memory of 11.54GiB (12395606016 bytes): RESOURCE_EXHAUSTED: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+E0829 09:28:12.034115   46413 cuda_executor.cc:1182] [1] Failed to allocate device memory of 21.72GiB (23324524544 bytes): RESOURCE_EXHAUSTED: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+E0829 09:28:12.034446   46413 cuda_executor.cc:1182] [1] Failed to allocate device memory of 19.55GiB (20992071680 bytes): RESOURCE_EXHAUSTED: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+E0829 09:28:12.034672   46413 cuda_executor.cc:1182] [1] Failed to allocate device memory of 17.59GiB (18892863488 bytes): RESOURCE_EXHAUSTED: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+E0829 09:28:12.034887   46413 cuda_executor.cc:1182] [1] Failed to allocate device memory of 15.83GiB (17003576320 bytes): RESOURCE_EXHAUSTED: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+E0829 09:28:12.035095   46413 cuda_executor.cc:1182] [1] Failed to allocate device memory of 14.25GiB (15303218176 bytes): RESOURCE_EXHAUSTED: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+E0829 09:28:12.035301   46413 cuda_executor.cc:1182] [1] Failed to allocate device memory of 12.83GiB (13772896256 bytes): RESOURCE_EXHAUSTED: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+E0829 09:28:12.035506   46413 cuda_executor.cc:1182] [1] Failed to allocate device memory of 11.54GiB (12395606016 bytes): RESOURCE_EXHAUSTED: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+E0829 09:28:12.035721   46413 cuda_executor.cc:1182] [1] Failed to allocate device memory of 10.39GiB (11156044800 bytes): RESOURCE_EXHAUSTED: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+E0829 09:28:12.156695   46413 cuda_executor.cc:1182] [2] Failed to allocate device memory of 21.72GiB (23324524544 bytes): RESOURCE_EXHAUSTED: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+E0829 09:28:12.157028   46413 cuda_executor.cc:1182] [2] Failed to allocate device memory of 19.55GiB (20992071680 bytes): RESOURCE_EXHAUSTED: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+E0829 09:28:12.157255   46413 cuda_executor.cc:1182] [2] Failed to allocate device memory of 17.59GiB (18892863488 bytes): RESOURCE_EXHAUSTED: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+E0829 09:28:12.157484   46413 cuda_executor.cc:1182] [2] Failed to allocate device memory of 15.83GiB (17003576320 bytes): RESOURCE_EXHAUSTED: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+E0829 09:28:12.157712   46413 cuda_executor.cc:1182] [2] Failed to allocate device memory of 14.25GiB (15303218176 bytes): RESOURCE_EXHAUSTED: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+E0829 09:28:12.157928   46413 cuda_executor.cc:1182] [2] Failed to allocate device memory of 12.83GiB (13772896256 bytes): RESOURCE_EXHAUSTED: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+E0829 09:28:12.158151   46413 cuda_executor.cc:1182] [2] Failed to allocate device memory of 11.54GiB (12395606016 bytes): RESOURCE_EXHAUSTED: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+E0829 09:28:12.292104   46413 cuda_executor.cc:1182] [3] Failed to allocate device memory of 21.72GiB (23324524544 bytes): RESOURCE_EXHAUSTED: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+E0829 09:28:12.292384   46413 cuda_executor.cc:1182] [3] Failed to allocate device memory of 19.55GiB (20992071680 bytes): RESOURCE_EXHAUSTED: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+E0829 09:28:12.292554   46413 cuda_executor.cc:1182] [3] Failed to allocate device memory of 17.59GiB (18892863488 bytes): RESOURCE_EXHAUSTED: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+E0829 09:28:12.292737   46413 cuda_executor.cc:1182] [3] Failed to allocate device memory of 15.83GiB (17003576320 bytes): RESOURCE_EXHAUSTED: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+E0829 09:28:12.292901   46413 cuda_executor.cc:1182] [3] Failed to allocate device memory of 14.25GiB (15303218176 bytes): RESOURCE_EXHAUSTED: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+E0829 09:28:12.293060   46413 cuda_executor.cc:1182] [3] Failed to allocate device memory of 12.83GiB (13772896256 bytes): RESOURCE_EXHAUSTED: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+E0829 09:28:12.293218   46413 cuda_executor.cc:1182] [3] Failed to allocate device memory of 11.54GiB (12395606016 bytes): RESOURCE_EXHAUSTED: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+E0829 09:28:12.293375   46413 cuda_executor.cc:1182] [3] Failed to allocate device memory of 10.39GiB (11156044800 bytes): RESOURCE_EXHAUSTED: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+E0829 09:28:12.293530   46413 cuda_executor.cc:1182] [3] Failed to allocate device memory of 9.35GiB (10040439808 bytes): RESOURCE_EXHAUSTED: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+E0829 09:28:12.293691   46413 cuda_executor.cc:1182] [3] Failed to allocate device memory of 8.42GiB (9036395520 bytes): RESOURCE_EXHAUSTED: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+E0829 09:28:12.293850   46413 cuda_executor.cc:1182] [3] Failed to allocate device memory of 7.57GiB (8132755968 bytes): RESOURCE_EXHAUSTED: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+E0829 09:28:12.380209   46413 cuda_executor.cc:1182] [4] Failed to allocate device memory of 21.72GiB (23324524544 bytes): RESOURCE_EXHAUSTED: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+E0829 09:28:12.380690   46413 cuda_executor.cc:1182] [4] Failed to allocate device memory of 19.55GiB (20992071680 bytes): RESOURCE_EXHAUSTED: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+E0829 09:28:12.381017   46413 cuda_executor.cc:1182] [4] Failed to allocate device memory of 17.59GiB (18892863488 bytes): RESOURCE_EXHAUSTED: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+terminate called after throwing an instance of 'absl::lts_20260107::BadStatusOrAccess'
+  what():  Bad StatusOr access: RESOURCE_EXHAUSTED: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
