@@ -1,0 +1,35 @@
+# N=20,971,520 ndev=5 leaf=512 theta=0.7 order=6 dtype=float32
+# G=1.0 halo_mass=100.0 halo_rs=2.0 rdisk=0.24 softening=0.0082864
+# dt=0.001 steps=150 devices=['NVIDIA A100-PCIE-40GB', 'NVIDIA A100-PCIE-40GB', 'NVIDIA A100-PCIE-40GB', 'NVIDIA A100-PCIE-40GB', 'NVIDIA A100-PCIE-40GB']
+# evaluator built in 0.1 s
+/tmp/claude-2701/-export-home-tbuck-Odisseo/0f399f0e-a4f5-4537-a919-ec493a526c94/scratchpad/mesh_galaxy_run.py:211: DeprecationWarning: jax.experimental.shard_map is deprecated in v0.8.0. Used jax.shard_map instead.
+  from jax.experimental.shard_map import shard_map
+# first force (compile incl.) 114.6 s
+# realignment verified against scatter_to_input_order (3.8 s)
+# self_near=23,089,698 cross_near=30,131,451 overflow={'cross_queue_overflow': 0.0, 'cross_far_overflow': 0.0, 'cross_near_overflow': 0.0, 'self_queue_overflow': 0.0, 'self_far_overflow': 0.0, 'self_near_overflow': 0.0, 'l2l_level_overflow': 0.0}
+# t=0  |L|=8.218493e+00  KE=2.968078e+01  com=[-2.1e-05 -2.0e-06  1.8e-05]
+  step      5  t=0.0050    55.77s  dL/L=5.247e-07  com=2.039e-06  KE=2.968179e+01
+  step     10  t=0.0100    59.65s  dL/L=6.925e-07  com=4.063e-06  KE=2.968457e+01
+  step     15  t=0.0150    59.28s  dL/L=7.485e-07  com=6.123e-06  KE=2.968911e+01
+  step     20  t=0.0200    65.05s  dL/L=6.822e-07  com=8.158e-06  KE=2.969541e+01
+  step     25  t=0.0250    62.20s  dL/L=7.139e-07  com=1.022e-05  KE=2.970345e+01
+  step     30  t=0.0300    66.22s  dL/L=8.934e-07  com=1.229e-05  KE=2.971323e+01
+  step     35  t=0.0350    64.09s  dL/L=1.101e-06  com=1.437e-05  KE=2.972473e+01
+  step     40  t=0.0400    68.39s  dL/L=1.350e-06  com=1.644e-05  KE=2.973795e+01
+  step     45  t=0.0450    66.20s  dL/L=1.332e-06  com=1.849e-05  KE=2.975289e+01
+  step     50  t=0.0500    69.77s  dL/L=1.226e-06  com=2.057e-05  KE=2.976956e+01
+  step     55  t=0.0550    66.09s  dL/L=1.284e-06  com=2.264e-05  KE=2.978795e+01
+  step     60  t=0.0600    69.71s  dL/L=1.253e-06  com=2.471e-05  KE=2.980807e+01
+  step     65  t=0.0650    68.09s  dL/L=1.284e-06  com=2.679e-05  KE=2.982992e+01
+  step     70  t=0.0700    72.94s  dL/L=1.163e-06  com=2.884e-05  KE=2.985351e+01
+  step     75  t=0.0750    68.86s  dL/L=1.267e-06  com=3.090e-05  KE=2.987883e+01
+  step     80  t=0.0800    73.27s  dL/L=1.445e-06  com=3.296e-05  KE=2.990590e+01
+  step     85  t=0.0850    71.52s  dL/L=1.539e-06  com=3.501e-05  KE=2.993468e+01
+  step     90  t=0.0900    76.89s  dL/L=1.490e-06  com=3.703e-05  KE=2.996518e+01
+  step     95  t=0.0950    73.00s  dL/L=1.540e-06  com=3.906e-05  KE=2.999735e+01
+  step    100  t=0.1000    75.46s  dL/L=1.706e-06  com=4.105e-05  KE=3.003118e+01
+  step    105  t=0.1050    72.91s  dL/L=1.781e-06  com=4.308e-05  KE=3.006661e+01
+  step    110  t=0.1100    77.90s  dL/L=2.036e-06  com=4.507e-05  KE=3.010360e+01
+  step    115  t=0.1150    74.39s  dL/L=2.215e-06  com=4.704e-05  KE=3.014209e+01
+  step    120  t=0.1200    78.86s  dL/L=2.490e-06  com=4.901e-05  KE=3.018200e+01
+  step    125  t=0.1250    75.03s  dL/L=2.626e-06  com=5.098e-05  KE=3.022326e+01

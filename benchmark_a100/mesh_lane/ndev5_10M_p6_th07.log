@@ -1,0 +1,3 @@
+# ndev=5 leaf=512 order=6 theta=0.7 mac=dehnen nearfield=auto devices=['NVIDIA A100-PCIE-40GB', 'NVIDIA A100-PCIE-40GB', 'NVIDIA A100-PCIE-40GB', 'NVIDIA A100-PCIE-40GB', 'NVIDIA A100-PCIE-40GB']
+N/dev= 2097152 ndev=5 leaf= 512 | queue= 1048576 nbr=  4096 far/node=  2048 xnbr= 16384 | self_near=     11916458 ovf=- rel_l2=9.695e-04 | 23.2517s peak=4.02/23.7GiB (build 70.22s)
+# wrote /export/home/tbuck/jaccpot/bench/results/distributed_ceiling/ladder_ndev5_leaf512_ndev5_10M_p6_th07.json

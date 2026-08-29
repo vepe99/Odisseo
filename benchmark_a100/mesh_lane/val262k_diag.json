@@ -1,0 +1,155 @@
+{
+ "args": {
+  "ic": "/tmp/claude-2701/-export-home-tbuck-Odisseo/0f399f0e-a4f5-4537-a919-ec493a526c94/scratchpad/disk_262k.npz",
+  "ndev": 2,
+  "leaf": 64,
+  "theta": 0.7,
+  "order": 6,
+  "softening": null,
+  "steps": 40,
+  "dt": 0.002,
+  "m2l_chunk": 65536,
+  "nearfield_chunk": 512,
+  "repartition_every": 0,
+  "render_every": 0,
+  "render_res": 800,
+  "render_extent": 1.2,
+  "diag_every": 10,
+  "no_halo": false,
+  "out_prefix": "/tmp/claude-2701/-export-home-tbuck-Odisseo/0f399f0e-a4f5-4537-a919-ec493a526c94/scratchpad/val262k",
+  "max_particles": 0,
+  "dtype": "float32"
+ },
+ "n": 262144,
+ "cap": 131072,
+ "softening": 0.07411588266019639,
+ "median_step_s": 1.0588836832903326,
+ "total_s": 84.04796209279448,
+ "first_diag": {
+  "cross_far_pairs": [
+   214748.0,
+   237149.0
+  ],
+  "cross_near_pairs": [
+   544557.0,
+   533153.0
+  ],
+  "cross_queue_overflow": [
+   0.0,
+   0.0
+  ],
+  "cross_far_overflow": [
+   0.0,
+   0.0
+  ],
+  "cross_near_overflow": [
+   0.0,
+   0.0
+  ],
+  "self_far_pairs": [
+   320842.0,
+   314896.0
+  ],
+  "self_near_pairs": [
+   871268.0,
+   878336.0
+  ],
+  "self_queue_overflow": [
+   0.0,
+   0.0
+  ],
+  "self_far_overflow": [
+   0.0,
+   0.0
+  ],
+  "self_near_overflow": [
+   0.0,
+   0.0
+  ],
+  "l2l_level_overflow": [
+   0.0,
+   0.0
+  ]
+ },
+ "rows": [
+  {
+   "step": 10,
+   "t": 0.02,
+   "seconds": 1.0577,
+   "dP_over_scale": 0.000232116857660003,
+   "dL_over_L": 6.77440652907535e-07,
+   "com_drift": 8.336050814250484e-05,
+   "ke": 29.68606948852539
+  },
+  {
+   "step": 20,
+   "t": 0.04,
+   "seconds": 1.0595,
+   "dP_over_scale": 0.0004210585029795766,
+   "dL_over_L": 1.8598641418066109e-06,
+   "com_drift": 0.0001658871042309329,
+   "ke": 29.64533233642578
+  },
+  {
+   "step": 30,
+   "t": 0.06,
+   "seconds": 1.0655,
+   "dP_over_scale": 0.0005984203889966011,
+   "dL_over_L": 1.8927877363239531e-06,
+   "com_drift": 0.00024706771364435554,
+   "ke": 29.59121322631836
+  },
+  {
+   "step": 40,
+   "t": 0.08,
+   "seconds": 1.066,
+   "dP_over_scale": 0.0007949811406433582,
+   "dL_over_L": 2.3932643671287224e-06,
+   "com_drift": 0.00032632259535603225,
+   "ke": 29.533008575439453
+  }
+ ],
+ "step_times": [
+  42.8366,
+  1.0363,
+  1.0337,
+  1.0436,
+  1.0354,
+  1.0346,
+  1.0411,
+  1.0583,
+  1.0498,
+  1.0577,
+  1.0395,
+  1.0478,
+  1.0514,
+  1.0512,
+  1.0562,
+  1.0531,
+  1.0622,
+  1.0613,
+  1.0713,
+  1.0595,
+  1.0557,
+  1.0691,
+  1.0628,
+  1.0591,
+  1.0673,
+  1.0669,
+  1.0602,
+  1.0655,
+  1.0612,
+  1.0655,
+  1.059,
+  1.065,
+  1.0559,
+  1.0588,
+  1.0572,
+  1.0607,
+  1.056,
+  1.063,
+  1.0697,
+  1.066
+ ],
+ "wall_total_s": 137.59650747291744
+}
