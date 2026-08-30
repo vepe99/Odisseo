@@ -56,6 +56,7 @@ def _resolve_fmm_runtime_profile(
 #: The lane names :func:`resolve_lane` can return, in dispatch-precedence order.
 INTEGRATION_LANES = (
     "direct",
+    "fmm_mesh",
     "fmm_blockstep",
     "fmm_differentiable",
     "fmm_forward",
@@ -97,6 +98,8 @@ def resolve_lane(config: SimulationConfig) -> str:
         return "direct"
     if int(config.acceleration_scheme) == int(FMM_ACC):
         # fmm_blockstep takes precedence over fmm_differentiable.
+        if bool(getattr(config, "fmm_mesh", False)):
+            return "fmm_mesh"
         if bool(getattr(config, "fmm_blockstep", False)):
             return "fmm_blockstep"
         if bool(getattr(config, "fmm_differentiable", False)):
@@ -175,6 +178,9 @@ def integrate(
 
     if lane == "direct":
         return _tagged(time_integration(primitive_state, mass, config, params))
+
+    if lane == "fmm_mesh":
+        return _tagged(_integrate_fmm_mesh(primitive_state, mass, config, params))
 
     if lane == "fmm_blockstep":
         return _tagged(
@@ -303,6 +309,71 @@ def integrate(
         )
 
     return _tagged(states_or_final)
+
+
+def _integrate_fmm_mesh(primitive_state, mass, config, params):
+    """Run the multi-GPU mesh lane and return a plain final state.
+
+    Returns the same shape as every other :func:`integrate` lane rather than the
+    richer ``MeshResult``, so a caller does not have to branch on the config to know
+    what it was handed. The dropped diagnostics -- per-step timings, the first
+    force's per-device pair counts and overflow flags, the conserved quantities --
+    are not recoverable from the state, so anything that needs them should call
+    ``mesh_coupling.integrate_mesh_jaccpot`` directly.
+
+    Parameters
+    ----------
+    primitive_state:
+        ``(N, 2, 3)`` positions and velocities.
+    mass:
+        ``(N,)`` particle masses.
+    config:
+        Must carry ``fmm_mesh=True`` and a ``mesh_options``.
+    params:
+        Simulation parameters; ``params.G`` is used.
+
+    Returns
+    -------
+    The final ``(N, 2, 3)`` state.
+    """
+    from odisseo.mesh_coupling import MeshOptions, integrate_mesh_jaccpot
+
+    options = getattr(config, "mesh_options", None)
+    if options is None:
+        raise ValueError(
+            "config.fmm_mesh=True needs config.mesh_options set; there is no "
+            "default, because MeshOptions has no default dt and this lane runs a "
+            "FIXED-step KDK -- a guessed dt would be silently wrong rather than "
+            "loudly wrong. Size it from the dynamical time at the smallest scale "
+            "you care to resolve."
+        )
+    if not isinstance(options, MeshOptions):
+        raise TypeError(
+            "config.mesh_options must be a MeshOptions or None; got "
+            f"{type(options).__name__}"
+        )
+    if bool(getattr(config, "fmm_differentiable", False)):
+        raise NotImplementedError(
+            "the mesh lane has no gradient path. `make_force_evaluator` does accept "
+            "differentiable=True, but the rollout has no adjoint and the halo "
+            "exchange needs jax >= 0.9.1 for its reverse pass. Use "
+            "fmm_differentiable on a single device, or drop it here."
+        )
+    if bool(getattr(config, "fmm_blockstep", False)):
+        raise NotImplementedError(
+            "the mesh lane is a fixed-step KDK and has no rung machinery; "
+            "fmm_mesh and fmm_blockstep cannot both be set. DistributedBlockStepFMM "
+            "exists but is a separate lane on jaccpot's mutual path."
+        )
+
+    n_steps = int(config.num_timesteps)
+    if n_steps < 1:
+        raise ValueError(
+            f"config.num_timesteps must be >= 1 for the mesh lane; got {n_steps!r}"
+        )
+    return integrate_mesh_jaccpot(
+        primitive_state, mass, config, params, options=options, n_steps=n_steps
+    ).state
 
 
 def _integrate_fmm_blockstep(primitive_state, mass, config, params):

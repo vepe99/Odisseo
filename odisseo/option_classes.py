@@ -313,3 +313,13 @@ class SimulationConfig(NamedTuple):
     # rung 0, collapsing the block scheme to a shared timestep without any
     # symptom. Better to ask than to guess that.
     blockstep_options: Optional[Any] = None
+    # --- multi-GPU mesh lane -------------------------------------------------
+    # Routes FMM_ACC through odisseo.mesh_coupling, the way `fmm_blockstep` above
+    # routes it through odisseo.blockstep_coupling. Appended at the END on purpose:
+    # a NamedTuple's field order is its constructor signature, so inserting above
+    # would silently rebind every positional caller.
+    fmm_mesh: bool = False
+    # A `MeshOptions`, REQUIRED when fmm_mesh is True. Typed loosely because
+    # importing it here would be circular. No default, for the same reason
+    # blockstep_options has none: MeshOptions has no default dt.
+    mesh_options: Optional[Any] = None
