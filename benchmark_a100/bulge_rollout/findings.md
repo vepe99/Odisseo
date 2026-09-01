@@ -475,3 +475,94 @@ The GPU reservation was released at that point.
 **Everything needed to run it elsewhere is measured, and none of it is invalidated by the
 abort**: the IC, the configuration, the accuracy, the step time, the memory footprint and the
 cap behaviour. See `SETUP.md` in this directory.
+
+## 7. The 4-card run: a cap cliff, and 17,825,792 particles
+
+Three of the six cards were taken, four came free later, so the question became what fits on
+four. The answer is set by a **discrete cap threshold**, not a gradual memory limit.
+
+`cross_max_interactions_per_node` doubles once leaves-per-device passes ~4,608. Scanning N at
+ndev 4, leaf 1024, criterion, eps 1e-5 (estimate = cap proxy scaled to the measured ndev 6 /
+leaf 1024 point of 40,105 MiB):
+
+    N            leaves/dev   self_int   cross_int   est. MiB   % of card
+    15,728,640        3,840      8,192      16,384     27,490      67.1 %
+    16,777,216        4,096      8,192      16,384     29,226      71.4 %
+    17,825,792        4,352      8,192      16,384     30,963      75.6 %   <- ceiling
+    18,874,368        4,608      8,192    **32,768**   53,534     130.7 %   <- OOM
+    20,971,520        5,120      8,192      32,768     60,768     148.4 %
+
+So **17,825,792 is the largest N that runs on four 40 GB cards at leaf 1024**. One rung
+further and a single cap doubles, taking the footprint from three quarters of a card to a
+third more than one. This is the same power-of-two rounding jaccpot's own cap record warns
+compounds a coefficient; here it produces a cliff between adjacent particle counts.
+
+Counter-intuitively **four cards are LIGHTER per card than six at these sizes**, because the
+cross caps carry a `remote` factor in (ndev - 1): at ndev 4 that factor is 3 against 5, which
+halves `cross_max_interactions_per_node` and outweighs the extra leaves per device.
+
+### Measured, 17,825,792 on 4 x A100-40GB (probe, 4 steps)
+
+    peak            27,692 MiB coordinator / 17,540 MiB worker  (68 % / 43 % of a card)
+                    -- the proxy predicted 30,963, so it over-estimates by 12 %
+    first force     1025.9 s incl. compile
+    median step     154.43 s   (115,429 particles/s)
+    force_scale     [0.009708, 169.7] -- 17,478x spread, so not the eps*1 fallback
+    overflow flags  all zero
+    probe           rel_l2 2.8765e-03  median 6.660e-04  p99 5.044e-03  max 7.792e-03
+    self_near 11,779,046   cross_near 14,018,631  (cross share 54.3 %)
+
+**Fewer cards is MORE accurate here**, which follows from the error being cross-domain
+limited. Against the 6-card / 21.0 M run of the same criterion and leaf:
+
+    metric        6 cards / 21.0M   4 cards / 17.8M   ratio
+    rel_l2            4.0344e-03        2.8765e-03    1.40x better
+    p99               7.481e-03         5.044e-03     1.48x better
+    max               1.589e-02         7.792e-03     2.04x better
+    cross share           60.4 %            54.3 %
+
+(An earlier note in this file compared 54.3 % against 79.8 %; that 79.8 % was the GEOMETRIC
+arm at leaf 512, not the criterion at leaf 1024. The criterion's own figures are 60.4 % and
+54.3 %.)
+
+### The angular-momentum gap between the two runs, and why it is not a defect
+
+    step   6c/21.0M dt 2.5e-4     4c/17.8M dt 5e-4
+       2   dL/L 1.0133e-09        dL/L 7.3644e-07
+       4   dL/L 1.4626e-09        dL/L 1.0270e-06
+
+727x at step 2, which dt alone (2x) does not explain. But COM drift differs by 2.24x and dP
+by 11.6x, so dL is out of line with BOTH. Un-normalising gives the resolution:
+
+    |dL| / |dP|     6 cards: 1.85e-03      4 cards: 0.116
+
+An effective lever arm of 1.85e-03 is far below any real particle radius, i.e. the 6-domain
+geometry happened to cancel cross-domain torques almost exactly; 0.116 is of order the actual
+radii and is what dP predicts. **The 6-card number was fortuitously good, rather than the
+4-card number being degraded** -- consistent with dP differing 5.8x per unit time while dL/dP
+differs 63x. Neither is a defect, and the distinction only matters for not chasing one.
+
+The 4-card drift also DECELERATES: 3.68e-07 per step over steps 0-2, then 1.45e-07 per step
+over 2-4, so the opening steps carry a transient. At the post-transient rate the projection
+at step 489 is **~7e-05**, i.e. 0.009 % of the true total |L| (|L|/lscale = 0.804). That
+projection, not the ratio against the other run, is what gated the launch.
+
+### Launched
+
+    17,825,792 particles = disc 14,854,827 + bulge 2,970,965, equal particle masses
+    4 x A100-40GB (cards 0, 2, 5, 7, all idle and uncontended)
+    leaf 1024, theta 0.7, order 6, fp32, nearfield_accum=wide
+    dehnen_error, adaptive_eps 1e-5, cross criterion ON, caps DERIVED
+    dt 5e-4, 489 steps = 0.2442 code = 36.4 Myr = a quarter orbit
+    softening 0.008988 (89.9 pc)
+    started 15:51, ~21.6 h expected including compile, repartitions and checkpoints
+
+The IC (`/export/scratch/tbuck/odisseo_ic/disk_bulge_17m8.npz`, 406 MB) was REGENERATED at
+the new N rather than trimmed from the 21 M file: the rollout trims a prefix without
+renormalising mass, so trimming would have dropped total baryon mass from 7.2 to 6.1 against
+an unchanged analytic halo of 100 -- a different galaxy, not a coarser sampling of the same
+one. Structure confirms it is the same galaxy: disc r50 0.5654 against 0.5655, bulge r50
+0.2446 against 0.2447, and the same quarter orbit of 489 steps.
+
+**RUN IN PROGRESS at the time of writing.** Outcome, final conservation, movies and the
+per-component structural comparison are not yet in this file.

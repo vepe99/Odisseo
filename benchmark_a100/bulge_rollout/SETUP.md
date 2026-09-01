@@ -152,6 +152,54 @@ The analysis separates disc from bulge and reports, per component, half-mass rad
 height, rotation, dispersions and surface-density profile, initial against final -- plus
 conservation in float64.
 
+## 3b. The 4-card variant (17,825,792 particles), and the cap cliff
+
+A second IC exists for four cards:
+
+    micromamba run -n odisseo python tools/agama_generate_scm_disk_ic.py \
+      --output /export/scratch/tbuck/odisseo_ic/disk_bulge_17m8.npz \
+      --n-particles 17825792 --quantum 8192 --seed 7 --state-dtype float32 \
+      --iterations 8 --bulge-mass-code 1.2 --bulge-scale-code 0.08 --bulge-gamma 1.0 \
+      --rmax-code 20.0
+
+    N 17,825,792 = disc 14,854,827 + bulge 2,970,965, equal particle masses, total 7.2
+    `--quantum 8192` so ndev 4 works at leaf 512, 1024 AND 2048
+    softening 0.008988 (89.9 pc, derived); quarter orbit still 489 steps at dt 5e-4
+
+    CUDA_VISIBLE_DEVICES=0,2,5,7 XLA_PYTHON_CLIENT_PREALLOCATE=false \
+    python -u tools/mesh_galaxy_run.py --ic <the 17m8 file> \
+      --ndev 4 --leaf 1024 --theta 0.7 --order 6 --dtype float32 \
+      --nearfield-accum wide --mac-type dehnen_error --adaptive-eps 1e-5 \
+      --dt 5e-4 --steps 489 --probe 256 --probe-seed 20260901 \
+      --render-every 10 --projection xy,xz --render-res 800 --render-extent 1.2 \
+      --repartition-every 100 --checkpoint-every 100 \
+      --diag-every 10 --overflow-every 10 --max-hours 23 --out-prefix <outdir>/qorbit
+
+Measured: **27,692 MiB coordinator / 17,540 MiB worker**, 154.43 s/step, rel_l2 2.8765e-03,
+all overflow flags clear, force_scale spread 17,478x. 489 steps ~= 21.0 h.
+
+**Why 17,825,792 and not more.** `cross_max_interactions_per_node` DOUBLES (16,384 ->
+32,768) once leaves-per-device passes ~4,608, taking the estimated footprint from 76 % of a
+40 GB card to 131 %. At leaf 1024 on four cards that puts a hard ceiling at 4,352 leaves per
+device:
+
+    N            leaves/dev   cross_int   est. MiB   verdict
+    16,777,216        4,096      16,384     29,226   fits
+    17,825,792        4,352      16,384     30,963   fits -- the ceiling
+    18,874,368        4,608      32,768     53,534   OOM
+
+Do NOT pick an N between these by interpolating; the limit is a discrete cap threshold. To go
+above it on four cards you must change leaf, not N.
+
+**Four cards are lighter per card than six** at these sizes, because the cross caps carry a
+factor of (ndev - 1). That also makes four cards MORE accurate here (rel_l2 2.88e-03 against
+4.03e-03 at six cards / 21.0 M), since the error is cross-domain limited.
+
+**Do not trim the 21 M IC to reach a smaller N.** The rollout trims a PREFIX and does not
+renormalise mass, so trimming 21.0 M -> 17.8 M drops total baryon mass from 7.2 to 6.1
+against an unchanged analytic halo of 100. Regenerate at the target N instead; it takes
+~8 min on CPU and sets both component masses to target by construction.
+
 ## 4. Porting to a queued system (HoreKa)
 
 **The blocking constraint is that this lane is single-process.** It builds one `shard_map`
@@ -172,6 +220,12 @@ measured point (ndev 6 / leaf 1024 = 40 105 MiB):
        8  1024  2 626 560     2 565         27 396 MiB          YES          YES
 
   \* 40 105 of 40 960 MiB is 98 %: it ran here only because the cards were otherwise empty.
+
+The ndev-4 row is the one to watch: at leaf 1024 it is only reachable below 4,608 leaves per
+device (N <= 17,825,792), because `cross_max_interactions_per_node` doubles above that. See
+section 3b -- the limit is a discrete cap threshold, and 21,012,480 on four cards lands the
+wrong side of it. MEASURED on four cards at 17,825,792: 27,692 MiB coordinator, 17,540 MiB
+worker, so the proxy over-estimates by ~12 %.
 
 **A 4-GPU node of 40 GB cards will not run leaf 1024** (~61 GB needed). The options, in order
 of how little they change:
