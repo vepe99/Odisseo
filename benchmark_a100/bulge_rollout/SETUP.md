@@ -8,8 +8,8 @@ behind these choices are in `findings.md`; this file is the operational half.
     repo      commit     branch
     jaccpot   c1cede7    main
     yggdrax   a5262ae    main
-    nornax    8fe9dbd    main
-    Odisseo   0a75785    feat/odisseo-mesh-lane   (+ uncommitted work, section 5)
+    nornax    8fe9dbd    main       (NOT needed by the mesh lane; block-step lane only)
+    Odisseo   5d8dc0f    horeka/disc-bulge-21m-quarter-orbit
 
     odisseo env  python 3.13.12  jax 0.9.0   numpy 2.4.4  agama 1.0.159
     jaccpot venv python 3.12.3   jax 0.10.2
@@ -195,9 +195,10 @@ dt 2.5e-4 (978 steps).
 Also note the derived softening depends only on N, so it is unchanged by ndev or leaf; and
 `--steps` must be recomputed if `--dt` changes, as `ceil(0.2443 / dt)`.
 
-## 5. Uncommitted work this depends on
+## 5. What this branch changes
 
-All in the `Odisseo` checkout on `feat/odisseo-mesh-lane`, none of it committed:
+All committed on `horeka/disc-bulge-21m-quarter-orbit` (5d8dc0f), branched from
+`feat/odisseo-mesh-lane` (0a75785):
 
     tools/agama_generate_scm_disk_ic.py   bulge component, disc-only rotation gate, shuffle,
                                           --rmax-code clip, uniform per-component mass
@@ -210,6 +211,10 @@ All in the `Odisseo` checkout on `feat/odisseo-mesh-lane`, none of it committed:
     tools/mesh_frames_to_movie.py         new
     tools/mesh_rollout_analysis.py        new
     odisseo/mesh_coupling.py              mac_type / adaptive_eps / mac_cross_criterion
+
+The two modified notebooks in the working tree (`notebooks/jaccpot_fmm_first_integration.ipynb`,
+`notebooks/scalability/galaxy_disk_fmm_large_n.py`) predate this work and were deliberately
+NOT included.
 
 Plus a stash in the `jaccpot` checkout (`stash@{0}`, "local: distributed order=6/theta=0.7
 defaults + test theta pins") which raises `DistributedFMMConfig`'s defaults from order 3 /

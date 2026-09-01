@@ -14,8 +14,22 @@ distributed FMM through ODISSEO's mesh lane. The configuration is already measur
 
 ## Repos and where the setup is written down
 
-  ~/jaccpot   c1cede7 (main)     ~/yggdrax  a5262ae (main)
-  ~/nornax    8fe9dbd (main)     ~/Odisseo  0a75785 (feat/odisseo-mesh-lane) + local work
+  ~/Odisseo   5d8dc0f on branch horeka/disc-bulge-21m-quarter-orbit  <-- committed and pushed
+  ~/jaccpot   c1cede7 (main)
+  ~/yggdrax   a5262ae (main)
+
+Three repos, and only three -- the mesh lane imports jaccpot and yggdrax and nothing else.
+nornax is NOT needed (it belongs to the block-step lane; verified: no mesh-lane file imports
+it, and odisseo.option_classes / odisseo.render_callback pull in only jax and numpy).
+
+  git clone git@github.com:vepe99/Odisseo.git \
+    && (cd Odisseo && git checkout horeka/disc-bulge-21m-quarter-orbit)
+  git clone git@github.com:TobiBu/jaccpot.git && (cd jaccpot && git checkout c1cede7)
+  git clone git@github.com:TobiBu/yggdrax.git && (cd yggdrax && git checkout a5262ae)
+
+jaccpot pins jax >=0.10.2,<0.11 (0.9.1/0.9.2 core-dump on its CPU backend); the runs above
+were taken with jax 0.9.0 in the odisseo env, importing jaccpot/yggdrax from the checkouts.
+Put all three on PYTHONPATH rather than installing.
 
 READ FIRST, both in Odisseo:
   benchmark_a100/bulge_rollout/SETUP.md    exact commands, ICs, provenance, memory table

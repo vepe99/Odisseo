@@ -1,6 +1,7 @@
 # A realistic disc + bulge at 21 million particles
 
-Session of 2026-09-01. The configuration is measured and validated; the production run was
+Session of 2026-09-01, committed on `horeka/disc-bulge-21m-quarter-orbit` (5d8dc0f).
+The configuration is measured and validated; the production run was
 **not** completed here, because a collaborator's job took three of the six reserved cards
 mid-launch and there is no scheduler on this box. It is packaged to run on HoreKa.
 

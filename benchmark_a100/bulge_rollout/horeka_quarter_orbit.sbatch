@@ -51,7 +51,7 @@ set -euo pipefail
 PY=${PY:-python}
 
 REPO=${REPO:-$HOME/Odisseo}
-export PYTHONPATH="${PYTHONPATH:-}:$HOME/jaccpot:$HOME/yggdrax:$REPO"
+export PYTHONPATH="${PYTHONPATH:-}:$HOME/jaccpot:$HOME/yggdrax:$REPO"   # nornax not needed
 
 # ---- 2. configuration ----------------------------------------------------------------
 GPUS_PER_NODE=${GPUS_PER_NODE:-4}
