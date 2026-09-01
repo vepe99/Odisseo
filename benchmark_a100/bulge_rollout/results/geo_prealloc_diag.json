@@ -1,0 +1,203 @@
+{
+ "args": {
+  "ic": "/export/scratch/tbuck/odisseo_ic/disk_bulge_21m_v2.npz",
+  "ndev": 6,
+  "leaf": 512,
+  "theta": 0.7,
+  "order": 6,
+  "softening": null,
+  "steps": 8,
+  "dt": 0.00025,
+  "m2l_chunk": 65536,
+  "nearfield_chunk": 512,
+  "repartition_every": 0,
+  "nearfield_accum": "wide",
+  "mac_type": "dehnen",
+  "adaptive_eps": null,
+  "mac_cross_criterion": true,
+  "probe": 256,
+  "probe_seed": 20260901,
+  "checkpoint_every": 0,
+  "overflow_every": 2,
+  "render_every": 0,
+  "render_res": 800,
+  "render_extent": 1.2,
+  "projection": "xy",
+  "diag_every": 2,
+  "max_hours": 0.0,
+  "no_halo": false,
+  "out_prefix": "/export/scratch/tbuck/odisseo_runs/pretest/geo_prealloc",
+  "max_particles": 0,
+  "dtype": "float32"
+ },
+ "n": 21012480,
+ "cap": 3502080,
+ "softening": 0.008278327231656524,
+ "median_step_s": 63.65296961925924,
+ "total_s": 519.9606076190248,
+ "first_diag": {
+  "cross_far_pairs": [
+   3527072.0,
+   2253268.0,
+   2165487.0,
+   3352713.0,
+   2156044.0,
+   2133614.0
+  ],
+  "cross_near_pairs": [
+   8637036.0,
+   8280306.0,
+   8238864.0,
+   8427409.0,
+   8241388.0,
+   8249761.0
+  ],
+  "cross_queue_overflow": [
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "cross_far_overflow": [
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "cross_near_overflow": [
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "self_far_pairs": [
+   1103604.0,
+   1043296.0,
+   987926.0,
+   1018112.0,
+   992838.0,
+   954298.0
+  ],
+  "self_near_pairs": [
+   2184636.0,
+   2168466.0,
+   2074540.0,
+   2082128.0,
+   2103742.0,
+   2047232.0
+  ],
+  "self_queue_overflow": [
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "self_far_overflow": [
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "self_near_overflow": [
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "l2l_level_overflow": [
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "force_scale_min": [
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "force_scale_max": [
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ]
+ },
+ "rows": [
+  {
+   "step": 2,
+   "t": 0.0005,
+   "seconds": 61.2032,
+   "dP_over_scale": 2.9782433557556942e-05,
+   "dL_over_L": 1.1738443106423802e-07,
+   "com_drift": 2.803929248784698e-07,
+   "ke": 37.901451110839844
+  },
+  {
+   "step": 4,
+   "t": 0.001,
+   "seconds": 64.9863,
+   "dP_over_scale": 6.485424091806635e-05,
+   "dL_over_L": 1.1269425215232332e-07,
+   "com_drift": 5.553112600864551e-07,
+   "ke": 37.90104675292969
+  },
+  {
+   "step": 6,
+   "t": 0.0015,
+   "seconds": 64.9192,
+   "dP_over_scale": 9.893388778436929e-05,
+   "dL_over_L": 2.557151219662046e-07,
+   "com_drift": 8.453570217170636e-07,
+   "ke": 37.90036392211914
+  },
+  {
+   "step": 8,
+   "t": 0.002,
+   "seconds": 65.0677,
+   "dP_over_scale": 0.00013248845061752945,
+   "dL_over_L": 2.2682407063712162e-07,
+   "com_drift": 1.150548087025527e-06,
+   "ke": 37.899410247802734
+  }
+ ],
+ "step_times": [
+  64.4608,
+  61.2032,
+  61.8075,
+  64.9863,
+  62.8451,
+  64.9192,
+  62.4156,
+  65.0677
+ ],
+ "probe": {
+  "probe": 256,
+  "probe_seed": 20260901,
+  "rel_l2": 0.015199919717823212,
+  "rel_median": 0.0012088774779074976,
+  "rel_p99": 0.02539011293028566,
+  "rel_max": 0.038257076071234665,
+  "seconds": 132.54
+ },
+ "num_repartitions": 0,
+ "wall_total_s": 937.3230802258477
+}

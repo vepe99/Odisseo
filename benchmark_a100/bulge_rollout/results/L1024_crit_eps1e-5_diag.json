@@ -1,0 +1,196 @@
+{
+ "args": {
+  "ic": "/export/scratch/tbuck/odisseo_ic/disk_bulge_21m_v2.npz",
+  "ndev": 6,
+  "leaf": 1024,
+  "theta": 0.7,
+  "order": 6,
+  "softening": null,
+  "steps": 6,
+  "dt": 0.00025,
+  "m2l_chunk": 65536,
+  "nearfield_chunk": 512,
+  "repartition_every": 0,
+  "nearfield_accum": "wide",
+  "mac_type": "dehnen_error",
+  "adaptive_eps": 1e-05,
+  "mac_cross_criterion": true,
+  "probe": 256,
+  "probe_seed": 20260901,
+  "pair_queue": 0,
+  "cross_queue": 0,
+  "cross_neighbors": 0,
+  "cross_interactions": 0,
+  "checkpoint_every": 0,
+  "overflow_every": 2,
+  "render_every": 0,
+  "render_res": 800,
+  "render_extent": 1.2,
+  "projection": "xy",
+  "diag_every": 2,
+  "max_hours": 0.0,
+  "no_halo": false,
+  "out_prefix": "/export/scratch/tbuck/odisseo_runs/pretest/L1024_crit_eps1e-5",
+  "max_particles": 0,
+  "dtype": "float32"
+ },
+ "n": 21012480,
+ "cap": 3502080,
+ "softening": 0.008278327231656524,
+ "median_step_s": 136.29543729824945,
+ "total_s": 826.3665251862258,
+ "first_diag": {
+  "cross_far_pairs": [
+   2618519.0,
+   1385767.0,
+   1412563.0,
+   2538876.0,
+   1376800.0,
+   1390473.0
+  ],
+  "cross_near_pairs": [
+   4056244.0,
+   2936814.0,
+   2778808.0,
+   3922881.0,
+   2802079.0,
+   2665653.0
+  ],
+  "cross_queue_overflow": [
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "cross_far_overflow": [
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "cross_near_overflow": [
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "self_far_pairs": [
+   1046734.0,
+   1062734.0,
+   1050804.0,
+   999856.0,
+   1048564.0,
+   1058488.0
+  ],
+  "self_near_pairs": [
+   2129488.0,
+   2140724.0,
+   2088154.0,
+   2087362.0,
+   2083286.0,
+   2019294.0
+  ],
+  "self_queue_overflow": [
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "self_far_overflow": [
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "self_near_overflow": [
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "l2l_level_overflow": [
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "force_scale_min": [
+   0.009387700818479061,
+   0.009908310137689114,
+   0.009293690323829651,
+   0.008366481401026249,
+   0.009638459421694279,
+   0.00937748234719038
+  ],
+  "force_scale_max": [
+   69.35003662109375,
+   179.21145629882812,
+   170.5251922607422,
+   70.6116943359375,
+   166.23147583007812,
+   167.79342651367188
+  ]
+ },
+ "rows": [
+  {
+   "step": 2,
+   "t": 0.0005,
+   "seconds": 137.8644,
+   "dP_over_scale": 9.033346030801988e-07,
+   "dL_over_L": 1.0132744503089382e-09,
+   "com_drift": 2.8289928976866444e-07,
+   "ke": 37.90157715303328
+  },
+  {
+   "step": 4,
+   "t": 0.001,
+   "seconds": 136.4689,
+   "dP_over_scale": 1.8061963943833671e-06,
+   "dL_over_L": 1.4626487271140397e-09,
+   "com_drift": 5.65998693952905e-07,
+   "ke": 37.90156558966237
+  },
+  {
+   "step": 6,
+   "t": 0.0015,
+   "seconds": 137.0483,
+   "dP_over_scale": 2.7132181436107904e-06,
+   "dL_over_L": 2.266175812165003e-09,
+   "com_drift": 8.492948616659622e-07,
+   "ke": 37.90154993901974
+  }
+ ],
+ "step_times": [
+  135.3956,
+  137.8644,
+  135.1464,
+  136.4689,
+  136.122,
+  137.0483
+ ],
+ "probe": {
+  "probe": 256,
+  "probe_seed": 20260901,
+  "rel_l2": 0.004034378577226925,
+  "rel_median": 0.00067171291352752,
+  "rel_p99": 0.007480984796953627,
+  "rel_max": 0.015894682296983015,
+  "seconds": 132.21
+ },
+ "num_repartitions": 0,
+ "wall_total_s": 1998.4735538009554
+}

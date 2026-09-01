@@ -1,0 +1,47 @@
+Updating action finder...done
+Computing density for component 0...done
+Computing density for component 1...done
+Computing density for component 2...done
+Updating potential...done
+Updating action finder...done
+Computing density for component 0...done
+Computing density for component 1...done
+Computing density for component 2...done
+Updating potential...done
+Updating action finder...done
+Computing density for component 0...done
+Computing density for component 1...done
+Computing density for component 2...done
+Updating potential...done
+Updating action finder...done
+Computing density for component 0...done
+Computing density for component 1...done
+Computing density for component 2...done
+Updating potential...done
+Updating action finder...done
+Computing density for component 0...done
+Computing density for component 1...done
+Computing density for component 2...done
+Updating potential...done
+Updating action finder...done
+Computing density for component 0...done
+Computing density for component 1...done
+Computing density for component 2...done
+Updating potential...done
+Updating action finder...done
+Computing density for component 0...done
+Computing density for component 1...done
+Computing density for component 2...done
+Updating potential...done
+Updating action finder...done
+Computing density for component 0...done
+Computing density for component 1...done
+Computing density for component 2...done
+Updating potential...done
+Updating action finder...done
+[info] disc: 0.000 % of the draw exceeded rmax=20 and was discarded
+[info] bulge: 0.798 % of the draw exceeded rmax=20 and was discarded
+[info] disc  n=17,510,400 prograde=1.0000 median_vphi=2.5335
+[info] bulge n=3,502,080 prograde=0.4999 median_vphi=-0.0005
+Saved AGAMA SCM IC file: /export/scratch/tbuck/odisseo_ic/disk_bulge_21m_v2.npz
+  N=21,012,480 (disc 17,510,400 + bulge 3,502,080), M_disc=6 M_bulge=1.2, m_particle=3.426535e-07

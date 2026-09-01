@@ -1,0 +1,36 @@
+############ ARM L1024_crit_eps1e-5 ############
+# N=21,012,480 ndev=6 leaf=1024 theta=0.7 order=6 dtype=float32
+# G=1.0 halo_mass=100.0 halo_rs=2.0 rdisk=0.24 softening=0.0082783
+# mac=dehnen_error eps=1e-05 cross_criterion=True accum=wide
+# dt=0.00025 steps=6 devices=['NVIDIA A100-PCIE-40GB', 'NVIDIA A100-PCIE-40GB', 'NVIDIA A100-PCIE-40GB', 'NVIDIA A100-PCIE-40GB', 'NVIDIA A100-PCIE-40GB', 'NVIDIA A100-PCIE-40GB']
+# caps: self_queue=1,048,576 self_nbr=8,192 self_int=8,192 | cross_queue=4,194,304 cross_nbr=32,768 cross_int=32,768
+# evaluator built in 0.4 s
+/export/home/tbuck/Odisseo/tools/mesh_galaxy_run.py:215: DeprecationWarning: jax.experimental.shard_map is deprecated in v0.8.0. Used jax.shard_map instead.
+  from jax.experimental.shard_map import shard_map
+E0901 12:22:44.125625 3858721 slow_operation_alarm.cc:73] 
+********************************
+[Compiling module input_reduce_fusion.2 for GPU] Very slow compile? If you want to file a bug, run with envvar XLA_FLAGS=--xla_dump_to=/tmp/foo and attach the results.
+********************************
+E0901 12:31:50.170382 3858676 slow_operation_alarm.cc:140] The operation took 11m6.044866189s
+
+********************************
+[Compiling module input_reduce_fusion.2 for GPU] Very slow compile? If you want to file a bug, run with envvar XLA_FLAGS=--xla_dump_to=/tmp/foo and attach the results.
+********************************
+# first force (compile incl.) 1003.8 s
+# realignment verified against scatter_to_input_order (3.8 s)
+# force_scale range [0.008366, 179.2] (21420.2x spread)
+# PROBE n=256 rel_l2=4.0344e-03 median=6.717e-04 p99=7.481e-03 max=1.589e-02 (132.2 s)
+# self_near=12,548,308 cross_near=19,162,479 overflow={'cross_queue_overflow': 0.0, 'cross_far_overflow': 0.0, 'cross_near_overflow': 0.0, 'self_queue_overflow': 0.0, 'self_far_overflow': 0.0, 'self_near_overflow': 0.0, 'l2l_level_overflow': 0.0}
+# t=0  |L|=9.560537e+00  KE=3.790158e+01  com=[-7.40e-05  1.39e-04  5.00e-05]
+  step      2  t=0.0005   137.86s  dL/L=1.013e-09  com=2.829e-07  KE=3.790158e+01
+  step      4  t=0.0010   136.47s  dL/L=1.463e-09  com=5.660e-07  KE=3.790157e+01
+  step      6  t=0.0015   137.05s  dL/L=2.266e-09  com=8.493e-07  KE=3.790155e+01
+# 6 steps in 826.4 s, median 136.295 s/step (154,169 particles/s)
+# wrote /export/scratch/tbuck/odisseo_runs/pretest/L1024_crit_eps1e-5_diag.json
+# checkpoint step 6 -> L1024_crit_eps1e-5_final.npz (609 MB)
+############ END L1024_crit_eps1e-5 rc=0 ############
+############ ARM L1024_geo ############
+# N=21,012,480 ndev=6 leaf=1024 theta=0.7 order=6 dtype=float32
+# G=1.0 halo_mass=100.0 halo_rs=2.0 rdisk=0.24 softening=0.0082783
+# mac=dehnen eps=None cross_criterion=True accum=wide
+# dt=0.00025 steps=6 devices=['NVIDIA A100-PCIE-40GB', 'NVIDIA A100-PCIE-40GB', 'NVIDIA A100-PCIE-40GB', 'NVIDIA A100-PCIE-40GB', 'NVIDIA A100-PCIE-40GB', 'NVIDIA A100-PCIE-40GB']
