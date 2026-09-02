@@ -629,3 +629,40 @@ moves `rel_l2` by 1 part in 29 000 between identical runs.
 Only its finiteness and order of magnitude are meaningful. Section 7's discussion of the 727x
 gap should be read with that in mind: the lever-arm explanation stands as arithmetic, but the
 underlying numbers are not stable enough to support a conclusion drawn from their ratio.
+
+### The re-run is CLEAN for 14 steps, so the fault is intermittent and its rate is unbounded
+
+Identical config, IC, dt and caps, with per-step finiteness checks and live diagnostics:
+
+    14/14 steps clean, median 155.004 s/step (115,002 particles/s)
+    force_scale floor stable in [0.009266, 0.009709] throughout -- it does NOT collapse
+    every overflow flag zero at every step
+    dL/L grew smoothly 9.576e-07 -> 1.817e-05, KE fell smoothly 37.90308 -> 37.87639
+
+`com_drift` at step 10 was **3.207e-06** against the failed run's **3.1996e-06** -- 0.2 %
+apart -- so the trajectory was the same and only the velocities went non-finite, once.
+
+The force-scale collapse hypothesis is therefore DEAD: the floor stays within 5 % of its
+initial value across 14 steps and never approaches zero. So is a deterministic bug in the
+configuration, and (from section 8) so are the IC and the NFW term.
+
+**The rate cannot be bounded from what we have.** One event in ~28 attempted steps across
+three runs (4 clean + <=10 to the failure + 14 clean) gives a Poisson interval of roughly
+1-in-1000 to 1-in-5 per step. At the optimistic end 489 steps expects ~0.4 failures; at the
+pessimistic end the rollout is unreachable. More 14-step diagnostics are a poor way to narrow
+this -- each costs ~40 min and buys ~14 steps of evidence.
+
+**This is plausibly the same fault as section 4.** Both are intermittent, both are on the
+distributed GPU lane, and in both the force is *either* correct (7.06e-07 against a direct
+sum in section 4) *or* non-finite rather than subtly wrong -- which is the signature of
+reading uninitialised memory rather than of a numerical instability. A cap-sized buffer whose
+padding is read but never written would behave exactly this way: harmless when the memory
+happens to hold benign values, NaN when it does not, and never reproducible. That is a
+hypothesis, not a finding -- it has NOT been tested, and testing it means instrumenting
+jaccpot's traversal buffers rather than the rollout.
+
+**Mitigation shipped instead of a root cause**: the finiteness gate turns a 17-hour spin into
+a one-step abort, `--restart-from` turns that abort into a resume, and a persistent XLA
+compilation cache turns the resume's 17-minute compile into seconds. The wrapper
+(`run_resilient.sh`) retries ONLY a non-finite abort and stops on anything else, so an OOM or
+a timeout is never papered over.
