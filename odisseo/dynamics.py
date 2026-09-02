@@ -9,9 +9,9 @@ from jax import vmap, jit, pmap
 from jax import random
 import jax
 import jax.numpy as jnp
+from jax import shard_map
 from jax.sharding import Mesh, NamedSharding
 from jax.sharding import PartitionSpec as P
-from jax.experimental.shard_map import shard_map
 
 import equinox as eqx
 
