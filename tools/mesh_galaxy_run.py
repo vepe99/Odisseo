@@ -641,8 +641,13 @@ def main():  # noqa: C901
 
     def kdk(x, v, a, dt):
         xn, vh = drift(x, v, a, dt)
-        an, _, _, _, _ = force(xn)
-        return xn, kick(vh, an, dt), an
+        an, _gid, dg, _raw, _self = force(xn)
+        # The diagnostic vector is RETURNED, not dropped. It used to be discarded
+        # here, which left `diag` in the step loop bound to the FIRST force forever --
+        # so the periodic overflow check re-validated step 0 on every cadence and could
+        # never see a capacity that overflowed later, which is the only reason the check
+        # exists. Caps are static; pair counts are not.
+        return xn, kick(vh, an, dt), an, dg
 
     def invariants(x, v, m):
         """Momentum, angular momentum, COM and KE -- reduced in float64 on the host.
@@ -801,7 +806,7 @@ def main():  # noqa: C901
     t_run0 = time.perf_counter()
     for it in range(1, args.steps + 1):
         t0 = time.perf_counter()
-        X, V, A = kdk(X, V, A, args.dt)
+        X, V, A, diag = kdk(X, V, A, args.dt)
         jax.block_until_ready(X)
         step_times.append(time.perf_counter() - t0)
 
@@ -848,6 +853,47 @@ def main():  # noqa: C901
                     f"truncated from here on. Grow the relevant cap (or loosen the "
                     f"criterion) and restart; diagnostics written."
                 )
+        # A NaN is the cheapest thing to detect and the most expensive to miss. This
+        # run reported `dL/L=nan` at step 10 and then span four A100s for SEVENTEEN
+        # HOURS without another line of output: once the state goes non-finite the
+        # tree's bounding box does too, every leaf becomes every other leaf's
+        # neighbour, and the traversal grinds forever at 100 % utilisation. There is
+        # no cheaper guard than this and no more expensive omission.
+        #
+        # Three device reductions plus one host sync per step, against a ~155 s step.
+        # The loop already blocks on X every step, so nothing is pipelined away.
+        finite = bool(
+            jnp.isfinite(A).all() & jnp.isfinite(X).all() & jnp.isfinite(V).all()
+        )
+        if not finite:
+            bad = {
+                "accel": int(np.count_nonzero(~np.isfinite(np.asarray(A)))),
+                "pos": int(np.count_nonzero(~np.isfinite(np.asarray(X)))),
+                "vel": int(np.count_nonzero(~np.isfinite(np.asarray(V)))),
+            }
+            dec = decode_diag(diag)
+            fs = (dec.get("force_scale_min", []), dec.get("force_scale_max", []))
+            pathlib.Path(f"{args.out_prefix}_diag.json").write_text(json.dumps({
+                "args": vars(args), "n": n, "cap": cap, "softening": soft,
+                "rows": rows, "step_times": [round(t, 4) for t in step_times],
+                "probe": probe_stats, "num_repartitions": n_reparts,
+                "aborted_at_step": it, "nonfinite_counts": bad,
+                "force_scale_min": fs[0], "force_scale_max": fs[1],
+                "overflow": overflow_flags(dec), "partial": True,
+            }, indent=1))
+            # Save the state so the failure is inspectable rather than only reported.
+            try:
+                save_state(it, final=False)
+            except Exception as exc:  # noqa: BLE001
+                print(f"# (could not snapshot the failed state: {exc})", flush=True)
+            raise SystemExit(
+                f"NON-FINITE STATE at step {it}: "
+                f"{bad['accel']} accel / {bad['pos']} pos / {bad['vel']} vel entries. "
+                f"force_scale min={min(fs[0]) if fs[0] else float('nan'):.6g} "
+                f"max={max(fs[1]) if fs[1] else float('nan'):.6g}. "
+                f"Refusing to continue -- a non-finite state makes the tree degenerate "
+                f"and the traversal never terminates. Diagnostics and a snapshot written."
+            )
         if args.checkpoint_every and it % args.checkpoint_every == 0:
             save_state(it)
         if args.diag_every and it % args.diag_every == 0:
@@ -861,6 +907,15 @@ def main():  # noqa: C901
                 "com_drift": float(np.linalg.norm(com - com0)),
                 "ke": float(ke),
             }
+            if args.mac_type == "dehnen_error":
+                _dec = decode_diag(diag)
+                _lo, _hi = _dec.get("force_scale_min", []), _dec.get("force_scale_max", [])
+                if _lo and _hi:
+                    # A force scale collapsing toward 0 makes eq (16a)'s `eps * min_b f_b`
+                    # collapse with it. Watching the FLOOR is how that gets caught before
+                    # it turns into a non-finite accept mask.
+                    row["force_scale_min"] = float(min(_lo))
+                    row["force_scale_max"] = float(max(_hi))
             rows.append(row)
             pathlib.Path(f"{args.out_prefix}_diag.json").write_text(json.dumps({
                 "args": vars(args), "n": n, "cap": cap, "softening": soft,
@@ -870,7 +925,9 @@ def main():  # noqa: C901
             }, indent=1))
             print(
                 f"  step {it:>6d}  t={row['t']:.4f}  {row['seconds']:7.2f}s  "
-                f"dL/L={row['dL_over_L']:.3e}  com={row['com_drift']:.3e}  KE={ke:.6e}",
+                f"dL/L={row['dL_over_L']:.3e}  com={row['com_drift']:.3e}  KE={ke:.6e}"
+                + (f"  fs=[{row['force_scale_min']:.4g},{row['force_scale_max']:.4g}]"
+                   if "force_scale_min" in row else ""),
                 flush=True,
             )
 

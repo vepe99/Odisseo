@@ -566,3 +566,66 @@ one. Structure confirms it is the same galaxy: disc r50 0.5654 against 0.5655, b
 
 **RUN IN PROGRESS at the time of writing.** Outcome, final conservation, movies and the
 per-component structural comparison are not yet in this file.
+
+## 8. The run failed at step 10, and two guards failed with it
+
+The 17.8 M / 4-card rollout launched 2026-09-01 15:51 reported `dL/L=nan`, `KE=nan` at
+**step 10 of 489** and then produced no further output for **seventeen hours** while holding
+four A100s at 100 % utilisation. Killed 2026-09-02 09:53.
+
+`com_drift` was finite (3.1996e-06) while `dP`, `dL` and `KE` were not, which localises it:
+COM is built from POSITIONS, the other three from VELOCITIES. So the velocities went
+non-finite first, which is the signature of a force that returned NaN AFTER the drift --
+`kick(vh, an, dt)` poisons `v` while `x` is still finite.
+
+**Why it then hung rather than crashed.** Once the state is non-finite the tree's bounding box
+is too, Morton keys degenerate, every leaf becomes every other leaf's neighbour, and the
+traversal grinds without terminating. 100 % GPU utilisation with zero progress is what that
+looks like from outside, and it is indistinguishable from healthy work unless something is
+checking the numbers.
+
+### Guard 1: there was no NaN check at all
+
+A non-finite state is the cheapest failure to detect and the most expensive to miss, and the
+step loop checked for capacity overflow and for a constant force scale but never for NaN. It
+printed `nan` and carried on.
+
+Fixed: `jnp.isfinite` over accel, positions and velocities every step -- three device
+reductions and one host sync against a ~155 s step, and the loop already blocks on `X` each
+step so nothing is pipelined away. On failure it writes the non-finite counts per array, the
+force-scale range, the overflow flags and a snapshot, then exits.
+
+### Guard 2: the periodic overflow check was VACUOUS
+
+`kdk` discarded the diagnostic vector:
+
+    an, _, _, _, _ = force(xn)          # the diag went in the bin
+
+so `diag` inside the step loop stayed bound to the **first force** forever. `--overflow-every`
+therefore re-validated step 0 on every cadence and could never have seen a capacity that
+overflowed later -- which is the only reason the check exists, since caps are static and pair
+counts are not. It was reported here (section 3) as mid-run protection. It was not.
+
+Fixed: `kdk` returns the diag and the loop rebinds it every step. **Verified rather than
+asserted**: the force-scale range now evolves per step (max 25.78 -> 25.82 -> 25.87 -> 25.88
+-> 25.90 -> 26.26 on the CPU smoke) where before it was frozen at the first force's value.
+That is the test for staleness -- a constant diagnostic across steps means it is not live.
+
+These two compound: a cap that overflows mid-run under the criterion truncates the prepass,
+which the record says drives `f_b` DOWN, and eq (16a) divides by `eps * min_b f_b`. A floor
+reaching zero gives a non-finite accept mask. The vacuous check could not see the overflow and
+the missing NaN check could not see the result.
+
+### dL/L at the 1e-6 level is NOT reproducible in this lane
+
+The diagnostic re-run gives `dL/L = 1.867e-06` at step 2 where the earlier probe of the
+**identical** config and IC gave `7.364e-07` -- a factor 2.5 apart. Together with the 727x gap
+between the 4- and 6-card runs, and the lever-arm analysis in section 7 showing near-perfect
+torque cancellation in one geometry, the conclusion is that dL/L here is a small residual of
+cancelling torques and is dominated by fp32 force non-determinism -- the same effect that
+moves `rel_l2` by 1 part in 29 000 between identical runs.
+
+**So do not compare dL/L between runs at this level, and do not read a ratio as a finding.**
+Only its finiteness and order of magnitude are meaningful. Section 7's discussion of the 727x
+gap should be read with that in mind: the lever-arm explanation stands as arithmetic, but the
+underlying numbers are not stable enough to support a conclusion drawn from their ratio.
