@@ -375,6 +375,15 @@ def main():  # noqa: C901
                     help="Override cross_max_neighbors_per_leaf. 0 = derive.")
     ap.add_argument("--cross-interactions", type=int, default=0,
                     help="Override cross_max_interactions_per_node. 0 = derive.")
+    ap.add_argument("--restart-from", default="",
+                    help="Resume from a snapshot written by --checkpoint-every instead of "
+                         "starting at the IC. Steps continue from the snapshot's own step "
+                         "counter, and the conservation baseline is carried IN the snapshot "
+                         "so dL/L stays continuous across a restart rather than resetting "
+                         "to zero. Exists because the force can return NaN intermittently "
+                         "(once at step 10 in ~14 steps, not reproducible); with the "
+                         "finiteness gate a run now aborts in one step, and this makes that "
+                         "cost a restart instead of the whole rollout.")
     ap.add_argument("--checkpoint-every", type=int, default=0,
                     help="Write a full particle snapshot (positions + velocities in "
                          "ORIGINAL input order) every N steps, plus one at the end. "
@@ -422,7 +431,10 @@ def main():  # noqa: C901
 
     t_wall0 = time.perf_counter()
     ic = np.load(args.ic)
-    state0 = np.asarray(ic["state0"])
+    restart = np.load(args.restart_from) if args.restart_from else None
+    # The snapshot carries state and the baseline; the IC still supplies the halo and
+    # bulge parameters, so both are opened and the snapshot wins on the state only.
+    state0 = np.asarray((restart if restart is not None else ic)["state0"])
     mass = np.asarray(ic["mass"])
     wdt = np.float32 if args.dtype == "float32" else np.float64
     pos = np.ascontiguousarray(state0[:, 0, :], dtype=wdt)
@@ -706,6 +718,13 @@ def main():  # noqa: C901
         tmp = dest.with_name(f".{dest.name}.tmp.npz")
         payload = dict(
             state0=st, mass=mass, step=np.asarray(int(step_index)),
+            # The baseline the run started from, so a restart reports dL/L against the
+            # ORIGINAL state rather than against wherever it happened to resume.
+            baseline_p0=np.asarray(p0, dtype=np.float64),
+            baseline_l0=np.asarray(l0, dtype=np.float64),
+            baseline_com0=np.asarray(com0, dtype=np.float64),
+            baseline_lscale=np.asarray(float(lscale)),
+            baseline_step0=np.asarray(int(step0)),
             t=np.asarray(float(step_index) * float(args.dt)),
             n_particles=np.asarray(int(n)),
             dt=np.asarray(float(args.dt)), softening=np.asarray(float(soft)),
@@ -799,12 +818,25 @@ def main():  # noqa: C901
     p0, l0, com0, ke0 = [np.asarray(z) for z in invariants(X, V, pstate["M"])]
     mtot = float(np.sum(mass))
     lscale = float(np.sum(mass * np.linalg.norm(np.cross(pos, vel), axis=1)))
+    step0 = 0
+    if restart is not None:
+        step0 = int(restart["step"]) if "step" in restart.files else 0
+        if "baseline_l0" in restart.files:
+            p0 = np.asarray(restart["baseline_p0"])
+            l0 = np.asarray(restart["baseline_l0"])
+            com0 = np.asarray(restart["baseline_com0"])
+            lscale = float(restart["baseline_lscale"])
+            print(f"# restart: resuming after step {step0}, conservation baseline carried "
+                  f"from the original start", flush=True)
+        else:
+            print(f"# restart: resuming after step {step0}; the snapshot carries NO "
+                  f"baseline, so dL/L is measured from HERE, not from the IC", flush=True)
     print(f"# t=0  |L|={np.linalg.norm(l0):.6e}  KE={ke0:.6e}  com={np.round(com0, 6)}", flush=True)
 
     rows = []
     step_times = []
     t_run0 = time.perf_counter()
-    for it in range(1, args.steps + 1):
+    for it in range(step0 + 1, args.steps + 1):
         t0 = time.perf_counter()
         X, V, A, diag = kdk(X, V, A, args.dt)
         jax.block_until_ready(X)
