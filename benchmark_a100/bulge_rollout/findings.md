@@ -719,3 +719,70 @@ commit, so moving it costs nobody anything.
 **Every measurement in this file from section 5 onward should be read as "against yggdrax
 a5262ae and jaccpot c1cede7"**, which is what SETUP.md records. jaccpot's checkout was
 verified still on `main` at c1cede7 throughout.
+
+## 10. THE ROOT CAUSE: the traversal is non-deterministic
+
+Two force evaluations of the **same input**, in the **same process**, through the **same
+compiled program**, at the production configuration, do not agree.
+
+    field                  eval 0        eval 1        eval 2        eval 3
+    cross_near (dev 2)   3,521,353     3,521,354     3,521,354     3,521,354
+    cross_far  (dev 1)   2,200,605     2,200,604     2,200,604     2,200,604
+    cross_far  (dev 2)   1,832,370     1,832,369     1,832,370     1,832,369
+    differing words            --   43,279,015    43,031,293    43,460,572   of 53,477,376
+
+**Pair counts are INTEGERS.** They cannot drift by rounding. A pair classified *far* on one
+call is classified *near* on the next, so the traversal's accept mask is not a function of
+its inputs. And `cross_far (dev 2)` disagrees between evals 1 and 2 as well as with eval 0,
+so it wanders rather than sitting at a fixed offset -- this is stochastic, not a one-off.
+
+Roughly 81 % of the float32 acceleration words differ between repeats, which is what a
+perturbed near/far split does to every downstream sum.
+
+**Only `cross_*` counts ever move.** The battery prints only fields that changed, and
+`self_near_pairs`/`self_far_pairs` have not appeared once. The self walk is deterministic;
+the non-determinism lives in the CROSS-DOMAIN walk.
+
+### This is the common cause of everything else in this file
+
+- **The intermittent NaN** (section 8): a traversal that occasionally classifies pairs
+  differently can occasionally produce a degenerate result. It explains why a 14-step re-run
+  was clean and why nothing in the configuration, the IC or the NFW term was at fault.
+- **`rel_l2` 2.8765e-03 vs 2.8766e-03** across processes (section 7): not fp32 rounding
+  within a fixed program -- two processes genuinely computed different numbers.
+- **dL/L unreproducible at the 1e-6 level** (section 8): the residual of cancelling torques
+  sits on top of a force that is not reproducible.
+- **The preallocate anomaly** (section 4), where the force was EITHER correct to 7.06e-07 OR
+  wrong, never subtly wrong -- the signature of a discrete change in which pairs were taken.
+
+They were four symptoms of one defect, and each was chased separately because the force was
+never audited for **reproducibility**, only for accuracy against a direct sum. An accuracy
+check cannot see this: every one of these evaluations is ~2.9e-03 from the fp64 answer. The
+run is accurate and not reproducible, and only a bitwise repeat test distinguishes those.
+
+### What this costs
+
+`rel_l2 = 2.88e-03` is a **sample from a distribution**, not a property of the configuration.
+It remains a fair accuracy estimate; it is not a number two runs will agree on.
+
+**Correction to section 7 and to earlier reporting in this file**: the max relative deviation
+between repeats was first quoted as 8.000e+00 with no distribution behind it. That is a
+maximum over 53 million components with `|a|` in the denominator, so it is dominated by
+particles whose acceleration is near zero and overstates how much the force moves. The
+localisation arms record median/p99/p99.99 instead.
+
+### Localisation (IN PROGRESS)
+
+Three arms at the identical configuration, differing only in which walk the criterion drives:
+
+    full      mac_type=dehnen_error, mac_cross_criterion=True    (known non-deterministic)
+    selfonly  mac_type=dehnen_error, mac_cross_criterion=False
+    geo       mac_type=dehnen                                    (no pair policy at all)
+
+If `geo` and `selfonly` are bit-identical and only `full` is not, the cross-walk pair policy
+(yggdrax PR #54, the newest code in the stack) owns it -- which also fits the history, since
+the earlier stable 127-step 21 M rollout ran the geometric MAC and never touched that path.
+
+**This decides the production configuration too.** An irreproducible 2.88e-03 is worth less
+than a reproducible 1.52e-02: if `geo` is deterministic it is the honest choice to run, and
+the criterion's 3.77x accuracy advantage is unbankable until this is fixed.
