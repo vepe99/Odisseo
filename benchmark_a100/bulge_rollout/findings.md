@@ -666,3 +666,56 @@ a one-step abort, `--restart-from` turns that abort into a resume, and a persist
 compilation cache turns the resume's 17-minute compile into seconds. The wrapper
 (`run_resilient.sh`) retries ONLY a non-finite abort and stops on anything else, so an OOM or
 a timeout is never papered over.
+
+## 9. The library underneath the runs can change branch (and did)
+
+Going accuracy-first found a reproducibility hole before it found anything about the force.
+
+`yggdrax` is installed **editable**, and the generated finder hard-pins the path:
+
+    MAPPING = {'yggdrax': '/export/home/tbuck/yggdrax/yggdrax'}
+
+so every run imports whatever branch that SHARED checkout is sitting on. Per its reflog it
+was switched at **2026-09-02 15:38:12** from `main` (a5262ae, which carries yggdrax PR #54's
+cross-walk pair policy) to `paper/differentiable-applications` (954ecaf, which does not).
+
+**jaccpot's guard did its job and refused to start:**
+
+    ValueError: mac_cross_criterion=True needs a yggdrax whose dual_tree_walk_cross_impl
+    accepts a pair_policy (yggdrax PR #54). The installed one does not, so the criterion
+    would reach the self walk and silently leave the cross walk on the geometric MAC --
+    which is FASTER and answers a different question
+
+That is the record's "four configurations raise rather than running a different criterion
+quietly" design, and it prevented a silently-wrong measurement. Worth noting as a case where
+a guard earned its keep.
+
+**It does NOT explain the NaN.** The switch was at 15:38 on 2026-09-02; the production run
+was 09-01 15:51 to 09-02 09:53 and the NaN diagnostic 09-02 09:59 to 10:54. The reflog shows
+no branch changes between 09-01 10:23 (the fast-forward to a5262ae) and 09-02 15:38, so both
+ran against a stable a5262ae. The intermittent NaN is still unexplained.
+
+**But the environment was never GUARANTEED stable**, and a measurement whose library can
+change branch between two runs is not reproducible whatever the code says. Two runs that
+disagree could always have been two different libraries.
+
+### The fix, and why PYTHONPATH cannot be it
+
+`PYTHONPATH` does not work here: the editable install's `.pth` inserts the finder into
+`sys.meta_path` during `site.py`, and a meta-path finder takes precedence over path entries.
+`sitecustomize` is imported by `site.py` AFTER the `.pth` files are processed, which is
+exactly the window in which the MAPPING can be repointed.
+
+So: `scratchpad/ygg_pin/sitecustomize.py` repoints `MAPPING['yggdrax']` to a fixed worktree
+(`YGGDRAX_PIN`, default `/export/home/tbuck/yggdrax-main-wt/yggdrax`, updated to a5262ae),
+and runs set `PYTHONPATH` to that directory. It raises rather than falling through if the pin
+is missing, so an unpinned run fails loudly instead of quietly using the shared checkout.
+
+Nothing writes to the shared repo: `/export/home/tbuck/yggdrax` is left on
+`paper/differentiable-applications`, because another session was evidently using it and a
+branch is not ours to take. `yggdrax-main-wt` was an unused detached worktree at an old
+commit, so moving it costs nobody anything.
+
+**Every measurement in this file from section 5 onward should be read as "against yggdrax
+a5262ae and jaccpot c1cede7"**, which is what SETUP.md records. jaccpot's checkout was
+verified still on `main` at c1cede7 throughout.
