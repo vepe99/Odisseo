@@ -199,7 +199,8 @@ def direct_acc_matrix(state: jnp.ndarray,
     if return_potential:
         # Compute potential energy (only sum interactions once)
         inv_r = r2_safe**-0.5 * (1.0 - eye)  # Diagonal is zero
-        pot = -params.G * jnp.sum(mass[:, None] * inv_r, axis=1)
+        # mass must be indexed by j (the summed axis), as in the acceleration above.
+        pot = -params.G * jnp.sum(mass[None, :] * inv_r, axis=1)
         return acc, pot
     else:
         return acc
@@ -262,7 +263,10 @@ def direct_acc_sharding(state: jnp.ndarray,
                      return_potential: bool = False) -> Union[jnp.ndarray, Tuple[jnp.ndarray, jnp.ndarray]]:
     """
     Compute the direct acceleration matrix for a system of particles. Shard the positions to allow for parallel computation.
-    CURRENTLY NOT WORKING.
+
+    The rows of the pairwise separation matrix are distributed over ``jax.devices()``
+    while the columns are replicated on every shard. ``N_particles`` need not be a
+    multiple of the device count: it is padded with zero-mass particles internally.
 
 
     Args:
@@ -279,36 +283,52 @@ def direct_acc_sharding(state: jnp.ndarray,
     
     batch_size = _resolve_batch_size(config.batch_size)
     pos = state[:, 0]
+    N = config.N_particles
+
     # Create a mesh from all devices
     devices = jax.devices()
+    n_devices = len(devices)
     mesh = Mesh(devices, axis_names=('N_particles',))
-    # Define sharding strategy - shard along axis 0
-    sharding = NamedSharding(mesh, P('N_particles', None))
-    in_specs = P('N_particles', None)
-    out_specs = P('N_particles', None)
-    @jit
-    def put_on_device(positions):
-        positions_sharded = jax.device_put(positions, sharding)
-        return positions_sharded
-    pos_sharded = put_on_device(pos.copy())
-    @jit 
-    def pairwise_diff(pos):
-        return pos[0, None] - pos_sharded
-    @jit
-    def lax_map_pairwise_diff(pos):
-        return jax.lax.map(pairwise_diff, pos, batch_size=batch_size)
-    dpos = jax.lax.stop_gradient(shard_map(lax_map_pairwise_diff, 
-                                           mesh=mesh, 
-                                           in_specs=in_specs, 
-                                           out_specs=out_specs)(pos))
-    eye = jax.lax.stop_gradient(jnp.eye(config.N_particles))
-    r2_safe = jnp.sum(dpos**2, axis=-1) + config.softening**2 + eye # Shape: (N, N)
+
+    # shard_map requires the sharded axis to divide evenly over the mesh, so pad
+    # up to a multiple of the device count with zero-mass particles. They exert no
+    # force (mass 0) and their rows are dropped from the result below.
+    N_padded = -(-N // n_devices) * n_devices
+    n_pad = N_padded - N
+    if n_pad:
+        pos = jnp.concatenate([pos, jnp.zeros((n_pad, 3), dtype=pos.dtype)], axis=0)
+        mass = jnp.concatenate([mass, jnp.zeros((n_pad,), dtype=mass.dtype)], axis=0)
+
+    # Positions are needed in two layouts: sharded over the mesh to split the rows
+    # of the pairwise matrix, and replicated so every shard sees all the columns.
+    pos_sharded = jax.device_put(pos, NamedSharding(mesh, P('N_particles', None)))
+    pos_replicated = jax.device_put(pos, NamedSharding(mesh, P(None, None)))
+
+    def pairwise_diff_shard(pos_local, pos_all):
+        # pos_local: (N_padded // n_devices, 3) rows owned by this shard.
+        # pos_all:   (N_padded, 3) every particle, replicated on this shard.
+        def pairwise_diff(particle_i):
+            return particle_i[None, :] - pos_all  # (N_padded, 3)
+        return jax.lax.map(pairwise_diff, pos_local, batch_size=batch_size)
+
+    dpos = jax.lax.stop_gradient(shard_map(pairwise_diff_shard,
+                                           mesh=mesh,
+                                           in_specs=(P('N_particles', None), P(None, None)),
+                                           out_specs=P('N_particles', None))(pos_sharded,
+                                                                             pos_replicated))
+    eye = jax.lax.stop_gradient(jnp.eye(N_padded))
+    r2_safe = jnp.sum(dpos**2, axis=-1) + config.softening**2 + eye # Shape: (N_padded, N_padded)
+    inv_r3 = r2_safe**-1.5 * (1.0 - eye)  # Diagonal is zero
+    acc = - params.G * jnp.sum((mass[:, None] * dpos) * inv_r3[:, :, None], axis=1)
+    acc = jax.device_put(acc[:N], devices[0])
     if return_potential:
-        inv_r = r2_safe**-0.5 * (1.0 - eye)
-        return jax.device_put(jnp.sum(-params.G * jnp.sum(mass[:, None] * inv_r, axis=1), axis=0), devices[0])
+        inv_r = r2_safe**-0.5 * (1.0 - eye)  # Diagonal is zero
+        # mass must be indexed by j (the summed axis), as in the acceleration above;
+        # this is also what zeroes out the zero-mass padding particles.
+        pot = - params.G * jnp.sum(mass[None, :] * inv_r, axis=1)
+        return acc, jax.device_put(pot[:N], devices[0])
     else:
-        inv_r3 = r2_safe**-1.5 * (1.0 - eye)
-        return jax.device_put(jnp.sum(-params.G * jnp.sum((mass[:, None] * dpos) * inv_r3[:, :, None], axis=1), axis=0), devices[0])
+        return acc
 
 
 @partial(jax.jit, static_argnames=['config', 'return_potential'])
