@@ -1261,3 +1261,31 @@ path already uses; at 8 cards the factor is 4× larger, untested).
 
 Conclusion: the halo exchange was the whole defect. The MACs, the Pallas near-field kernels, the
 aligner, the frozen RCB partition and the queue cache were all innocent, as the reading in §13 said.
+
+### 14.5 The production configuration passes: jax 0.10.2, native exchange (22:55)
+
+Standalone venv `/export/scratch/tbuck/venv_prod_jax0102` (jax 0.10.2 = jaccpot's floor; plugin
+from its own site-packages; editable jaccpot / yggdrax-main-wt / Odisseo; no sitecustomize pin),
+cards 1,3,4,6, same IC, same probe (`results/rollout_probe_jax0102_native.log`,
+`crit_jax0102_diag.json`), exit rc=pending:
+
+| step | 0.9.0 native (§13) | 0.9.0 `buf` (§14.4) | **0.10.2 native** | median |
+|---|---|---|---|---|
+| 0 | 2.88e-3 | 2.8766e-3 | 2.8766e-3 | 6.66e-4 |
+| 1 | **0.45–0.50** | 4.1650e-3 | **4.1650e-3** | 6.69e-4 |
+| 2 | **0.45–0.50** | 2.5335e-3 | **2.5335e-3** | 6.62e-4 |
+| 3 | ~2.7e-3 | 2.7110e-3 | 2.7110e-3 | 6.43e-4 |
+| 4 | — | 3.1450e-3 | (pending) |  |
+
+Identical to the `buf` run to five significant figures at every step — two different exchange
+implementations, two JAX versions, one force. Step time 145–150 s (median ~148 s), the fastest of
+the three. dL/L 1.66e-9 / 3.09e-9 at steps 1 / 2, same as `buf`.
+
+**Production is unblocked.** Launched 2026-09-04 ~22:57: 25,165,824 particles on 8 cards,
+`results/run_25m_8card_jax0102.sh` (jax 0.10.2 venv, native exchange, `--probe-every 25`,
+finiteness gate, checkpoint every 20, auto-resume on a non-finite abort only).
+
+What "trust" now rests on, and what it does not: every step probed so far (0–4) is a fresh fp64
+direct sum over all sources for 256 random targets, in the t=0 class. The production run keeps
+that instrument on at 25-step cadence; a probe that leaves the ~3e-3 class is the signal to stop.
+Not re-verified on 0.10.2: the 8-card memory estimate (29.1 GiB/card from §5, taken on 0.9.0).

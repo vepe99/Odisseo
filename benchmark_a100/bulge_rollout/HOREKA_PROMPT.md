@@ -27,9 +27,13 @@ it, and odisseo.option_classes / odisseo.render_callback pull in only jax and nu
   git clone git@github.com:TobiBu/jaccpot.git && (cd jaccpot && git checkout c1cede7)
   git clone git@github.com:TobiBu/yggdrax.git && (cd yggdrax && git checkout a5262ae)
 
-jaccpot pins jax >=0.10.2,<0.11 (0.9.1/0.9.2 core-dump on its CPU backend); the runs above
-were taken with jax 0.9.0 in the odisseo env, importing jaccpot/yggdrax from the checkouts.
-Put all three on PYTHONPATH rather than installing.
+**jax ≥ 0.10.2 is REQUIRED, in a venv with no `--system-site-packages`** (findings.md §14: on
+jax < 0.9.1 the distributed forward silently loses the cross-domain near field on most steps;
+0.10.2 is jaccpot's floor and is verified clean in the full pipeline). Check the plugin actually
+loaded: `python -c "import jax_plugins.xla_cuda12 as p; print(p.__file__)"` must be inside
+your venv. If the module's jax is older and cannot be changed, `--halo-exchange buf` is the
+accuracy-identical fallback. Install the three repos with `pip install --no-deps -e` (Odisseo's
+`odisseo/__init__` imports nornax, so add `pip install --no-deps -e nornax` plus diffrax equinox).
 
 READ FIRST, both in Odisseo:
   benchmark_a100/bulge_rollout/SETUP.md    exact commands, ICs, provenance, memory table
@@ -51,24 +55,15 @@ Measured on 6xA100-40GB: 136.3 s/step, 18.5 h for 489 steps, force rel_l2 4.03e-
 an fp64 direct sum, dL/L 2.3e-09 after 6 steps, every overflow flag clear, peak 40,105 MiB
 on the coordinator card and ~31,450 MiB on each worker.
 
-## STOP (2026-09-04 21:15): do not launch a rollout on this lane yet
+## RESOLVED (2026-09-04 22:55): the defect was the halo exchange, not the MAC
 
-Both MACs are ~45-50 % wrong on every force evaluation after the first once positions move,
-while every diagnostic that was being watched looks healthy. Read findings.md section 13. The
-only instrument that sees it is `--probe-every N` (a fresh fp64 direct sum on a cadence); it
-must stay on in any run, and a later-step probe must sit at the step-0 level (~3e-03) or the
-run is computing garbage. Until section 13 is resolved the work here is DIAGNOSIS, not a run.
-
-## Why the MAC was believed settled (2026-09-04 20:50 -- superseded above)
-
-`mac_type=dehnen_error` is the ONLY configuration whose force is the same number twice. Four
-calls of the same input through the same compiled program, each vs one fp64 direct sum:
-criterion 3.111689e-03..3.111703e-03 (spread 4.6e-06); geometric `dehnen` 4.97e-03 on the
-first call then 0.539 / 0.310 / 0.521 -- 30-54 % wrong on every later call, identical accept
-mask, all overflow flags clear, nothing non-finite. **No guard sees it, and every accuracy
-number ever taken for the geometric MAC was on the first call.** Do not run `dehnen` for a
-rollout, and do not accept a t=0 probe as validation: use `--probe-every 50` so the force is
-scored on later steps too. Details: findings.md sections 10-12.
+The ~45–50 % wrong forces after step 0 (findings §13) were XLA's `ragged_all_to_all` returning
+its fill value under buffer donation on jax 0.9.0 — the cross-domain near field silently
+dropped while every invariant looked healthy. jax 0.10.2 with the native exchange is verified
+correct at every probed step (§14.5) and is the production configuration; the 25M/8-card run
+was launched on the home box 2026-09-04 22:57. Keep `--probe-every 25` on in any run — a probe
+outside the ~3e-3 class is the stop signal. The geometric MAC's "wrong on later calls" (§11) was
+the same defect; the criterion remains the accuracy pick (3.77× at equal cost), not a safety one.
 
 ## The one thing that decides whether it runs at all
 

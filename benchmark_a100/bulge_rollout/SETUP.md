@@ -14,10 +14,18 @@ behind these choices are in `findings.md`; this file is the operational half.
     odisseo env  python 3.13.12  jax 0.9.0   numpy 2.4.4  agama 1.0.159
     jaccpot venv python 3.12.3   jax 0.10.2
 
-`jaccpot` requires jax >= 0.10.2 and < 0.11 (0.9.1/0.9.2 core-dump on its CPU backend). The
-`odisseo` micromamba env carries jax 0.9.0 and is what ran everything here, via
-`/export/home/tbuck/micromamba/envs/odisseo/bin/python`, with jaccpot and yggdrax imported
-from the working checkouts.
+**Environment requirement (2026-09-04, findings §14): jax ≥ 0.10.2 in a STANDALONE venv.** The
+`odisseo` micromamba env (jax 0.9.0) is what took every number in §§1–13 of findings.md, and on
+it the distributed forward silently drops the cross-domain near field on most force calls after
+the first (XLA `ragged_all_to_all` stale-address defect; fixed in the 0.9.1 XLA:GPU plugin). The
+production venv is `/export/scratch/tbuck/venv_prod_jax0102`: `python -m venv` (NO
+`--system-site-packages` — that resolves `jax_plugins.xla_cuda12` to the old env's plugin `.so`
+while `pip list` says 0.10.2), `pip install "jax[cuda12]==0.10.2" numpy scipy jaxtyping beartype
+matplotlib imageio pillow diffrax equinox astropy autocvd`, then `pip install --no-deps -e` for
+yggdrax-main-wt, jaccpot, nornax, Odisseo. Verify with
+`python -c "import jax_plugins.xla_cuda12 as p; print(p.__file__)"` — it must be inside the venv.
+Any run on jax < 0.9.1 must pass `--halo-exchange buf` (accuracy-identical, no measurable cost at
+4 cards) and is otherwise computing garbage.
 
 Hardware these numbers were taken on: 8 x A100-PCIE-40GB, **no NVLink** (PIX/NODE/SYS only),
 GPUs 0-3 on NUMA 0 and 4-7 on NUMA 1, so any set of five or more crosses the CPU
@@ -66,13 +74,14 @@ seeded `default_rng` for the shuffle, so the same agama build gives the same fil
 DIFFERENT agama version may not. Prefer copying the `.npz` over regenerating if the numbers
 have to match exactly.
 
-## 1a. STOP: as of 2026-09-04 21:15 NO configuration of this lane is trustworthy for a rollout
+## 1a. RESOLVED (2026-09-04 22:55): the wrong forces were the halo exchange on jax 0.9.0
 
-Both MACs are ~45-50 % wrong (median particle ~16 %) on calls after the first once positions
-MOVE, with step time, dL/L, KE, overflow flags and finiteness all looking healthy. The
-identical-input test that cleared the criterion (1b below) was blind to it by construction.
-Do not launch a production run until `findings.md` section 13 is resolved; when you do, keep
-`--probe-every` on, because nothing else can see this.
+Both MACs were ~45–50 % wrong on force calls after the first because XLA's `ragged_all_to_all`
+returned its fill value once buffers moved (donation). Pure-JAX repro, full-pipeline confirmation
+with `--halo-exchange buf`, and the production configuration (jax 0.10.2, native) all in
+findings.md §14. The MACs, kernels, aligner and partition were innocent. **Every run must keep
+`--probe-every N` on**: it is the only instrument that saw this, and a later-step probe must sit
+in the step-0 class (~3e-3 rel-L2 at eps 1e-5) or the run is wrong.
 
 ## 1b. (SUPERSEDED by 1a -- kept as the record of an experiment that was blind) the MAC is a reproducibility requirement, not a trade-off
 
