@@ -887,3 +887,23 @@ accept mask is deterministic; its force is not, and by five orders of magnitude 
 criterion's.
 
 The criterion arm of the same experiment is pending at the time of writing.
+
+### Code reconnaissance while the criterion arm ran (facts, not conclusions)
+
+- `_chunked_pallas_nearfield_accumulate` is called at `jaccpot/distributed/fmm.py:2613`
+  OUTSIDE any `uses_criterion` branch: **both MACs share the near-field**. So if the criterion
+  arm is clean across four calls, the defect is not in the shared near-field kernel.
+- `grep input_output_aliases|donate` over `jaccpot/distributed/`, `jaccpot/pallas/`,
+  `jaccpot/nearfield/` finds **nothing**. The "aliased accumulator" form of the hypothesis is
+  not supported.
+- Under the criterion, `fmm.py:2308-2309` does `prepass_res = self_res` and then
+  `inter, nbr, self_res = build_interactions_and_neighbors(...)` -- the second self walk
+  REPLACES the lists the geometric path uses directly. Whatever the geometric path leaves in a
+  state that goes wrong on the second call, the criterion overwrites with a fresh walk.
+- The self far list is "packed into the front `[0, far_pair_count)` with a `-1` tail"
+  (`fmm.py:2198`, `:2532`); its validity mask is `(s_idx < s_active) & (s_src >= 0) &
+  (s_tgt >= 0)` (`:2484`), where `s_active` is the walk's count when present and otherwise a
+  `>= 0` census of the trimmed dual-tree list (`:2474-2478`).
+- The defect does NOT appear on forced-CPU devices at small N (the `--probe-every` smoke,
+  61,440 particles, 2 CPU devices, baseline near-field: rel_l2 1.120e-02 -> 1.109e-02 ->
+  1.135e-02 across steps 0/2/4). GPU-only until shown otherwise.
