@@ -1058,3 +1058,25 @@ order against a direct sum at the positions in that order. CPU smoke: raw == ali
 1.9e-07, `alignment_ok=True` at every step. `rollout_probe_align.sh` (chained on 1,3,4,6) runs
 five criterion steps with both checks. Raw accurate and aligned wrong => the mapping is the
 defect and the force was never wrong.
+
+### Ruled out (2026-09-04 evening), so the next reader does not redo them
+
+- **The Morton bounding box is per-call.** `fmm.py:1971` computes `bounds = global_bounds(pos_topo)`
+  inside the evaluate path and passes it to the local and coarse tree builds (`:1977`, `:2102`,
+  `:2106`). The partition-time bounds at `:1194-1197` serve only the `morton` partitioner's
+  initial layout. A frozen box is not the "wrong input".
+- **The harness's donation chain is legal.** `kick` has one output, so it can absorb only one of
+  its two donated inputs; had it consumed `an`, reusing `an` as the next step's `A` would raise
+  on GPU. Hundreds of steps never raised, and the CPU run is exact at every step.
+
+### The one structural difference between the clean and the broken experiment
+
+Identical-input calls: clean. Moving positions: wrong. The one thing that changes structurally
+between them is that the RCB partition is FROZEN at the IC while the particles drift, so by step 1
+some particles are owned by a device whose box they have left. Too few to move a median directly --
+but if a stray corrupts its device's coarse-tree extents, the cross-domain far field is wrong for
+every particle on that device, which is exactly a median-scale, MAC-independent effect.
+`single_call_repro.py` now runs each saved step under BOTH the frozen partition (positions loaded
+into the rollout's row order) and a fresh RCB on the step's own positions; `stray_analysis.py`
+counts strays per device per step and joins them with per-target errors. If frozen reproduces and
+fresh does not, this is it.
