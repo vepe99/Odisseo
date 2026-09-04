@@ -1267,7 +1267,7 @@ aligner, the frozen RCB partition and the queue cache were all innocent, as the 
 Standalone venv `/export/scratch/tbuck/venv_prod_jax0102` (jax 0.10.2 = jaccpot's floor; plugin
 from its own site-packages; editable jaccpot / yggdrax-main-wt / Odisseo; no sitecustomize pin),
 cards 1,3,4,6, same IC, same probe (`results/rollout_probe_jax0102_native.log`,
-`crit_jax0102_diag.json`), exit rc=pending:
+`crit_jax0102_diag.json`), exit rc=0:
 
 | step | 0.9.0 native (§13) | 0.9.0 `buf` (§14.4) | **0.10.2 native** | median |
 |---|---|---|---|---|
@@ -1275,10 +1275,10 @@ cards 1,3,4,6, same IC, same probe (`results/rollout_probe_jax0102_native.log`,
 | 1 | **0.45–0.50** | 4.1650e-3 | **4.1650e-3** | 6.69e-4 |
 | 2 | **0.45–0.50** | 2.5335e-3 | **2.5335e-3** | 6.62e-4 |
 | 3 | ~2.7e-3 | 2.7110e-3 | 2.7110e-3 | 6.43e-4 |
-| 4 | — | 3.1450e-3 | (pending) |  |
+| 4 | — | 3.1450e-3 | 3.1450e-3 | 6.96e-4 |
 
 Identical to the `buf` run to five significant figures at every step — two different exchange
-implementations, two JAX versions, one force. Step time 145–150 s (median ~148 s), the fastest of
+implementations, two JAX versions, one force. Step time 145–150 s (median 145.850 s), the fastest of
 the three. dL/L 1.66e-9 / 3.09e-9 at steps 1 / 2, same as `buf`.
 
 **Production is unblocked.** Launched 2026-09-04 ~22:57: 25,165,824 particles on 8 cards,

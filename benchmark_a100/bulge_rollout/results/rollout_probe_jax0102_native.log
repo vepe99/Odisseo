@@ -35,3 +35,13 @@ E0904 22:27:21.650977 3307842 slow_operation_alarm.cc:140] The operation took 11
 # PROBE step=3 RAW-in-Morton-order rel_l2=2.7110e-03  aligned rel_l2=2.7110e-03  alignment_ok=True
 # PROBE step=3 n=256 rel_l2=2.7110e-03 median=6.425e-04 p99=4.920e-03 max=7.131e-03 (113.6 s)
   step      3  t=0.0015   145.39s  dL/L=4.381e-09  com=9.475e-07  KE=3.790316e+01  fs=[0.009707,164]
+# PROBE step=4 gid_o implies Morton order with 0 descents (consistent; bounds are a host approximation, so a handful of descents at device seams is noise, thousands is not)
+# PROBE step=4 RAW-in-Morton-order rel_l2=3.1450e-03  aligned rel_l2=3.1450e-03  alignment_ok=True
+# PROBE step=4 n=256 rel_l2=3.1450e-03 median=6.959e-04 p99=6.136e-03 max=9.286e-03 (113.7 s)
+  step      4  t=0.0020   146.26s  dL/L=5.756e-09  com=1.263e-06  KE=3.790311e+01  fs=[0.009495,163.9]
+# 4 steps in 1541.3 s, median 145.850 s/step (122,220 particles/s)
+# wrote /export/scratch/tbuck/odisseo_runs/rollprobe_align/crit_jax0102_diag.json
+# checkpoint step 4 -> crit_jax0102_final.npz (517 MB)
+######## END rc=0 ########
+ROLLOUT-PROBE-JAX0102-NATIVE DONE
+CHAIN-JAX0102 DONE
