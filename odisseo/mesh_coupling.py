@@ -128,6 +128,21 @@ class MeshOptions:
     mac_cross_criterion : bool
         Whether the criterion also decides cross-domain pairs. Default True; False
         is the self-only ablation.
+    halo_exchange : str
+        Implementation of the LET halo exchange, forward and gradient path:
+        ``"auto"`` (default), ``"native"`` or ``"buf"``. **On jax < 0.9.1 the native
+        ``jax.lax.ragged_all_to_all`` keeps its FILL VALUE once buffers move** -- and
+        a donating leapfrog moves them every step -- so the cross-domain near field
+        silently vanishes (~45 % force error, rel-L2 0.45 against an fp64 direct sum
+        at 17.8M particles on 4 GPUs) while dL/L, energy, COM and every overflow flag
+        look healthy. Every mesh-lane rollout taken before 2026-09-04 had this.
+        ``"auto"`` resolves to ``"buf"`` on an affected JAX (the all_gather path,
+        identical forces, no measurable cost at 4 devices) and to the cheap native
+        exchange on jax >= 0.9.1. Requires jaccpot with the forward gate (2026-09) or
+        this module's own rebind, which is applied whenever the value is explicit.
+        The only instrument that sees the defect is a moving-position probe against
+        a direct sum at a step > 0; keep one on. Record:
+        ``benchmark_a100/bulge_rollout/findings.md`` section 14.
     external_acceleration : callable or None
         ``(positions) -> (N, 3)`` added to the self-gravity force each step. Used
         for an analytic halo the IC did not sample.
@@ -157,6 +172,10 @@ class MeshOptions:
     mac_type: str = "dehnen"
     adaptive_eps: Optional[float] = None
     mac_cross_criterion: bool = True
+    # See the docstring: on jax < 0.9.1 the native ragged exchange silently drops the
+    # cross-domain near field under buffer donation. "auto" is safe with a gated
+    # jaccpot; an explicit value is enforced here as well, for older jaccpots.
+    halo_exchange: str = "auto"
     verify_alignment: bool = True
     check_overflow_every: int = 10
     external_acceleration: Optional[Callable[[Any], Any]] = None
@@ -205,6 +224,10 @@ class MeshOptions:
         if self.adaptive_eps is not None and not (self.adaptive_eps > 0):
             raise ValueError(
                 f"adaptive_eps must be > 0, got {self.adaptive_eps!r}"
+            )
+        if self.halo_exchange not in ("auto", "native", "buf"):
+            raise ValueError(
+                f"halo_exchange must be 'auto', 'native' or 'buf', got {self.halo_exchange!r}"
             )
 
 
@@ -655,8 +678,26 @@ def integrate_mesh_jaccpot(
         mac_cross_criterion=bool(options.mac_cross_criterion),
     ).resolved_for(part.cap, options.ndev)
 
+    if options.halo_exchange != "auto":
+        # Belt and braces for a jaccpot from before its forward gate (2026-09-04),
+        # where `halo_exchange` reached only the gradient path: the same module-level
+        # rebind jaccpot applies, made permanent for this process. With a gated
+        # jaccpot the two agree (its own rebind is layered on top with the same value).
+        import functools
+
+        import yggdrax.distributed.let as _ygg_let
+
+        _ygg_let.ragged_all_to_all_exchange = functools.partial(
+            _ygg_let.ragged_all_to_all_exchange, method=options.halo_exchange
+        )
+
     mesh = make_mesh(options.ndev)
-    evaluate = make_force_evaluator(cfg, options.ndev, part.cap, mesh, jit=True)
+    # `halo_exchange` is a make_force_evaluator keyword, not a config field. With a
+    # jaccpot from before 2026-09-04 it reaches only the gradient path; the rebind
+    # above covers the forward there.
+    evaluate = make_force_evaluator(
+        cfg, options.ndev, part.cap, mesh, jit=True, halo_exchange=options.halo_exchange
+    )
     align = make_aligner(mesh, axis_name=options.axis_name)
 
     shard2 = NamedSharding(mesh, P(options.axis_name, None))

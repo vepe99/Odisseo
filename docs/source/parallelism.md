@@ -200,3 +200,32 @@ simulation = time_integration(initial_state, mass, config=config, params=params)
 Below a benchmark of this sharding scheme. It can be appreciated that for very large `N_particles` an almost linear scaling is achieved with respect to the number of GPUs.
 This benchmark was run on NVIDIA A100 with 40GB of memory.
 <img src="../../notebooks/scalability/gpu_scaling_combined.png" alt="Scalability" width="100%">
+
+## One large simulation across the GPUs of a node: the jaccpot mesh lane
+
+`odisseo.mesh_coupling.integrate_mesh_jaccpot` (options in `MeshOptions`) runs a single
+N-body system over all GPUs of one node with jaccpot's distributed FMM: the particles are
+split into spatial domains (RCB), each device builds its own tree and imports a *halo* of
+boundary particles from its neighbours, and a KDK leapfrog steps the whole system in one
+`shard_map` program. It has carried 25 million particles on 8×A100 (see
+`benchmark_a100/bulge_rollout/` for the exact setup and record).
+
+**Requirement: jax >= 0.9.1, verified as >= 0.10.2, in a venv without
+`--system-site-packages`.** On older JAX the collective that moves the halo
+(`jax.lax.ragged_all_to_all`) silently returns its fill value once its buffers move, and
+the donating leapfrog moves them every step: the cross-domain near field disappears —
+about a 45 % force error — while angular momentum, energy, centre of mass and every
+overflow flag look healthy. Every mesh-lane run before 2026-09-04 had this. Check the
+plugin that actually loaded, not `pip list`:
+
+```python
+import jax_plugins.xla_cuda12 as p; print(p.__file__)   # must be inside your venv
+```
+
+If the JAX cannot be changed, `MeshOptions(halo_exchange="buf")` (or
+`tools/mesh_galaxy_run.py --halo-exchange buf`) selects the all_gather exchange: identical
+forces, no measurable cost at 4 devices. And keep a moving-position probe on
+(`--probe-every N`: an fp64 direct sum for a few hundred random particles): it is the only
+instrument that sees this class of defect, because a run-it-twice reproducibility check
+reuses the same buffers and passes. Details: `benchmark_a100/bulge_rollout/findings.md`,
+section 14.
