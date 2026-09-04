@@ -1080,3 +1080,26 @@ every particle on that device, which is exactly a median-scale, MAC-independent 
 into the rollout's row order) and a fresh RCB on the step's own positions; `stray_analysis.py`
 counts strays per device per step and joins them with per-target errors. If frozen reproduces and
 fresh does not, this is it.
+
+### Two more rulings-out, and the blind spot in the alignment probe
+
+- **`pos_topo` / `pos_live` is not a split in our mode.** `fmm.py:1969-1995`: with
+  `differentiable=False`, `pos_topo = pos`, the value rows are `tree.positions_sorted` (the
+  tree's own reordering of the same array) and `gid_sorted = gid[perm]` from the same
+  `perm = tree.particle_indices`. The map and the rows come from ONE permutation and cannot
+  disagree with each other; the whole of `fn` is pure over `(pos, mass, gid, count)`.
+- **The alignment probe had a blind spot, now closed.** The aligner and `scatter_to_input_order`
+  both consume the evaluator's `gid_o`, so they agree even when `gid_o` is wrong -- and a wrong
+  `gid_o` also poisons the raw-Morton probe, whose reference is built at positions permuted by
+  it. A wrong MAP would have read as a wrong FORCE. Added: recompute the Morton keys of the
+  positions `gid_o` implies, with the evaluator's own encoding, and require them non-decreasing
+  per device. A mis-mapping breaks monotonicity; ties do not. (Ties themselves cannot be the
+  fault: tied particles share a 1.9e-05 cell and have near-identical accelerations.)
+
+The remaining candidate INSIDE the program is the halo exchange: a ragged all-to-all writes only
+the received regions of a caller-provided output buffer, and if XLA elides the zero-fill on the
+belief that the collective fully overwrites it, the tail beyond each device's received count is
+the previous call's halo. With a disc cut into thin RCB slabs most leaves are boundary leaves, so
+spurious remote sources would reach the median. Under investigation in the code; the per-device
+error breakdown in `stray_analysis.py` will show whether the damage concentrates on devices with
+two neighbours.
