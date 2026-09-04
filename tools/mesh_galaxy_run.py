@@ -150,7 +150,7 @@ def make_density_projector(mesh, res, axes, lo, hi):
     from jax.sharding import PartitionSpec as P
 
     try:
-        from jax.experimental.shard_map import shard_map
+        from jax import shard_map  # jax.experimental.shard_map is deprecated since 0.8
     except ImportError:  # pragma: no cover - newer jax
         from jax.experimental.shard_map import shard_map  # type: ignore
 
@@ -173,7 +173,7 @@ def make_density_projector(mesh, res, axes, lo, hi):
         mesh=mesh,
         in_specs=(P("gpus", None), P("gpus")),
         out_specs=P(),
-        check_rep=False,
+        check_vma=False,
     )
     return jax.jit(fn)
 
@@ -212,7 +212,7 @@ def make_aligner(mesh):
     import jax
     import jax.numpy as jnp
     from jax.sharding import PartitionSpec as P
-    from jax.experimental.shard_map import shard_map
+    from jax import shard_map  # jax.experimental.shard_map is deprecated since 0.8
 
     def local(v, gid_out, rk):
         ascending = v[jnp.argsort(gid_out.reshape(-1))]
@@ -223,7 +223,7 @@ def make_aligner(mesh):
         mesh=mesh,
         in_specs=(P("gpus", None), P("gpus", None), P("gpus")),
         out_specs=P("gpus", None),
-        check_rep=False,
+        check_vma=False,
     )
     return jax.jit(fn)
 
