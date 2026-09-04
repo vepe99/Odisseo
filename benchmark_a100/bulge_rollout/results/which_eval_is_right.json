@@ -1,0 +1,119 @@
+{
+ "N": 17825792,
+ "ndev": 4,
+ "leaf": 1024,
+ "probe": 512,
+ "neval": 4,
+ "results": {
+  "dehnen": {
+   "rel_l2_vs_truth": [
+    0.004967329402963124,
+    0.5385852132371753,
+    0.30964440261721027,
+    0.5214297910938942
+   ],
+   "pair_counts": [
+    {
+     "cross_far_pairs": 5669435,
+     "cross_near_pairs": 17079004,
+     "self_far_pairs": 2220382,
+     "self_near_pairs": 5386852
+    },
+    {
+     "cross_far_pairs": 5669435,
+     "cross_near_pairs": 17079004,
+     "self_far_pairs": 2220382,
+     "self_near_pairs": 5386852
+    },
+    {
+     "cross_far_pairs": 5669435,
+     "cross_near_pairs": 17079004,
+     "self_far_pairs": 2220382,
+     "self_near_pairs": 5386852
+    },
+    {
+     "cross_far_pairs": 5669435,
+     "cross_near_pairs": 17079004,
+     "self_far_pairs": 2220382,
+     "self_near_pairs": 5386852
+    }
+   ],
+   "pairwise": {
+    "0-1": 0.5653128027915955,
+    "0-2": 0.317274808883667,
+    "0-3": 0.5537591576576233,
+    "1-2": 0.531022310256958,
+    "1-3": 0.3454216420650482,
+    "2-3": 0.4631008803844452
+   },
+   "nonfinite": [
+    0,
+    0,
+    0,
+    0
+   ],
+   "accuracy_spread": 107.4255078626147,
+   "caps": {
+    "self_q": 1048576,
+    "self_int": 4096,
+    "cross_q": 2097152,
+    "cross_int": 8192
+   }
+  },
+  "dehnen_error": {
+   "rel_l2_vs_truth": [
+    0.003111692717769725,
+    0.003111689017209827,
+    0.0031116929431637915,
+    0.003111703181535848
+   ],
+   "pair_counts": [
+    {
+     "cross_far_pairs": 8033400,
+     "cross_near_pairs": 14018632,
+     "self_far_pairs": 5649944,
+     "self_near_pairs": 11779046
+    },
+    {
+     "cross_far_pairs": 8033400,
+     "cross_near_pairs": 14018632,
+     "self_far_pairs": 5649944,
+     "self_near_pairs": 11779046
+    },
+    {
+     "cross_far_pairs": 8033401,
+     "cross_near_pairs": 14018631,
+     "self_far_pairs": 5649944,
+     "self_near_pairs": 11779046
+    },
+    {
+     "cross_far_pairs": 8033400,
+     "cross_near_pairs": 14018632,
+     "self_far_pairs": 5649944,
+     "self_near_pairs": 11779046
+    }
+   ],
+   "pairwise": {
+    "0-1": 2.2235097674183635e-07,
+    "0-2": 2.2138591759812698e-07,
+    "0-3": 2.2266303290052747e-07,
+    "1-2": 2.1987078469010157e-07,
+    "1-3": 2.1683582929199474e-07,
+    "2-3": 2.1908574865392438e-07
+   },
+   "nonfinite": [
+    0,
+    0,
+    0,
+    0
+   ],
+   "accuracy_spread": 4.5519735239515504e-06,
+   "caps": {
+    "self_q": 1048576,
+    "self_int": 8192,
+    "cross_q": 4194304,
+    "cross_int": 16384
+   }
+  }
+ }
+}

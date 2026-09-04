@@ -907,3 +907,60 @@ The criterion arm of the same experiment is pending at the time of writing.
 - The defect does NOT appear on forced-CPU devices at small N (the `--probe-every` smoke,
   61,440 particles, 2 CPU devices, baseline near-field: rel_l2 1.120e-02 -> 1.109e-02 ->
   1.135e-02 across steps 0/2/4). GPU-only until shown otherwise.
+
+## 12. VERDICT: the criterion is trustworthy; the geometric MAC is not
+
+`which_eval_is_right.py`, complete (2026-09-04 20:50). Same input, same compiled program,
+four calls each, every call scored against ONE shared fp64 direct sum (512 targets):
+
+    call     dehnen_error (criterion)      dehnen (geometric)
+      0          3.111693e-03                 4.967e-03
+      1          3.111689e-03                 0.539
+      2          3.111693e-03                 0.310
+      3          3.111703e-03                 0.521
+    spread       4.55e-06                     107x
+    pairwise rel_l2, full population, all six pairs:
+                 2.17e-07 .. 2.23e-07         0.32 .. 0.57
+
+**The criterion's non-determinism is round-off, full stop.** Its accept mask wobbles by one
+pair in 3.5 million (`cross_far` 8,033,400 / 8,033,401), and the call where it wobbled is as
+accurate as the calls where it did not, to seven digits. Its aggregate reproduces across
+processes: 3.1117001e-03 (Sep-2 battery #3) against 3.111693e-03 today, same probe seed.
+There is nothing left to hunt in the criterion path.
+
+**The geometric MAC is wrong on every call after the first, by 30-54 %, each call differently,
+with an identical accept mask and every guard silent.** It is unsafe for anything that calls
+it more than once -- which is every rollout. Because both MACs share the near-field
+(`fmm.py:2613` is outside the criterion branch), the defect is not there. Under the criterion
+the second self walk REPLACES `inter, nbr, self_res` (`fmm.py:2308-2309`); under the geometric
+MAC the first walk's outputs are used directly. The bug lives in what that first walk leaves
+behind. Localisation continues in `geo_where.py` (which rows, fixed or moving, raw vs aligned).
+
+### What this settles for the galaxy run
+
+- **Configuration**: `mac_type="dehnen_error"`, `adaptive_eps=1e-5`, cross criterion ON. Not
+  a choice about accuracy any more -- it is the only configuration whose force is the same
+  number twice.
+- **The Sep-2 conclusion is reversed**: "geo is deterministic so it is the honest choice" was
+  wrong on both counts. Its accept mask is deterministic; its force is not. The criterion's
+  accept mask is not deterministic; its force is.
+- **Every geometric-MAC accuracy figure in this file** (1.52e-02 at 21 M / 6, 5.28e-03 and
+  4.97e-03 at 17.8 M / 4) is a first-call number and describes one call out of 489.
+  `rollout_probe.sh` (running) says whether the record's geometric rollouts were wrong from
+  step 2 when positions move, or only on identical repeated input.
+
+### The intermittent NaN, in this light
+
+A defect that produces call-to-call garbage in a small set of particles is exactly the kind
+that would occasionally produce `inf`. But the NaN was observed under the CRITERION, whose
+force is now shown clean across four identical calls. So either the criterion path is also
+affected at a rate too low for four calls to see, or the NaN has a different cause -- the
+rollout probe and a longer criterion run with the finiteness gate are what bound that now.
+
+### The measurement lesson, stated once
+
+An accuracy check against a reference cannot see this class of defect: every geometric call
+that is 50 % wrong overall is still accurate on the bulk of its particles, and a first-call
+probe -- which is what every harness in the stack ran -- sees the one call that is right.
+**Audit a force for reproducibility, and score a call other than the first.** A per-particle
+median hides rare garbage; a global L2 norm cannot.
