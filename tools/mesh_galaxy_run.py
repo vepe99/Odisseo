@@ -401,6 +401,13 @@ def main():  # noqa: C901
                          "(once at step 10 in ~14 steps, not reproducible); with the "
                          "finiteness gate a run now aborts in one step, and this makes that "
                          "cost a restart instead of the whole rollout.")
+    ap.add_argument("--snapshot-steps", default="",
+                    help="Comma-separated step indices at which to write a NON-rolling "
+                         "snapshot <prefix>_step<k>.npz (same format as the checkpoint). "
+                         "For re-evaluating a specific step's positions in isolation: a "
+                         "force that is wrong at steps 1-2 and right at 0 and 3 is either "
+                         "position-dependent (a single fresh call on X1 reproduces it) or "
+                         "call-order-dependent (it does not).")
     ap.add_argument("--checkpoint-every", type=int, default=0,
                     help="Write a full particle snapshot (positions + velocities in "
                          "ORIGINAL input order) every N steps, plus one at the end. "
@@ -757,6 +764,7 @@ def main():  # noqa: C901
         return pp, ll, com, ke
 
     n_reparts = 0
+    snapshot_steps = {int(t) for t in str(args.snapshot_steps).split(",") if t.strip()}
 
     def save_state(step_index, final=False):
         """Snapshot the particles in the caller's ORIGINAL order.
@@ -777,6 +785,8 @@ def main():  # noqa: C901
         st[oi, 0, :] = pos_rows
         st[oi, 1, :] = vel_rows
         suffix = "final" if final else "ckpt"
+        if final is None:  # step-indexed, non-rolling
+            suffix = f"step{int(step_index)}"
         dest = pathlib.Path(f"{args.out_prefix}_{suffix}.npz")
         # The temp name must ALSO end in .npz: np.savez appends the extension when the
         # path lacks it, so a ".npz.tmp" target is written as ".npz.tmp.npz" and the
@@ -996,6 +1006,8 @@ def main():  # noqa: C901
             run_probe(it, A_self, A_raw, gid_o)
         if args.checkpoint_every and it % args.checkpoint_every == 0:
             save_state(it)
+        if it in snapshot_steps:
+            save_state(it, final=None)
         if args.diag_every and it % args.diag_every == 0:
             p, l, com, ke = [np.asarray(z) for z in invariants(X, V, pstate["M"])]
             row = {
@@ -1007,6 +1019,16 @@ def main():  # noqa: C901
                 "com_drift": float(np.linalg.norm(com - com0)),
                 "ke": float(ke),
             }
+            # Per-step pair counts and flags. Until now only the FIRST force's were kept,
+            # which hid whether a step that computes a wrong force also walks a
+            # different tree. Both MACs see identical positions each step, so a
+            # position-dependent fault should show here as a count that moves.
+            _dec_all = decode_diag(diag)
+            for _f in ("self_near_pairs", "self_far_pairs", "cross_near_pairs",
+                       "cross_far_pairs"):
+                if _f in _dec_all:
+                    row[_f] = float(sum(_dec_all[_f]))
+            row["overflow_any"] = float(sum(overflow_flags(_dec_all).values()))
             if args.mac_type == "dehnen_error":
                 _dec = decode_diag(diag)
                 _lo, _hi = _dec.get("force_scale_min", []), _dec.get("force_scale_max", [])
