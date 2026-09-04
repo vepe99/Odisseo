@@ -292,13 +292,15 @@ def _build_fmm_solver(
                     if fmm_upward_leaf_batch_size is None
                     else int(fmm_upward_leaf_batch_size)
                 ),
+                fixed_order=(
+                    None if fmm_fixed_order is None else int(fmm_fixed_order)
+                ),
+                # Keep one global leaf-size contract per simulation: tree target
+                # and runtime leaf cap are tied to the same value.
+                fixed_max_leaf_size=int(leaf_size),
             ),
             mac_type=str(fmm_mac_type),
         ),
-        fixed_order=(None if fmm_fixed_order is None else int(fmm_fixed_order)),
-        # Keep one global leaf-size contract per simulation: tree target and
-        # runtime leaf cap are tied to the same value.
-        fixed_max_leaf_size=int(leaf_size),
     )
 
 
