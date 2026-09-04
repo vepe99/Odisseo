@@ -1103,3 +1103,86 @@ the previous call's halo. With a disc cut into thin RCB slabs most leaves are bo
 spurious remote sources would reach the median. Under investigation in the code; the per-device
 error breakdown in `stray_analysis.py` will show whether the damage concentrates on devices with
 two neighbours.
+
+## 14. The lead: XLA's `ragged_all_to_all` keeps its FILL VALUE after allocator churn (jax 0.9.0)
+
+**Status: under test** (2026-09-04 21:53, cards 0,2,5,7). Recorded before the result so the reasoning is
+on file either way.
+
+While reading the halo exchange as the last in-program candidate (§13), jaccpot's own
+`fmm.py::_grad_halo_exchange` turned out to document a defect with **our symptom's exact magnitude**:
+
+> a forward evaluated after one gradient silently drops the entire cross-domain near field and
+> reproduces the LOCAL-ONLY direct sum to 2e-16 (**rel-L2 0.42** against the true force)
+
+Our wrong steps are rel-L2 0.45–0.50, both MACs. The mechanism, per that docstring and
+`bench/repro_jax_ragged_all_to_all_grad.py`: in the XLA that jaxlib 0.9.0 pins,
+`RaggedAllToAllStartThunk::Initialize` **caches peer output-buffer device addresses from the first
+execution**; after allocator churn the kernel writes to stale addresses and the real output keeps
+its fill value (0 for `halo_posm` → zero-mass halo; −1 for `halo_gid` → `halo_valid` false). Fixed in
+XLA `4e0cc7e356`, shipped in **jax 0.9.1**. This box runs **jax 0.9.0 / jaxlib 0.9.0**.
+
+jaccpot observed it only via gradients and pinned only the gradient path (`halo_exchange` is
+"differentiable mode only", `fmm.py:2811`). The forward always runs `method="auto"` → `"native"` on
+GPU (`yggdrax/distributed/comm.py`). But the trigger is *allocator churn*, not the gradient — and our
+KDK loop **donates its buffers every step**, so the exchange's temporary buffers can move between
+calls. jaccpot's forward was only ever verified without churn.
+
+What it predicts, against what we measured:
+
+| prediction | observed |
+|---|---|
+| MAC-independent (halo sits under both walks) | geo and criterion equally wrong, §11 |
+| identical-input repeated calls clean (no churn) | criterion spread 4.55e-6, §12 |
+| error = missing cross-domain near field, ~0.42 | 0.45–0.50 |
+| address-dependent, so step-indexed and deterministic per process layout | good/bad/bad/good, identical in two processes |
+| stale-address writes land in memory now owned by something else | the intermittent NaN (§7) |
+| dL/L, COM, KE healthy — dropped pairs are mutual, so momentum-like invariants survive | §11 |
+
+Two tests, chained (`chain_buf.sh`):
+
+1. **Pure-JAX forward-only repro** (`ragged_forward_churn_repro.py`, adapted from the upstream
+   script, **no gradient**): `jit(shard_map(ragged_all_to_all))`, fresh input buffers per call,
+   optional donation, and varying-size junk kept alive across the call so the executable's temp
+   buffer moves. Four configs, one process each (the upstream caveat).
+2. **The decisive test**: `--halo-exchange buf` (new flag in `mesh_galaxy_run.py`; the same
+   module-level rebind jaccpot applies to its grad path, made permanent for the process, so the
+   forward uses the `all_gather` path that is "verified corruption-free") on the criterion rollout
+   probe, 4 steps, probe every step, cards 0,2,5,7. **Correct forces at steps 1–3 ⇒ the defect is
+   the native ragged exchange.** Wrong ⇒ this lead is dead and the halo is exonerated with it.
+
+The cards-0,2,5,7 chain (geo identical-input backend check → `geo_where`) was killed to run this:
+it tested a Pallas-state hypothesis already ruled out by reading (§13), and the 1,3,4,6 chain's
+baseline-vs-Pallas probe covers what was left of it.
+
+If confirmed, the fix options are: (a) upgrade to jax ≥ 0.9.1 (the two-JAX-versions note in memory
+says a second install exists on this box — check which); (b) run with `--halo-exchange buf`
+(bandwidth O(ndev²·block) instead of O(halo), cost to be measured at 17.8M/4 cards); (c) upstream:
+jaccpot's forward needs the same gate as its gradient path — `resolve_grad_halo_exchange` should
+govern `"auto"` in the forward too on affected JAX.
+
+### 14.1 Test 1 result: CONFIRMED in pure JAX, forward only, no gradient (21:55)
+
+`results/ragged_forward_churn_repro.py` / `.log`, jax 0.9.0, 2×A100, `jit(shard_map(ragged_all_to_all))`,
+40 calls each, one config per process:
+
+| config | result | pattern |
+|---|---|---|
+| donate + churn | **CORRUPT 35/40** | `.XXXXXXXXXXXXXXXXXXXXXXXX..XXX.XXXX.XXXX` |
+| donate only | **CORRUPT 36/40** | `.XXXXXXXX.XXXXXXXXXXXXXXX.XXXXXXXX.XXXXX` |
+| churn only | **CORRUPT 3/40** | `...X..........X......................X..` |
+| neither (identical buffers) | CLEAN 0/40 | `........................................` |
+
+Corrupt calls return `[-1 -1 -1 -1  3 4 7 8]`: device 0's output keeps the fill value, device 1's
+arrives — "which device varies" as upstream noted. The first call is always clean (it is the one
+whose addresses get cached), which is exactly our step 0. **Donation alone is sufficient** — no
+gradient, no jaccpot, no yggdrax — and our KDK donates every step. Churn without donation gives the
+intermittent profile; that is the NaN's rate class (§7: once in 10 steps, then clean for 14).
+
+The fourth row is why §12 was wrong: repeated identical-input calls reuse the same buffers, so the
+cached addresses stay valid and the exchange is correct. An identical-input reproducibility test is
+structurally blind to this defect. (`GPU rtol=0 needs a control` in memory said the same thing for a
+different reason.)
+
+Consequence, independent of test 2: **every distributed rollout produced on this box under jax 0.9.0
+with the native halo exchange and donated buffers is suspect**, not just this campaign's.

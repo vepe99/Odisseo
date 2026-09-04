@@ -1,0 +1,25 @@
+#### REPRO [--churn --donate]
+  iter   1: [-1. -1. -1. -1.  3.  4.  7.  8.]
+  iter   2: [-1. -1. -1. -1.  3.  4.  7.  8.]
+  iter   3: [-1. -1. -1. -1.  3.  4.  7.  8.]
+jax 0.9.0  donate=True churn=True  iters=40
+  .XXXXXXXXXXXXXXXXXXXXXXXX..XXX.XXXX.XXXX
+  -> CORRUPT (35/40 calls returned the fill value or garbage)
+#### REPRO [--churn]
+  iter   3: [-1. -1. -1. -1.  3.  4.  7.  8.]
+  iter  14: [-1. -1. -1. -1.  3.  4.  7.  8.]
+  iter  37: [-1. -1. -1. -1.  3.  4.  7.  8.]
+jax 0.9.0  donate=False churn=True  iters=40
+  ...X..........X......................X..
+  -> CORRUPT (3/40 calls returned the fill value or garbage)
+#### REPRO [--donate]
+  iter   1: [-1. -1. -1. -1.  3.  4.  7.  8.]
+  iter   2: [-1. -1. -1. -1.  3.  4.  7.  8.]
+  iter   3: [-1. -1. -1. -1.  3.  4.  7.  8.]
+jax 0.9.0  donate=True churn=False  iters=40
+  .XXXXXXXX.XXXXXXXXXXXXXXX.XXXXXXXX.XXXXX
+  -> CORRUPT (36/40 calls returned the fill value or garbage)
+#### REPRO []
+jax 0.9.0  donate=False churn=False  iters=40
+  ........................................
+  -> CLEAN (0/40 calls returned the fill value or garbage)

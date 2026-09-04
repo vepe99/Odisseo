@@ -357,6 +357,13 @@ def main():  # noqa: C901
     ap.add_argument("--no-mac-cross-criterion", dest="mac_cross_criterion",
                     action="store_false",
                     help="Self-only ablation: cross walk stays geometric.")
+    ap.add_argument("--halo-exchange", choices=("auto", "native", "buf"), default="auto",
+                    help="Implementation of the FORWARD LET halo exchange. jaccpot's own "
+                         "halo_exchange knob pins only the gradient path; 'auto' is the "
+                         "native jax.lax.ragged_all_to_all, which on jax < 0.9.1 under "
+                         "jit(shard_map) can keep its FILL VALUE after allocator churn "
+                         "(stale cached peer addresses; see jaccpot fmm._grad_halo_exchange). "
+                         "A donating KDK loop is allocator churn. 'buf' is the all_gather path.")
     ap.add_argument("--probe", type=int, default=0,
                     help="Measure the SELF-GRAVITY force error at t=0 against an "
                          "fp64 direct sum over ALL sources, for this many randomly "
@@ -488,7 +495,8 @@ def main():  # noqa: C901
         f"# N={n:,} ndev={args.ndev} leaf={args.leaf} theta={args.theta} order={args.order} dtype={args.dtype}\n"
         f"# G={g} halo_mass={halo_m} halo_rs={halo_rs} rdisk={rdisk} softening={soft:.5g}\n"
         f"# mac={args.mac_type} eps={args.adaptive_eps} cross_criterion={args.mac_cross_criterion} "
-        f"accum={args.nearfield_accum} nearfield_backend={args.nearfield_backend}\n"
+        f"accum={args.nearfield_accum} nearfield_backend={args.nearfield_backend} "
+        f"halo_exchange={args.halo_exchange}\n"
         f"# dt={args.dt} steps={args.steps} devices={[d.device_kind for d in jax.devices()][:args.ndev]}",
         flush=True,
     )
@@ -498,6 +506,16 @@ def main():  # noqa: C901
             "--mac-type dehnen_error requires --adaptive-eps: under the criterion "
             "theta no longer gates the self walk, so leaving eps unset would silently "
             "hand accuracy to a knob that decides nothing."
+        )
+    if args.halo_exchange != "auto":
+        # Rebind the FORWARD halo exchange -- the same module-level rebind jaccpot's
+        # _grad_halo_exchange applies to the gradient path, made permanent for this
+        # process. The evaluator has not been built yet, so every traced program
+        # below picks it up.
+        import functools
+        import yggdrax.distributed.let as _ygg_let
+        _ygg_let.ragged_all_to_all_exchange = functools.partial(
+            _ygg_let.ragged_all_to_all_exchange, method=args.halo_exchange
         )
     cfg = DistributedFMMConfig(
         leaf_size=args.leaf,
