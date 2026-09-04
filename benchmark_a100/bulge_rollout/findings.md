@@ -1186,3 +1186,27 @@ different reason.)
 
 Consequence, independent of test 2: **every distributed rollout produced on this box under jax 0.9.0
 with the native halo exchange and donated buffers is suspect**, not just this campaign's.
+
+### 14.2 Control: jax 0.9.1 is CLEAN on the same script (22:00)
+
+Throwaway venv `/export/scratch/tbuck/venv_jax091` (`jax[cuda12]==0.9.1`, nothing shared touched),
+same `ragged_forward_churn_repro.py`, same cards, `results/ragged_forward_churn_repro_jax091.log`:
+
+| config | jax 0.9.0 | jax 0.9.1 |
+|---|---|---|
+| donate | CORRUPT 36/40 | **CLEAN 0/40** |
+| donate + churn | CORRUPT 35/40 | **CLEAN 0/40** |
+| neither | CLEAN | CLEAN |
+
+The JAX version is the only variable. jaccpot's `JAX_RAGGED_GRAD_FIXED_VERSION = (0, 9, 1)` boundary
+holds for the forward too. Side note: envs/odisseo carries `jax-cuda12-pjrt 0.9.1` under
+`jax/jaxlib/jax-cuda12-plugin 0.9.0` — a mismatched runtime, corrupt as measured; the fix needs the
+full 0.9.1 set.
+
+Fix paths for production, in order of preference:
+1. **Overlay venv**: `python -m venv --system-site-packages` on envs/odisseo's interpreter with
+   `jax[cuda12]==0.9.1` installed inside — shadows the env's jax, leaves the shared env and the
+   editable jaccpot/yggdrax/nornax/agama installs untouched. Native halo exchange, no bandwidth
+   penalty. (Being built and import-tested now.)
+2. `--halo-exchange buf` on jax 0.9.0: O(ndev²·block) bandwidth; cost to be read off the buf probe.
+3. Upgrading envs/odisseo itself — the user's call, it is shared.
