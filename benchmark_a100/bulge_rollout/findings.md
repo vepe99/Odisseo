@@ -1289,3 +1289,16 @@ What "trust" now rests on, and what it does not: every step probed so far (0–4
 direct sum over all sources for 256 random targets, in the t=0 class. The production run keeps
 that instrument on at 25-step cadence; a probe that leaves the ~3e-3 class is the signal to stop.
 Not re-verified on 0.10.2: the 8-card memory estimate (29.1 GiB/card from §5, taken on 0.9.0).
+
+### 14.6 Upstream: the finding in the code, and the PRs (2026-09-05 00:20)
+
+Documented and enforced where a future reader will look, not only here:
+
+| repo | PR | what |
+|---|---|---|
+| jaccpot | [#322](https://github.com/TobiBu/jaccpot/pull/322) → main | `halo_exchange="auto"` gates the **forward** trace (was `if differentiable` only); docstrings corrected; `bench/repro_jax_ragged_all_to_all_forward.py`; `tests/distributed/test_forward_halo_donation.py` (donating, drifting loop vs direct sum every step); README section; audit-doc addendum |
+| yggdrax | [#69](https://github.com/TobiBu/yggdrax/pull/69) → main | `resolve_ragged_method`: `"auto"` → native only on gpu/tpu **and** jax ≥ 0.9.1 (`RAGGED_NATIVE_FIXED_JAX`); resolver unit tests; README section |
+| ODISSEO | [#23](https://github.com/vepe99/Odisseo/pull/23) → jaccpot-integration | this campaign; `MeshOptions.halo_exchange`; `docs/source/parallelism.md` mesh-lane section. (`main` carries neither the mesh nor the block-step lane.) |
+
+Production at the time of opening: 25,165,824 on 8×A100, **80 s/step**, dL/L 1e-9/step, probe at
+step 25 = 1.09e-3 (t=0: 4.98e-3). Projected finish ~11:00.
