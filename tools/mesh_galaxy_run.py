@@ -355,6 +355,15 @@ def main():  # noqa: C901
                          "chosen targets. 0 = skip. The subsampled reference means "
                          "rel_l2 is only comparable at the SAME --probe: the same "
                          "config reads 3.13e-3 at probe 192 and 4.42e-3 at 256.")
+    ap.add_argument("--probe-every", type=int, default=0,
+                    help="Re-score the force against a FRESH fp64 direct sum every N steps, "
+                         "not only at t=0. Exists because every accuracy number this lane "
+                         "ever produced was on the first force, and the geometric MAC was "
+                         "found to be 0.5 % accurate on its first call and 30-54 % wrong on "
+                         "every later call to the SAME input (identical accept mask, zero "
+                         "overflow flags, zero non-finite -- no other guard sees it). The "
+                         "reference is recomputed because positions have moved; ~225 s per "
+                         "probe at 17.8M on the host. 0 = t=0 only.")
     ap.add_argument("--probe-seed", type=int, default=20260901,
                     help="Seed for the probe's target choice, so two arms compare on "
                          "exactly the same targets.")
@@ -608,29 +617,43 @@ def main():  # noqa: C901
             )
         print(f"# force_scale range [{lo:.4g}, {hi:.4g}] ({hi / max(lo, 1e-300):.1f}x spread)",
               flush=True)
-    if args.probe > 0:
+    probe_history = []
+
+    def run_probe(step_index, a_self_arr):
+        """Score the SELF-GRAVITY force at this step against a fresh fp64 direct sum.
+
+        Targets are fixed by ``--probe-seed`` so every probe scores the same particles;
+        the reference is recomputed each time because they have moved. Row order: both
+        ``X`` and the aligned acceleration are in partition row order, and the targets
+        index rows, so a repartition between probes changes WHICH particles are scored
+        -- acceptable for a trend, but do not compare a probe across a repartition to
+        one before it particle-by-particle.
+        """
         t0 = time.perf_counter()
         pos_rows = np.asarray(jax.device_get(X))[:n]
         mass_rows = np.asarray(jax.device_get(pstate["M"]))[:n]
         rngp = np.random.default_rng(int(args.probe_seed))
         targets = np.sort(rngp.choice(n, size=int(args.probe), replace=False))
         a_ref = direct_sum_probe(pos_rows, mass_rows, targets, soft, g)
-        a_got = np.asarray(jax.device_get(A_self))[:n][targets].astype(np.float64)
+        a_got = np.asarray(jax.device_get(a_self_arr))[:n][targets].astype(np.float64)
         num = np.linalg.norm(a_got - a_ref, axis=1)
         den = np.linalg.norm(a_ref, axis=1)
         rel = num / np.maximum(den, 1e-300)
         rel_l2 = float(np.linalg.norm(num) / max(np.linalg.norm(den), 1e-300))
-        probe_stats = {
+        stats = {
+            "step": int(step_index),
             "probe": int(args.probe), "probe_seed": int(args.probe_seed),
             "rel_l2": rel_l2, "rel_median": float(np.median(rel)),
             "rel_p99": float(np.quantile(rel, 0.99)), "rel_max": float(rel.max()),
             "seconds": round(time.perf_counter() - t0, 2),
         }
-        print(f"# PROBE n={args.probe} rel_l2={rel_l2:.4e} median={np.median(rel):.3e} "
-              f"p99={np.quantile(rel, 0.99):.3e} max={rel.max():.3e} "
-              f"({probe_stats['seconds']:.1f} s)", flush=True)
-    else:
-        probe_stats = None
+        probe_history.append(stats)
+        print(f"# PROBE step={step_index} n={args.probe} rel_l2={rel_l2:.4e} "
+              f"median={np.median(rel):.3e} p99={np.quantile(rel, 0.99):.3e} "
+              f"max={rel.max():.3e} ({stats['seconds']:.1f} s)", flush=True)
+        return stats
+
+    probe_stats = run_probe(0, A_self) if args.probe > 0 else None
     print(f"# self_near={sum(diag0.get('self_near_pairs', [0])):,.0f} "
           f"cross_near={sum(diag0.get('cross_near_pairs', [0])):,.0f} overflow={ovf}", flush=True)
     if any(v > 0 for v in ovf.values()):
@@ -653,13 +676,13 @@ def main():  # noqa: C901
 
     def kdk(x, v, a, dt):
         xn, vh = drift(x, v, a, dt)
-        an, _gid, dg, _raw, _self = force(xn)
+        an, _gid, dg, _raw, a_self_n = force(xn)
         # The diagnostic vector is RETURNED, not dropped. It used to be discarded
         # here, which left `diag` in the step loop bound to the FIRST force forever --
         # so the periodic overflow check re-validated step 0 on every cadence and could
         # never see a capacity that overflowed later, which is the only reason the check
         # exists. Caps are static; pair counts are not.
-        return xn, kick(vh, an, dt), an, dg
+        return xn, kick(vh, an, dt), an, dg, a_self_n
 
     def invariants(x, v, m):
         """Momentum, angular momentum, COM and KE -- reduced in float64 on the host.
@@ -838,7 +861,7 @@ def main():  # noqa: C901
     t_run0 = time.perf_counter()
     for it in range(step0 + 1, args.steps + 1):
         t0 = time.perf_counter()
-        X, V, A, diag = kdk(X, V, A, args.dt)
+        X, V, A, diag, A_self = kdk(X, V, A, args.dt)
         jax.block_until_ready(X)
         step_times.append(time.perf_counter() - t0)
 
@@ -908,7 +931,7 @@ def main():  # noqa: C901
             pathlib.Path(f"{args.out_prefix}_diag.json").write_text(json.dumps({
                 "args": vars(args), "n": n, "cap": cap, "softening": soft,
                 "rows": rows, "step_times": [round(t, 4) for t in step_times],
-                "probe": probe_stats, "num_repartitions": n_reparts,
+                "probe": probe_stats, "probe_history": probe_history, "num_repartitions": n_reparts,
                 "aborted_at_step": it, "nonfinite_counts": bad,
                 "force_scale_min": fs[0], "force_scale_max": fs[1],
                 "overflow": overflow_flags(dec), "partial": True,
@@ -926,6 +949,8 @@ def main():  # noqa: C901
                 f"Refusing to continue -- a non-finite state makes the tree degenerate "
                 f"and the traversal never terminates. Diagnostics and a snapshot written."
             )
+        if args.probe > 0 and args.probe_every and it % args.probe_every == 0:
+            run_probe(it, A_self)
         if args.checkpoint_every and it % args.checkpoint_every == 0:
             save_state(it)
         if args.diag_every and it % args.diag_every == 0:
@@ -973,7 +998,7 @@ def main():  # noqa: C901
         "args": vars(args), "n": n, "cap": cap, "softening": soft,
         "median_step_s": med, "total_s": total, "first_diag": diag0,
         "rows": rows, "step_times": [round(t, 4) for t in step_times],
-        "probe": probe_stats, "num_repartitions": n_reparts,
+        "probe": probe_stats, "probe_history": probe_history, "num_repartitions": n_reparts,
         "wall_total_s": time.perf_counter() - t_wall0,
     }, indent=1))
     print(f"# wrote {out}", flush=True)

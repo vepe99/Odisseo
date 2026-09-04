@@ -837,3 +837,53 @@ not with an error. `DistributedFMMConfig` defaults `m2l_chunk` and `nearfield_ch
 **None**, i.e. full-batch, which is what produced the 292.86 GiB OOM in battery #2; the run
 script's 65536 / 512 are what make any large-N config viable, and a hand-built config must
 pass them.
+
+## 11. THE GEOMETRIC MAC IS WRONG ON EVERY CALL AFTER THE FIRST
+
+`which_eval_is_right.py` (2026-09-04), 17,825,792 / 4 cards / leaf 1024, four evaluations of
+the SAME input through the SAME compiled program, each scored against ONE shared fp64 direct
+sum over all sources for 512 targets. `mac_type="dehnen"`:
+
+    eval   rel_l2 vs fp64 truth   accept mask (self_near / cross_near / cross_far)
+      0        4.967e-03           5,386,852 / 17,079,004 / 5,669,435
+      1        5.386e-01           identical
+      2        3.096e-01           identical
+      3        5.214e-01           identical
+    spread across the four calls: 107x. Non-finite: 0. Overflow flags: all clear, every call.
+
+    full-population pairwise rel_l2 (proper norms, all 17.8 M particles):
+        0-1 0.565   0-2 0.317   0-3 0.554   1-2 0.531   1-3 0.345   2-3 0.463
+
+**The first call is accurate. Every later call is 30-54 % wrong, and each is wrong
+DIFFERENTLY.** The accept mask does not move, so the traversal takes the same pairs every
+time -- the arithmetic downstream of it is what changes. And no existing guard can see it:
+pair counts are stable, overflow flags are clear, nothing is non-finite. Only scoring the
+force against an independent reference on a call other than the first shows it.
+
+This reconciles with the Sep-2 pairwise data (evals 1-3 agreeing at 1e-07 per-particle
+MEDIAN while differing by 35-53 % in L2): the bulk of the particles are fine after the first
+call, and a small, call-to-call-varying set carries values large enough to dominate any L2
+norm -- the 2.7e+28 maximum of section 10 was one of them. A median cannot see them; a 512-
+target probe catches them about one time in twenty; a full-population norm cannot miss them.
+
+**That signature -- clean on the first call, rare garbage on later calls, different garbage
+each time -- is a buffer that is zero on first allocation and reused without being re-zeroed.**
+Hypothesis, not yet located in code.
+
+### What this does to the record
+
+Every accuracy number this lane has ever produced was measured on the FIRST force -- the
+probe ran once, at t=0, in every harness including jaccpot's own ladder. So the geometric
+MAC's rel_l2 figures (1.52e-02 at 21 M / 6 cards, 5.28e-03 at 17.8 M / 4 cards) describe a
+call that a rollout makes exactly once. Whether the 127-step and 8-step geometric rollouts
+were silently wrong at every step after the first depends on whether this fires when
+positions CHANGE between calls, or only on identical repeated input. `rollout_probe.sh`
+(`--probe-every 1`, three real steps, fresh fp64 reference each step, both MACs) answers
+that. Until it does, no geometric-MAC rollout result in this file should be cited as
+validated beyond its first force.
+
+**The Sep-2 line "if geo is deterministic it is the honest choice to run" is now false.** Its
+accept mask is deterministic; its force is not, and by five orders of magnitude more than the
+criterion's.
+
+The criterion arm of the same experiment is pending at the time of writing.
