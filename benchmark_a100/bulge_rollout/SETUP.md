@@ -66,11 +66,36 @@ seeded `default_rng` for the shuffle, so the same agama build gives the same fil
 DIFFERENT agama version may not. Prefer copying the `.npz` over regenerating if the numbers
 have to match exactly.
 
+## 1b. READ THIS FIRST: the MAC is a reproducibility requirement, not a trade-off
+
+`mac_type="dehnen_error"` is the ONLY configuration whose force is the same number twice.
+Measured 2026-09-04 (`which_eval_is_right.py`, four calls of the same input through the same
+compiled program, each against one fp64 direct sum, 17,825,792 / 4 cards / leaf 1024):
+
+    call     dehnen_error        dehnen (geometric)
+      0      3.111693e-03        4.967e-03
+      1      3.111689e-03        0.539
+      2      3.111693e-03        0.310
+      3      3.111703e-03        0.521
+
+**The geometric MAC is 30-54 % wrong on every call after the first**, differently each time,
+with an identical accept mask, all overflow flags clear and nothing non-finite -- no guard
+sees it, and every accuracy figure ever taken for it was on the first call. Do not run
+`mac_type="dehnen"` for anything that evaluates the force more than once. The criterion's
+own non-determinism is a +-1-pair tie-break at the acceptance boundary with a force effect at
+round-off (pairwise rel_l2 2.2e-07) and zero effect on accuracy.
+
+Score a call other than the first: `--probe-every N` re-scores the force against a fresh fp64
+direct sum on a cadence. A t=0 probe alone is what let this go unnoticed.
+
+`findings.md` sections 10-12 have the full record.
+
 ## 2. The run
 
     N 21 012 480, 6 x A100, RCB partitioner
     leaf 1024, theta 0.7, order 6, fp32 state, nearfield_accum = wide
     mac_type dehnen_error, adaptive_eps 1e-5, cross criterion ON, caps DERIVED
+                                        ^ REQUIRED for reproducibility -- see section 1b
     dt 5e-4, 489 steps = 0.2445 code = 36.4 Myr
     softening 0.008278 (82.8 pc, the script's derived value = 0.5*rdisk/sqrt(N/1e5))
 
@@ -241,10 +266,10 @@ of how little they change:
    every host-side step that currently assumes all rows locally. The mesh lane has never run
    multi-node. This is real work, not a flag.
 
-The geometric fallback is much lighter and is a legitimate answer if only 40 GB cards are
-available: `--mac-type dehnen --leaf 512` measured 63.66 s/step at ~31.4 GB per card and
-rel_l2 1.5200e-02, i.e. 3.77x worse forces, with the full quarter orbit in 17.3 h at
-dt 2.5e-4 (978 steps).
+**There is no geometric fallback.** `--mac-type dehnen` was measured 30-54 % wrong on every
+force evaluation after the first (section 1b); its 63.66 s/step and rel_l2 1.52e-02 are
+first-call numbers. If only 40 GB cards are available and the criterion does not fit, the
+answer is a larger leaf or fewer particles, not the geometric MAC.
 
 Also note the derived softening depends only on N, so it is unchanged by ndev or leaf; and
 `--steps` must be recomputed if `--dt` changes, as `ceil(0.2443 / dt)`.
