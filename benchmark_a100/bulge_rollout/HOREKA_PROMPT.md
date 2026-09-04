@@ -51,6 +51,17 @@ Measured on 6xA100-40GB: 136.3 s/step, 18.5 h for 489 steps, force rel_l2 4.03e-
 an fp64 direct sum, dL/L 2.3e-09 after 6 steps, every overflow flag clear, peak 40,105 MiB
 on the coordinator card and ~31,450 MiB on each worker.
 
+## Why the MAC is not negotiable (settled 2026-09-04)
+
+`mac_type=dehnen_error` is the ONLY configuration whose force is the same number twice. Four
+calls of the same input through the same compiled program, each vs one fp64 direct sum:
+criterion 3.111689e-03..3.111703e-03 (spread 4.6e-06); geometric `dehnen` 4.97e-03 on the
+first call then 0.539 / 0.310 / 0.521 -- 30-54 % wrong on every later call, identical accept
+mask, all overflow flags clear, nothing non-finite. **No guard sees it, and every accuracy
+number ever taken for the geometric MAC was on the first call.** Do not run `dehnen` for a
+rollout, and do not accept a t=0 probe as validation: use `--probe-every 50` so the force is
+scored on later steps too. Details: findings.md sections 10-12.
+
 ## The one thing that decides whether it runs at all
 
 This lane is SINGLE-PROCESS: one shard_map mesh over jax.devices(), and the host side (RCB
@@ -95,7 +106,10 @@ Submit a 4-step job first (--steps 4, no --render-every, keep --probe 256) and c
   2. "# force_scale range [...]" is NOT constant. Constant means the criterion silently fell
      back to eps*1, which accepts more and runs FASTER. Expect a spread of ~2e4 on this IC.
   3. overflow={...} all zero. A truncated walk reads FASTER and computes a wrong force.
-  4. "# PROBE ... rel_l2" ~= 4.03e-03. Only comparable at --probe 256 --probe-seed 20260901.
+  4. "# PROBE step=0 ... rel_l2" ~= 4.03e-03 (6 cards/21M) or 2.88e-03 (4 cards/17.8M); only
+     comparable at --probe 256 --probe-seed 20260901. Then "# PROBE step=50 ..." and later
+     MUST stay at that level -- a later-step probe drifting to 1e-1 is the geometric-MAC
+     defect and means the configuration is not the one specified here.
   5. "realignment verified against scatter_to_input_order"
   6. peak memory per card, against the table above
 Only then submit the full 489 steps.
@@ -113,6 +127,10 @@ Only then submit the full 489 steps.
 - --m2l-chunk and --nearfield-chunk do NOT reduce the buffer that OOMs at leaf 512; measured
   byte-identical OOM (46.17 GiB) with chunks 8x and 4x smaller.
 - Request exclusive nodes. A shared card ruins the timing and can OOM a 20-hour job.
+- The rollout script has a per-step finiteness gate, --restart-from (baseline carried in the
+  snapshot) and a rolling checkpoint every 20 steps; the reference wrapper is
+  benchmark_a100/bulge_rollout/results/launch_used.sh's successor `run_25m_8card.sh` pattern:
+  retry ONLY a "NON-FINITE STATE" abort, never an OOM or timeout.
 
 ## What I want out of it
 
