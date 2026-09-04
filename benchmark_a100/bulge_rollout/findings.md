@@ -1235,3 +1235,29 @@ jax 0.10.2 + editable jaccpot / yggdrax-main-wt / Odisseo — jaccpot's CI-teste
 exchange, no shared env touched, no sitecustomize pin needed (yggdrax installs from the worktree
 directly). Gate before any production step: the moving-position probe (`rollout_probe_jax091.sh`
 retargeted at this venv) must be correct at steps 1–3.
+
+### 14.4 Test 2 result: the full pipeline is CORRECT with the forward exchange pinned to `buf` (22:40)
+
+jax 0.9.0, cards 0,2,5,7, 17.8M disc+bulge, criterion (eps 1e-5), leaf 1024, moving positions,
+fp64 direct-sum probe of 256 targets at EVERY step (`results/rollout_probe_buf_jax090.log`,
+`crit_buf_diag.json`):
+
+| step | native halo (§13, two processes) | **`--halo-exchange buf`** | median | dL/L |
+|---|---|---|---|---|
+| 0 | 2.88e-3 | 2.8766e-3 | 6.66e-4 | — |
+| 1 | **0.45–0.50** | **4.1650e-3** | 6.69e-4 | 1.66e-9 |
+| 2 | **0.45–0.50** | **2.5335e-3** | 6.62e-4 | 3.09e-9 |
+| 3 | ~2.7e-3 | 2.7110e-3 | 6.43e-4 | 4.38e-9 |
+| 4 | — | 3.1450e-3 | 6.96e-4 | 5.75e-9 |
+
+Alignment verified and gid_o Morton-monotone at every step. **Every probed step is in the
+t=0 accuracy class.** The step-indexed good/bad/bad/good pattern is gone with the one change.
+
+Two things the healthy-looking invariants were hiding: dL/L per step is now **~1.5e-9**, not the
+1.45e-7 the native-halo runs showed (§3's "projected 7.2e-5 over 489 steps" was 100× too pessimistic
+— it was measuring the defect, not the integrator). And `buf` costs **nothing measurable at 4 cards**:
+153.3–153.8 s/step against 154.4 s native (it is the same O(ndev²·block) all_gather the gradient
+path already uses; at 8 cards the factor is 4× larger, untested).
+
+Conclusion: the halo exchange was the whole defect. The MACs, the Pallas near-field kernels, the
+aligner, the frozen RCB partition and the queue cache were all innocent, as the reading in §13 said.

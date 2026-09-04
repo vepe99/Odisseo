@@ -1,0 +1,109 @@
+#### REPRO [--churn --donate] 2026-09-04T21:53:52+02:00
+Traceback (most recent call last):
+  File "/tmp/claude-2701/-export-home-tbuck-Odisseo/a39fa1ce-5bcc-4d98-a2cb-fc5d97be87b5/scratchpad/ragged_forward_churn_repro.py", line 71, in <module>
+    main()
+    ~~~~^^
+  File "/tmp/claude-2701/-export-home-tbuck-Odisseo/a39fa1ce-5bcc-4d98-a2cb-fc5d97be87b5/scratchpad/ragged_forward_churn_repro.py", line 57, in main
+    y = np.asarray(run(x, sizes, in_off, out_off, rec))
+                   ~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/claude-2701/-export-home-tbuck-Odisseo/a39fa1ce-5bcc-4d98-a2cb-fc5d97be87b5/scratchpad/ragged_forward_churn_repro.py", line 30, in body
+    return jax.lax.ragged_all_to_all(x, out, in_off, sizes, out_off, rec, axis_name="gpus")
+           ~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ValueError: ragged_all_to_all input_offsets must be rank 1 with positive dimension size, but got shape (1, 2)
+--------------------
+For simplicity, JAX has removed its internal frames from the traceback of the following exception. Set JAX_TRACEBACK_FILTERING=off to include these.
+#### REPRO rc=1
+#### REPRO [--churn] 2026-09-04T21:53:55+02:00
+Traceback (most recent call last):
+  File "/tmp/claude-2701/-export-home-tbuck-Odisseo/a39fa1ce-5bcc-4d98-a2cb-fc5d97be87b5/scratchpad/ragged_forward_churn_repro.py", line 71, in <module>
+    main()
+    ~~~~^^
+  File "/tmp/claude-2701/-export-home-tbuck-Odisseo/a39fa1ce-5bcc-4d98-a2cb-fc5d97be87b5/scratchpad/ragged_forward_churn_repro.py", line 57, in main
+    y = np.asarray(run(x, sizes, in_off, out_off, rec))
+                   ~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/claude-2701/-export-home-tbuck-Odisseo/a39fa1ce-5bcc-4d98-a2cb-fc5d97be87b5/scratchpad/ragged_forward_churn_repro.py", line 30, in body
+    return jax.lax.ragged_all_to_all(x, out, in_off, sizes, out_off, rec, axis_name="gpus")
+           ~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ValueError: ragged_all_to_all input_offsets must be rank 1 with positive dimension size, but got shape (1, 2)
+--------------------
+For simplicity, JAX has removed its internal frames from the traceback of the following exception. Set JAX_TRACEBACK_FILTERING=off to include these.
+#### REPRO rc=1
+#### REPRO [--donate] 2026-09-04T21:53:58+02:00
+Traceback (most recent call last):
+  File "/tmp/claude-2701/-export-home-tbuck-Odisseo/a39fa1ce-5bcc-4d98-a2cb-fc5d97be87b5/scratchpad/ragged_forward_churn_repro.py", line 71, in <module>
+    main()
+    ~~~~^^
+  File "/tmp/claude-2701/-export-home-tbuck-Odisseo/a39fa1ce-5bcc-4d98-a2cb-fc5d97be87b5/scratchpad/ragged_forward_churn_repro.py", line 57, in main
+    y = np.asarray(run(x, sizes, in_off, out_off, rec))
+                   ~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/claude-2701/-export-home-tbuck-Odisseo/a39fa1ce-5bcc-4d98-a2cb-fc5d97be87b5/scratchpad/ragged_forward_churn_repro.py", line 30, in body
+    return jax.lax.ragged_all_to_all(x, out, in_off, sizes, out_off, rec, axis_name="gpus")
+           ~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ValueError: ragged_all_to_all input_offsets must be rank 1 with positive dimension size, but got shape (1, 2)
+--------------------
+For simplicity, JAX has removed its internal frames from the traceback of the following exception. Set JAX_TRACEBACK_FILTERING=off to include these.
+#### REPRO rc=1
+#### REPRO [] 2026-09-04T21:54:01+02:00
+Traceback (most recent call last):
+  File "/tmp/claude-2701/-export-home-tbuck-Odisseo/a39fa1ce-5bcc-4d98-a2cb-fc5d97be87b5/scratchpad/ragged_forward_churn_repro.py", line 71, in <module>
+    main()
+    ~~~~^^
+  File "/tmp/claude-2701/-export-home-tbuck-Odisseo/a39fa1ce-5bcc-4d98-a2cb-fc5d97be87b5/scratchpad/ragged_forward_churn_repro.py", line 57, in main
+    y = np.asarray(run(x, sizes, in_off, out_off, rec))
+                   ~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/claude-2701/-export-home-tbuck-Odisseo/a39fa1ce-5bcc-4d98-a2cb-fc5d97be87b5/scratchpad/ragged_forward_churn_repro.py", line 30, in body
+    return jax.lax.ragged_all_to_all(x, out, in_off, sizes, out_off, rec, axis_name="gpus")
+           ~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ValueError: ragged_all_to_all input_offsets must be rank 1 with positive dimension size, but got shape (1, 2)
+--------------------
+For simplicity, JAX has removed its internal frames from the traceback of the following exception. Set JAX_TRACEBACK_FILTERING=off to include these.
+#### REPRO rc=1
+#### BUF PROBE 2026-09-04T21:54:03+02:00
+######## ROLLOUT-PROBE-ALIGN crit 2026-09-04T21:54:03+02:00 ########
+# N=17,825,792 ndev=4 leaf=1024 theta=0.7 order=6 dtype=float32
+# G=1.0 halo_mass=100.0 halo_rs=2.0 rdisk=0.24 softening=0.0089879
+# mac=dehnen_error eps=1e-05 cross_criterion=True accum=wide nearfield_backend=auto halo_exchange=buf
+# dt=0.0005 steps=4 devices=['NVIDIA A100-PCIE-40GB', 'NVIDIA A100-PCIE-40GB', 'NVIDIA A100-PCIE-40GB', 'NVIDIA A100-PCIE-40GB']
+# caps: self_queue=1,048,576 self_nbr=8,192 self_int=8,192 | cross_queue=4,194,304 cross_nbr=32,768 cross_int=16,384
+# evaluator built in 0.4 s
+/export/home/tbuck/Odisseo/tools/mesh_galaxy_run.py:215: DeprecationWarning: jax.experimental.shard_map is deprecated in v0.8.0. Used jax.shard_map instead.
+  from jax.experimental.shard_map import shard_map
+E0904 21:57:19.779307 3275625 slow_operation_alarm.cc:73] 
+********************************
+[Compiling module input_reduce_fusion.2 for GPU] Very slow compile? If you want to file a bug, run with envvar XLA_FLAGS=--xla_dump_to=/tmp/foo and attach the results.
+********************************
+E0904 22:06:27.795738 3275589 slow_operation_alarm.cc:140] The operation took 11m8.016559415s
+
+********************************
+[Compiling module input_reduce_fusion.2 for GPU] Very slow compile? If you want to file a bug, run with envvar XLA_FLAGS=--xla_dump_to=/tmp/foo and attach the results.
+********************************
+# first force (compile incl.) 1018.2 s
+# realignment verified against scatter_to_input_order (3.1 s)
+# force_scale range [0.009708, 169.7] (17478.0x spread)
+# PROBE step=0 gid_o implies Morton order with 0 descents (consistent; bounds are a host approximation, so a handful of descents at device seams is noise, thousands is not)
+# PROBE step=0 RAW-in-Morton-order rel_l2=2.8766e-03  aligned rel_l2=2.8766e-03  alignment_ok=True
+# PROBE step=0 n=256 rel_l2=2.8766e-03 median=6.659e-04 p99=5.044e-03 max=7.792e-03 (111.9 s)
+# self_near=11,779,046 cross_near=14,018,632 overflow={'cross_queue_overflow': 0.0, 'cross_far_overflow': 0.0, 'cross_near_overflow': 0.0, 'self_queue_overflow': 0.0, 'self_far_overflow': 0.0, 'self_near_overflow': 0.0, 'l2l_level_overflow': 0.0}
+# t=0  |L|=9.556678e+00  KE=3.790326e+01  com=[1.92e-04 4.60e-05 8.90e-05]
+# PROBE step=1 gid_o implies Morton order with 0 descents (consistent; bounds are a host approximation, so a handful of descents at device seams is noise, thousands is not)
+# PROBE step=1 RAW-in-Morton-order rel_l2=4.1650e-03  aligned rel_l2=4.1650e-03  alignment_ok=True
+# PROBE step=1 n=256 rel_l2=4.1650e-03 median=6.688e-04 p99=6.875e-03 max=1.238e-02 (112.3 s)
+  step      1  t=0.0005   153.57s  dL/L=1.660e-09  com=3.162e-07  KE=3.790323e+01  fs=[0.009708,164]
+# PROBE step=2 gid_o implies Morton order with 0 descents (consistent; bounds are a host approximation, so a handful of descents at device seams is noise, thousands is not)
+# PROBE step=2 RAW-in-Morton-order rel_l2=2.5335e-03  aligned rel_l2=2.5335e-03  alignment_ok=True
+# PROBE step=2 n=256 rel_l2=2.5335e-03 median=6.615e-04 p99=4.366e-03 max=6.885e-03 (111.8 s)
+  step      2  t=0.0010   153.31s  dL/L=3.093e-09  com=6.320e-07  KE=3.790320e+01  fs=[0.009708,165.1]
+# PROBE step=3 gid_o implies Morton order with 0 descents (consistent; bounds are a host approximation, so a handful of descents at device seams is noise, thousands is not)
+# PROBE step=3 RAW-in-Morton-order rel_l2=2.7110e-03  aligned rel_l2=2.7110e-03  alignment_ok=True
+# PROBE step=3 n=256 rel_l2=2.7110e-03 median=6.425e-04 p99=4.920e-03 max=7.131e-03 (112.7 s)
+  step      3  t=0.0015   153.31s  dL/L=4.380e-09  com=9.475e-07  KE=3.790316e+01  fs=[0.009707,164]
+# PROBE step=4 gid_o implies Morton order with 0 descents (consistent; bounds are a host approximation, so a handful of descents at device seams is noise, thousands is not)
+# PROBE step=4 RAW-in-Morton-order rel_l2=3.1450e-03  aligned rel_l2=3.1450e-03  alignment_ok=True
+# PROBE step=4 n=256 rel_l2=3.1450e-03 median=6.958e-04 p99=6.136e-03 max=9.285e-03 (113.0 s)
+  step      4  t=0.0020   153.81s  dL/L=5.753e-09  com=1.263e-06  KE=3.790311e+01  fs=[0.009495,163.9]
+# 4 steps in 1546.9 s, median 153.442 s/step (116,173 particles/s)
+# wrote /export/scratch/tbuck/odisseo_runs/rollprobe_align/crit_buf_diag.json
+# checkpoint step 4 -> crit_buf_final.npz (517 MB)
+######## END rc=0 ########
+ROLLOUT-PROBE-ALIGN DONE
+CHAIN-BUF DONE
