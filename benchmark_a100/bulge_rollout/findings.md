@@ -786,3 +786,54 @@ the earlier stable 127-step 21 M rollout ran the geometric MAC and never touched
 **This decides the production configuration too.** An irreproducible 2.88e-03 is worth less
 than a reproducible 1.52e-02: if `geo` is deterministic it is the honest choice to run, and
 the criterion's 3.77x accuracy advantage is unbankable until this is fixed.
+
+### Localisation results (2026-09-02 evening; recorded 09-04 -- they were never committed)
+
+All three arms at 17,825,792 / 4 cards / leaf 1024, three evaluations each, deviation
+statistics per particle `|dA|/|A|` (median / p99 / p99.99 / max), against eval 0:
+
+    arm       mac            cross   words differ   median      p99        p99.99     max
+    full      dehnen_error   yes     80.6 %         1.76e-07    3.9e-06    3.6e-04    2.0
+    selfonly  dehnen_error   no      80.3 %         1.66e-07    4.1e-06    3.9e-04    18.1
+    geo       dehnen         no      100.0 %        2.37e-02    9.3        980        2.7e+28
+
+**Every arm is non-deterministic, so the cross-walk pair policy is NOT the owner** -- the
+`selfonly` arm has no cross policy and moves just as much as `full`. The Sep-2 hypothesis
+that yggdrax PR #54 introduced this is refuted by its own experiment.
+
+**And the geometric MAC is five orders of magnitude WORSE**, with a per-particle max of
+2.7e+28 -- that is garbage, not rounding. The pairwise matrix (4 evals, `pairwise_dehnen_0`)
+localises it in TIME rather than in code:
+
+    geo, median |dA|/|A|:      eval0-1 4.15e-02   eval0-2 2.67e-02   eval0-3 4.02e-02
+                               eval1-2 2.89e-07   eval1-3 7.78e-07   eval2-3 1.80e-05
+    accept mask:               IDENTICAL on all four evals (5,386,852 / 2,220,382 / 17,079,004 / 5,669,435)
+
+**Eval 0 -- the first call after compile -- is the outlier.** Evals 1, 2, 3 agree with each
+other at round-off level; eval 0 disagrees with all of them by ~3-4 % median. The accept
+mask does not move, so this is not the traversal: the same pairs are taken and the ARITHMETIC
+comes out different on the first call.
+
+For the criterion the picture is the reverse and benign:
+
+    dehnen_error, median |dA|/|A|:  every pair 1.73e-07 .. 1.78e-07, eval 0 included
+    accept mask:                    wobbles by +-1 pair (cross_far 8,033,400/401/402)
+
+A +-1-pair tie-break at the acceptance boundary, with a force effect at round-off. No first-
+call anomaly.
+
+**The unresolved contradiction that decides everything.** `geo_check` probes the FIRST call
+of the geometric MAC against an fp64 direct sum and gets `rel_l2 = 5.2781e-03` -- accurate.
+Yet that first call disagrees with every later call by 3-4 %. Both cannot be innocent: either
+the first call is right and the later ones are wrong, or the reverse -- and nothing scored the
+later calls against truth. `which_eval_is_right.py` does exactly that, for both MACs, against
+one shared fp64 reference. Until it reports, the Sep-2 line "if geo is deterministic it is the
+honest choice to run" should be treated as unsupported: geo's accept mask is deterministic
+but its FORCE is not, and by five orders more than the criterion's.
+
+Also for the record: the 25,165,824 / 8-card battery launched 2026-09-03 12:00 wrote only its
+configuration lines and then stopped at 12:01 with no traceback -- it died with the session,
+not with an error. `DistributedFMMConfig` defaults `m2l_chunk` and `nearfield_chunk` to
+**None**, i.e. full-batch, which is what produced the 292.86 GiB OOM in battery #2; the run
+script's 65536 / 512 are what make any large-N config viable, and a hand-built config must
+pass them.

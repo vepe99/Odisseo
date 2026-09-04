@@ -1,0 +1,35 @@
+{
+ "tag": "full",
+ "mac": "dehnen_error",
+ "cross_criterion": true,
+ "evals": [
+  {
+   "eval": 1,
+   "differing_words": 43098441,
+   "pct": {
+    "0.5": 1.760249830340399e-07,
+    "0.9": 6.132905241429398e-07,
+    "0.99": 3.892313543474302e-06,
+    "0.9999": 0.0003646060358732939
+   },
+   "max": 2.0,
+   "changed": []
+  },
+  {
+   "eval": 2,
+   "differing_words": 43117898,
+   "pct": {
+    "0.5": 1.761926711196793e-07,
+    "0.9": 6.217583177203778e-07,
+    "0.99": 3.82775806428981e-06,
+    "0.9999": 0.00037463451735675335
+   },
+   "max": 1.7999999523162842,
+   "changed": []
+  }
+ ],
+ "self_stable": true,
+ "cross_stable": true,
+ "bit_identical": false,
+ "verdict": "NON-DETERMINISTIC"
+}

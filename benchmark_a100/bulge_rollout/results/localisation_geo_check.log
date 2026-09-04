@@ -1,0 +1,13 @@
+
+=== dehnen ===
+  caps: cross_q=2,097,152 cross_nbr=16,384 cross_int=8,192
+  pairs: self_near=5,386,852 cross_near=17,079,004 cross_far=5,669,435
+  OVERFLOW: all flags clear
+  rel_l2 vs fp64 direct sum (256 targets) = 5.2781e-03   non-finite = 0
+
+
+=== dehnen_error ===
+  caps: cross_q=4,194,304 cross_nbr=32,768 cross_int=16,384
+  pairs: self_near=11,779,046 cross_near=14,018,632 cross_far=8,033,401
+  OVERFLOW: all flags clear
+  rel_l2 vs fp64 direct sum (256 targets) = 2.6121e-03   non-finite = 0

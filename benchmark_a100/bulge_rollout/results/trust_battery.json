@@ -1,0 +1,12 @@
+{
+ "rel_l2": 0.0031117001412949144,
+ "median": 0.0006888940126824777,
+ "p90": 0.0022918875635883403,
+ "p99": 0.005988941551478055,
+ "max": 0.008378055853815467,
+ "probe": 512,
+ "seconds": 224.2,
+ "determinism_worst_differing_words": 43460572,
+ "determinism_worst_rel": 8.5,
+ "pair_counts_stable": false
+}

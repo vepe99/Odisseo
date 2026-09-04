@@ -1,0 +1,56 @@
+{
+ "mac": "dehnen",
+ "cross": false,
+ "pairs": [
+  {
+   "cross_far_pairs": 5669435.0,
+   "cross_near_pairs": 17079004.0,
+   "self_far_pairs": 2220382.0,
+   "self_near_pairs": 5386852.0
+  },
+  {
+   "cross_far_pairs": 5669435.0,
+   "cross_near_pairs": 17079004.0,
+   "self_far_pairs": 2220382.0,
+   "self_near_pairs": 5386852.0
+  },
+  {
+   "cross_far_pairs": 5669435.0,
+   "cross_near_pairs": 17079004.0,
+   "self_far_pairs": 2220382.0,
+   "self_near_pairs": 5386852.0
+  },
+  {
+   "cross_far_pairs": 5669435.0,
+   "cross_near_pairs": 17079004.0,
+   "self_far_pairs": 2220382.0,
+   "self_near_pairs": 5386852.0
+  }
+ ],
+ "matrix": {
+  "0-1": {
+   "median": 0.04149601608514786,
+   "differing_words": 53477006
+  },
+  "0-2": {
+   "median": 0.02668413147330284,
+   "differing_words": 53476990
+  },
+  "0-3": {
+   "median": 0.04015089198946953,
+   "differing_words": 53476807
+  },
+  "1-2": {
+   "median": 2.891489430112415e-07,
+   "differing_words": 46305241
+  },
+  "1-3": {
+   "median": 7.784775561958668e-07,
+   "differing_words": 46477290
+  },
+  "2-3": {
+   "median": 1.800981226551812e-05,
+   "differing_words": 48629562
+  }
+ }
+}

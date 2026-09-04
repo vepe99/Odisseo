@@ -1,0 +1,45 @@
+[sitecustomize] yggdrax pinned to /export/home/tbuck/yggdrax-main-wt/yggdrax
+devices: [0, 1, 2, 3]
+N=17,825,792  softening=0.0089879
+caps: self_q=1,048,576 self_int=8,192 cross_q=4,194,304 cross_int=16,384
+# config cross-checked against /export/scratch/tbuck/odisseo_runs/nandiag/nd_diag.json: identical on adaptive_eps, dtype, leaf, m2l_chunk, mac_type, ndev, nearfield_accum, nearfield_chunk, order, theta
+
+# first force (compile incl.) 1051.1 s
+# overflow: {'cross_queue_overflow': 0.0, 'cross_far_overflow': 0.0, 'cross_near_overflow': 0.0, 'self_queue_overflow': 0.0, 'self_far_overflow': 0.0, 'self_near_overflow': 0.0, 'l2l_level_overflow': 0.0}
+# self_near=11,779,046 cross_near=14,018,631 fs=[0.0097077,169.671]
+
+=== 1+2. DETERMINISM over 10 evaluations of identical input ===
+   eval 1: cross_near_pairs CHANGED [3582232.0, 3518228.0, 3521353.0, 3396818.0] -> [3582232.0, 3518228.0, 3521354.0, 3396818.0]
+   eval 1: cross_far_pairs CHANGED [2138126.0, 2200605.0, 1832370.0, 1862301.0] -> [2138126.0, 2200604.0, 1832369.0, 1862301.0]
+   eval 1: differing float32 words = 43,279,015 / 53,477,376   max rel dev = 8.000e+00   non-finite = 0
+   eval 2: cross_near_pairs CHANGED [3582232.0, 3518228.0, 3521353.0, 3396818.0] -> [3582232.0, 3518228.0, 3521354.0, 3396818.0]
+   eval 2: cross_far_pairs CHANGED [2138126.0, 2200605.0, 1832370.0, 1862301.0] -> [2138126.0, 2200604.0, 1832370.0, 1862301.0]
+   eval 2: differing float32 words = 43,031,293 / 53,477,376   max rel dev = 4.222e+00   non-finite = 0
+   eval 3: cross_near_pairs CHANGED [3582232.0, 3518228.0, 3521353.0, 3396818.0] -> [3582232.0, 3518228.0, 3521354.0, 3396818.0]
+   eval 3: cross_far_pairs CHANGED [2138126.0, 2200605.0, 1832370.0, 1862301.0] -> [2138126.0, 2200604.0, 1832369.0, 1862301.0]
+   eval 3: differing float32 words = 43,460,572 / 53,477,376   max rel dev = 3.667e+00   non-finite = 0
+   eval 4: cross_near_pairs CHANGED [3582232.0, 3518228.0, 3521353.0, 3396818.0] -> [3582232.0, 3518228.0, 3521354.0, 3396818.0]
+   eval 4: cross_far_pairs CHANGED [2138126.0, 2200605.0, 1832370.0, 1862301.0] -> [2138126.0, 2200604.0, 1832369.0, 1862301.0]
+   eval 4: differing float32 words = 43,267,949 / 53,477,376   max rel dev = 5.167e+00   non-finite = 0
+   eval 5: cross_near_pairs CHANGED [3582232.0, 3518228.0, 3521353.0, 3396818.0] -> [3582232.0, 3518228.0, 3521354.0, 3396818.0]
+   eval 5: cross_far_pairs CHANGED [2138126.0, 2200605.0, 1832370.0, 1862301.0] -> [2138126.0, 2200605.0, 1832369.0, 1862301.0]
+   eval 5: differing float32 words = 43,189,492 / 53,477,376   max rel dev = 3.667e+00   non-finite = 0
+   eval 6: cross_near_pairs CHANGED [3582232.0, 3518228.0, 3521353.0, 3396818.0] -> [3582232.0, 3518228.0, 3521354.0, 3396818.0]
+   eval 6: cross_far_pairs CHANGED [2138126.0, 2200605.0, 1832370.0, 1862301.0] -> [2138126.0, 2200605.0, 1832368.0, 1862301.0]
+   eval 6: differing float32 words = 43,292,432 / 53,477,376   max rel dev = 8.500e+00   non-finite = 0
+   eval 7: cross_near_pairs CHANGED [3582232.0, 3518228.0, 3521353.0, 3396818.0] -> [3582232.0, 3518228.0, 3521354.0, 3396818.0]
+   eval 7: cross_far_pairs CHANGED [2138126.0, 2200605.0, 1832370.0, 1862301.0] -> [2138126.0, 2200604.0, 1832369.0, 1862301.0]
+   eval 7: differing float32 words = 43,129,626 / 53,477,376   max rel dev = 4.000e+00   non-finite = 0
+   eval 8: cross_near_pairs CHANGED [3582232.0, 3518228.0, 3521353.0, 3396818.0] -> [3582232.0, 3518228.0, 3521354.0, 3396818.0]
+   eval 8: cross_far_pairs CHANGED [2138126.0, 2200605.0, 1832370.0, 1862301.0] -> [2138126.0, 2200604.0, 1832369.0, 1862301.0]
+   eval 8: differing float32 words = 43,296,013 / 53,477,376   max rel dev = 1.333e+00   non-finite = 0
+   eval 9: cross_near_pairs CHANGED [3582232.0, 3518228.0, 3521353.0, 3396818.0] -> [3582232.0, 3518228.0, 3521354.0, 3396818.0]
+   eval 9: differing float32 words = 42,960,454 / 53,477,376   max rel dev = 6.333e+00   non-finite = 0
+
+   VERDICT: NON-DETERMINISTIC -- up to 43,460,572 words differ, max rel 8.500e+00, first at eval 1
+   pair counts UNSTABLE across repeats
+
+=== 3. ACCURACY vs an fp64 direct sum over all 17,825,792 sources, 512 targets ===
+   rel_l2=3.1117e-03  median=6.8889e-04  p90=2.2919e-03  p99=5.9889e-03  max=8.3781e-03  probe=512  seconds=2.2420e+02  determinism_worst_differing_words=43460572  determinism_worst_rel=8.5000e+00  pair_counts_stable=False
+
+# wrote /export/scratch/tbuck/odisseo_runs/trust_battery.json
