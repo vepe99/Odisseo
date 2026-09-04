@@ -51,7 +51,15 @@ Measured on 6xA100-40GB: 136.3 s/step, 18.5 h for 489 steps, force rel_l2 4.03e-
 an fp64 direct sum, dL/L 2.3e-09 after 6 steps, every overflow flag clear, peak 40,105 MiB
 on the coordinator card and ~31,450 MiB on each worker.
 
-## Why the MAC is not negotiable (settled 2026-09-04)
+## STOP (2026-09-04 21:15): do not launch a rollout on this lane yet
+
+Both MACs are ~45-50 % wrong on every force evaluation after the first once positions move,
+while every diagnostic that was being watched looks healthy. Read findings.md section 13. The
+only instrument that sees it is `--probe-every N` (a fresh fp64 direct sum on a cadence); it
+must stay on in any run, and a later-step probe must sit at the step-0 level (~3e-03) or the
+run is computing garbage. Until section 13 is resolved the work here is DIAGNOSIS, not a run.
+
+## Why the MAC was believed settled (2026-09-04 20:50 -- superseded above)
 
 `mac_type=dehnen_error` is the ONLY configuration whose force is the same number twice. Four
 calls of the same input through the same compiled program, each vs one fp64 direct sum:

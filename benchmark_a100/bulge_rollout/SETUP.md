@@ -66,7 +66,15 @@ seeded `default_rng` for the shuffle, so the same agama build gives the same fil
 DIFFERENT agama version may not. Prefer copying the `.npz` over regenerating if the numbers
 have to match exactly.
 
-## 1b. READ THIS FIRST: the MAC is a reproducibility requirement, not a trade-off
+## 1a. STOP: as of 2026-09-04 21:15 NO configuration of this lane is trustworthy for a rollout
+
+Both MACs are ~45-50 % wrong (median particle ~16 %) on calls after the first once positions
+MOVE, with step time, dL/L, KE, overflow flags and finiteness all looking healthy. The
+identical-input test that cleared the criterion (1b below) was blind to it by construction.
+Do not launch a production run until `findings.md` section 13 is resolved; when you do, keep
+`--probe-every` on, because nothing else can see this.
+
+## 1b. (SUPERSEDED by 1a -- kept as the record of an experiment that was blind) the MAC is a reproducibility requirement, not a trade-off
 
 `mac_type="dehnen_error"` is the ONLY configuration whose force is the same number twice.
 Measured 2026-09-04 (`which_eval_is_right.py`, four calls of the same input through the same

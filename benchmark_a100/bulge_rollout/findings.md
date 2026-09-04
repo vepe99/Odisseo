@@ -964,3 +964,58 @@ that is 50 % wrong overall is still accurate on the bulk of its particles, and a
 probe -- which is what every harness in the stack ran -- sees the one call that is right.
 **Audit a force for reproducibility, and score a call other than the first.** A per-particle
 median hides rare garbage; a global L2 norm cannot.
+
+## 13. WITHDRAWN: section 12. BOTH MACs are wrong once positions move. No rollout is trustworthy.
+
+`rollout_probe.sh` (2026-09-04 20:43-21:15), 17,825,792 / 4 cards / leaf 1024, a REAL rollout
+of three steps at dt 5e-4, the force scored at every step against a FRESH fp64 direct sum:
+
+    step    geometric (dehnen)                    criterion (dehnen_error)
+      0     5.7232e-03  (median 8.97e-04)         2.8766e-03  (median 6.66e-04)
+      1     0.4662      (median 0.176)            0.4489      (median 0.157)
+      2     0.5026      (median 0.174)            (pending at time of writing)
+      3     5.7005e-03  (median 9.23e-04)         (pending)
+
+**The criterion fails the moment positions move, by the same amount as the geometric MAC.**
+Section 12 called the criterion trustworthy on the strength of four accurate calls to
+IDENTICAL input. That experiment was blind to this by construction: if the program reuses
+something from the previous call instead of recomputing it, stale equals fresh when the input
+has not changed. Change the positions and stale is wrong -- for both MACs, to the same degree
+(0.449 against 0.466; medians 0.157 against 0.176). **The defect is in the shared path.**
+
+**And it is intermittent, not "every later call".** The geometric arm is wrong at steps 1 and 2
+and accurate again at step 3 (5.70e-03). Sections 11 and 12 said "every call after the first";
+that was true of the four identical-input calls observed and is not true in general. Whether a
+given call is wrong varies -- which is what a read of memory not written on this call looks
+like, since what that memory holds depends on allocator state.
+
+**Everything we watched was blind.** At step 1 of the criterion arm: step time 152.7 s, dL/L
+7.8e-07, COM drift 3.2e-07, KE 37.903, force-scale floor 0.009708, every overflow flag zero,
+nothing non-finite -- and the force was 45 % wrong. The 14-step NaN diagnostic (section 8)
+that was called "clean" never scored the force. The 4-card production attempt's 10 steps, the
+6-card pretests, the record's 127-step geometric rollout: **every rollout in this record
+computed wrong forces from step 1**, and only a probe on a step other than the first can see
+it. Section 12's measurement lesson stands and is now the headline.
+
+### What is ruled out, and what is not
+
+- `_DUAL_TREE_QUEUE_CACHE` (yggdrax `_interactions_impl.py:247`) is ruled out: it stores an
+  `int` queue capacity keyed on a tuple, and under a trace it is not consulted per call.
+- `make_force_evaluator` carries no persistent Python state (grep: no caches, closures over
+  mutable state, or reuse). The compiled `evaluate` is pure over `(x, M, gid, counts)`.
+- Therefore a wrong output for CHANGED input on a later call can only come from **memory the
+  program did not write on this call** -- an output or scratch buffer whose contents are left
+  over from the previous execution. Both MACs share the Pallas near-field (`fmm.py:2613`).
+- On forced-CPU devices with the `baseline` (pure-JAX) near-field, the force is stable across
+  steps (`--probe-every` smoke at 61,440: 1.94e-07 / 1.74e-07 / 1.95e-07). GPU-specific until
+  shown otherwise.
+
+`rollout_probe_baseline.sh` (chained) runs the criterion with `--nearfield-backend baseline`
+and positions moving. If it is accurate at steps 1-3 where `pallas` is not, the Pallas near-
+field kernel owns the defect. If it fails too, the defect is upstream of the near-field.
+
+### Consequence for the galaxy run
+
+**Production is blocked.** There is currently no configuration of this lane whose force is
+correct on a step other than the first, and the run script's `--probe-every` is the only
+instrument that can tell. It stays in the launcher as the guard that would have caught this.
