@@ -691,6 +691,33 @@ def main():  # noqa: C901
             morton_pos_of_row[morton_rows] = np.arange(morton_rows.size)
             tm = morton_pos_of_row[targets]; okm = tm >= 0
             a_ref_m = direct_sum_probe(pos_m, mass_m, tm[okm], soft, g)
+            # A map check that does not use the map as its own witness. The aligner and
+            # scatter_to_input_order both consume gid_o, so they can agree while gid_o is
+            # wrong -- and a wrong gid_o also poisons the raw-Morton probe above, whose
+            # reference is built at positions permuted by it. Independent test: if gid_o
+            # is right, the positions it implies are the evaluator's Morton order, so their
+            # keys -- recomputed here with the same encoding -- must be non-decreasing PER
+            # DEVICE. Ties are equal keys and still pass; a mis-mapping breaks monotonicity.
+            try:
+                from yggdrax.morton import morton_encode_impl
+                from yggdrax.distributed.partition import global_bounds as _gb
+                lo = pos_rows.min(axis=0); hi = pos_rows.max(axis=0)
+                span = hi - lo
+                _bounds = (jnp.asarray(lo - span * 1e-6), jnp.asarray(hi + span * 1e-6))
+                keys = np.asarray(morton_encode_impl(jnp.asarray(pos_m, dtype=np.float32), _bounds))
+                per_dev = np.asarray(jax.device_get(pstate["COUNTS"])).astype(int)
+                starts = np.concatenate([[0], np.cumsum(per_dev)])
+                viol = 0
+                for d in range(len(per_dev)):
+                    kd = keys[starts[d]:starts[d] + per_dev[d]]
+                    viol += int(np.count_nonzero(np.diff(kd) < 0))
+                stats["gid_o_morton_violations"] = viol
+                print(f"# PROBE step={step_index} gid_o implies Morton order with {viol} descents "
+                      f"({'consistent' if viol == 0 else 'INCONSISTENT -- gid_o itself is suspect'}; "
+                      f"bounds are a host approximation, so a handful of descents at device "
+                      f"seams is noise, thousands is not)", flush=True)
+            except Exception as exc:  # noqa: BLE001
+                print(f"# PROBE step={step_index}: morton check skipped ({str(exc)[:100]})", flush=True)
             a_raw_h = np.asarray(jax.device_get(a_raw_arr)).reshape(-1, 3)
             a_raw_t = a_raw_h[np.flatnonzero(valid)[tm[okm]]].astype(np.float64)
             num_m = np.linalg.norm(a_raw_t - a_ref_m, axis=1)
