@@ -1019,3 +1019,42 @@ field kernel owns the defect. If it fails too, the defect is upstream of the nea
 **Production is blocked.** There is currently no configuration of this lane whose force is
 correct on a step other than the first, and the run script's `--probe-every` is the only
 instrument that can tell. It stays in the launcher as the guard that would have caught this.
+
+### Rollout probe complete: the failure is a deterministic, step-indexed PATTERN, not noise
+
+    step    geometric   criterion
+      0     5.72e-03    2.88e-03
+      1     0.466       0.449
+      2     0.503       0.483
+      3     5.70e-03    2.91e-03      <- both accurate again
+
+Identical good / bad / bad / good for both MACs, in two separate processes, on the same
+steps. Section 13's word "intermittent" undersells this: whatever goes wrong is tied to the
+step index, not to allocator luck. It is also indifferent to the MAC, so it is downstream of
+(or orthogonal to) the traversal's accept decision.
+
+### The Pallas near-field kernels are exonerated by reading them
+
+`jaccpot/pallas/nearfield_fused_leaf.py`: both kernels the distributed lane can reach build
+`acc0` from `jnp.zeros`; the `n_sub` grid axis is NOT a reduction -- `out_specs` maps
+`(leaf, sub) -> (leaf, sub, 0)` so each sub-iteration writes its own output block; every block
+is fully written (`jnp.where(tvalid, acc, zero)`); no read of `out_ref`, no scratch, no
+`input_output_aliases`. They are pure. `_chunked_pallas_nearfield_accumulate` seeds its
+accumulator with `jnp.zeros_like(concat_pos)`. Pure JAX plus pure kernels cannot read memory
+they did not write, so "stale buffer" is now the WRONG frame.
+
+**A pure program that gives a wrong answer for a given input is being given a different input,
+or its output is being read back wrongly.** That reframes the search onto the boundary between
+the evaluator and the harness: the positions it is handed, and the map that puts its Morton-
+ordered output back into input rows. A mostly-local mis-mapping -- each particle receiving a
+Morton neighbour's acceleration -- would produce ~50 % per-particle error, leave dL/L and KE
+looking healthy (neighbours share r and v), be invisible on identical input (same order), and
+depend on how far the order moved since it was last correct. `_verify_alignment` had only ever
+run on the first force.
+
+`tools/mesh_galaxy_run.py` now, on every probed step: (1) re-runs `_verify_alignment` against
+jaccpot's own host `scatter_to_input_order`; (2) scores the RAW force in the evaluator's Morton
+order against a direct sum at the positions in that order. CPU smoke: raw == aligned ==
+1.9e-07, `alignment_ok=True` at every step. `rollout_probe_align.sh` (chained on 1,3,4,6) runs
+five criterion steps with both checks. Raw accurate and aligned wrong => the mapping is the
+defect and the force was never wrong.

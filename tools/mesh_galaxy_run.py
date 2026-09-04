@@ -332,6 +332,14 @@ def main():  # noqa: C901
     # 439x accuracy for 1.8 % time and 0 % memory. This script never passed the knob,
     # so every number it has produced so far was taken at the floor -- which is also
     # why loosening theta once looked like it BOUGHT accuracy. Default it to wide.
+    ap.add_argument("--nearfield-backend", default="auto",
+                    choices=("auto", "baseline", "pallas"),
+                    help="Near-field P2P backend. 'auto' picks pallas on Ampere+. Exposed "
+                         "because the force was found to be 45-50 %% wrong on every call "
+                         "after the first once positions MOVE, for BOTH MACs, with every "
+                         "guard silent -- the signature of a kernel reading memory it did "
+                         "not write on this call. 'baseline' is the pure-JAX P2P; if it is "
+                         "accurate where 'pallas' is not, the Pallas near-field owns it.")
     ap.add_argument("--nearfield-accum", default="wide", choices=("input", "wide"),
                     help="Near-field accumulator width. 'wide' = fp64 accumulate.")
     # Dehnen (2014) section 5 mass-dependent MAC. Under "dehnen_error" theta stops
@@ -473,7 +481,7 @@ def main():  # noqa: C901
         f"# N={n:,} ndev={args.ndev} leaf={args.leaf} theta={args.theta} order={args.order} dtype={args.dtype}\n"
         f"# G={g} halo_mass={halo_m} halo_rs={halo_rs} rdisk={rdisk} softening={soft:.5g}\n"
         f"# mac={args.mac_type} eps={args.adaptive_eps} cross_criterion={args.mac_cross_criterion} "
-        f"accum={args.nearfield_accum}\n"
+        f"accum={args.nearfield_accum} nearfield_backend={args.nearfield_backend}\n"
         f"# dt={args.dt} steps={args.steps} devices={[d.device_kind for d in jax.devices()][:args.ndev]}",
         flush=True,
     )
@@ -493,6 +501,7 @@ def main():  # noqa: C901
         m2l_chunk=args.m2l_chunk,
         nearfield_chunk=args.nearfield_chunk,
         nearfield_accum=args.nearfield_accum,
+        nearfield_backend=args.nearfield_backend,
         mac_type=args.mac_type,
         adaptive_eps=args.adaptive_eps,
         mac_cross_criterion=bool(args.mac_cross_criterion),
@@ -619,7 +628,7 @@ def main():  # noqa: C901
               flush=True)
     probe_history = []
 
-    def run_probe(step_index, a_self_arr):
+    def run_probe(step_index, a_self_arr, a_raw_arr=None, gid_o_arr=None):
         """Score the SELF-GRAVITY force at this step against a fresh fp64 direct sum.
 
         Targets are fixed by ``--probe-seed`` so every probe scores the same particles;
@@ -647,13 +656,47 @@ def main():  # noqa: C901
             "rel_p99": float(np.quantile(rel, 0.99)), "rel_max": float(rel.max()),
             "seconds": round(time.perf_counter() - t0, 2),
         }
+        # Is the FORCE wrong, or only its MAPPING back to input rows? Two independent
+        # checks, both only possible here because the evaluator's raw output and its
+        # gid map are in hand:
+        #  (1) the on-device aligner against jaccpot's own host scatter, on THIS step
+        #      (it used to be checked once, at the first force);
+        #  (2) the RAW force, in the evaluator's own Morton order, against a direct sum at
+        #      the positions in THAT order. If (2) is accurate while the aligned force is
+        #      not, the force is right and the mapping is the defect.
+        if a_raw_arr is not None and gid_o_arr is not None:
+            gid_in = np.asarray(jax.device_get(pstate["GID"]))
+            gid_out = np.asarray(jax.device_get(gid_o_arr)).reshape(-1)
+            try:
+                _verify_alignment(a_self_arr, a_raw_arr, gid_o_arr, pstate["GID"], n)
+                stats["alignment_ok"] = True
+            except Exception as exc:  # noqa: BLE001
+                stats["alignment_ok"] = False
+                print(f"# PROBE step={step_index}: ALIGNMENT MISMATCH -- {str(exc)[:160]}",
+                      flush=True)
+            row_of_gid = np.empty(int(gid_in.max()) + 1, np.int64)
+            row_of_gid[gid_in] = np.arange(len(gid_in))
+            valid = gid_out >= 0
+            morton_rows = row_of_gid[gid_out[valid]]
+            pos_m = pos_rows[morton_rows]; mass_m = mass_rows[morton_rows]
+            # score the same PARTICLES: map the row targets to their Morton positions
+            morton_pos_of_row = np.full(n, -1, np.int64)
+            morton_pos_of_row[morton_rows] = np.arange(morton_rows.size)
+            tm = morton_pos_of_row[targets]; okm = tm >= 0
+            a_ref_m = direct_sum_probe(pos_m, mass_m, tm[okm], soft, g)
+            a_raw_h = np.asarray(jax.device_get(a_raw_arr)).reshape(-1, 3)
+            a_raw_t = a_raw_h[np.flatnonzero(valid)[tm[okm]]].astype(np.float64)
+            num_m = np.linalg.norm(a_raw_t - a_ref_m, axis=1)
+            stats["rel_l2_raw_morton"] = float(np.linalg.norm(num_m) / max(np.linalg.norm(np.linalg.norm(a_ref_m, axis=1)), 1e-300))
+            print(f"# PROBE step={step_index} RAW-in-Morton-order rel_l2={stats['rel_l2_raw_morton']:.4e}"
+                  f"  aligned rel_l2={rel_l2:.4e}  alignment_ok={stats['alignment_ok']}", flush=True)
         probe_history.append(stats)
         print(f"# PROBE step={step_index} n={args.probe} rel_l2={rel_l2:.4e} "
               f"median={np.median(rel):.3e} p99={np.quantile(rel, 0.99):.3e} "
               f"max={rel.max():.3e} ({stats['seconds']:.1f} s)", flush=True)
         return stats
 
-    probe_stats = run_probe(0, A_self) if args.probe > 0 else None
+    probe_stats = run_probe(0, A_self, A_raw, gid_o) if args.probe > 0 else None
     print(f"# self_near={sum(diag0.get('self_near_pairs', [0])):,.0f} "
           f"cross_near={sum(diag0.get('cross_near_pairs', [0])):,.0f} overflow={ovf}", flush=True)
     if any(v > 0 for v in ovf.values()):
@@ -676,13 +719,13 @@ def main():  # noqa: C901
 
     def kdk(x, v, a, dt):
         xn, vh = drift(x, v, a, dt)
-        an, _gid, dg, _raw, a_self_n = force(xn)
+        an, gid_n, dg, raw_n, a_self_n = force(xn)
         # The diagnostic vector is RETURNED, not dropped. It used to be discarded
         # here, which left `diag` in the step loop bound to the FIRST force forever --
         # so the periodic overflow check re-validated step 0 on every cadence and could
         # never see a capacity that overflowed later, which is the only reason the check
         # exists. Caps are static; pair counts are not.
-        return xn, kick(vh, an, dt), an, dg, a_self_n
+        return xn, kick(vh, an, dt), an, dg, a_self_n, raw_n, gid_n
 
     def invariants(x, v, m):
         """Momentum, angular momentum, COM and KE -- reduced in float64 on the host.
@@ -861,7 +904,7 @@ def main():  # noqa: C901
     t_run0 = time.perf_counter()
     for it in range(step0 + 1, args.steps + 1):
         t0 = time.perf_counter()
-        X, V, A, diag, A_self = kdk(X, V, A, args.dt)
+        X, V, A, diag, A_self, A_raw, gid_o = kdk(X, V, A, args.dt)
         jax.block_until_ready(X)
         step_times.append(time.perf_counter() - t0)
 
@@ -950,7 +993,7 @@ def main():  # noqa: C901
                 f"and the traversal never terminates. Diagnostics and a snapshot written."
             )
         if args.probe > 0 and args.probe_every and it % args.probe_every == 0:
-            run_probe(it, A_self)
+            run_probe(it, A_self, A_raw, gid_o)
         if args.checkpoint_every and it % args.checkpoint_every == 0:
             save_state(it)
         if args.diag_every and it % args.diag_every == 0:
