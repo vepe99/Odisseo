@@ -1210,3 +1210,28 @@ Fix paths for production, in order of preference:
    penalty. (Being built and import-tested now.)
 2. `--halo-exchange buf` on jax 0.9.0: O(ndev²·block) bandwidth; cost to be read off the buf probe.
 3. Upgrading envs/odisseo itself — the user's call, it is shared.
+
+### 14.3 Where the fix lives, and a venv trap that faked a negative (22:15)
+
+**Trap.** An overlay venv (`python -m venv --system-site-packages` on envs/odisseo + `jax[cuda12]==0.9.1`)
+reported jax/jaxlib/plugin/pjrt 0.9.1 in `pip list` and was **CORRUPT 4/4 runs** (15–39/40). Matching
+its 13 `nvidia-*` packages one-for-one to the clean standalone venv changed nothing. The reason:
+`jax_plugins` is a namespace package, and `jax_plugins.xla_cuda12` resolved to
+**`envs/odisseo/.../jax_plugins/xla_cuda12`** — the **0.9.0 PJRT plugin `.so`**, i.e. the 0.9.0
+XLA:GPU — under a 0.9.1 `jax`. `pip list` cannot show this. Never test an XLA fix through
+`--system-site-packages`; check `jax_plugins.xla_cuda12.__file__`.
+(`results/overlay_venv_jax091.log`, `overlay_nvidia_stages.log`.)
+
+**Attribution.** jax 0.9.0 with NCCL bumped 2.29.3 → 2.31.2 and NVSHMEM 3.5.21 → 3.7.2: still
+CORRUPT 5/5 runs (`results/jax090_nccl_only.log`). The fix is in the XLA:GPU plugin, as the upstream
+note says — not in the CUDA libraries.
+
+**jax 0.10.2 is clean**: `jaccpot/.venv` (standalone, plugin from its own site-packages) — donate
+CLEAN 3×40/40. And jaccpot's `pyproject.toml` declares **jax ≥ 0.10.2 as a hard floor** (0.9.1/0.9.2
+SIGFPE in XLA:CPU compiling the P2M scan). envs/odisseo at 0.9.0 was below jaccpot's own floor.
+
+**Production environment decision:** a clean standalone venv (`/export/scratch/tbuck/venv_prod_jax0102`),
+jax 0.10.2 + editable jaccpot / yggdrax-main-wt / Odisseo — jaccpot's CI-tested version, native halo
+exchange, no shared env touched, no sitecustomize pin needed (yggdrax installs from the worktree
+directly). Gate before any production step: the moving-position probe (`rollout_probe_jax091.sh`
+retargeted at this venv) must be correct at steps 1–3.
