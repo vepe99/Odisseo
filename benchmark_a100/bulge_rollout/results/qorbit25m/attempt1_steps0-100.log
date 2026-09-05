@@ -1,0 +1,53 @@
+# N=25,165,824 ndev=8 leaf=1024 theta=0.7 order=6 dtype=float32
+# G=1.0 halo_mass=100.0 halo_rs=2.0 rdisk=0.24 softening=0.0075644
+# mac=dehnen_error eps=1e-05 cross_criterion=True accum=wide nearfield_backend=auto halo_exchange=native
+# dt=0.0005 steps=489 devices=['NVIDIA A100-PCIE-40GB', 'NVIDIA A100-PCIE-40GB', 'NVIDIA A100-PCIE-40GB', 'NVIDIA A100-PCIE-40GB', 'NVIDIA A100-PCIE-40GB', 'NVIDIA A100-PCIE-40GB', 'NVIDIA A100-PCIE-40GB', 'NVIDIA A100-PCIE-40GB']
+# caps: self_queue=524,288 self_nbr=4,096 self_int=4,096 | cross_queue=4,194,304 cross_nbr=32,768 cross_int=32,768
+# evaluator built in 0.1 s
+E0904 23:03:43.927821 3356323 slow_operation_alarm.cc:73] 
+********************************
+[Compiling module input_reduce_fusion.10 for GPU] Very slow compile? If you want to file a bug, run with envvar XLA_FLAGS=--xla_dump_to=/tmp/foo and attach the results.
+********************************
+E0904 23:14:02.172392 3356321 slow_operation_alarm.cc:140] The operation took 12m18.244670865s
+
+********************************
+[Compiling module input_reduce_fusion.10 for GPU] Very slow compile? If you want to file a bug, run with envvar XLA_FLAGS=--xla_dump_to=/tmp/foo and attach the results.
+********************************
+# first force (compile incl.) 883.9 s
+# realignment verified against scatter_to_input_order (4.3 s)
+# force_scale range [0.007446, 151.9] (20398.7x spread)
+# PROBE step=0 gid_o implies Morton order with 0 descents (consistent; bounds are a host approximation, so a handful of descents at device seams is noise, thousands is not)
+# PROBE step=0 RAW-in-Morton-order rel_l2=4.9781e-03  aligned rel_l2=4.9781e-03  alignment_ok=True
+# PROBE step=0 n=256 rel_l2=4.9781e-03 median=5.517e-04 p99=8.619e-03 max=1.354e-02 (158.7 s)
+# self_near=14,090,076 cross_near=24,960,802 overflow={'cross_queue_overflow': 0.0, 'cross_far_overflow': 0.0, 'cross_near_overflow': 0.0, 'self_queue_overflow': 0.0, 'self_far_overflow': 0.0, 'self_near_overflow': 0.0, 'l2l_level_overflow': 0.0}
+# rendering projections ['xy', 'xz'] at 800^2, extent +/-1.2
+# t=0  |L|=9.559261e+00  KE=3.790671e+01  com=[ 1.13e-04  1.08e-04 -3.20e-05]
+  step     10  t=0.0050    80.12s  dL/L=1.097e-08  com=6.600e-07  KE=3.790733e+01  fs=[0.007465,126.4]
+# checkpoint step 20 -> q_ckpt.npz (730 MB)
+  step     20  t=0.0100    80.67s  dL/L=2.071e-08  com=1.309e-06  KE=3.791106e+01  fs=[0.007466,111.2]
+# PROBE step=25 gid_o implies Morton order with 0 descents (consistent; bounds are a host approximation, so a handful of descents at device seams is noise, thousands is not)
+# PROBE step=25 RAW-in-Morton-order rel_l2=1.0929e-03  aligned rel_l2=1.0929e-03  alignment_ok=True
+# PROBE step=25 n=256 rel_l2=1.0929e-03 median=5.540e-04 p99=2.853e-03 max=3.330e-03 (158.1 s)
+  step     30  t=0.0150    81.39s  dL/L=3.154e-08  com=1.946e-06  KE=3.792041e+01  fs=[0.007464,94.75]
+# checkpoint step 40 -> q_ckpt.npz (730 MB)
+  step     40  t=0.0200    84.74s  dL/L=4.168e-08  com=2.569e-06  KE=3.793624e+01  fs=[0.007469,85.44]
+# PROBE step=50 gid_o implies Morton order with 0 descents (consistent; bounds are a host approximation, so a handful of descents at device seams is noise, thousands is not)
+# PROBE step=50 RAW-in-Morton-order rel_l2=8.2702e-04  aligned rel_l2=8.2702e-04  alignment_ok=True
+# PROBE step=50 n=256 rel_l2=8.2702e-04 median=4.723e-04 p99=2.036e-03 max=2.525e-03 (157.9 s)
+  step     50  t=0.0250    82.69s  dL/L=4.956e-08  com=3.176e-06  KE=3.795865e+01  fs=[0.007466,80.69]
+# checkpoint step 60 -> q_ckpt.npz (730 MB)
+  step     60  t=0.0300    84.23s  dL/L=5.745e-08  com=3.765e-06  KE=3.798740e+01  fs=[0.007485,89.04]
+  step     70  t=0.0350    85.10s  dL/L=6.808e-08  com=4.333e-06  KE=3.802212e+01  fs=[0.007484,88.8]
+# PROBE step=75 gid_o implies Morton order with 0 descents (consistent; bounds are a host approximation, so a handful of descents at device seams is noise, thousands is not)
+# PROBE step=75 RAW-in-Morton-order rel_l2=7.9346e-04  aligned rel_l2=7.9346e-04  alignment_ok=True
+# PROBE step=75 n=256 rel_l2=7.9346e-04 median=4.272e-04 p99=1.748e-03 max=3.231e-03 (158.1 s)
+# checkpoint step 80 -> q_ckpt.npz (730 MB)
+  step     80  t=0.0400    85.89s  dL/L=7.559e-08  com=4.877e-06  KE=3.806234e+01  fs=[0.007482,94.04]
+  step     90  t=0.0450    87.64s  dL/L=8.503e-08  com=5.394e-06  KE=3.810750e+01  fs=[0.007492,96.87]
+  step    100  repartitioned (#1), realignment re-verified
+# PROBE step=100: ALIGNMENT MISMATCH -- on-device realignment disagrees with scatter_to_input_order on 25165679 of 25165824 rows (max |diff| 1.381e+02). Refusing to integrate.
+# PROBE step=100 gid_o implies Morton order with 0 descents (consistent; bounds are a host approximation, so a handful of descents at device seams is noise, thousands is not)
+# PROBE step=100 RAW-in-Morton-order rel_l2=3.5249e-03  aligned rel_l2=1.0349e+00  alignment_ok=False
+# PROBE step=100 n=256 rel_l2=1.0349e+00 median=7.597e-01 p99=8.955e+00 max=1.174e+01 (158.0 s)
+# checkpoint step 100 -> q_ckpt.npz (730 MB)
+  step    100  t=0.0500    88.32s  dL/L=9.752e-08  com=5.884e-06  KE=3.815706e+01  fs=[0.007509,153.7]

@@ -1317,3 +1317,54 @@ right; the instrument was stale for that one step (and would have been at 200/30
 consistent, the run was stopped and resumed from it with the fix — ~15 min lost, and every
 remaining probe is honest. Attempt-1 artifacts (frames 0–100, diag, log) preserved in
 `qorbit25m/attempt1_steps0-100/`; the movie is assembled from both.
+
+## 15. RESULT: 25,165,824 particles, a quarter orbit, every probe in class (2026-09-05 13:49)
+
+`results/qorbit25m/` (logs of both attempts, diag JSONs, launcher, `analysis.json`, movies).
+
+**Run.** 25,165,824 (disc 20,971,520 + bulge 4,194,304), 8×A100-PCIE-40GB, jax 0.10.2 standalone venv,
+native halo exchange, criterion MAC eps 1e-5, leaf 1024, order 6, fp32 state with wide fp64 near-field
+accumulation, dt 5e-4, 489 steps = 0.2445 code = 36.4 Myr = a quarter orbit at the half-mass radius.
+Repartition every 100, checkpoint every 20, fp64 direct-sum probe of 256 targets every 25.
+**489 steps in 40,801 s wall (11.3 h) at a median 82.0 s/step = 307k particles/s**, 17.3 GiB/card.
+One deliberate restart at step 100 (§14.7, ~10 min: compile cache hit, first force 99 s).
+
+**The instrument that matters — every probe, both attempts:**
+
+| step | rel-L2 | median | p99 | | step | rel-L2 | median | p99 |
+|---|---|---|---|---|---|---|---|---|
+| 0 | 4.98e-3 | 5.5e-4 | 8.6e-3 | | 250 | 1.06e-3 | 4.5e-4 | 2.7e-3 |
+| 25 | 1.09e-3 | 5.5e-4 | 2.9e-3 | | 275 | 8.9e-4 | 4.4e-4 | 2.5e-3 |
+| 50 | 8.3e-4 | 4.7e-4 | 2.0e-3 | | **300** ᴿ | 5.03e-3 | 6.1e-4 | 9.3e-3 |
+| 75 | 7.9e-4 | 4.3e-4 | 1.7e-3 | | 325 | 1.83e-3 | 5.1e-4 | 3.4e-3 |
+| **100** ᴿ | 3.52e-3 † | 5.5e-4 | 6.5e-3 | | 350 | 8.0e-4 | 4.1e-4 | 2.0e-3 |
+| 125 | 2.10e-3 | 5.6e-4 | 3.4e-3 | | 375 | 8.2e-4 | 4.4e-4 | 2.0e-3 |
+| 150 | 1.02e-3 | 4.7e-4 | 2.3e-3 | | **400** ᴿ | 3.33e-3 | 5.5e-4 | 6.5e-3 |
+| 175 | 9.1e-4 | 4.0e-4 | 2.3e-3 | | 425 | 2.28e-3 | 5.5e-4 | 4.4e-3 |
+| **200** ᴿ | 4.30e-3 | 5.9e-4 | 6.2e-3 | | 450 | 1.20e-3 | 5.4e-4 | 2.6e-3 |
+| 225 | 1.42e-3 | 5.4e-4 | 2.6e-3 | | 475 | 1.00e-3 | 4.6e-4 | 2.6e-3 |
+
+ᴿ = repartition step. † = the restart's initial probe at the step-100 state; attempt 1's own step-100
+reading (1.03) was the stale-`A_self` artifact of §14.7, not the force. The pattern is physical: a fresh
+RCB partition puts the most cross-domain pairs on the criterion's boundary (rel-L2 3–5e-3, median
+unchanged), and the number settles to ~1e-3 as the frozen partition ages. **No probe left the class.
+The median particle error never moved from 4–6e-4.** Contrast §13: 0.45 from step 1.
+
+**Conservation (float64 host):** |L| 9.55926129 → 9.55926447, **dL/L = 4.6e-7** over 489 steps
+(~1e-9/step throughout; the record's earlier 1.45e-7/step was the halo defect, §14.4); COM drift 3.8e-5
+code = 0.38 pc.
+
+**Physics (per component, `analysis.json`):** KE +7.24 %; r_half 5.30 → 5.07 kpc (all), disc 5.65 → 5.43,
+bulge 2.44 → 2.25 kpc; disc v_φ median +4.2 %, σ_R +3.5 %, σ_z +2.0 %; bulge σ_R +4.9 %; prograde
+fractions unchanged to 5 digits; scale height unchanged (0.63 → 0.62 kpc). The system contracts by
+~4 % and heats over the quarter orbit: the Agama SCM equilibrium was built against Agama's own halo
+model, while the run's live self-gravity plus the *analytic* NFW halo of the driver is not the same
+potential, and 25M softened particles are not the smooth DF. That is an IC-equilibrium question for
+the science setup, not a code defect — every force was checked against a direct sum. Worth revisiting
+with Agama's halo parameters matched to the driver's, or a live halo.
+
+**Movies:** `results/qorbit25m/q_xy.mp4`, `q_xz.mp4` (49 frames, steps 0–480, both attempts spliced).
+
+What made this trustworthy, in one line: not the invariants (they looked fine while the forces were
+45 % wrong) but a fresh fp64 direct sum on moving positions, twenty times, on every configuration that
+ever ran.
