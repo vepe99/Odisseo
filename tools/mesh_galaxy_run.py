@@ -965,8 +965,11 @@ def main():  # noqa: C901
 
         if args.repartition_every and it % args.repartition_every == 0:
             X, V = repartition(X, V)
-            # A is in the OLD row order and must not survive the swap.
-            A, gid_o, diag, A_raw, _ = force(X)
+            # A is in the OLD row order and must not survive the swap -- and neither
+            # may A_self: the probe scores it against the NEW row order. Discarding it
+            # here made the step-100 probe of the 25M run read rel-L2 1.03 (garbage)
+            # while the integration was correct (dL/L on trend). Keep every output.
+            A, gid_o, diag, A_raw, A_self = force(X)
             jax.block_until_ready(A)
             _verify_alignment(
                 align(A_raw, gid_o, pstate["RANK"]), A_raw, gid_o, pstate["GID"], n

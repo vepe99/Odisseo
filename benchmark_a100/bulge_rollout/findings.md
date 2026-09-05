@@ -1302,3 +1302,18 @@ Documented and enforced where a future reader will look, not only here:
 
 Production at the time of opening: 25,165,824 on 8×A100, **80 s/step**, dL/L 1e-9/step, probe at
 step 25 = 1.09e-3 (t=0: 4.98e-3). Projected finish ~11:00.
+
+### 14.7 Production, first 100 steps; a stale-probe artifact at the repartition step (02:25)
+
+25,165,824 on 8×A100, jax 0.10.2, native exchange: **80–88 s/step**, dL/L **1e-9/step** (9.75e-8 at
+step 100), probes at steps 25/50/75 = **1.09e-3 / 8.3e-4 / 7.9e-4** (t=0: 4.98e-3). All in class.
+
+The probe at step 100 read rel-L2 **1.03** — garbage — while dL/L stayed exactly on trend. Step 100
+is the repartition step: the loop correctly recomputes the force after the new RCB partition
+(`A, gid_o, diag, A_raw, _ = force(X)`), but discarded the recomputed `A_self`, so the probe
+scored the *old*-row-order self-forces against the *new*-order positions. The integration was
+right; the instrument was stale for that one step (and would have been at 200/300/400). Fixed
+(`A_self` kept). Because the step-100 checkpoint was written after the repartition and is
+consistent, the run was stopped and resumed from it with the fix — ~15 min lost, and every
+remaining probe is honest. Attempt-1 artifacts (frames 0–100, diag, log) preserved in
+`qorbit25m/attempt1_steps0-100/`; the movie is assembled from both.
