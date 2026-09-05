@@ -1,0 +1,23 @@
+#### venv+install 2026-09-04T21:58:10+02:00
+WARNING: Cache entry deserialization failed, entry ignored
+WARNING: Cache entry deserialization failed, entry ignored
+WARNING: Cache entry deserialization failed, entry ignored
+WARNING: Cache entry deserialization failed, entry ignored
+installed jax 0.9.1 jaxlib 0.9.1
+jax                      0.9.1
+jax-cuda12-pjrt          0.9.1
+jax-cuda12-plugin        0.9.1
+jaxlib                   0.9.1
+#### REPRO@0.9.1 [--donate] 2026-09-04T21:59:47+02:00
+jax 0.9.1  donate=True churn=False  iters=40
+  ........................................
+  -> CLEAN (0/40 calls returned the fill value or garbage)
+#### REPRO@0.9.1 [--churn --donate] 2026-09-04T21:59:52+02:00
+jax 0.9.1  donate=True churn=True  iters=40
+  ........................................
+  -> CLEAN (0/40 calls returned the fill value or garbage)
+#### REPRO@0.9.1 [] 2026-09-04T22:00:00+02:00
+jax 0.9.1  donate=False churn=False  iters=40
+  ........................................
+  -> CLEAN (0/40 calls returned the fill value or garbage)
+JAX091 DONE

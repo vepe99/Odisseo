@@ -1,0 +1,36 @@
+===== ARM: preallocate TRUE (default) =====
+PREALLOC=(default=true) ndev_visible=8
+dL/L = 2.794196e-03   FAIL
+first_diag:
+   cross_far_overflow           [0.0, 0.0]
+   cross_far_pairs              [0.0, 0.0]
+   cross_near_overflow          [0.0, 0.0]
+   cross_near_pairs             [64.0, 64.0]
+   cross_queue_overflow         [0.0, 0.0]
+   force_scale_max              [0.0, 0.0]
+   force_scale_min              [0.0, 0.0]
+   l2l_level_overflow           [0.0, 0.0]
+   self_far_overflow            [0.0, 0.0]
+   self_far_pairs               [0.0, 0.0]
+   self_near_overflow           [0.0, 0.0]
+   self_near_pairs              [56.0, 56.0]
+   self_queue_overflow          [0.0, 0.0]
+force vs exact direct sum: rel_l2=7.0624e-07 median=4.144e-07 max=1.002e-05
+===== ARM: preallocate FALSE =====
+PREALLOC=false ndev_visible=8
+dL/L = 3.525650e-09   PASS
+first_diag:
+   cross_far_overflow           [0.0, 0.0]
+   cross_far_pairs              [0.0, 0.0]
+   cross_near_overflow          [0.0, 0.0]
+   cross_near_pairs             [64.0, 64.0]
+   cross_queue_overflow         [0.0, 0.0]
+   force_scale_max              [0.0, 0.0]
+   force_scale_min              [0.0, 0.0]
+   l2l_level_overflow           [0.0, 0.0]
+   self_far_overflow            [0.0, 0.0]
+   self_far_pairs               [0.0, 0.0]
+   self_near_overflow           [0.0, 0.0]
+   self_near_pairs              [56.0, 56.0]
+   self_queue_overflow          [0.0, 0.0]
+force vs exact direct sum: rel_l2=7.0624e-07 median=4.144e-07 max=1.002e-05

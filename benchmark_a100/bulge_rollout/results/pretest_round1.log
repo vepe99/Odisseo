@@ -1,0 +1,159 @@
+############ ARM geo (preallocate=false) ############
+# N=21,012,480 ndev=6 leaf=512 theta=0.7 order=6 dtype=float32
+# G=1.0 halo_mass=100.0 halo_rs=2.0 rdisk=0.24 softening=0.0082783
+# mac=dehnen eps=None cross_criterion=True accum=wide
+# dt=0.00025 steps=8 devices=['NVIDIA A100-PCIE-40GB', 'NVIDIA A100-PCIE-40GB', 'NVIDIA A100-PCIE-40GB', 'NVIDIA A100-PCIE-40GB', 'NVIDIA A100-PCIE-40GB', 'NVIDIA A100-PCIE-40GB']
+# evaluator built in 0.4 s
+/export/home/tbuck/Odisseo/tools/mesh_galaxy_run.py:215: DeprecationWarning: jax.experimental.shard_map is deprecated in v0.8.0. Used jax.shard_map instead.
+  from jax.experimental.shard_map import shard_map
+# first force (compile incl.) 249.7 s
+# realignment verified against scatter_to_input_order (4.2 s)
+# PROBE n=256 rel_l2=1.5200e-02 median=1.209e-03 p99=2.539e-02 max=3.826e-02 (134.7 s)
+# self_near=12,660,744 cross_near=50,074,764 overflow={'cross_queue_overflow': 0.0, 'cross_far_overflow': 0.0, 'cross_near_overflow': 0.0, 'self_queue_overflow': 0.0, 'self_far_overflow': 0.0, 'self_near_overflow': 0.0, 'l2l_level_overflow': 0.0}
+# t=0  |L|=9.560536e+00  KE=3.790158e+01  com=[-7.40e-05  1.39e-04  5.00e-05]
+  step      2  t=0.0005    62.06s  dL/L=7.711e-07  com=2.705e-07  KE=3.790155e+01
+  step      4  t=0.0010    64.99s  dL/L=2.631e-06  com=5.669e-07  KE=3.790144e+01
+  step      6  t=0.0015    64.81s  dL/L=4.513e-06  com=8.538e-07  KE=3.790122e+01
+  step      8  t=0.0020    65.18s  dL/L=5.421e-06  com=1.171e-06  KE=3.790091e+01
+# 8 steps in 520.9 s, median 63.656 s/step (330,095 particles/s)
+# wrote /export/scratch/tbuck/odisseo_runs/pretest/geo_diag.json
+############ END geo rc=0 ############
+############ ARM crit_eps1e-5 (preallocate=false) ############
+# N=21,012,480 ndev=6 leaf=512 theta=0.7 order=6 dtype=float32
+# G=1.0 halo_mass=100.0 halo_rs=2.0 rdisk=0.24 softening=0.0082783
+# mac=dehnen_error eps=1e-05 cross_criterion=True accum=wide
+# dt=0.00025 steps=8 devices=['NVIDIA A100-PCIE-40GB', 'NVIDIA A100-PCIE-40GB', 'NVIDIA A100-PCIE-40GB', 'NVIDIA A100-PCIE-40GB', 'NVIDIA A100-PCIE-40GB', 'NVIDIA A100-PCIE-40GB']
+# evaluator built in 0.4 s
+/export/home/tbuck/Odisseo/tools/mesh_galaxy_run.py:215: DeprecationWarning: jax.experimental.shard_map is deprecated in v0.8.0. Used jax.shard_map instead.
+  from jax.experimental.shard_map import shard_map
+W0901 11:48:22.436988 3817178 hlo_rematerialization.cc:3204] Can't reduce memory use below 28.07GiB (30137826507 bytes) by rematerialization; only reduced to 62.63GiB (67248211823 bytes), down from 69.62GiB (74760073675 bytes) originally
+W0901 11:50:22.368311 3817440 bfc_allocator.cc:502] Allocator (GPU_0_bfc) ran out of memory trying to allocate 63.78GiB (rounded to 68482828288)requested by op 
+If the cause is memory fragmentation maybe the environment variable 'TF_GPU_ALLOCATOR=cuda_malloc_async' will improve the situation. 
+Current allocation summary follows.
+Current allocation summary follows.
+W0901 11:50:22.368767 3817440 bfc_allocator.cc:513] __________________________________________________________________********_________***__****_______*
+E0901 11:50:22.368796 3817440 pjrt_stream_executor_client.cc:2111] Execution of replica 0 failed: RESOURCE_EXHAUSTED: Out of memory while trying to allocate 63.78GiB. [tf-allocator-allocation-error='']
+W0901 11:50:22.395358 3817455 bfc_allocator.cc:502] Allocator (GPU_5_bfc) ran out of memory trying to allocate 63.78GiB (rounded to 68482828288)requested by op 
+If the cause is memory fragmentation maybe the environment variable 'TF_GPU_ALLOCATOR=cuda_malloc_async' will improve the situation. 
+Current allocation summary follows.
+Current allocation summary follows.
+W0901 11:50:22.395673 3817455 bfc_allocator.cc:513] *_________________________________________________*********************xxxx***********x*********xxxx
+E0901 11:50:22.395700 3817455 pjrt_stream_executor_client.cc:2111] Execution of replica 0 failed: RESOURCE_EXHAUSTED: Out of memory while trying to allocate 63.78GiB. [tf-allocator-allocation-error='']
+W0901 11:50:22.411600 3817443 bfc_allocator.cc:502] Allocator (GPU_1_bfc) ran out of memory trying to allocate 63.78GiB (rounded to 68482828288)requested by op 
+If the cause is memory fragmentation maybe the environment variable 'TF_GPU_ALLOCATOR=cuda_malloc_async' will improve the situation. 
+Current allocation summary follows.
+Current allocation summary follows.
+W0901 11:50:22.411844 3817443 bfc_allocator.cc:513] *_________________________________________________*********************xxxx***********x*********xxxx
+E0901 11:50:22.411863 3817443 pjrt_stream_executor_client.cc:2111] Execution of replica 0 failed: RESOURCE_EXHAUSTED: Out of memory while trying to allocate 63.78GiB. [tf-allocator-allocation-error='']
+W0901 11:50:22.429336 3817446 bfc_allocator.cc:502] Allocator (GPU_2_bfc) ran out of memory trying to allocate 63.78GiB (rounded to 68482828288)requested by op 
+If the cause is memory fragmentation maybe the environment variable 'TF_GPU_ALLOCATOR=cuda_malloc_async' will improve the situation. 
+Current allocation summary follows.
+Current allocation summary follows.
+W0901 11:50:22.429650 3817446 bfc_allocator.cc:513] *_________________________________________________*********************xxxx***********x*********xxxx
+E0901 11:50:22.429675 3817446 pjrt_stream_executor_client.cc:2111] Execution of replica 0 failed: RESOURCE_EXHAUSTED: Out of memory while trying to allocate 63.78GiB. [tf-allocator-allocation-error='']
+W0901 11:50:22.446567 3817449 bfc_allocator.cc:502] Allocator (GPU_3_bfc) ran out of memory trying to allocate 63.78GiB (rounded to 68482828288)requested by op 
+If the cause is memory fragmentation maybe the environment variable 'TF_GPU_ALLOCATOR=cuda_malloc_async' will improve the situation. 
+Current allocation summary follows.
+Current allocation summary follows.
+W0901 11:50:22.446877 3817449 bfc_allocator.cc:513] *_________________________________________________*********************xxxx***********x*********xxxx
+E0901 11:50:22.446900 3817449 pjrt_stream_executor_client.cc:2111] Execution of replica 0 failed: RESOURCE_EXHAUSTED: Out of memory while trying to allocate 63.78GiB. [tf-allocator-allocation-error='']
+W0901 11:50:22.463863 3817452 bfc_allocator.cc:502] Allocator (GPU_4_bfc) ran out of memory trying to allocate 63.78GiB (rounded to 68482828288)requested by op 
+If the cause is memory fragmentation maybe the environment variable 'TF_GPU_ALLOCATOR=cuda_malloc_async' will improve the situation. 
+Current allocation summary follows.
+Current allocation summary follows.
+W0901 11:50:22.464131 3817452 bfc_allocator.cc:513] *_________________________________________________*********************xxxx***********x*********xxxx
+E0901 11:50:22.464159 3817452 pjrt_stream_executor_client.cc:2111] Execution of replica 0 failed: RESOURCE_EXHAUSTED: Out of memory while trying to allocate 63.78GiB. [tf-allocator-allocation-error='']
+Traceback (most recent call last):
+  File "/export/home/tbuck/Odisseo/tools/mesh_galaxy_run.py", line 843, in <module>
+    main()
+    ~~~~^^
+  File "/export/home/tbuck/Odisseo/tools/mesh_galaxy_run.py", line 517, in main
+    A, gid_o, diag, A_raw, A_self = force(X)
+                                    ~~~~~^^^
+  File "/export/home/tbuck/Odisseo/tools/mesh_galaxy_run.py", line 503, in force
+    a_raw, gid_o, diag = evaluate(x, pstate["M"], pstate["GID"], pstate["COUNTS"])
+                         ~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+jax.errors.JaxRuntimeError: RESOURCE_EXHAUSTED: Out of memory while trying to allocate 63.78GiB.: while running replica 0 and partition 0 of a replicated computation (other replicas may have failed as well).
+--------------------
+For simplicity, JAX has removed its internal frames from the traceback of the following exception. Set JAX_TRACEBACK_FILTERING=off to include these.
+############ END crit_eps1e-5 rc=0 ############
+############ ARM crit_eps1e-3 (preallocate=false) ############
+# N=21,012,480 ndev=6 leaf=512 theta=0.7 order=6 dtype=float32
+# G=1.0 halo_mass=100.0 halo_rs=2.0 rdisk=0.24 softening=0.0082783
+# mac=dehnen_error eps=0.001 cross_criterion=True accum=wide
+# dt=0.00025 steps=8 devices=['NVIDIA A100-PCIE-40GB', 'NVIDIA A100-PCIE-40GB', 'NVIDIA A100-PCIE-40GB', 'NVIDIA A100-PCIE-40GB', 'NVIDIA A100-PCIE-40GB', 'NVIDIA A100-PCIE-40GB']
+# evaluator built in 0.4 s
+/export/home/tbuck/Odisseo/tools/mesh_galaxy_run.py:215: DeprecationWarning: jax.experimental.shard_map is deprecated in v0.8.0. Used jax.shard_map instead.
+  from jax.experimental.shard_map import shard_map
+W0901 11:52:59.388135 3823191 hlo_rematerialization.cc:3204] Can't reduce memory use below 28.07GiB (30137826507 bytes) by rematerialization; only reduced to 62.63GiB (67248211823 bytes), down from 69.62GiB (74760073675 bytes) originally
+W0901 11:54:59.436900 3823455 bfc_allocator.cc:502] Allocator (GPU_4_bfc) ran out of memory trying to allocate 63.78GiB (rounded to 68482828288)requested by op 
+If the cause is memory fragmentation maybe the environment variable 'TF_GPU_ALLOCATOR=cuda_malloc_async' will improve the situation. 
+Current allocation summary follows.
+Current allocation summary follows.
+W0901 11:54:59.437226 3823455 bfc_allocator.cc:513] *_________________________________________________*********************xxxx***********x*********xxxx
+E0901 11:54:59.437252 3823455 pjrt_stream_executor_client.cc:2111] Execution of replica 0 failed: RESOURCE_EXHAUSTED: Out of memory while trying to allocate 63.78GiB. [tf-allocator-allocation-error='']
+W0901 11:54:59.464673 3823452 bfc_allocator.cc:502] Allocator (GPU_3_bfc) ran out of memory trying to allocate 63.78GiB (rounded to 68482828288)requested by op 
+If the cause is memory fragmentation maybe the environment variable 'TF_GPU_ALLOCATOR=cuda_malloc_async' will improve the situation. 
+Current allocation summary follows.
+Current allocation summary follows.
+W0901 11:54:59.464943 3823452 bfc_allocator.cc:513] *_________________________________________________*********************xxxx***********x*********xxxx
+E0901 11:54:59.464970 3823452 pjrt_stream_executor_client.cc:2111] Execution of replica 0 failed: RESOURCE_EXHAUSTED: Out of memory while trying to allocate 63.78GiB. [tf-allocator-allocation-error='']
+W0901 11:54:59.482475 3823458 bfc_allocator.cc:502] Allocator (GPU_5_bfc) ran out of memory trying to allocate 63.78GiB (rounded to 68482828288)requested by op 
+If the cause is memory fragmentation maybe the environment variable 'TF_GPU_ALLOCATOR=cuda_malloc_async' will improve the situation. 
+Current allocation summary follows.
+Current allocation summary follows.
+W0901 11:54:59.482779 3823458 bfc_allocator.cc:513] *_________________________________________________*********************xxxx***********x*********xxxx
+E0901 11:54:59.482805 3823458 pjrt_stream_executor_client.cc:2111] Execution of replica 0 failed: RESOURCE_EXHAUSTED: Out of memory while trying to allocate 63.78GiB. [tf-allocator-allocation-error='']
+W0901 11:54:59.499040 3823449 bfc_allocator.cc:502] Allocator (GPU_2_bfc) ran out of memory trying to allocate 63.78GiB (rounded to 68482828288)requested by op 
+If the cause is memory fragmentation maybe the environment variable 'TF_GPU_ALLOCATOR=cuda_malloc_async' will improve the situation. 
+Current allocation summary follows.
+Current allocation summary follows.
+W0901 11:54:59.499299 3823449 bfc_allocator.cc:513] *_________________________________________________*********************xxxx***********x*********xxxx
+E0901 11:54:59.499325 3823449 pjrt_stream_executor_client.cc:2111] Execution of replica 0 failed: RESOURCE_EXHAUSTED: Out of memory while trying to allocate 63.78GiB. [tf-allocator-allocation-error='']
+W0901 11:54:59.510289 3823443 bfc_allocator.cc:502] Allocator (GPU_0_bfc) ran out of memory trying to allocate 63.78GiB (rounded to 68482828288)requested by op 
+If the cause is memory fragmentation maybe the environment variable 'TF_GPU_ALLOCATOR=cuda_malloc_async' will improve the situation. 
+Current allocation summary follows.
+Current allocation summary follows.
+W0901 11:54:59.510537 3823443 bfc_allocator.cc:513] __________________________________________________________________********_________******__________*
+E0901 11:54:59.510555 3823443 pjrt_stream_executor_client.cc:2111] Execution of replica 0 failed: RESOURCE_EXHAUSTED: Out of memory while trying to allocate 63.78GiB. [tf-allocator-allocation-error='']
+W0901 11:54:59.530260 3823446 bfc_allocator.cc:502] Allocator (GPU_1_bfc) ran out of memory trying to allocate 63.78GiB (rounded to 68482828288)requested by op 
+If the cause is memory fragmentation maybe the environment variable 'TF_GPU_ALLOCATOR=cuda_malloc_async' will improve the situation. 
+Current allocation summary follows.
+Current allocation summary follows.
+W0901 11:54:59.530533 3823446 bfc_allocator.cc:513] *_________________________________________________*********************xxxx***********x*********xxxx
+E0901 11:54:59.530560 3823446 pjrt_stream_executor_client.cc:2111] Execution of replica 0 failed: RESOURCE_EXHAUSTED: Out of memory while trying to allocate 63.78GiB. [tf-allocator-allocation-error='']
+Traceback (most recent call last):
+  File "/export/home/tbuck/Odisseo/tools/mesh_galaxy_run.py", line 843, in <module>
+    main()
+    ~~~~^^
+  File "/export/home/tbuck/Odisseo/tools/mesh_galaxy_run.py", line 517, in main
+    A, gid_o, diag, A_raw, A_self = force(X)
+                                    ~~~~~^^^
+  File "/export/home/tbuck/Odisseo/tools/mesh_galaxy_run.py", line 503, in force
+    a_raw, gid_o, diag = evaluate(x, pstate["M"], pstate["GID"], pstate["COUNTS"])
+                         ~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+jax.errors.JaxRuntimeError: RESOURCE_EXHAUSTED: Out of memory while trying to allocate 63.78GiB.: while running replica 0 and partition 0 of a replicated computation (other replicas may have failed as well).
+--------------------
+For simplicity, JAX has removed its internal frames from the traceback of the following exception. Set JAX_TRACEBACK_FILTERING=off to include these.
+############ END crit_eps1e-3 rc=0 ############
+############ ARM geo_prealloc (preallocate=true) ############
+# N=21,012,480 ndev=6 leaf=512 theta=0.7 order=6 dtype=float32
+# G=1.0 halo_mass=100.0 halo_rs=2.0 rdisk=0.24 softening=0.0082783
+# mac=dehnen eps=None cross_criterion=True accum=wide
+# dt=0.00025 steps=8 devices=['NVIDIA A100-PCIE-40GB', 'NVIDIA A100-PCIE-40GB', 'NVIDIA A100-PCIE-40GB', 'NVIDIA A100-PCIE-40GB', 'NVIDIA A100-PCIE-40GB', 'NVIDIA A100-PCIE-40GB']
+# evaluator built in 0.4 s
+/export/home/tbuck/Odisseo/tools/mesh_galaxy_run.py:215: DeprecationWarning: jax.experimental.shard_map is deprecated in v0.8.0. Used jax.shard_map instead.
+  from jax.experimental.shard_map import shard_map
+# first force (compile incl.) 248.7 s
+# realignment verified against scatter_to_input_order (3.9 s)
+# PROBE n=256 rel_l2=1.5200e-02 median=1.209e-03 p99=2.539e-02 max=3.826e-02 (132.5 s)
+# self_near=12,660,744 cross_near=50,074,764 overflow={'cross_queue_overflow': 0.0, 'cross_far_overflow': 0.0, 'cross_near_overflow': 0.0, 'self_queue_overflow': 0.0, 'self_far_overflow': 0.0, 'self_near_overflow': 0.0, 'l2l_level_overflow': 0.0}
+# t=0  |L|=9.560536e+00  KE=3.790158e+01  com=[-7.40e-05  1.39e-04  5.00e-05]
+  step      2  t=0.0005    61.20s  dL/L=1.174e-07  com=2.804e-07  KE=3.790145e+01
+  step      4  t=0.0010    64.99s  dL/L=1.127e-07  com=5.553e-07  KE=3.790105e+01
+  step      6  t=0.0015    64.92s  dL/L=2.557e-07  com=8.454e-07  KE=3.790036e+01
+  step      8  t=0.0020    65.07s  dL/L=2.268e-07  com=1.151e-06  KE=3.789941e+01
+# 8 steps in 520.0 s, median 63.653 s/step (330,110 particles/s)
+# wrote /export/scratch/tbuck/odisseo_runs/pretest/geo_prealloc_diag.json
+# checkpoint step 8 -> geo_prealloc_final.npz (609 MB)
+############ END geo_prealloc rc=0 ############

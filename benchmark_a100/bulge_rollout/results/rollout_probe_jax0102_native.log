@@ -1,0 +1,47 @@
+#### CANDIDATE PROBE (jax 0.10.2, native halo) on 1,3,4,6 2026-09-04T22:14:18+02:00
+######## ROLLOUT-PROBE-JAX0102-NATIVE crit 2026-09-04T22:14:18+02:00 ########
+# N=17,825,792 ndev=4 leaf=1024 theta=0.7 order=6 dtype=float32
+# G=1.0 halo_mass=100.0 halo_rs=2.0 rdisk=0.24 softening=0.0089879
+# mac=dehnen_error eps=1e-05 cross_criterion=True accum=wide nearfield_backend=auto halo_exchange=native
+# dt=0.0005 steps=4 devices=['NVIDIA A100-PCIE-40GB', 'NVIDIA A100-PCIE-40GB', 'NVIDIA A100-PCIE-40GB', 'NVIDIA A100-PCIE-40GB']
+# caps: self_queue=1,048,576 self_nbr=8,192 self_int=8,192 | cross_queue=4,194,304 cross_nbr=32,768 cross_int=16,384
+# evaluator built in 0.1 s
+E0904 22:17:24.672950 3307858 slow_operation_alarm.cc:73] 
+********************************
+[Compiling module input_reduce_fusion.8 for GPU] Very slow compile? If you want to file a bug, run with envvar XLA_FLAGS=--xla_dump_to=/tmp/foo and attach the results.
+********************************
+E0904 22:27:21.650977 3307842 slow_operation_alarm.cc:140] The operation took 11m56.978137201s
+
+********************************
+[Compiling module input_reduce_fusion.8 for GPU] Very slow compile? If you want to file a bug, run with envvar XLA_FLAGS=--xla_dump_to=/tmp/foo and attach the results.
+********************************
+# first force (compile incl.) 921.7 s
+# realignment verified against scatter_to_input_order (3.0 s)
+# force_scale range [0.009708, 169.7] (17478.0x spread)
+# PROBE step=0 gid_o implies Morton order with 0 descents (consistent; bounds are a host approximation, so a handful of descents at device seams is noise, thousands is not)
+# PROBE step=0 RAW-in-Morton-order rel_l2=2.8766e-03  aligned rel_l2=2.8766e-03  alignment_ok=True
+# PROBE step=0 n=256 rel_l2=2.8766e-03 median=6.660e-04 p99=5.044e-03 max=7.792e-03 (114.2 s)
+# self_near=11,779,046 cross_near=14,018,632 overflow={'cross_queue_overflow': 0.0, 'cross_far_overflow': 0.0, 'cross_near_overflow': 0.0, 'self_queue_overflow': 0.0, 'self_far_overflow': 0.0, 'self_near_overflow': 0.0, 'l2l_level_overflow': 0.0}
+# t=0  |L|=9.556678e+00  KE=3.790326e+01  com=[1.92e-04 4.60e-05 8.90e-05]
+# PROBE step=1 gid_o implies Morton order with 0 descents (consistent; bounds are a host approximation, so a handful of descents at device seams is noise, thousands is not)
+# PROBE step=1 RAW-in-Morton-order rel_l2=4.1650e-03  aligned rel_l2=4.1650e-03  alignment_ok=True
+# PROBE step=1 n=256 rel_l2=4.1650e-03 median=6.687e-04 p99=6.875e-03 max=1.238e-02 (113.8 s)
+  step      1  t=0.0005   150.16s  dL/L=1.663e-09  com=3.162e-07  KE=3.790323e+01  fs=[0.009708,164]
+# PROBE step=2 gid_o implies Morton order with 0 descents (consistent; bounds are a host approximation, so a handful of descents at device seams is noise, thousands is not)
+# PROBE step=2 RAW-in-Morton-order rel_l2=2.5335e-03  aligned rel_l2=2.5335e-03  alignment_ok=True
+# PROBE step=2 n=256 rel_l2=2.5335e-03 median=6.616e-04 p99=4.366e-03 max=6.885e-03 (114.1 s)
+  step      2  t=0.0010   145.44s  dL/L=3.094e-09  com=6.320e-07  KE=3.790320e+01  fs=[0.009708,165.1]
+# PROBE step=3 gid_o implies Morton order with 0 descents (consistent; bounds are a host approximation, so a handful of descents at device seams is noise, thousands is not)
+# PROBE step=3 RAW-in-Morton-order rel_l2=2.7110e-03  aligned rel_l2=2.7110e-03  alignment_ok=True
+# PROBE step=3 n=256 rel_l2=2.7110e-03 median=6.425e-04 p99=4.920e-03 max=7.131e-03 (113.6 s)
+  step      3  t=0.0015   145.39s  dL/L=4.381e-09  com=9.475e-07  KE=3.790316e+01  fs=[0.009707,164]
+# PROBE step=4 gid_o implies Morton order with 0 descents (consistent; bounds are a host approximation, so a handful of descents at device seams is noise, thousands is not)
+# PROBE step=4 RAW-in-Morton-order rel_l2=3.1450e-03  aligned rel_l2=3.1450e-03  alignment_ok=True
+# PROBE step=4 n=256 rel_l2=3.1450e-03 median=6.959e-04 p99=6.136e-03 max=9.286e-03 (113.7 s)
+  step      4  t=0.0020   146.26s  dL/L=5.756e-09  com=1.263e-06  KE=3.790311e+01  fs=[0.009495,163.9]
+# 4 steps in 1541.3 s, median 145.850 s/step (122,220 particles/s)
+# wrote /export/scratch/tbuck/odisseo_runs/rollprobe_align/crit_jax0102_diag.json
+# checkpoint step 4 -> crit_jax0102_final.npz (517 MB)
+######## END rc=0 ########
+ROLLOUT-PROBE-JAX0102-NATIVE DONE
+CHAIN-JAX0102 DONE

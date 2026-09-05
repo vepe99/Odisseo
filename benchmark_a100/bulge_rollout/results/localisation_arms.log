@@ -1,0 +1,24 @@
+######## ARM full (dehnen_error, cross=1) 2026-09-02T18:34:16+02:00 ########
+# full: mac=dehnen_error cross_criterion=True yggdrax=/export/home/tbuck/yggdrax-main-wt/yggdrax/__init__.py
+
+#   baseline self_near=11,779,046  self_far=5,649,944  cross_near=14,018,632  cross_far=8,033,401
+#   eval 1: 43,098,441/53,477,376 words differ (80.6 %)  rel dev median=1.760e-07 p99=3.892e-06 p99.99=3.646e-04 max=2.000e+00
+#   eval 2: 43,117,898/53,477,376 words differ (80.6 %)  rel dev median=1.762e-07 p99=3.828e-06 p99.99=3.746e-04 max=1.800e+00
+# full VERDICT: NON-DETERMINISTIC
+######## ARM full done rc=0 ########
+######## ARM selfonly (dehnen_error, cross=0) 2026-09-02T18:58:38+02:00 ########
+# selfonly: mac=dehnen_error cross_criterion=False yggdrax=/export/home/tbuck/yggdrax-main-wt/yggdrax/__init__.py
+
+#   baseline self_near=11,779,046  self_far=5,649,944  cross_near=17,079,004  cross_far=5,669,435
+#   eval 1: 42,928,672/53,477,376 words differ (80.3 %)  rel dev median=1.662e-07 p99=4.058e-06 p99.99=3.887e-04 max=1.812e+01
+#   eval 2: 42,959,853/53,477,376 words differ (80.3 %)  rel dev median=1.678e-07 p99=4.091e-06 p99.99=3.956e-04 max=1.350e+01
+# selfonly VERDICT: NON-DETERMINISTIC
+######## ARM selfonly done rc=0 ########
+######## ARM geo (dehnen, cross=0) 2026-09-02T19:24:17+02:00 ########
+# geo: mac=dehnen cross_criterion=False yggdrax=/export/home/tbuck/yggdrax-main-wt/yggdrax/__init__.py
+#   baseline self_near=5,386,852  self_far=2,220,382  cross_near=17,079,004  cross_far=5,669,435
+#   eval 1: 53,477,009/53,477,376 words differ (100.0 %)  rel dev median=2.370e-02 p99=9.275e+00 p99.99=9.807e+02 max=2.695e+28
+#   eval 2: 53,476,828/53,477,376 words differ (100.0 %)  rel dev median=2.336e-02 p99=9.259e+00 p99.99=9.806e+02 max=5.686e+27
+# geo VERDICT: NON-DETERMINISTIC
+######## ARM geo done rc=0 ########
+ALL ARMS DONE

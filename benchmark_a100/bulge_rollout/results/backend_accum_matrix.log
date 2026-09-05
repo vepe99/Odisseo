@@ -1,0 +1,12 @@
+devices: [CudaDevice(id=0), CudaDevice(id=1)]
+
+   backend  accum   dL/L (6 steps)   vs baseline/wide
+  baseline  input       7.6618e-09
+  baseline   wide       7.6618e-09
+    pallas  input       2.0130e-08
+    pallas   wide       3.5257e-09
+
+   baseline/input  dL/L=7.6618e-09  =          1.0x baseline/wide
+   baseline/wide   dL/L=7.6618e-09  =          1.0x baseline/wide
+     pallas/input  dL/L=2.0130e-08  =          2.6x baseline/wide
+     pallas/wide   dL/L=3.5257e-09  =          0.5x baseline/wide

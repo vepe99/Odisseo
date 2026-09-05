@@ -1,0 +1,212 @@
+{
+ "args": {
+  "ic": "/export/scratch/tbuck/odisseo_ic/disk_bulge_17m8.npz",
+  "ndev": 4,
+  "leaf": 1024,
+  "theta": 0.7,
+  "order": 6,
+  "softening": null,
+  "steps": 3,
+  "dt": 0.0005,
+  "m2l_chunk": 65536,
+  "nearfield_chunk": 512,
+  "repartition_every": 0,
+  "nearfield_accum": "wide",
+  "mac_type": "dehnen",
+  "adaptive_eps": null,
+  "mac_cross_criterion": true,
+  "probe": 256,
+  "probe_every": 1,
+  "probe_seed": 20260901,
+  "pair_queue": 0,
+  "cross_queue": 0,
+  "cross_neighbors": 0,
+  "cross_interactions": 0,
+  "restart_from": "",
+  "checkpoint_every": 0,
+  "overflow_every": 1,
+  "render_every": 0,
+  "render_res": 800,
+  "render_extent": 1.2,
+  "projection": "xy",
+  "diag_every": 1,
+  "max_hours": 0.0,
+  "no_halo": false,
+  "out_prefix": "/export/scratch/tbuck/odisseo_runs/rollprobe/geo",
+  "max_particles": 0,
+  "dtype": "float32"
+ },
+ "n": 17825792,
+ "cap": 4456448,
+ "softening": 0.008987870963055122,
+ "median_step_s": 44.49172796588391,
+ "total_s": 479.3469858756289,
+ "first_diag": {
+  "cross_far_pairs": [
+   1581783.0,
+   1517799.0,
+   1300014.0,
+   1269839.0
+  ],
+  "cross_near_pairs": [
+   4290315.0,
+   4234734.0,
+   4271735.0,
+   4282220.0
+  ],
+  "cross_queue_overflow": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "cross_far_overflow": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "cross_near_overflow": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "self_far_pairs": [
+   649960.0,
+   608154.0,
+   494342.0,
+   467926.0
+  ],
+  "self_near_pairs": [
+   1437984.0,
+   1378164.0,
+   1300296.0,
+   1270408.0
+  ],
+  "self_queue_overflow": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "self_far_overflow": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "self_near_overflow": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "l2l_level_overflow": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "force_scale_min": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "force_scale_max": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ]
+ },
+ "rows": [
+  {
+   "step": 1,
+   "t": 0.0005,
+   "seconds": 44.4917,
+   "dP_over_scale": 1.293284315099441e-05,
+   "dL_over_L": 1.6080049313330761e-06,
+   "com_drift": 3.161408277656724e-07,
+   "ke": 37.90304027592862
+  },
+  {
+   "step": 2,
+   "t": 0.001,
+   "seconds": 43.8127,
+   "dP_over_scale": 2.4518484602898267e-05,
+   "dL_over_L": 3.1341202401425416e-06,
+   "com_drift": 6.325696997460614e-07,
+   "ke": 37.902487254525546
+  },
+  {
+   "step": 3,
+   "t": 0.0015,
+   "seconds": 44.897,
+   "dP_over_scale": 2.3413073878874546e-05,
+   "dL_over_L": 3.0573499084304733e-06,
+   "com_drift": 9.487855289562501e-07,
+   "ke": 37.90190380826314
+  }
+ ],
+ "step_times": [
+  44.4917,
+  43.8127,
+  44.897
+ ],
+ "probe": {
+  "step": 0,
+  "probe": 256,
+  "probe_seed": 20260901,
+  "rel_l2": 0.005723215474432594,
+  "rel_median": 0.0008968839652404661,
+  "rel_p99": 0.013121424891338457,
+  "rel_max": 0.024671253698285264,
+  "seconds": 112.44
+ },
+ "probe_history": [
+  {
+   "step": 0,
+   "probe": 256,
+   "probe_seed": 20260901,
+   "rel_l2": 0.005723215474432594,
+   "rel_median": 0.0008968839652404661,
+   "rel_p99": 0.013121424891338457,
+   "rel_max": 0.024671253698285264,
+   "seconds": 112.44
+  },
+  {
+   "step": 1,
+   "probe": 256,
+   "probe_seed": 20260901,
+   "rel_l2": 0.46618508966525324,
+   "rel_median": 0.17579907036256812,
+   "rel_p99": 0.7564460897376186,
+   "rel_max": 0.9831206324632068,
+   "seconds": 113.0
+  },
+  {
+   "step": 2,
+   "probe": 256,
+   "probe_seed": 20260901,
+   "rel_l2": 0.5026310874061383,
+   "rel_median": 0.17386738178719324,
+   "rel_p99": 0.859607671829733,
+   "rel_max": 0.9968730208561439,
+   "seconds": 112.93
+  },
+  {
+   "step": 3,
+   "probe": 256,
+   "probe_seed": 20260901,
+   "rel_l2": 0.005700517650266974,
+   "rel_median": 0.0009228300698328985,
+   "rel_p99": 0.01114832276161567,
+   "rel_max": 0.024653438311347666,
+   "seconds": 112.92
+  }
+ ],
+ "num_repartitions": 0,
+ "wall_total_s": 842.4319098610431
+}

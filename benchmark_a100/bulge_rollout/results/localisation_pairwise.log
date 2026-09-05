@@ -1,0 +1,30 @@
+######## PAIRWISE dehnen cross=0 2026-09-02T20:27:05+02:00 ########
+  eval 0: self_near=5,386,852  self_far=2,220,382  cross_near=17,079,004  cross_far=5,669,435
+  eval 1: self_near=5,386,852  self_far=2,220,382  cross_near=17,079,004  cross_far=5,669,435
+  eval 2: self_near=5,386,852  self_far=2,220,382  cross_near=17,079,004  cross_far=5,669,435
+  eval 3: self_near=5,386,852  self_far=2,220,382  cross_near=17,079,004  cross_far=5,669,435
+
+  pairwise median |dA|/|A| (rows/cols = eval index), dehnen cross=0:
+                   0           1           2           3
+     0                 4.150e-02   2.668e-02   4.015e-02
+     1                             2.891e-07   7.785e-07
+     2                                         1.801e-05
+     3                                                  
+
+  bitwise-identical pairs: NONE
+######## PAIRWISE dehnen_error cross=1 2026-09-02T20:34:10+02:00 ########
+
+  eval 0: self_near=11,779,046  self_far=5,649,944  cross_near=14,018,632  cross_far=8,033,400
+  eval 1: self_near=11,779,046  self_far=5,649,944  cross_near=14,018,632  cross_far=8,033,401
+  eval 2: self_near=11,779,046  self_far=5,649,944  cross_near=14,018,631  cross_far=8,033,402
+  eval 3: self_near=11,779,046  self_far=5,649,944  cross_near=14,018,632  cross_far=8,033,401
+
+  pairwise median |dA|/|A| (rows/cols = eval index), dehnen_error cross=1:
+                   0           1           2           3
+     0                 1.731e-07   1.768e-07   1.766e-07
+     1                             1.753e-07   1.761e-07
+     2                                         1.783e-07
+     3                                                  
+
+  bitwise-identical pairs: NONE
+PAIRWISE DONE

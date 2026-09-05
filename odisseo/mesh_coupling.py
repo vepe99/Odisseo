@@ -118,6 +118,31 @@ class MeshOptions:
         Re-check capacity overflow every N steps; 0 checks only the first force.
         Caps are static but pair counts grow as the system clusters, so an overflow
         can switch on mid-run and silently truncate the force.
+    mac_type : str
+        Multipole acceptance criterion: ``bh``, ``engblom``, ``dehnen`` (geometric,
+        the default) or ``dehnen_error`` (the mass-dependent criterion, which needs
+        ``adaptive_eps``).
+    adaptive_eps : float or None
+        Relative force-accuracy target for ``mac_type="dehnen_error"``. Mandatory
+        under that criterion and ignored otherwise.
+    mac_cross_criterion : bool
+        Whether the criterion also decides cross-domain pairs. Default True; False
+        is the self-only ablation.
+    halo_exchange : str
+        Implementation of the LET halo exchange, forward and gradient path:
+        ``"auto"`` (default), ``"native"`` or ``"buf"``. **On jax < 0.9.1 the native
+        ``jax.lax.ragged_all_to_all`` keeps its FILL VALUE once buffers move** -- and
+        a donating leapfrog moves them every step -- so the cross-domain near field
+        silently vanishes (~45 % force error, rel-L2 0.45 against an fp64 direct sum
+        at 17.8M particles on 4 GPUs) while dL/L, energy, COM and every overflow flag
+        look healthy. Every mesh-lane rollout taken before 2026-09-04 had this.
+        ``"auto"`` resolves to ``"buf"`` on an affected JAX (the all_gather path,
+        identical forces, no measurable cost at 4 devices) and to the cheap native
+        exchange on jax >= 0.9.1. Requires jaccpot with the forward gate (2026-09) or
+        this module's own rebind, which is applied whenever the value is explicit.
+        The only instrument that sees the defect is a moving-position probe against
+        a direct sum at a step > 0; keep one on. Record:
+        ``benchmark_a100/bulge_rollout/findings.md`` section 14.
     external_acceleration : callable or None
         ``(positions) -> (N, 3)`` added to the self-gravity force each step. Used
         for an analytic halo the IC did not sample.
@@ -137,6 +162,20 @@ class MeshOptions:
     working_dtype: str = "float32"
     nearfield_accum: str = "wide"
     repartition_every: int = 0
+    # Dehnen (2014) section 5 mass-dependent MAC. "dehnen" is the geometric sphere
+    # MAC (theta gates both walks). Under "dehnen_error" theta stops gating the SELF
+    # walk entirely and `adaptive_eps` replaces it as the accuracy knob, while theta
+    # still gates the CROSS walk's geometry. Measured on the mesh at N=1048576:
+    # 4.4-7.7x better p99.99 force error at 0.77-0.88x the near-field work, growing
+    # to 8.8-15.1x at four devices -- most of it in the CROSS walk, which is why
+    # `mac_cross_criterion` defaults on (the self-only ablation is 1.87x at MORE work).
+    mac_type: str = "dehnen"
+    adaptive_eps: Optional[float] = None
+    mac_cross_criterion: bool = True
+    # See the docstring: on jax < 0.9.1 the native ragged exchange silently drops the
+    # cross-domain near field under buffer donation. "auto" is safe with a gated
+    # jaccpot; an explicit value is enforced here as well, for older jaccpots.
+    halo_exchange: str = "auto"
     verify_alignment: bool = True
     check_overflow_every: int = 10
     external_acceleration: Optional[Callable[[Any], Any]] = None
@@ -167,6 +206,28 @@ class MeshOptions:
         if self.partitioner not in ("rcb", "morton"):
             raise ValueError(
                 f"partitioner must be rcb or morton, got {self.partitioner!r}"
+            )
+        if self.mac_type not in ("bh", "engblom", "dehnen", "dehnen_error"):
+            raise ValueError(
+                f"mac_type must be one of bh/engblom/dehnen/dehnen_error, got "
+                f"{self.mac_type!r}. 'dehnen_theta' is REFUTED (12-9300x worse error "
+                f"at 1.35-15x the work) and the distributed lane rejects it outright."
+            )
+        if self.mac_type == "dehnen_error" and self.adaptive_eps is None:
+            # Not a defaultable knob: under the criterion theta gates nothing on the
+            # self walk, so an unset eps would hand accuracy to a knob that decides
+            # nothing -- and the run would look fine while being far less accurate.
+            raise ValueError(
+                "mac_type='dehnen_error' requires adaptive_eps, which replaces theta "
+                "as the self walk's accuracy knob."
+            )
+        if self.adaptive_eps is not None and not (self.adaptive_eps > 0):
+            raise ValueError(
+                f"adaptive_eps must be > 0, got {self.adaptive_eps!r}"
+            )
+        if self.halo_exchange not in ("auto", "native", "buf"):
+            raise ValueError(
+                f"halo_exchange must be 'auto', 'native' or 'buf', got {self.halo_exchange!r}"
             )
 
 
@@ -612,10 +673,31 @@ def integrate_mesh_jaccpot(
         m2l_chunk=options.m2l_chunk,
         nearfield_chunk=options.nearfield_chunk,
         nearfield_accum=options.nearfield_accum,
+        mac_type=options.mac_type,
+        adaptive_eps=options.adaptive_eps,
+        mac_cross_criterion=bool(options.mac_cross_criterion),
     ).resolved_for(part.cap, options.ndev)
 
+    if options.halo_exchange != "auto":
+        # Belt and braces for a jaccpot from before its forward gate (2026-09-04),
+        # where `halo_exchange` reached only the gradient path: the same module-level
+        # rebind jaccpot applies, made permanent for this process. With a gated
+        # jaccpot the two agree (its own rebind is layered on top with the same value).
+        import functools
+
+        import yggdrax.distributed.let as _ygg_let
+
+        _ygg_let.ragged_all_to_all_exchange = functools.partial(
+            _ygg_let.ragged_all_to_all_exchange, method=options.halo_exchange
+        )
+
     mesh = make_mesh(options.ndev)
-    evaluate = make_force_evaluator(cfg, options.ndev, part.cap, mesh, jit=True)
+    # `halo_exchange` is a make_force_evaluator keyword, not a config field. With a
+    # jaccpot from before 2026-09-04 it reaches only the gradient path; the rebind
+    # above covers the forward there.
+    evaluate = make_force_evaluator(
+        cfg, options.ndev, part.cap, mesh, jit=True, halo_exchange=options.halo_exchange
+    )
     align = make_aligner(mesh, axis_name=options.axis_name)
 
     shard2 = NamedSharding(mesh, P(options.axis_name, None))

@@ -1,0 +1,35 @@
+{
+ "tag": "selfonly",
+ "mac": "dehnen_error",
+ "cross_criterion": false,
+ "evals": [
+  {
+   "eval": 1,
+   "differing_words": 42928672,
+   "pct": {
+    "0.5": 1.6624669285647542e-07,
+    "0.9": 5.964490128462785e-07,
+    "0.99": 4.058381819049828e-06,
+    "0.9999": 0.0003887227503582835
+   },
+   "max": 18.125,
+   "changed": []
+  },
+  {
+   "eval": 2,
+   "differing_words": 42959853,
+   "pct": {
+    "0.5": 1.6779571865299658e-07,
+    "0.9": 5.967316383248544e-07,
+    "0.99": 4.090813035872998e-06,
+    "0.9999": 0.0003956332802772522
+   },
+   "max": 13.5,
+   "changed": []
+  }
+ ],
+ "self_stable": true,
+ "cross_stable": true,
+ "bit_identical": false,
+ "verdict": "NON-DETERMINISTIC"
+}
