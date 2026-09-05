@@ -1,9 +1,17 @@
 # A realistic disc + bulge at 21 million particles
 
-Session of 2026-09-01, committed on `horeka/disc-bulge-21m-quarter-orbit` (5d8dc0f).
-The configuration is measured and validated; the production run was
-**not** completed here, because a collaborator's job took three of the six reserved cards
-mid-launch and there is no scheduler on this box. It is packaged to run on HoreKa.
+Sessions of 2026-09-01 → 09-05 on `horeka/disc-bulge-21m-quarter-orbit`.
+
+**Done: 25,165,824 particles (20,971,520 disc + 4,194,304 bulge) for a quarter orbit on 8×A100,
+489 steps at 82 s/step (11.3 h), with an fp64 direct-sum probe every 25 steps — all twenty in the
+t=0 accuracy class, dL/L 4.6e-7.** `findings.md` §15 has the result; `results/qorbit25m/` the logs,
+diagnostics, analysis and movies.
+
+**And the reason it took until 09-05:** every multi-GPU rollout on this box before 2026-09-04 computed
+~45 % wrong forces from its second step while every invariant looked healthy — XLA's
+`ragged_all_to_all` on jax 0.9.0 silently returning its fill value under buffer donation. Root-caused
+in pure JAX, fixed upstream (jaccpot #322, yggdrax #69), documented in `findings.md` §14. The
+production environment is a standalone jax 0.10.2 venv; `SETUP.md` §0 says how and why.
 
 | file | what it is |
 |---|---|

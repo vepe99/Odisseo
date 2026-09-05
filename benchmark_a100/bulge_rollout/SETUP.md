@@ -170,6 +170,30 @@ so keep `--probe 256 --probe-seed 20260901` if the number is to be compared with
 5. `realignment verified against scatter_to_input_order` -- the evaluator's rows are permuted
    even at zero padding; this is the check that the aligner is the same map.
 
+## 2a. How it actually ran (2026-09-05): 25,165,824 on 8 cards, jax 0.10.2
+
+    python   /export/scratch/tbuck/venv_prod_jax0102/bin/python   (standalone venv, §0)
+    launcher results/qorbit25m/run_25m_8card.sh  (= tools/mesh_galaxy_run.py with:)
+      --ic disk_bulge_25m.npz --ndev 8 --leaf 1024 --theta 0.7 --order 6 --dtype float32
+      --nearfield-accum wide --mac-type dehnen_error --adaptive-eps 1e-5 --halo-exchange native
+      --dt 5e-4 --steps 489 --probe 256 --probe-seed 20260901 --probe-every 25
+      --render-every 10 --projection xy,xz --render-res 800 --render-extent 1.2
+      --repartition-every 100 --checkpoint-every 20 --diag-every 10 --overflow-every 10
+    JAX_COMPILATION_CACHE_DIR=/export/scratch/tbuck/jax_cache_prod_jax0102  XLA_PYTHON_CLIENT_PREALLOCATE=false
+
+    compile + first force        884 s   (99 s on a warm cache)
+    median step                  82.0 s  (77 s just after a repartition, 88 s just before one)
+    memory                       17.3 GiB/card  (§2's 29 GiB estimate was taken on jax 0.9.0)
+    489 steps                    40,801 s = 11.3 h wall   (the 18.5 h above was the 6-card, 21M estimate)
+    fp64 probe, 20 later steps   rel_l2 0.8e-3 .. 5.0e-3, median particle 4-6e-4 -- every one in class
+    dL/L after 489 steps         4.6e-7  (float64, host)
+    repartitions                 4 (steps 100/200/300/400), cap unchanged, no recompile
+
+One restart, deliberate, at step 100: the probe at a repartition step scored the pre-repartition
+`A_self` against the new row order (a stale instrument, physics unaffected). Fixed in the driver;
+resumed from `q_ckpt.npz` (written after the repartition, consistent). Movie frames from both
+attempts are spliced in `results/qorbit25m/`. Full account: `findings.md` §14.7, §15.
+
 ## 3. Outputs
 
     qorbit_diag.json          config, per-step times, float64 invariants, probe, first_diag

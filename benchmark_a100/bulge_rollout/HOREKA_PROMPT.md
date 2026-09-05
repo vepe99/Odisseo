@@ -61,7 +61,7 @@ The ~45–50 % wrong forces after step 0 (findings §13) were XLA's `ragged_all_
 its fill value under buffer donation on jax 0.9.0 — the cross-domain near field silently
 dropped while every invariant looked healthy. jax 0.10.2 with the native exchange is verified
 correct at every probed step (§14.5) and is the production configuration; the 25M/8-card run
-was launched on the home box 2026-09-04 22:57. Keep `--probe-every 25` on in any run — a probe
+COMPLETED on the home box 2026-09-05 (489 steps, 82 s/step, all 20 later-step probes in class; `findings.md` §15). A HoreKa run is now a re-run or a scale-up, not the first result. Keep `--probe-every 25` on in any run — a probe
 outside the ~3e-3 class is the stop signal. The geometric MAC's "wrong on later calls" (§11) was
 the same defect; the criterion remains the accuracy pick (3.77× at equal cost), not a safety one.
 
