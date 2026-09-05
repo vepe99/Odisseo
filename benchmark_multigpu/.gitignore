@@ -1,0 +1,11 @@
+# transient / large / machine-specific outputs (keep .json summaries + .pdf figures)
+__pycache__/
+*.pyc
+artifacts/*.log
+artifacts/*.npz
+artifacts/*.tipsy
+artifacts/bonsai*
+# the nested per-run dirs hold the shared ICs and per-theta force dumps (tens of MB);
+# the top-level *.json summaries are the durable record and stay tracked
+artifacts/**/*.tipsy
+artifacts/**/*.npz
