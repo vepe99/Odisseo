@@ -1,0 +1,18 @@
+[
+  {
+    "order": 4,
+    "pairs": 1000000,
+    "nodes": 12500,
+    "longest_row": 114,
+    "csr_ns_per_pair": 23.229269310832024,
+    "csr_ms": 23.229269310832024,
+    "csr_median_ms": 24.51251447200775,
+    "pure_ns_per_pair": 69.87473648041487,
+    "pure_ms": 69.87473648041487,
+    "pure_db_ns_per_pair": 70.14637906104326,
+    "pure_db_ms": 70.14637906104326,
+    "rel_l2_csr_vs_pure": 1.041706218822659e-06,
+    "rel_l2_db_vs_pure": 0.0,
+    "chunk": 4096
+  }
+]

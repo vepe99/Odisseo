@@ -1,0 +1,1431 @@
+{
+  "provenance": {
+    "timestamp_utc": "2026-09-09T18:16:15.361941+00:00",
+    "repos": {
+      "jaccpot": {
+        "sha": "c1cede7",
+        "branch": "main",
+        "dirty": true
+      },
+      "yggdrax": {
+        "sha": "a22472f",
+        "branch": "paper/differentiable-applications",
+        "dirty": true
+      },
+      "jztree": {
+        "sha": "ee82fa2",
+        "branch": "main",
+        "dirty": false
+      },
+      "odisseo_bench": {
+        "sha": "2da9e8e",
+        "branch": "bench/multi-gpu",
+        "dirty": true
+      }
+    },
+    "jax_version": "0.10.2",
+    "jax_backend": "gpu",
+    "devices": [
+      {
+        "id": 0,
+        "kind": "NVIDIA A100-PCIE-40GB",
+        "platform": "gpu"
+      }
+    ],
+    "nvidia_smi": "0, NVIDIA A100-PCIE-40GB, 40960 MiB, 595.71.05\n1, NVIDIA A100-PCIE-40GB, 40960 MiB, 595.71.05\n2, NVIDIA A100-PCIE-40GB, 40960 MiB, 595.71.05\n3, NVIDIA A100-PCIE-40GB, 40960 MiB, 595.71.05\n4, NVIDIA A100-PCIE-40GB, 40960 MiB, 595.71.05\n5, NVIDIA A100-PCIE-40GB, 40960 MiB, 595.71.05\n6, NVIDIA A100-PCIE-40GB, 40960 MiB, 595.71.05\n7, NVIDIA A100-PCIE-40GB, 40960 MiB, 595.71.05",
+    "benchmark": "compare_force",
+    "args": {
+      "n": 200000,
+      "ic": "plummer",
+      "ndevs": [
+        1
+      ],
+      "pkd_thetas": [
+        0.4,
+        0.5,
+        0.6,
+        0.7,
+        0.8,
+        0.9,
+        1.0
+      ],
+      "jac_thetas": [
+        0.4,
+        0.6,
+        0.8
+      ],
+      "orders": [
+        4,
+        6
+      ],
+      "jac_leaf_single": [
+        32,
+        64,
+        128,
+        256
+      ],
+      "jac_leaf_dist": 64,
+      "jac_edge_cap": null,
+      "jac_max_interactions": 0,
+      "jac_env": [
+        "JACCPOT_STATIC_STRICT_FUSED_COMPACT_FAR_PAIR_CAP=8388608",
+        "JACCPOT_STATIC_STRICT_FUSED_M2L_CSR=1"
+      ],
+      "partitioner": "rcb",
+      "pkd_nbucket": [
+        16
+      ],
+      "pkd_ngroup": [
+        0
+      ],
+      "pkd_cores": 16,
+      "pkd_cpu": false,
+      "pkd_cpu_cores": 32,
+      "repeats": 5,
+      "warmup": 2,
+      "ref_targets": 4096,
+      "softening": 1e-07,
+      "softening_tolerance": 1e-06,
+      "G": 1.0,
+      "seed": 0,
+      "timeout": 3600.0,
+      "workdir": null,
+      "out": "/tmp/compare_force_leaf_jq3x5_zf/leaf32.json",
+      "allow_busy": false,
+      "skip_pkdgrav3": true,
+      "skip_jaccpot": false
+    },
+    "loadavg": [
+      84.509765625,
+      82.5732421875,
+      97.37451171875
+    ],
+    "cores": 64
+  },
+  "ic": {
+    "name": "plummer",
+    "n": 200000,
+    "seed": 0,
+    "softening": 1e-07,
+    "softening_reference_shift_aggL2": 3.760136490441972e-10,
+    "G": 1.0,
+    "reference_targets": 4096
+  },
+  "fast_lane_env": {
+    "JACCPOT_STATIC_STRICT_GPU_MODE": "on",
+    "JACCPOT_STATIC_STRICT_FUSED_MODE": "on",
+    "JACCPOT_LARGE_N_STATIC_TARGET_BLOCKS": "1",
+    "JACCPOT_LARGE_N_TARGET_BLOCK_SIZE": "4",
+    "JACCPOT_LARGE_N_STATIC_TARGET_BLOCKS_MAX_PER_LEAF": "auto",
+    "JACCPOT_LARGE_N_NEIGHBOR_EDGE_PROFILE_FIXED_CAP": "134217728",
+    "JACCPOT_STATIC_STRICT_REQUIRE_EXACT_CAP_PROFILE_MATCH": "0",
+    "JACCPOT_STATIC_STRICT_FUSED_DEVICE_ONLY": "1",
+    "JACCPOT_STATIC_STRICT_FUSED_DISALLOW_HOST_SEGMENT_FALLBACK": "1",
+    "JACCPOT_STATIC_STRICT_FUSED_FLAT_COMPACT_FAR_PAIRS": "1",
+    "JACCPOT_STATIC_STRICT_FUSED_COMPACT_FAR_PAIR_CAP": "8388608",
+    "JACCPOT_LARGE_N_COMPILED_STATE_MODE": "on",
+    "JACCPOT_LARGE_N_RADIX_FAST_PAYLOAD_IN_FUSED": "1",
+    "JACCPOT_LARGE_N_RADIX_FAST_PAYLOAD_MAX_MB": "0",
+    "JACCPOT_STATIC_STRICT_FUSED_PROFILE_SET": "200000",
+    "JACCPOT_STATIC_STRICT_FUSED_M2L_CSR": "1"
+  },
+  "devices": [
+    0
+  ],
+  "pkd_theta_scale": 1.5,
+  "pkdgrav3": [],
+  "jaccpot": [
+    {
+      "code": "jaccpot",
+      "lane": "single_gpu_fused",
+      "ndev": 1,
+      "order": 4,
+      "theta": 0.4,
+      "theta_pkd_equivalent": 0.6000000000000001,
+      "leaf_size": 32,
+      "traversal_overrides": {
+        "max_neighbors_per_leaf": 8192,
+        "max_interactions_per_node": 16384
+      },
+      "force_eval_s": {
+        "min": 0.03606594167649746,
+        "median": 0.04724402725696564,
+        "iqr": 0.005908545106649399,
+        "max": 0.047474099323153496,
+        "mean": 0.04499436244368553,
+        "std": 0.004468249717176635,
+        "samples": [
+          0.04688940569758415,
+          0.04724402725696564,
+          0.04729833826422691,
+          0.047474099323153496,
+          0.03606594167649746
+        ]
+      },
+      "walk_s": 0.0,
+      "walk_stage_s": {
+        "refresh_dual_setup_seconds": 0.0,
+        "refresh_dual_artifact_build_seconds": 0.0,
+        "refresh_dual_select_interactions_seconds": 0.0,
+        "refresh_dual_far_pair_plan_seconds": 0.0,
+        "refresh_dual_split_combined_seconds": 0.0,
+        "refresh_dual_split_far_pairs_seconds": 0.0,
+        "refresh_dual_split_leaf_neighbors_seconds": 0.0,
+        "refresh_dual_raw_combined_seconds": 0.0,
+        "refresh_tree_build_seconds": 0.0,
+        "refresh_tree_upward_seconds": 0.0,
+        "refresh_nearfield_seconds": 0.0,
+        "refresh_total_seconds": 0.0
+      },
+      "prepare_s": 47.09283436089754,
+      "peak_bytes_in_use": {
+        "0": 7938567424
+      },
+      "errors": {
+        "median": 3.768406162484761e-05,
+        "p90": 0.0003804177984743382,
+        "max": 0.032256089097739825,
+        "aggL2": 0.0002520273674727129,
+        "aggL2_signflip": 1.999999490052652,
+        "n_ref": 4096
+      },
+      "budget": {
+        "num_leaves": 6250,
+        "neighbor_entries_directed": 10507412,
+        "neighbor_pairs_undirected": 5253706,
+        "unmatched_directions": 0,
+        "self_entries": 0,
+        "mean_neighbor_leaves_per_leaf": 1681.18592,
+        "max_neighbor_leaves_per_leaf": 6249,
+        "occupancy_mean": 32.0,
+        "occupancy_min": 32,
+        "occupancy_max": 32,
+        "direct_sources_per_target_mean": 53828.94944,
+        "direct_sources_per_target_median": 41823.0,
+        "direct_sources_per_target_p90": 81509.40000000037,
+        "direct_sources_per_target_max": 199999,
+        "direct_share_of_N": 0.2691447472,
+        "p2p_pair_evaluations": 10765789888.0
+      },
+      "nearfield_kernel_layout": "leafpair_gather",
+      "contention": {
+        "devices": [
+          0
+        ],
+        "n_samples": 6,
+        "duration_s": 6.236053705215454,
+        "foreign_pids_on_devices": [],
+        "own_util_max": {
+          "0": 97
+        },
+        "other_gpu_util_max": 96,
+        "loadavg1_max": 75.42041015625,
+        "loadavg1_min": 72.6640625,
+        "cores": 64,
+        "contaminated": false,
+        "flags": [
+          "loadavg>=8 (75.4)",
+          "other-gpus-busy (96%)"
+        ]
+      },
+      "diagnostics": {
+        "recent_dual_neighbor_count": 10507412,
+        "static_radix_far_pair_count": 0,
+        "large_n_eval_active_leaf_count": 6250
+      },
+      "fastlane": {
+        "fused_mode_active": true,
+        "fastlane_hits": 0,
+        "fastlane_attempts": 0,
+        "fallback_count": 0,
+        "last_fallback_reason": ""
+      }
+    },
+    {
+      "code": "jaccpot",
+      "lane": "single_gpu_fused",
+      "ndev": 1,
+      "order": 4,
+      "theta": 0.6,
+      "theta_pkd_equivalent": 0.8999999999999999,
+      "leaf_size": 32,
+      "traversal_overrides": {
+        "max_neighbors_per_leaf": 8192,
+        "max_interactions_per_node": 16384
+      },
+      "force_eval_s": {
+        "min": 0.015591878443956375,
+        "median": 0.02385799027979374,
+        "iqr": 0.007212340831756592,
+        "max": 0.026601183228194714,
+        "mean": 0.02241432070732117,
+        "std": 0.0038131992494640087,
+        "samples": [
+          0.026601183228194714,
+          0.024717964231967926,
+          0.02385799027979374,
+          0.02130258735269308,
+          0.015591878443956375
+        ]
+      },
+      "walk_s": 0.0,
+      "walk_stage_s": {
+        "refresh_dual_setup_seconds": 0.0,
+        "refresh_dual_artifact_build_seconds": 0.0,
+        "refresh_dual_select_interactions_seconds": 0.0,
+        "refresh_dual_far_pair_plan_seconds": 0.0,
+        "refresh_dual_split_combined_seconds": 0.0,
+        "refresh_dual_split_far_pairs_seconds": 0.0,
+        "refresh_dual_split_leaf_neighbors_seconds": 0.0,
+        "refresh_dual_raw_combined_seconds": 0.0,
+        "refresh_tree_build_seconds": 0.0,
+        "refresh_tree_upward_seconds": 0.0,
+        "refresh_nearfield_seconds": 0.0,
+        "refresh_total_seconds": 0.0
+      },
+      "prepare_s": 7.122143901884556,
+      "peak_bytes_in_use": {
+        "0": 7938567424
+      },
+      "errors": {
+        "median": 0.0003217152501998908,
+        "p90": 0.0018070167199309077,
+        "max": 1.0217102627210541,
+        "aggL2": 0.0012999033867400571,
+        "aggL2_signflip": 1.999991797483757,
+        "n_ref": 4096
+      },
+      "budget": {
+        "num_leaves": 6250,
+        "neighbor_entries_directed": 3659118,
+        "neighbor_pairs_undirected": 1829559,
+        "unmatched_directions": 0,
+        "self_entries": 0,
+        "mean_neighbor_leaves_per_leaf": 585.45888,
+        "max_neighbor_leaves_per_leaf": 6249,
+        "occupancy_mean": 32.0,
+        "occupancy_min": 32,
+        "occupancy_max": 32,
+        "direct_sources_per_target_mean": 18765.68416,
+        "direct_sources_per_target_median": 13375.0,
+        "direct_sources_per_target_p90": 22722.200000000186,
+        "direct_sources_per_target_max": 199999,
+        "direct_share_of_N": 0.0938284208,
+        "p2p_pair_evaluations": 3753136832.0
+      },
+      "nearfield_kernel_layout": "leafpair_gather",
+      "contention": {
+        "devices": [
+          0
+        ],
+        "n_samples": 5,
+        "duration_s": 4.926820755004883,
+        "foreign_pids_on_devices": [],
+        "own_util_max": {
+          "0": 63
+        },
+        "other_gpu_util_max": 96,
+        "loadavg1_max": 78.54052734375,
+        "loadavg1_min": 76.06298828125,
+        "cores": 64,
+        "contaminated": false,
+        "flags": [
+          "loadavg>=8 (78.5)",
+          "other-gpus-busy (96%)"
+        ]
+      },
+      "diagnostics": {
+        "recent_dual_neighbor_count": 3659118,
+        "static_radix_far_pair_count": 0,
+        "large_n_eval_active_leaf_count": 6250
+      },
+      "fastlane": {
+        "fused_mode_active": true,
+        "fastlane_hits": 0,
+        "fastlane_attempts": 0,
+        "fallback_count": 0,
+        "last_fallback_reason": ""
+      }
+    },
+    {
+      "code": "jaccpot",
+      "lane": "single_gpu_fused",
+      "ndev": 1,
+      "order": 4,
+      "theta": 0.8,
+      "theta_pkd_equivalent": 1.2000000000000002,
+      "leaf_size": 32,
+      "traversal_overrides": {
+        "max_neighbors_per_leaf": 8192,
+        "max_interactions_per_node": 16384
+      },
+      "force_eval_s": {
+        "min": 0.013629378750920296,
+        "median": 0.01463585440069437,
+        "iqr": 0.0016522929072380066,
+        "max": 0.015553058125078678,
+        "mean": 0.014547339268028736,
+        "std": 0.0007524552247322755,
+        "samples": [
+          0.015553058125078678,
+          0.013629378750920296,
+          0.01463585440069437,
+          0.015149655751883984,
+          0.013768749311566353
+        ]
+      },
+      "walk_s": 0.0,
+      "walk_stage_s": {
+        "refresh_dual_setup_seconds": 0.0,
+        "refresh_dual_artifact_build_seconds": 0.0,
+        "refresh_dual_select_interactions_seconds": 0.0,
+        "refresh_dual_far_pair_plan_seconds": 0.0,
+        "refresh_dual_split_combined_seconds": 0.0,
+        "refresh_dual_split_far_pairs_seconds": 0.0,
+        "refresh_dual_split_leaf_neighbors_seconds": 0.0,
+        "refresh_dual_raw_combined_seconds": 0.0,
+        "refresh_tree_build_seconds": 0.0,
+        "refresh_tree_upward_seconds": 0.0,
+        "refresh_nearfield_seconds": 0.0,
+        "refresh_total_seconds": 0.0
+      },
+      "prepare_s": 7.230540568009019,
+      "peak_bytes_in_use": {
+        "0": 7938567424
+      },
+      "errors": {
+        "median": 0.0015932079742977789,
+        "p90": 0.006030141788658784,
+        "max": 24.562852646524206,
+        "aggL2": 0.014370042630289166,
+        "aggL2_signflip": 2.0001773681917916,
+        "n_ref": 4096
+      },
+      "budget": {
+        "num_leaves": 6250,
+        "neighbor_entries_directed": 1680746,
+        "neighbor_pairs_undirected": 840373,
+        "unmatched_directions": 0,
+        "self_entries": 0,
+        "mean_neighbor_leaves_per_leaf": 268.91936,
+        "max_neighbor_leaves_per_leaf": 6249,
+        "occupancy_mean": 32.0,
+        "occupancy_min": 32,
+        "occupancy_max": 32,
+        "direct_sources_per_target_mean": 8636.41952,
+        "direct_sources_per_target_median": 5887.0,
+        "direct_sources_per_target_p90": 9599.0,
+        "direct_sources_per_target_max": 199999,
+        "direct_share_of_N": 0.0431820976,
+        "p2p_pair_evaluations": 1727283904.0
+      },
+      "nearfield_kernel_layout": "leafpair_gather",
+      "contention": {
+        "devices": [
+          0
+        ],
+        "n_samples": 4,
+        "duration_s": 4.065781116485596,
+        "foreign_pids_on_devices": [],
+        "own_util_max": {
+          "0": 0
+        },
+        "other_gpu_util_max": 100,
+        "loadavg1_max": 78.68798828125,
+        "loadavg1_min": 75.509765625,
+        "cores": 64,
+        "contaminated": false,
+        "flags": [
+          "loadavg>=8 (78.7)",
+          "other-gpus-busy (100%)"
+        ]
+      },
+      "diagnostics": {
+        "recent_dual_neighbor_count": 1680746,
+        "static_radix_far_pair_count": 0,
+        "large_n_eval_active_leaf_count": 6250
+      },
+      "fastlane": {
+        "fused_mode_active": true,
+        "fastlane_hits": 0,
+        "fastlane_attempts": 0,
+        "fallback_count": 0,
+        "last_fallback_reason": ""
+      }
+    },
+    {
+      "code": "jaccpot",
+      "lane": "single_gpu_fused",
+      "ndev": 1,
+      "order": 6,
+      "theta": 0.4,
+      "theta_pkd_equivalent": 0.6000000000000001,
+      "leaf_size": 32,
+      "traversal_overrides": {
+        "max_neighbors_per_leaf": 8192,
+        "max_interactions_per_node": 16384
+      },
+      "force_eval_s": {
+        "min": 0.03368718922138214,
+        "median": 0.034604513086378574,
+        "iqr": 0.015045090112835169,
+        "max": 0.05835826322436333,
+        "mean": 0.039899326488375665,
+        "std": 0.009446760874219135,
+        "samples": [
+          0.05835826322436333,
+          0.039132886566221714,
+          0.034604513086378574,
+          0.03371378034353256,
+          0.03368718922138214
+        ]
+      },
+      "walk_s": 0.0,
+      "walk_stage_s": {
+        "refresh_dual_setup_seconds": 0.0,
+        "refresh_dual_artifact_build_seconds": 0.0,
+        "refresh_dual_select_interactions_seconds": 0.0,
+        "refresh_dual_far_pair_plan_seconds": 0.0,
+        "refresh_dual_split_combined_seconds": 0.0,
+        "refresh_dual_split_far_pairs_seconds": 0.0,
+        "refresh_dual_split_leaf_neighbors_seconds": 0.0,
+        "refresh_dual_raw_combined_seconds": 0.0,
+        "refresh_tree_build_seconds": 0.0,
+        "refresh_tree_upward_seconds": 0.0,
+        "refresh_nearfield_seconds": 0.0,
+        "refresh_total_seconds": 0.0
+      },
+      "prepare_s": 19.473167691379786,
+      "peak_bytes_in_use": {
+        "0": 7942014720
+      },
+      "errors": {
+        "median": 2.1126199566660685e-06,
+        "p90": 1.1123355313424616e-05,
+        "max": 0.006510887974972302,
+        "aggL2": 2.6732342585158295e-05,
+        "aggL2_signflip": 2.0000001281801283,
+        "n_ref": 4096
+      },
+      "budget": {
+        "num_leaves": 6250,
+        "neighbor_entries_directed": 10507412,
+        "neighbor_pairs_undirected": 5253706,
+        "unmatched_directions": 0,
+        "self_entries": 0,
+        "mean_neighbor_leaves_per_leaf": 1681.18592,
+        "max_neighbor_leaves_per_leaf": 6249,
+        "occupancy_mean": 32.0,
+        "occupancy_min": 32,
+        "occupancy_max": 32,
+        "direct_sources_per_target_mean": 53828.94944,
+        "direct_sources_per_target_median": 41823.0,
+        "direct_sources_per_target_p90": 81509.40000000037,
+        "direct_sources_per_target_max": 199999,
+        "direct_share_of_N": 0.2691447472,
+        "p2p_pair_evaluations": 10765789888.0
+      },
+      "nearfield_kernel_layout": "leafpair_gather",
+      "contention": {
+        "devices": [
+          0
+        ],
+        "n_samples": 14,
+        "duration_s": 14.603557825088501,
+        "foreign_pids_on_devices": [],
+        "own_util_max": {
+          "0": 0
+        },
+        "other_gpu_util_max": 96,
+        "loadavg1_max": 67.27099609375,
+        "loadavg1_min": 63.55126953125,
+        "cores": 64,
+        "contaminated": false,
+        "flags": [
+          "loadavg>=8 (67.3)",
+          "other-gpus-busy (96%)"
+        ]
+      },
+      "diagnostics": {
+        "recent_dual_neighbor_count": 10507412,
+        "static_radix_far_pair_count": 0,
+        "large_n_eval_active_leaf_count": 6250
+      },
+      "fastlane": {
+        "fused_mode_active": true,
+        "fastlane_hits": 0,
+        "fastlane_attempts": 0,
+        "fallback_count": 0,
+        "last_fallback_reason": ""
+      }
+    },
+    {
+      "code": "jaccpot",
+      "lane": "single_gpu_fused",
+      "ndev": 1,
+      "order": 6,
+      "theta": 0.6,
+      "theta_pkd_equivalent": 0.8999999999999999,
+      "leaf_size": 32,
+      "traversal_overrides": {
+        "max_neighbors_per_leaf": 8192,
+        "max_interactions_per_node": 16384
+      },
+      "force_eval_s": {
+        "min": 0.023851710371673107,
+        "median": 0.02399090025573969,
+        "iqr": 0.003611987456679344,
+        "max": 0.02884779591113329,
+        "mean": 0.025366715528070925,
+        "std": 0.001947407397482262,
+        "samples": [
+          0.02884779591113329,
+          0.026185530237853527,
+          0.02395764086395502,
+          0.02399090025573969,
+          0.023851710371673107
+        ]
+      },
+      "walk_s": 0.0,
+      "walk_stage_s": {
+        "refresh_dual_setup_seconds": 0.0,
+        "refresh_dual_artifact_build_seconds": 0.0,
+        "refresh_dual_select_interactions_seconds": 0.0,
+        "refresh_dual_far_pair_plan_seconds": 0.0,
+        "refresh_dual_split_combined_seconds": 0.0,
+        "refresh_dual_split_far_pairs_seconds": 0.0,
+        "refresh_dual_split_leaf_neighbors_seconds": 0.0,
+        "refresh_dual_raw_combined_seconds": 0.0,
+        "refresh_tree_build_seconds": 0.0,
+        "refresh_tree_upward_seconds": 0.0,
+        "refresh_nearfield_seconds": 0.0,
+        "refresh_total_seconds": 0.0
+      },
+      "prepare_s": 8.936425843276083,
+      "peak_bytes_in_use": {
+        "0": 7942014720
+      },
+      "errors": {
+        "median": 5.882126300275786e-05,
+        "p90": 0.00022372465394801072,
+        "max": 2.0912789605597832,
+        "aggL2": 0.001217805129645859,
+        "aggL2_signflip": 2.0000045639755006,
+        "n_ref": 4096
+      },
+      "budget": {
+        "num_leaves": 6250,
+        "neighbor_entries_directed": 3659118,
+        "neighbor_pairs_undirected": 1829559,
+        "unmatched_directions": 0,
+        "self_entries": 0,
+        "mean_neighbor_leaves_per_leaf": 585.45888,
+        "max_neighbor_leaves_per_leaf": 6249,
+        "occupancy_mean": 32.0,
+        "occupancy_min": 32,
+        "occupancy_max": 32,
+        "direct_sources_per_target_mean": 18765.68416,
+        "direct_sources_per_target_median": 13375.0,
+        "direct_sources_per_target_p90": 22722.200000000186,
+        "direct_sources_per_target_max": 199999,
+        "direct_share_of_N": 0.0938284208,
+        "p2p_pair_evaluations": 3753136832.0
+      },
+      "nearfield_kernel_layout": "leafpair_gather",
+      "contention": {
+        "devices": [
+          0
+        ],
+        "n_samples": 12,
+        "duration_s": 11.541740655899048,
+        "foreign_pids_on_devices": [],
+        "own_util_max": {
+          "0": 31
+        },
+        "other_gpu_util_max": 96,
+        "loadavg1_max": 75.21875,
+        "loadavg1_min": 72.4521484375,
+        "cores": 64,
+        "contaminated": false,
+        "flags": [
+          "loadavg>=8 (75.2)",
+          "other-gpus-busy (96%)"
+        ]
+      },
+      "diagnostics": {
+        "recent_dual_neighbor_count": 3659118,
+        "static_radix_far_pair_count": 0,
+        "large_n_eval_active_leaf_count": 6250
+      },
+      "fastlane": {
+        "fused_mode_active": true,
+        "fastlane_hits": 0,
+        "fastlane_attempts": 0,
+        "fallback_count": 0,
+        "last_fallback_reason": ""
+      }
+    },
+    {
+      "code": "jaccpot",
+      "lane": "single_gpu_fused",
+      "ndev": 1,
+      "order": 6,
+      "theta": 0.8,
+      "theta_pkd_equivalent": 1.2000000000000002,
+      "leaf_size": 32,
+      "traversal_overrides": {
+        "max_neighbors_per_leaf": 8192,
+        "max_interactions_per_node": 16384
+      },
+      "force_eval_s": {
+        "min": 0.013824348337948322,
+        "median": 0.013925460167229176,
+        "iqr": 0.000250927172601223,
+        "max": 0.014166660606861115,
+        "mean": 0.013955269940197468,
+        "std": 0.00012387503494306544,
+        "samples": [
+          0.013824348337948322,
+          0.013925460167229176,
+          0.014166660606861115,
+          0.01400971133261919,
+          0.013850169256329536
+        ]
+      },
+      "walk_s": 0.0,
+      "walk_stage_s": {
+        "refresh_dual_setup_seconds": 0.0,
+        "refresh_dual_artifact_build_seconds": 0.0,
+        "refresh_dual_select_interactions_seconds": 0.0,
+        "refresh_dual_far_pair_plan_seconds": 0.0,
+        "refresh_dual_split_combined_seconds": 0.0,
+        "refresh_dual_split_far_pairs_seconds": 0.0,
+        "refresh_dual_split_leaf_neighbors_seconds": 0.0,
+        "refresh_dual_raw_combined_seconds": 0.0,
+        "refresh_tree_build_seconds": 0.0,
+        "refresh_tree_upward_seconds": 0.0,
+        "refresh_nearfield_seconds": 0.0,
+        "refresh_total_seconds": 0.0
+      },
+      "prepare_s": 8.1629149178043,
+      "peak_bytes_in_use": {
+        "0": 7942014720
+      },
+      "errors": {
+        "median": 0.0005898901680282925,
+        "p90": 0.002361368149310493,
+        "max": 92.28370013072677,
+        "aggL2": 0.05220713161484388,
+        "aggL2_signflip": 2.0007829345085635,
+        "n_ref": 4096
+      },
+      "budget": {
+        "num_leaves": 6250,
+        "neighbor_entries_directed": 1680746,
+        "neighbor_pairs_undirected": 840373,
+        "unmatched_directions": 0,
+        "self_entries": 0,
+        "mean_neighbor_leaves_per_leaf": 268.91936,
+        "max_neighbor_leaves_per_leaf": 6249,
+        "occupancy_mean": 32.0,
+        "occupancy_min": 32,
+        "occupancy_max": 32,
+        "direct_sources_per_target_mean": 8636.41952,
+        "direct_sources_per_target_median": 5887.0,
+        "direct_sources_per_target_p90": 9599.0,
+        "direct_sources_per_target_max": 199999,
+        "direct_share_of_N": 0.0431820976,
+        "p2p_pair_evaluations": 1727283904.0
+      },
+      "nearfield_kernel_layout": "leafpair_gather",
+      "contention": {
+        "devices": [
+          0
+        ],
+        "n_samples": 11,
+        "duration_s": 11.133854627609253,
+        "foreign_pids_on_devices": [],
+        "own_util_max": {
+          "0": 0
+        },
+        "other_gpu_util_max": 99,
+        "loadavg1_max": 84.509765625,
+        "loadavg1_min": 79.78369140625,
+        "cores": 64,
+        "contaminated": false,
+        "flags": [
+          "loadavg>=8 (84.5)",
+          "other-gpus-busy (99%)"
+        ]
+      },
+      "diagnostics": {
+        "recent_dual_neighbor_count": 1680746,
+        "static_radix_far_pair_count": 0,
+        "large_n_eval_active_leaf_count": 6250
+      },
+      "fastlane": {
+        "fused_mode_active": true,
+        "fastlane_hits": 0,
+        "fastlane_attempts": 0,
+        "fallback_count": 0,
+        "last_fallback_reason": ""
+      }
+    },
+    {
+      "code": "jaccpot",
+      "lane": "single_gpu_fused",
+      "ndev": 1,
+      "order": 4,
+      "theta": 0.4,
+      "theta_pkd_equivalent": 0.6000000000000001,
+      "leaf_size": 128,
+      "traversal_overrides": {},
+      "force_eval_s": {
+        "min": 0.08829653356224298,
+        "median": 0.08887417614459991,
+        "iqr": 0.002111585345119238,
+        "max": 0.09193096123635769,
+        "mean": 0.0893419848755002,
+        "std": 0.0013241226544924906,
+        "samples": [
+          0.08829653356224298,
+          0.08887417614459991,
+          0.08850975520908833,
+          0.0890984982252121,
+          0.09193096123635769
+        ]
+      },
+      "walk_s": 0.0,
+      "walk_stage_s": {
+        "refresh_dual_setup_seconds": 0.0,
+        "refresh_dual_artifact_build_seconds": 0.0,
+        "refresh_dual_select_interactions_seconds": 0.0,
+        "refresh_dual_far_pair_plan_seconds": 0.0,
+        "refresh_dual_split_combined_seconds": 0.0,
+        "refresh_dual_split_far_pairs_seconds": 0.0,
+        "refresh_dual_split_leaf_neighbors_seconds": 0.0,
+        "refresh_dual_raw_combined_seconds": 0.0,
+        "refresh_tree_build_seconds": 0.0,
+        "refresh_tree_upward_seconds": 0.0,
+        "refresh_nearfield_seconds": 0.0,
+        "refresh_total_seconds": 0.0
+      },
+      "prepare_s": 45.26839793007821,
+      "peak_bytes_in_use": {
+        "0": 3422810624
+      },
+      "errors": {
+        "median": 1.3132671521625877e-05,
+        "p90": 0.0001661010331665799,
+        "max": 0.013978531846048508,
+        "aggL2": 0.00012362317208491856,
+        "aggL2_signflip": 2.0000020654643236,
+        "n_ref": 4096
+      },
+      "budget": {
+        "num_leaves": 1563,
+        "neighbor_entries_directed": 1867642,
+        "neighbor_pairs_undirected": 933821,
+        "unmatched_directions": 0,
+        "self_entries": 0,
+        "mean_neighbor_leaves_per_leaf": 1194.9085092770313,
+        "max_neighbor_leaves_per_leaf": 1562,
+        "occupancy_mean": 127.95905310300704,
+        "occupancy_min": 64,
+        "occupancy_max": 128,
+        "direct_sources_per_target_mean": 152996.25312,
+        "direct_sources_per_target_median": 148927.0,
+        "direct_sources_per_target_p90": 199999.0,
+        "direct_sources_per_target_max": 199999,
+        "direct_share_of_N": 0.7649812656,
+        "p2p_pair_evaluations": 30599250624.0
+      },
+      "nearfield_kernel_layout": "leafpair_gather",
+      "contention": {
+        "devices": [
+          0
+        ],
+        "n_samples": 6,
+        "duration_s": 6.223511695861816,
+        "foreign_pids_on_devices": [],
+        "own_util_max": {
+          "0": 99
+        },
+        "other_gpu_util_max": 95,
+        "loadavg1_max": 75.876953125,
+        "loadavg1_min": 75.326171875,
+        "cores": 64,
+        "contaminated": false,
+        "flags": [
+          "loadavg>=8 (75.9)",
+          "other-gpus-busy (95%)"
+        ]
+      },
+      "diagnostics": {
+        "recent_dual_neighbor_count": 1867642,
+        "static_radix_far_pair_count": 0,
+        "large_n_eval_active_leaf_count": 1563
+      },
+      "fastlane": {
+        "fused_mode_active": true,
+        "fastlane_hits": 0,
+        "fastlane_attempts": 0,
+        "fallback_count": 0,
+        "last_fallback_reason": ""
+      }
+    },
+    {
+      "code": "jaccpot",
+      "lane": "single_gpu_fused",
+      "ndev": 1,
+      "order": 4,
+      "theta": 0.6,
+      "theta_pkd_equivalent": 0.8999999999999999,
+      "leaf_size": 128,
+      "traversal_overrides": {},
+      "force_eval_s": {
+        "min": 0.04323945380747318,
+        "median": 0.044948093593120575,
+        "iqr": 0.02831768151372671,
+        "max": 0.07335997465997934,
+        "mean": 0.054963286966085434,
+        "std": 0.013662316952622983,
+        "samples": [
+          0.07335997465997934,
+          0.06989187747240067,
+          0.04323945380747318,
+          0.044948093593120575,
+          0.043377035297453403
+        ]
+      },
+      "walk_s": 0.0,
+      "walk_stage_s": {
+        "refresh_dual_setup_seconds": 0.0,
+        "refresh_dual_artifact_build_seconds": 0.0,
+        "refresh_dual_select_interactions_seconds": 0.0,
+        "refresh_dual_far_pair_plan_seconds": 0.0,
+        "refresh_dual_split_combined_seconds": 0.0,
+        "refresh_dual_split_far_pairs_seconds": 0.0,
+        "refresh_dual_split_leaf_neighbors_seconds": 0.0,
+        "refresh_dual_raw_combined_seconds": 0.0,
+        "refresh_tree_build_seconds": 0.0,
+        "refresh_tree_upward_seconds": 0.0,
+        "refresh_nearfield_seconds": 0.0,
+        "refresh_total_seconds": 0.0
+      },
+      "prepare_s": 13.391823451034725,
+      "peak_bytes_in_use": {
+        "0": 3422810624
+      },
+      "errors": {
+        "median": 0.0002334037405799928,
+        "p90": 0.0019254876515076773,
+        "max": 0.2235540864932036,
+        "aggL2": 0.0011485048299545982,
+        "aggL2_signflip": 1.9999895208816918,
+        "n_ref": 4096
+      },
+      "budget": {
+        "num_leaves": 1563,
+        "neighbor_entries_directed": 866018,
+        "neighbor_pairs_undirected": 433009,
+        "unmatched_directions": 0,
+        "self_entries": 0,
+        "mean_neighbor_leaves_per_leaf": 554.0742162507997,
+        "max_neighbor_leaves_per_leaf": 1562,
+        "occupancy_mean": 127.95905310300704,
+        "occupancy_min": 64,
+        "occupancy_max": 128,
+        "direct_sources_per_target_mean": 70943.21504,
+        "direct_sources_per_target_median": 58175.0,
+        "direct_sources_per_target_p90": 116031.0,
+        "direct_sources_per_target_max": 199999,
+        "direct_share_of_N": 0.3547160752,
+        "p2p_pair_evaluations": 14188643008.0
+      },
+      "nearfield_kernel_layout": "leafpair_gather",
+      "contention": {
+        "devices": [
+          0
+        ],
+        "n_samples": 5,
+        "duration_s": 4.947211027145386,
+        "foreign_pids_on_devices": [],
+        "own_util_max": {
+          "0": 97
+        },
+        "other_gpu_util_max": 96,
+        "loadavg1_max": 78.57275390625,
+        "loadavg1_min": 78.57275390625,
+        "cores": 64,
+        "contaminated": false,
+        "flags": [
+          "loadavg>=8 (78.6)",
+          "other-gpus-busy (96%)"
+        ]
+      },
+      "diagnostics": {
+        "recent_dual_neighbor_count": 866018,
+        "static_radix_far_pair_count": 0,
+        "large_n_eval_active_leaf_count": 1563
+      },
+      "fastlane": {
+        "fused_mode_active": true,
+        "fastlane_hits": 0,
+        "fastlane_attempts": 0,
+        "fallback_count": 0,
+        "last_fallback_reason": ""
+      }
+    },
+    {
+      "code": "jaccpot",
+      "lane": "single_gpu_fused",
+      "ndev": 1,
+      "order": 4,
+      "theta": 0.8,
+      "theta_pkd_equivalent": 1.2000000000000002,
+      "leaf_size": 128,
+      "traversal_overrides": {},
+      "force_eval_s": {
+        "min": 0.028455850668251514,
+        "median": 0.02868254203349352,
+        "iqr": 0.006148035638034344,
+        "max": 0.039825436659157276,
+        "mean": 0.031018407829105855,
+        "std": 0.00441937806620879,
+        "samples": [
+          0.039825436659157276,
+          0.029527347534894943,
+          0.02868254203349352,
+          0.028600862249732018,
+          0.028455850668251514
+        ]
+      },
+      "walk_s": 0.0,
+      "walk_stage_s": {
+        "refresh_dual_setup_seconds": 0.0,
+        "refresh_dual_artifact_build_seconds": 0.0,
+        "refresh_dual_select_interactions_seconds": 0.0,
+        "refresh_dual_far_pair_plan_seconds": 0.0,
+        "refresh_dual_split_combined_seconds": 0.0,
+        "refresh_dual_split_far_pairs_seconds": 0.0,
+        "refresh_dual_split_leaf_neighbors_seconds": 0.0,
+        "refresh_dual_raw_combined_seconds": 0.0,
+        "refresh_tree_build_seconds": 0.0,
+        "refresh_tree_upward_seconds": 0.0,
+        "refresh_nearfield_seconds": 0.0,
+        "refresh_total_seconds": 0.0
+      },
+      "prepare_s": 12.405581794679165,
+      "peak_bytes_in_use": {
+        "0": 3422810624
+      },
+      "errors": {
+        "median": 0.001463665156587721,
+        "p90": 0.006560234271617267,
+        "max": 2.3230427780747447,
+        "aggL2": 0.010008207737500276,
+        "aggL2_signflip": 2.0000406002398754,
+        "n_ref": 4096
+      },
+      "budget": {
+        "num_leaves": 1563,
+        "neighbor_entries_directed": 426804,
+        "neighbor_pairs_undirected": 213402,
+        "unmatched_directions": 0,
+        "self_entries": 0,
+        "mean_neighbor_leaves_per_leaf": 273.0671785028791,
+        "max_neighbor_leaves_per_leaf": 1562,
+        "occupancy_mean": 127.95905310300704,
+        "occupancy_min": 64,
+        "occupancy_max": 128,
+        "direct_sources_per_target_mean": 34962.80416,
+        "direct_sources_per_target_median": 26303.0,
+        "direct_sources_per_target_p90": 48063.0,
+        "direct_sources_per_target_max": 199999,
+        "direct_share_of_N": 0.1748140208,
+        "p2p_pair_evaluations": 6992560832.0
+      },
+      "nearfield_kernel_layout": "leafpair_gather",
+      "contention": {
+        "devices": [
+          0
+        ],
+        "n_samples": 5,
+        "duration_s": 4.9049623012542725,
+        "foreign_pids_on_devices": [],
+        "own_util_max": {
+          "0": 56
+        },
+        "other_gpu_util_max": 95,
+        "loadavg1_max": 71.78173828125,
+        "loadavg1_min": 71.55859375,
+        "cores": 64,
+        "contaminated": false,
+        "flags": [
+          "loadavg>=8 (71.8)",
+          "other-gpus-busy (95%)"
+        ]
+      },
+      "diagnostics": {
+        "recent_dual_neighbor_count": 426804,
+        "static_radix_far_pair_count": 0,
+        "large_n_eval_active_leaf_count": 1563
+      },
+      "fastlane": {
+        "fused_mode_active": true,
+        "fastlane_hits": 0,
+        "fastlane_attempts": 0,
+        "fallback_count": 0,
+        "last_fallback_reason": ""
+      }
+    },
+    {
+      "code": "jaccpot",
+      "lane": "single_gpu_fused",
+      "ndev": 1,
+      "order": 6,
+      "theta": 0.4,
+      "theta_pkd_equivalent": 0.6000000000000001,
+      "leaf_size": 128,
+      "traversal_overrides": {},
+      "force_eval_s": {
+        "min": 0.08844618033617735,
+        "median": 0.09038431849330664,
+        "iqr": 0.008088999893516302,
+        "max": 0.10351483430713415,
+        "mean": 0.09263630621135235,
+        "std": 0.005503220656158419,
+        "samples": [
+          0.10351483430713415,
+          0.08844618033617735,
+          0.09038431849330664,
+          0.0909727718681097,
+          0.0898634260520339
+        ]
+      },
+      "walk_s": 0.0,
+      "walk_stage_s": {
+        "refresh_dual_setup_seconds": 0.0,
+        "refresh_dual_artifact_build_seconds": 0.0,
+        "refresh_dual_select_interactions_seconds": 0.0,
+        "refresh_dual_far_pair_plan_seconds": 0.0,
+        "refresh_dual_split_combined_seconds": 0.0,
+        "refresh_dual_split_far_pairs_seconds": 0.0,
+        "refresh_dual_split_leaf_neighbors_seconds": 0.0,
+        "refresh_dual_raw_combined_seconds": 0.0,
+        "refresh_tree_build_seconds": 0.0,
+        "refresh_tree_upward_seconds": 0.0,
+        "refresh_nearfield_seconds": 0.0,
+        "refresh_total_seconds": 0.0
+      },
+      "prepare_s": 19.877854174934328,
+      "peak_bytes_in_use": {
+        "0": 3422810624
+      },
+      "errors": {
+        "median": 8.579145497336017e-07,
+        "p90": 4.7432074031341315e-06,
+        "max": 0.0017255589550220856,
+        "aggL2": 9.566600370368593e-06,
+        "aggL2_signflip": 2.000000034483158,
+        "n_ref": 4096
+      },
+      "budget": {
+        "num_leaves": 1563,
+        "neighbor_entries_directed": 1867642,
+        "neighbor_pairs_undirected": 933821,
+        "unmatched_directions": 0,
+        "self_entries": 0,
+        "mean_neighbor_leaves_per_leaf": 1194.9085092770313,
+        "max_neighbor_leaves_per_leaf": 1562,
+        "occupancy_mean": 127.95905310300704,
+        "occupancy_min": 64,
+        "occupancy_max": 128,
+        "direct_sources_per_target_mean": 152996.25312,
+        "direct_sources_per_target_median": 148927.0,
+        "direct_sources_per_target_p90": 199999.0,
+        "direct_sources_per_target_max": 199999,
+        "direct_share_of_N": 0.7649812656,
+        "p2p_pair_evaluations": 30599250624.0
+      },
+      "nearfield_kernel_layout": "leafpair_gather",
+      "contention": {
+        "devices": [
+          0
+        ],
+        "n_samples": 16,
+        "duration_s": 16.223955392837524,
+        "foreign_pids_on_devices": [],
+        "own_util_max": {
+          "0": 98
+        },
+        "other_gpu_util_max": 98,
+        "loadavg1_max": 86.65966796875,
+        "loadavg1_min": 84.5244140625,
+        "cores": 64,
+        "contaminated": false,
+        "flags": [
+          "loadavg>=8 (86.7)",
+          "other-gpus-busy (98%)"
+        ]
+      },
+      "diagnostics": {
+        "recent_dual_neighbor_count": 1867642,
+        "static_radix_far_pair_count": 0,
+        "large_n_eval_active_leaf_count": 1563
+      },
+      "fastlane": {
+        "fused_mode_active": true,
+        "fastlane_hits": 0,
+        "fastlane_attempts": 0,
+        "fallback_count": 0,
+        "last_fallback_reason": ""
+      }
+    },
+    {
+      "code": "jaccpot",
+      "lane": "single_gpu_fused",
+      "ndev": 1,
+      "order": 6,
+      "theta": 0.6,
+      "theta_pkd_equivalent": 0.8999999999999999,
+      "leaf_size": 128,
+      "traversal_overrides": {},
+      "force_eval_s": {
+        "min": 0.04291656333953142,
+        "median": 0.043249414302408695,
+        "iqr": 0.007531997747719288,
+        "max": 0.0563884899020195,
+        "mean": 0.046039496548473835,
+        "std": 0.005210474563815622,
+        "samples": [
+          0.0563884899020195,
+          0.04461754206568003,
+          0.04291656333953142,
+          0.04302547313272953,
+          0.043249414302408695
+        ]
+      },
+      "walk_s": 0.0,
+      "walk_stage_s": {
+        "refresh_dual_setup_seconds": 0.0,
+        "refresh_dual_artifact_build_seconds": 0.0,
+        "refresh_dual_select_interactions_seconds": 0.0,
+        "refresh_dual_far_pair_plan_seconds": 0.0,
+        "refresh_dual_split_combined_seconds": 0.0,
+        "refresh_dual_split_far_pairs_seconds": 0.0,
+        "refresh_dual_split_leaf_neighbors_seconds": 0.0,
+        "refresh_dual_raw_combined_seconds": 0.0,
+        "refresh_tree_build_seconds": 0.0,
+        "refresh_tree_upward_seconds": 0.0,
+        "refresh_nearfield_seconds": 0.0,
+        "refresh_total_seconds": 0.0
+      },
+      "prepare_s": 9.124457592144608,
+      "peak_bytes_in_use": {
+        "0": 3422810624
+      },
+      "errors": {
+        "median": 3.875038447592049e-05,
+        "p90": 0.00019102487480773052,
+        "max": 0.07547717678932137,
+        "aggL2": 0.0002976356271502456,
+        "aggL2_signflip": 2.00000249168764,
+        "n_ref": 4096
+      },
+      "budget": {
+        "num_leaves": 1563,
+        "neighbor_entries_directed": 866018,
+        "neighbor_pairs_undirected": 433009,
+        "unmatched_directions": 0,
+        "self_entries": 0,
+        "mean_neighbor_leaves_per_leaf": 554.0742162507997,
+        "max_neighbor_leaves_per_leaf": 1562,
+        "occupancy_mean": 127.95905310300704,
+        "occupancy_min": 64,
+        "occupancy_max": 128,
+        "direct_sources_per_target_mean": 70943.21504,
+        "direct_sources_per_target_median": 58175.0,
+        "direct_sources_per_target_p90": 116031.0,
+        "direct_sources_per_target_max": 199999,
+        "direct_share_of_N": 0.3547160752,
+        "p2p_pair_evaluations": 14188643008.0
+      },
+      "nearfield_kernel_layout": "leafpair_gather",
+      "contention": {
+        "devices": [
+          0
+        ],
+        "n_samples": 13,
+        "duration_s": 12.70693039894104,
+        "foreign_pids_on_devices": [],
+        "own_util_max": {
+          "0": 86
+        },
+        "other_gpu_util_max": 96,
+        "loadavg1_max": 92.16455078125,
+        "loadavg1_min": 87.98486328125,
+        "cores": 64,
+        "contaminated": false,
+        "flags": [
+          "loadavg>=8 (92.2)",
+          "other-gpus-busy (96%)"
+        ]
+      },
+      "diagnostics": {
+        "recent_dual_neighbor_count": 866018,
+        "static_radix_far_pair_count": 0,
+        "large_n_eval_active_leaf_count": 1563
+      },
+      "fastlane": {
+        "fused_mode_active": true,
+        "fastlane_hits": 0,
+        "fastlane_attempts": 0,
+        "fallback_count": 0,
+        "last_fallback_reason": ""
+      }
+    },
+    {
+      "code": "jaccpot",
+      "lane": "single_gpu_fused",
+      "ndev": 1,
+      "order": 6,
+      "theta": 0.8,
+      "theta_pkd_equivalent": 1.2000000000000002,
+      "leaf_size": 128,
+      "traversal_overrides": {},
+      "force_eval_s": {
+        "min": 0.024365351535379887,
+        "median": 0.02488864306360483,
+        "iqr": 0.011708267498761415,
+        "max": 0.04003644920885563,
+        "mean": 0.029335054010152815,
+        "std": 0.006161335025563395,
+        "samples": [
+          0.04003644920885563,
+          0.03256513178348541,
+          0.02488864306360483,
+          0.024819694459438324,
+          0.024365351535379887
+        ]
+      },
+      "walk_s": 0.0,
+      "walk_stage_s": {
+        "refresh_dual_setup_seconds": 0.0,
+        "refresh_dual_artifact_build_seconds": 0.0,
+        "refresh_dual_select_interactions_seconds": 0.0,
+        "refresh_dual_far_pair_plan_seconds": 0.0,
+        "refresh_dual_split_combined_seconds": 0.0,
+        "refresh_dual_split_far_pairs_seconds": 0.0,
+        "refresh_dual_split_leaf_neighbors_seconds": 0.0,
+        "refresh_dual_raw_combined_seconds": 0.0,
+        "refresh_tree_build_seconds": 0.0,
+        "refresh_tree_upward_seconds": 0.0,
+        "refresh_nearfield_seconds": 0.0,
+        "refresh_total_seconds": 0.0
+      },
+      "prepare_s": 7.363365421071649,
+      "peak_bytes_in_use": {
+        "0": 3422810624
+      },
+      "errors": {
+        "median": 0.0006321229247313342,
+        "p90": 0.003490304878071537,
+        "max": 2.039116856082961,
+        "aggL2": 0.008383289800427575,
+        "aggL2_signflip": 2.0002000282281487,
+        "n_ref": 4096
+      },
+      "budget": {
+        "num_leaves": 1563,
+        "neighbor_entries_directed": 426804,
+        "neighbor_pairs_undirected": 213402,
+        "unmatched_directions": 0,
+        "self_entries": 0,
+        "mean_neighbor_leaves_per_leaf": 273.0671785028791,
+        "max_neighbor_leaves_per_leaf": 1562,
+        "occupancy_mean": 127.95905310300704,
+        "occupancy_min": 64,
+        "occupancy_max": 128,
+        "direct_sources_per_target_mean": 34962.80416,
+        "direct_sources_per_target_median": 26303.0,
+        "direct_sources_per_target_p90": 48063.0,
+        "direct_sources_per_target_max": 199999,
+        "direct_share_of_N": 0.1748140208,
+        "p2p_pair_evaluations": 6992560832.0
+      },
+      "nearfield_kernel_layout": "leafpair_gather",
+      "contention": {
+        "devices": [
+          0
+        ],
+        "n_samples": 13,
+        "duration_s": 12.138183832168579,
+        "foreign_pids_on_devices": [],
+        "own_util_max": {
+          "0": 67
+        },
+        "other_gpu_util_max": 95,
+        "loadavg1_max": 85.20751953125,
+        "loadavg1_min": 82.2275390625,
+        "cores": 64,
+        "contaminated": false,
+        "flags": [
+          "loadavg>=8 (85.2)",
+          "other-gpus-busy (95%)"
+        ]
+      },
+      "diagnostics": {
+        "recent_dual_neighbor_count": 426804,
+        "static_radix_far_pair_count": 0,
+        "large_n_eval_active_leaf_count": 1563
+      },
+      "fastlane": {
+        "fused_mode_active": true,
+        "fastlane_hits": 0,
+        "fastlane_attempts": 0,
+        "fallback_count": 0,
+        "last_fallback_reason": ""
+      }
+    }
+  ],
+  "fast_lane_env_by_leaf": {
+    "32": {
+      "JACCPOT_STATIC_STRICT_GPU_MODE": "on",
+      "JACCPOT_STATIC_STRICT_FUSED_MODE": "on",
+      "JACCPOT_LARGE_N_STATIC_TARGET_BLOCKS": "1",
+      "JACCPOT_LARGE_N_TARGET_BLOCK_SIZE": "4",
+      "JACCPOT_LARGE_N_STATIC_TARGET_BLOCKS_MAX_PER_LEAF": "auto",
+      "JACCPOT_LARGE_N_NEIGHBOR_EDGE_PROFILE_FIXED_CAP": "134217728",
+      "JACCPOT_STATIC_STRICT_REQUIRE_EXACT_CAP_PROFILE_MATCH": "0",
+      "JACCPOT_STATIC_STRICT_FUSED_DEVICE_ONLY": "1",
+      "JACCPOT_STATIC_STRICT_FUSED_DISALLOW_HOST_SEGMENT_FALLBACK": "1",
+      "JACCPOT_STATIC_STRICT_FUSED_FLAT_COMPACT_FAR_PAIRS": "1",
+      "JACCPOT_STATIC_STRICT_FUSED_COMPACT_FAR_PAIR_CAP": "8388608",
+      "JACCPOT_LARGE_N_COMPILED_STATE_MODE": "on",
+      "JACCPOT_LARGE_N_RADIX_FAST_PAYLOAD_IN_FUSED": "1",
+      "JACCPOT_LARGE_N_RADIX_FAST_PAYLOAD_MAX_MB": "0",
+      "JACCPOT_STATIC_STRICT_FUSED_PROFILE_SET": "200000",
+      "JACCPOT_STATIC_STRICT_FUSED_M2L_CSR": "1"
+    },
+    "128": {
+      "JACCPOT_STATIC_STRICT_GPU_MODE": "on",
+      "JACCPOT_STATIC_STRICT_FUSED_MODE": "on",
+      "JACCPOT_LARGE_N_STATIC_TARGET_BLOCKS": "1",
+      "JACCPOT_LARGE_N_TARGET_BLOCK_SIZE": "4",
+      "JACCPOT_LARGE_N_STATIC_TARGET_BLOCKS_MAX_PER_LEAF": "64",
+      "JACCPOT_LARGE_N_NEIGHBOR_EDGE_PROFILE_FIXED_CAP": "8388608",
+      "JACCPOT_STATIC_STRICT_REQUIRE_EXACT_CAP_PROFILE_MATCH": "0",
+      "JACCPOT_STATIC_STRICT_FUSED_DEVICE_ONLY": "1",
+      "JACCPOT_STATIC_STRICT_FUSED_DISALLOW_HOST_SEGMENT_FALLBACK": "1",
+      "JACCPOT_STATIC_STRICT_FUSED_FLAT_COMPACT_FAR_PAIRS": "1",
+      "JACCPOT_STATIC_STRICT_FUSED_COMPACT_FAR_PAIR_CAP": "8388608",
+      "JACCPOT_LARGE_N_COMPILED_STATE_MODE": "on",
+      "JACCPOT_LARGE_N_RADIX_FAST_PAYLOAD_IN_FUSED": "1",
+      "JACCPOT_LARGE_N_RADIX_FAST_PAYLOAD_MAX_MB": "0",
+      "JACCPOT_STATIC_STRICT_FUSED_PROFILE_SET": "200000",
+      "JACCPOT_STATIC_STRICT_FUSED_M2L_CSR": "1"
+    }
+  }
+}

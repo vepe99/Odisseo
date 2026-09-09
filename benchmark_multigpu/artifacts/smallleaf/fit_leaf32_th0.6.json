@@ -1,0 +1,45 @@
+{
+  "n": 200000,
+  "ic": "plummer",
+  "leaf": 32,
+  "order": 4,
+  "theta": 0.6,
+  "devices": [
+    6
+  ],
+  "env_overrides": {
+    "JACCPOT_STATIC_STRICT_FUSED_COMPACT_FAR_PAIR_CAP": "8388608",
+    "JACCPOT_LARGE_N_NEIGHBOR_EDGE_PROFILE_FIXED_CAP": "8388608",
+    "JACCPOT_LARGE_N_STATIC_TARGET_BLOCKS_MAX_PER_LEAF": "auto"
+  },
+  "traversal_overrides": {
+    "max_neighbors_per_leaf": 8192
+  },
+  "fast_lane_env": {
+    "JACCPOT_STATIC_STRICT_GPU_MODE": "on",
+    "JACCPOT_STATIC_STRICT_FUSED_MODE": "on",
+    "JACCPOT_LARGE_N_STATIC_TARGET_BLOCKS": "1",
+    "JACCPOT_LARGE_N_TARGET_BLOCK_SIZE": "4",
+    "JACCPOT_LARGE_N_STATIC_TARGET_BLOCKS_MAX_PER_LEAF": "auto",
+    "JACCPOT_LARGE_N_NEIGHBOR_EDGE_PROFILE_FIXED_CAP": "8388608",
+    "JACCPOT_STATIC_STRICT_REQUIRE_EXACT_CAP_PROFILE_MATCH": "0",
+    "JACCPOT_STATIC_STRICT_FUSED_DEVICE_ONLY": "1",
+    "JACCPOT_STATIC_STRICT_FUSED_DISALLOW_HOST_SEGMENT_FALLBACK": "1",
+    "JACCPOT_STATIC_STRICT_FUSED_FLAT_COMPACT_FAR_PAIRS": "1",
+    "JACCPOT_STATIC_STRICT_FUSED_COMPACT_FAR_PAIR_CAP": "8388608",
+    "JACCPOT_LARGE_N_COMPILED_STATE_MODE": "on",
+    "JACCPOT_LARGE_N_RADIX_FAST_PAYLOAD_IN_FUSED": "1",
+    "JACCPOT_LARGE_N_RADIX_FAST_PAYLOAD_MAX_MB": "0",
+    "JACCPOT_STATIC_STRICT_FUSED_PROFILE_SET": "200000"
+  },
+  "fits": false,
+  "stage": "prepare",
+  "caps": {
+    "compact_far_pair_cap": 8388608,
+    "neighbor_edge_cap": 8388608,
+    "static_target_blocks_max_per_leaf": "auto",
+    "num_leaves": 6250
+  },
+  "failed": "jaccpot could not fit N=200000 with preset='large_n_gpu', leaf_size=32, max_order=4, dtype=<class 'jax.numpy.float32'>.",
+  "failed_full": "Traceback (most recent call last):\n  File \"/export/home/tbuck/jaccpot-smallleaf-wt/jaccpot/runtime/fmm_prepare.py\", line 3967, in prepare_state\n    return self._prepare_state_uncaught(positions, masses, **kwargs)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/export/home/tbuck/jaccpot-smallleaf-wt/jaccpot/runtime/fmm_prepare.py\", line 4138, in _prepare_state_uncaught\n    return prepare_large_n_state(\n           ^^^^^^^^^^^^^^^^^^^^^^\n  File \"/export/home/tbuck/jaccpot-smallleaf-wt/jaccpot/runtime/_large_n_pipeline.py\", line 1366, in prepare_large_n_state\n    ) = _build_tree_and_dual_downward_artifacts(\n        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/export/home/tbuck/jaccpot-smallleaf-wt/jaccpot/runtime/_large_n_pipeline.py\", line 1121, in _build_tree_and_dual_downward_artifacts\n    fmm._prepare_state_tree_upward_and_dual_downward(\n  File \"/export/home/tbuck/jaccpot-smallleaf-wt/jaccpot/runtime/fmm_prepare.py\", line 1114, in _prepare_state_tree_upward_and_dual_downward\n    dual_downward_artifacts = self._prepare_state_dual_and_downward(\n                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/export/home/tbuck/jaccpot-smallleaf-wt/jaccpot/runtime/fmm_prepare.py\", line 1303, in _prepare_state_dual_and_downward\n    return self._prepare_state_dual_and_downward_strict_streamed_fast(\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/export/home/tbuck/jaccpot-smallleaf-wt/jaccpot/runtime/fmm_prepare.py\", line 3499, in _prepare_state_dual_and_downward_strict_streamed_fast\n    dual_artifacts, cache_entry = _build_dual_tree_artifacts(\n                                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/export/home/tbuck/jaccpot-smallleaf-wt/jaccpot/runtime/_interaction_cache.py\", line 2400, in _build_dual_tree_artifacts\n    _build_dual_tree_artifacts_split_strict_streamed(\n  File \"/export/home/tbuck/jaccpot-smallleaf-wt/jaccpot/runtime/_interaction_cache.py\", line 1133, in _build_dual_tree_artifacts_split_strict_streamed\n    ) = build_compact_far_pairs_and_leaf_neighbor_lists(\n        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/export/home/tbuck/yggdrax/yggdrax/interactions.py\", line 243, in build_compact_far_pairs_and_leaf_neighbor_lists\n    return _call_with_topology(\n           ^^^^^^^^^^^^^^^^^^^^\n  File \"/export/home/tbuck/yggdrax/yggdrax/interactions.py\", line 37, in _call_with_topology\n    return func(resolve_tree_topology(tree), *args, **kwargs)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/export/home/tbuck/jaccpot/.venv/lib/python3.12/site-packages/jaxtyping/_decorator.py\", line 541, in wrapped_fn\n    return wrapped_fn_impl(args, kwargs, bound, memos)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/export/home/tbuck/jaccpot/.venv/lib/python3.12/site-packages/jaxtyping/_decorator.py\", line 465, in wrapped_fn_impl\n    out = fn(*args, **kwargs)\n          ^^^^^^^^^^^^^^^^^^^\n  File \"/export/home/tbuck/yggdrax/yggdrax/_interactions_impl.py\", line 5977, in build_compact_far_pairs_and_leaf_neighbor_lists\n    raw = _run_dual_tree_walk_raw(\n          ^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/export/home/tbuck/yggdrax/yggdrax/_interactions_impl.py\", line 3973, in _run_dual_tree_walk_raw\n    return helper(\n           ^^^^^^^\n  File \"/export/home/tbuck/yggdrax/yggdrax/_interactions_impl.py\", line 4701, in _run_legacy_dual_tree_walk_raw\n    return _run_dual_tree_walk_raw(\n           ^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/export/home/tbuck/yggdrax/yggdrax/_interactions_impl.py\", line 4480, in _run_dual_tree_walk_raw\n    _raise_if_true(overflow_far, far_error_msg)\n  File \"/export/home/tbuck/yggdrax/yggdrax/_interactions_impl.py\", line 1187, in _raise_if_true\n    raise RuntimeError(message)\nRuntimeError: Interaction list capacity exceeded; increase max_interactions_per_node and rebuild.\n\nThe above exception was the direct cause of the following exception:\n\nTraceback (most recent call last):\n  File \"/export/home/tbuck/Odisseo-bench-multigpu/benchmark_multigpu/codes/fit_smallleaf_caps.py\", line 217, in main\n    prepared, eval_fn = solver.strict_fused_prepared_eval_fn(\n                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/export/home/tbuck/jaccpot-smallleaf-wt/jaccpot/solver.py\", line 2074, in strict_fused_prepared_eval_fn\n    return self._impl.strict_fused_prepared_eval_fn(\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/export/home/tbuck/jaccpot-smallleaf-wt/jaccpot/runtime/fmm_strict_run.py\", line 1176, in strict_fused_prepared_eval_fn\n    prepared = self.prepare_state(\n               ^^^^^^^^^^^^^^^^^^^\n  File \"/export/home/tbuck/jaccpot/.venv/lib/python3.12/site-packages/jaxtyping/_decorator.py\", line 541, in wrapped_fn\n    return wrapped_fn_impl(args, kwargs, bound, memos)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/export/home/tbuck/jaccpot/.venv/lib/python3.12/site-packages/jaxtyping/_decorator.py\", line 465, in wrapped_fn_impl\n    out = fn(*args, **kwargs)\n          ^^^^^^^^^^^^^^^^^^^\n  File \"/export/home/tbuck/jaccpot-smallleaf-wt/jaccpot/runtime/fmm_prepare.py\", line 3982, in prepare_state\n    reraise_with_capacity_report(\n  File \"/export/home/tbuck/jaccpot-smallleaf-wt/jaccpot/runtime/capacity_diagnostics.py\", line 242, in reraise_with_capacity_report\n    raise RuntimeError(\"\\n\".join(lines)) from exc\nRuntimeError: jaccpot could not fit N=200000 with preset='large_n_gpu', leaf_size=32, max_order=4, dtype=<class 'jax.numpy.float32'>.\nDevice: 0.80 GiB in use of 29.62 GiB.\nLargest statically-sized buffers for this configuration:\n      7.63 GiB  fast-lane source payload (num_leaves x max_neighbors_per_leaf x leaf)\n           sized by: leaf_size, or JACCPOT_LARGE_N_RADIX_FAST_PAYLOAD_MAX_MB to decline it\n      0.19 GiB  near-field neighbour buffer (num_leaves x max_neighbors_per_leaf)\n           sized by: TraversalOverrides(max_neighbors_per_leaf=...)\n      0.05 GiB  far-field interaction buffer (total_nodes x max_interactions_per_node)\n           sized by: TraversalOverrides(max_interactions_per_node=...)\n      0.00 GiB  leaf-major particle payload (num_leaves x leaf x 4)\n           sized by: leaf_size\n      0.00 GiB  multipole + local coefficients (2 x total_nodes x (p+1)^2)\n           sized by: max_order\nWhat usually fits: preset='large_n_gpu' with leaf_size=256 keeps the fast-lane payload and the near-field neighbour buffer bounded (it is the path built for this N); raising leaf_size shrinks num_leaves and every per-leaf buffer with it, at some accuracy cost. To change ONE traversal capacity without disturbing the preset's other tuning, pass jaccpot.TraversalOverrides(...) rather than a full DualTreeTraversalConfig.\n"
+}

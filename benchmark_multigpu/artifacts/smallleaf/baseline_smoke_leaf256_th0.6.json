@@ -1,0 +1,830 @@
+{
+  "tag": "smoke_leaf256_th0.6",
+  "n": 200000,
+  "ic": "plummer",
+  "leaf": 256,
+  "order": 4,
+  "theta": 0.6,
+  "steps": 5,
+  "reps": 3,
+  "dt": 0.01,
+  "vel_sigma": 0.4,
+  "devices": [
+    4
+  ],
+  "env_overrides": {},
+  "traversal_overrides": {},
+  "fast_lane_env": {
+    "JACCPOT_STATIC_STRICT_GPU_MODE": "on",
+    "JACCPOT_STATIC_STRICT_FUSED_MODE": "on",
+    "JACCPOT_LARGE_N_STATIC_TARGET_BLOCKS": "1",
+    "JACCPOT_LARGE_N_TARGET_BLOCK_SIZE": "4",
+    "JACCPOT_LARGE_N_STATIC_TARGET_BLOCKS_MAX_PER_LEAF": "64",
+    "JACCPOT_LARGE_N_NEIGHBOR_EDGE_PROFILE_FIXED_CAP": "2097152",
+    "JACCPOT_STATIC_STRICT_REQUIRE_EXACT_CAP_PROFILE_MATCH": "0",
+    "JACCPOT_STATIC_STRICT_FUSED_DEVICE_ONLY": "1",
+    "JACCPOT_STATIC_STRICT_FUSED_DISALLOW_HOST_SEGMENT_FALLBACK": "1",
+    "JACCPOT_STATIC_STRICT_FUSED_FLAT_COMPACT_FAR_PAIRS": "1",
+    "JACCPOT_STATIC_STRICT_FUSED_COMPACT_FAR_PAIR_CAP": "131072",
+    "JACCPOT_LARGE_N_COMPILED_STATE_MODE": "on",
+    "JACCPOT_LARGE_N_RADIX_FAST_PAYLOAD_IN_FUSED": "1",
+    "JACCPOT_LARGE_N_RADIX_FAST_PAYLOAD_MAX_MB": "0",
+    "JACCPOT_STATIC_STRICT_FUSED_PROFILE_SET": "200000"
+  },
+  "worktree": "/export/home/tbuck/jaccpot-smallleaf-wt",
+  "num_leaves": 782,
+  "eval_only": {
+    "timing": {
+      "min": 0.06999524589627981,
+      "median": 0.07018628716468811,
+      "iqr": 0.00030688289552927017,
+      "max": 0.07036107778549194,
+      "mean": 0.0701611570215651,
+      "std": 0.00013597809494627218,
+      "samples": [
+        0.07021661754697561,
+        0.07005581632256508,
+        0.07036107778549194,
+        0.07018628716468811,
+        0.0703099686652422,
+        0.07000308576971292,
+        0.06999524589627981
+      ]
+    },
+    "contention": {
+      "devices": [
+        4
+      ],
+      "n_samples": 2,
+      "duration_s": 1.2182683944702148,
+      "foreign_pids_on_devices": [],
+      "own_util_max": {
+        "4": 14
+      },
+      "other_gpu_util_max": 97,
+      "loadavg1_max": 20.529296875,
+      "loadavg1_min": 20.529296875,
+      "cores": 64,
+      "contaminated": false,
+      "flags": [
+        "loadavg>=8 (20.5)",
+        "other-gpus-busy (97%)"
+      ]
+    },
+    "prepare_s_incl_compile": 31.658362291753292,
+    "aggL2": 0.0008270791203870804,
+    "ref_targets": 4096,
+    "nearfield_kernel_layout": "leafpair_gather",
+    "fused_mode_active": true,
+    "lists": {
+      "neighbor_rows_max": 781,
+      "neighbor_edges_total": 356082,
+      "far_pairs": 100970,
+      "direct_share_of_N": 0.5827600559999999,
+      "active_leaves": 782
+    },
+    "validated_caps": {
+      "traced": false,
+      "max_pair_queue_requested": 131072,
+      "queue_capacity": 131072,
+      "compact_far_pair_capacity": 131072,
+      "max_neighbors_per_leaf_used": 256,
+      "grew": [
+        "max_pair_queue 65536->131072"
+      ],
+      "far_pair_count": 100970,
+      "max_neighbors_observed": 781,
+      "total_neighbors": 356082
+    },
+    "trace": {
+      "per_call": {
+        "window_ms": 71.06556033333332,
+        "busy_ms": 68.23088133333336,
+        "kernel_sum_ms": 68.23112666666667,
+        "launches": 170.0
+      },
+      "stages": {
+        "nearfield_pallas_leafpair": {
+          "ms_per_step": 67.35612133333333,
+          "launches_per_step": 1.0,
+          "kernels": 1
+        },
+        "reduce": {
+          "ms_per_step": 0.47484733333333334,
+          "launches_per_step": 26.0,
+          "kernels": 2
+        },
+        "memcpy": {
+          "ms_per_step": 0.15091266666666667,
+          "launches_per_step": 76.0,
+          "kernels": 1
+        },
+        "scatter": {
+          "ms_per_step": 0.07708833333333333,
+          "launches_per_step": 3.0,
+          "kernels": 3
+        },
+        "xla_fusion_other": {
+          "ms_per_step": 0.14414699999999994,
+          "launches_per_step": 61.0,
+          "kernels": 13
+        },
+        "gather": {
+          "ms_per_step": 0.02801,
+          "launches_per_step": 3.0,
+          "kernels": 3
+        }
+      },
+      "per_leaf_family": [],
+      "top": [
+        {
+          "name": "nearfield_leafpair_t32_s1024_c64_w256_ainput",
+          "total_ms_per_call": 67.35612133333333,
+          "count_per_call": 1.0,
+          "mean_us": 67356.12133333333,
+          "share": 0.9871758627465138
+        },
+        {
+          "name": "input_reduce_fusion",
+          "total_ms_per_call": 0.46940733333333334,
+          "count_per_call": 25.0,
+          "mean_us": 18.77629333333333,
+          "share": 0.006879665575896983
+        },
+        {
+          "name": "MemcpyD2D",
+          "total_ms_per_call": 0.15091266666666667,
+          "count_per_call": 76.0,
+          "mean_us": 1.9856929824561405,
+          "share": 0.002211786233633936
+        },
+        {
+          "name": "input_scatter_fusion_1",
+          "total_ms_per_call": 0.051477666666666665,
+          "count_per_call": 1.0,
+          "mean_us": 51.477666666666664,
+          "share": 0.0007544601588971758
+        },
+        {
+          "name": "loop_dynamic_update_slice_fusion",
+          "total_ms_per_call": 0.04657900000000003,
+          "count_per_call": 25.0,
+          "mean_us": 1.863160000000001,
+          "share": 0.0006826649694289091
+        },
+        {
+          "name": "loop_add_fusion",
+          "total_ms_per_call": 0.03561599999999997,
+          "count_per_call": 25.0,
+          "mean_us": 1.4246399999999986,
+          "share": 0.0005219905011095127
+        },
+        {
+          "name": "loop_gather_fusion",
+          "total_ms_per_call": 0.018410666666666665,
+          "count_per_call": 1.0,
+          "mean_us": 18.410666666666668,
+          "share": 0.0002698279739188439
+        },
+        {
+          "name": "loop_broadcast_fusion_1",
+          "total_ms_per_call": 0.017450666666666666,
+          "count_per_call": 1.0,
+          "mean_us": 17.450666666666667,
+          "share": 0.0002557581490910942
+        },
+        {
+          "name": "input_scatter_fusion",
+          "total_ms_per_call": 0.017056,
+          "count_per_call": 1.0,
+          "mean_us": 17.056,
+          "share": 0.00024997388777301934
+        },
+        {
+          "name": "loop_add_multiply_slice_fusion",
+          "total_ms_per_call": 0.013023999999999999,
+          "count_per_call": 1.0,
+          "mean_us": 13.024,
+          "share": 0.00019088062349647064
+        },
+        {
+          "name": "loop_add_divide_slice_fusion",
+          "total_ms_per_call": 0.009674666666666666,
+          "count_per_call": 1.0,
+          "mean_us": 9.674666666666667,
+          "share": 0.00014179256798632178
+        },
+        {
+          "name": "input_scatter_fusion_2",
+          "total_ms_per_call": 0.008554666666666667,
+          "count_per_call": 1.0,
+          "mean_us": 8.554666666666668,
+          "share": 0.00012537777235394716
+        },
+        {
+          "name": "loop_add_divide_reduce_slice_subtract_fusion",
+          "total_ms_per_call": 0.00544,
+          "count_per_call": 1.0,
+          "mean_us": 5.44,
+          "share": 7.972900735724819e-05
+        },
+        {
+          "name": "loop_gather_fusion_1",
+          "total_ms_per_call": 0.005109000000000001,
+          "count_per_call": 1.0,
+          "mean_us": 5.109000000000001,
+          "share": 7.487784900518034e-05
+        },
+        {
+          "name": "loop_gather_fusion_2",
+          "total_ms_per_call": 0.004490333333333333,
+          "count_per_call": 1.0,
+          "mean_us": 4.490333333333333,
+          "share": 6.581062856063054e-05
+        },
+        {
+          "name": "loop_add_divide_fusion",
+          "total_ms_per_call": 0.003616,
+          "count_per_call": 1.0,
+          "mean_us": 3.616,
+          "share": 5.29963401845238e-05
+        },
+        {
+          "name": "loop_pad_fusion",
+          "total_ms_per_call": 0.0035413333333333334,
+          "count_per_call": 1.0,
+          "mean_us": 3.5413333333333337,
+          "share": 5.1902020475698826e-05
+        },
+        {
+          "name": "loop_transpose_fusion",
+          "total_ms_per_call": 0.003531,
+          "count_per_call": 1.0,
+          "mean_us": 3.531,
+          "share": 5.1750574444566795e-05
+        },
+        {
+          "name": "loop_pad_fusion_1",
+          "total_ms_per_call": 0.003338666666666667,
+          "count_per_call": 1.0,
+          "mean_us": 3.3386666666666667,
+          "share": 4.893172412317389e-05
+        },
+        {
+          "name": "loop_broadcast_fusion",
+          "total_ms_per_call": 0.002453666666666667,
+          "count_per_call": 1.0,
+          "mean_us": 2.453666666666667,
+          "share": 3.596110436009216e-05
+        },
+        {
+          "name": "loop_compare_fusion_1",
+          "total_ms_per_call": 0.0019196666666666667,
+          "count_per_call": 1.0,
+          "mean_us": 1.9196666666666669,
+          "share": 2.8134764299656396e-05
+        },
+        {
+          "name": "loop_divide_fusion",
+          "total_ms_per_call": 0.001749333333333333,
+          "count_per_call": 1.0,
+          "mean_us": 1.7493333333333332,
+          "share": 2.5638347463899417e-05
+        },
+        {
+          "name": "loop_exponential_fusion",
+          "total_ms_per_call": 0.001653,
+          "count_per_call": 1.0,
+          "mean_us": 1.6529999999999998,
+          "share": 2.422647962528148e-05
+        }
+      ]
+    }
+  },
+  "scan_full": {
+    "label": "full",
+    "ms_per_step_min": 132.60406963527203,
+    "ms_per_step_median": 132.70857818424702,
+    "ms_per_step_max": 132.72676430642605,
+    "samples_ms": [
+      132.60406963527203,
+      132.70857818424702,
+      132.72676430642605
+    ],
+    "spread": 0.0009252707815944105,
+    "compile_s": 26.92391946911812,
+    "contention": {
+      "devices": [
+        4
+      ],
+      "n_samples": 3,
+      "duration_s": 2.309131145477295,
+      "foreign_pids_on_devices": [],
+      "own_util_max": {
+        "4": 99
+      },
+      "other_gpu_util_max": 100,
+      "loadavg1_max": 28.00439453125,
+      "loadavg1_min": 28.00439453125,
+      "cores": 64,
+      "contaminated": false,
+      "flags": [
+        "loadavg>=8 (28.0)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    "fallback_count": 0,
+    "last_fallback_reason": "",
+    "compile_count": 1,
+    "trace": {
+      "per_step": {
+        "window_ms": 138.18712420000003,
+        "busy_ms": 129.98600660001426,
+        "kernel_sum_ms": 129.9984594,
+        "launches": 7817.2
+      },
+      "stages": {
+        "nearfield_pallas_leafpair": {
+          "ms_per_step": 79.929424,
+          "launches_per_step": 1.2,
+          "kernels": 1
+        },
+        "scatter": {
+          "ms_per_step": 18.086528800000004,
+          "launches_per_step": 191.2,
+          "kernels": 9
+        },
+        "xla_fusion_other": {
+          "ms_per_step": 6.479646400000002,
+          "launches_per_step": 448.2,
+          "kernels": 17
+        },
+        "memcpy": {
+          "ms_per_step": 3.145010200000004,
+          "launches_per_step": 864.0,
+          "kernels": 3
+        },
+        "sort": {
+          "ms_per_step": 5.725280399999999,
+          "launches_per_step": 228.0,
+          "kernels": 19
+        },
+        "reduce": {
+          "ms_per_step": 1.8798546,
+          "launches_per_step": 214.0,
+          "kernels": 7
+        },
+        "gather": {
+          "ms_per_step": 0.3820859999999999,
+          "launches_per_step": 41.0,
+          "kernels": 2
+        },
+        "other": {
+          "ms_per_step": 0.31386920000000007,
+          "launches_per_step": 98.0,
+          "kernels": 2
+        }
+      },
+      "per_leaf_family": [],
+      "top": [
+        {
+          "name": "nearfield_leafpair_t32_s1024_c64_w256_ainput",
+          "total_ms_per_call": 399.64712,
+          "count_per_call": 6.0,
+          "mean_us": 66607.85333333333,
+          "share": 0.6148490095106466
+        },
+        {
+          "name": "input_scatter_fusion_15",
+          "total_ms_per_call": 29.795969999999993,
+          "count_per_call": 130.0,
+          "mean_us": 229.1997692307692,
+          "share": 0.04584049709130629
+        },
+        {
+          "name": "input_scatter_fusion_9",
+          "total_ms_per_call": 23.857857999999997,
+          "count_per_call": 100.0,
+          "mean_us": 238.57857999999996,
+          "share": 0.03670483190356946
+        },
+        {
+          "name": "input_scatter_fusion_4",
+          "total_ms_per_call": 23.66908400000001,
+          "count_per_call": 110.0,
+          "mean_us": 215.173490909091,
+          "share": 0.036414406923348526
+        },
+        {
+          "name": "input_transpose_fusion",
+          "total_ms_per_call": 15.098943000000002,
+          "count_per_call": 5.0,
+          "mean_us": 3019.7886000000003,
+          "share": 0.02322941836339947
+        },
+        {
+          "name": "memcpy128",
+          "total_ms_per_call": 9.045215999999977,
+          "count_per_call": 838.0,
+          "mean_us": 10.793813842482072,
+          "share": 0.01391588183698118
+        },
+        {
+          "name": "memcpy32_post",
+          "total_ms_per_call": 6.020893000000044,
+          "count_per_call": 3170.0,
+          "mean_us": 1.8993353312302976,
+          "share": 0.009263022081629444
+        },
+        {
+          "name": "input_scatter_fusion_14",
+          "total_ms_per_call": 5.549985,
+          "count_per_call": 130.0,
+          "mean_us": 42.69219230769231,
+          "share": 0.00853853964980142
+        },
+        {
+          "name": "sort_47_1",
+          "total_ms_per_call": 4.016674999999999,
+          "count_per_call": 130.0,
+          "mean_us": 30.897499999999994,
+          "share": 0.006179573232696324
+        },
+        {
+          "name": "sort_14_1",
+          "total_ms_per_call": 3.7330199999999993,
+          "count_per_call": 55.0,
+          "mean_us": 67.8730909090909,
+          "share": 0.005743175753358196
+        },
+        {
+          "name": "sort_17_1",
+          "total_ms_per_call": 3.6175690000000005,
+          "count_per_call": 50.0,
+          "mean_us": 72.35138,
+          "share": 0.005565556725359163
+        },
+        {
+          "name": "input_and_reduce_fusion_5",
+          "total_ms_per_call": 2.859842000000001,
+          "count_per_call": 100.0,
+          "mean_us": 28.59842000000001,
+          "share": 0.004399809064198804
+        },
+        {
+          "name": "input_reduce_fusion_3",
+          "total_ms_per_call": 2.3095289999999995,
+          "count_per_call": 125.0,
+          "mean_us": 18.476231999999996,
+          "share": 0.0035531636461839477
+        },
+        {
+          "name": "input_scatter_fusion_16",
+          "total_ms_per_call": 2.1859500000000014,
+          "count_per_call": 130.0,
+          "mean_us": 16.81500000000001,
+          "share": 0.0033630398546092327
+        },
+        {
+          "name": "input_scatter_fusion_6",
+          "total_ms_per_call": 2.131717,
+          "count_per_call": 105.0,
+          "mean_us": 20.30206666666667,
+          "share": 0.0032796034812086396
+        },
+        {
+          "name": "gemm_fusion_dot_97",
+          "total_ms_per_call": 2.0255679999999985,
+          "count_per_call": 130.0,
+          "mean_us": 15.581292307692298,
+          "share": 0.003116295392036005
+        },
+        {
+          "name": "loop_and_slice_fusion",
+          "total_ms_per_call": 1.8703070000000002,
+          "count_per_call": 100.0,
+          "mean_us": 18.703070000000004,
+          "share": 0.0028774294843681818
+        },
+        {
+          "name": "loop_add_fusion_8",
+          "total_ms_per_call": 1.6988760000000007,
+          "count_per_call": 105.0,
+          "mean_us": 16.179771428571435,
+          "share": 0.0026136863588092653
+        },
+        {
+          "name": "loop_broadcast_transpose_fusion_4",
+          "total_ms_per_call": 1.695201,
+          "count_per_call": 130.0,
+          "mean_us": 13.040007692307693,
+          "share": 0.002608032445652198
+        },
+        {
+          "name": "loop_reduce_fusion_2",
+          "total_ms_per_call": 1.4251900000000015,
+          "count_per_call": 130.0,
+          "mean_us": 10.963000000000012,
+          "share": 0.0021926259843045516
+        },
+        {
+          "name": "loop_and_broadcast_select_fusion",
+          "total_ms_per_call": 1.3059220000000002,
+          "count_per_call": 100.0,
+          "mean_us": 13.059220000000003,
+          "share": 0.002009134579021019
+        },
+        {
+          "name": "loop_maximum_fusion",
+          "total_ms_per_call": 1.2285459999999997,
+          "count_per_call": 105.0,
+          "mean_us": 11.700438095238091,
+          "share": 0.0018900931682887306
+        },
+        {
+          "name": "sort_47_1__2",
+          "total_ms_per_call": 1.207748,
+          "count_per_call": 130.0,
+          "mean_us": 9.290369230769231,
+          "share": 0.001858095866019163
+        },
+        {
+          "name": "sort_14_1__14",
+          "total_ms_per_call": 1.1684160000000001,
+          "count_per_call": 55.0,
+          "mean_us": 21.243927272727277,
+          "share": 0.0017975843796807335
+        },
+        {
+          "name": "sort_14_1__20",
+          "total_ms_per_call": 1.163677,
+          "count_per_call": 55.0,
+          "mean_us": 21.15776363636364,
+          "share": 0.0017902935240477168
+        },
+        {
+          "name": "sort_14_1__9",
+          "total_ms_per_call": 1.1610830000000003,
+          "count_per_call": 55.0,
+          "mean_us": 21.110600000000005,
+          "share": 0.0017863027075227021
+        },
+        {
+          "name": "sort_14_1__27",
+          "total_ms_per_call": 1.160958,
+          "count_per_call": 55.0,
+          "mean_us": 21.10832727272727,
+          "share": 0.0017861103975513725
+        },
+        {
+          "name": "sort_14_1__5",
+          "total_ms_per_call": 1.1596190000000004,
+          "count_per_call": 55.0,
+          "mean_us": 21.083981818181826,
+          "share": 0.0017840503731384994
+        },
+        {
+          "name": "sort_14_1__2",
+          "total_ms_per_call": 1.157756,
+          "count_per_call": 55.0,
+          "mean_us": 21.050109090909093,
+          "share": 0.0017811841853258147
+        },
+        {
+          "name": "loop_and_compare_convert_gather_select_fusion",
+          "total_ms_per_call": 1.1563519999999996,
+          "count_per_call": 100.0,
+          "mean_us": 11.563519999999997,
+          "share": 0.0017790241597278491
+        },
+        {
+          "name": "sort_14_1__35",
+          "total_ms_per_call": 1.151366,
+          "count_per_call": 55.0,
+          "mean_us": 20.93392727272727,
+          "share": 0.0017713532995914873
+        },
+        {
+          "name": "input_scatter_fusion_13",
+          "total_ms_per_call": 1.1397090000000003,
+          "count_per_call": 100.0,
+          "mean_us": 11.397090000000002,
+          "share": 0.0017534192409052506
+        },
+        {
+          "name": "input_scatter_fusion_12",
+          "total_ms_per_call": 1.12989,
+          "count_per_call": 100.0,
+          "mean_us": 11.298900000000001,
+          "share": 0.0017383129080374318
+        },
+        {
+          "name": "sort_17_1__14",
+          "total_ms_per_call": 1.056478,
+          "count_per_call": 50.0,
+          "mean_us": 21.12956,
+          "share": 0.0016253700311159227
+        },
+        {
+          "name": "sort_17_1__5",
+          "total_ms_per_call": 1.055007,
+          "count_per_call": 50.0,
+          "mean_us": 21.10014,
+          "share": 0.0016231069273733255
+        },
+        {
+          "name": "sort_17_1__2",
+          "total_ms_per_call": 1.0543039999999997,
+          "count_per_call": 50.0,
+          "mean_us": 21.086079999999992,
+          "share": 0.0016220253760945717
+        },
+        {
+          "name": "sort_17_1__9",
+          "total_ms_per_call": 1.0540169999999998,
+          "count_per_call": 50.0,
+          "mean_us": 21.080339999999996,
+          "share": 0.0016215838324004012
+        },
+        {
+          "name": "sort_17_1__20",
+          "total_ms_per_call": 1.050913,
+          "count_per_call": 50.0,
+          "mean_us": 21.01826,
+          "share": 0.0016168083911923651
+        },
+        {
+          "name": "sort_17_1__27",
+          "total_ms_per_call": 1.04528,
+          "count_per_call": 50.0,
+          "mean_us": 20.9056,
+          "share": 0.0016081421346444047
+        },
+        {
+          "name": "sort_17_1__35",
+          "total_ms_per_call": 1.0419899999999997,
+          "count_per_call": 50.0,
+          "mean_us": 20.839799999999997,
+          "share": 0.001603080536199031
+        }
+      ]
+    }
+  },
+  "ablations": {
+    "JACCPOT_LARGE_N_NEARFIELD_DIAG_MODE=self_only": {
+      "label": "large_n_nearfield=self_only",
+      "ms_per_step_min": 50.87552163749933,
+      "ms_per_step_median": 51.72981787472963,
+      "ms_per_step_max": 51.92782077938318,
+      "samples_ms": [
+        51.72981787472963,
+        51.92782077938318,
+        50.87552163749933
+      ],
+      "spread": 0.020683800539319144,
+      "compile_s": 24.96893327496946,
+      "contention": {
+        "devices": [
+          4
+        ],
+        "n_samples": 2,
+        "duration_s": 1.1703617572784424,
+        "foreign_pids_on_devices": [],
+        "own_util_max": {
+          "4": 95
+        },
+        "other_gpu_util_max": 100,
+        "loadavg1_max": 25.68310546875,
+        "loadavg1_min": 25.68310546875,
+        "cores": 64,
+        "contaminated": false,
+        "flags": [
+          "loadavg>=8 (25.7)",
+          "other-gpus-busy (100%)"
+        ]
+      },
+      "fallback_count": 0,
+      "last_fallback_reason": "",
+      "compile_count": 1
+    },
+    "JACCPOT_LARGE_N_NEARFIELD_DIAG_MODE=pairs_only": {
+      "label": "large_n_nearfield=pairs_only",
+      "ms_per_step_min": 131.03726971894503,
+      "ms_per_step_median": 132.61566776782274,
+      "ms_per_step_max": 132.8970169648528,
+      "samples_ms": [
+        131.03726971894503,
+        132.61566776782274,
+        132.8970169648528
+      ],
+      "spread": 0.014192506070194101,
+      "compile_s": 25.024384795688093,
+      "contention": {
+        "devices": [
+          4
+        ],
+        "n_samples": 3,
+        "duration_s": 2.2798960208892822,
+        "foreign_pids_on_devices": [],
+        "own_util_max": {
+          "4": 99
+        },
+        "other_gpu_util_max": 88,
+        "loadavg1_max": 24.9326171875,
+        "loadavg1_min": 24.9326171875,
+        "cores": 64,
+        "contaminated": false,
+        "flags": [
+          "loadavg>=8 (24.9)",
+          "other-gpus-busy (88%)"
+        ]
+      },
+      "fallback_count": 0,
+      "last_fallback_reason": "",
+      "compile_count": 1
+    },
+    "JACCPOT_STRICT_REFRESH_DETAIL_DIAG_MODE=m2l_only": {
+      "label": "strict_refresh_detail=m2l_only",
+      "ms_per_step_min": 45.51297705620527,
+      "ms_per_step_median": 46.96554020047188,
+      "ms_per_step_max": 47.679393738508224,
+      "samples_ms": [
+        46.96554020047188,
+        47.679393738508224,
+        45.51297705620527
+      ],
+      "spread": 0.047599977466373705,
+      "compile_s": 14.96676307078451,
+      "contention": {
+        "devices": [
+          4
+        ],
+        "n_samples": 2,
+        "duration_s": 1.178224802017212,
+        "foreign_pids_on_devices": [],
+        "own_util_max": {
+          "4": 98
+        },
+        "other_gpu_util_max": 88,
+        "loadavg1_max": 23.21240234375,
+        "loadavg1_min": 23.21240234375,
+        "cores": 64,
+        "contaminated": false,
+        "flags": [
+          "loadavg>=8 (23.2)",
+          "other-gpus-busy (88%)"
+        ]
+      },
+      "fallback_count": 0,
+      "last_fallback_reason": "",
+      "compile_count": 1
+    },
+    "JACCPOT_STRICT_REFRESH_DETAIL_DIAG_MODE=l2l_only": {
+      "label": "strict_refresh_detail=l2l_only",
+      "ms_per_step_min": 30.318410135805607,
+      "ms_per_step_median": 30.551704950630665,
+      "ms_per_step_max": 31.310504861176014,
+      "samples_ms": [
+        31.310504861176014,
+        30.551704950630665,
+        30.318410135805607
+      ],
+      "spread": 0.03272251813094773,
+      "compile_s": 10.98055930249393,
+      "contention": {
+        "devices": [
+          4
+        ],
+        "n_samples": 2,
+        "duration_s": 1.0192768573760986,
+        "foreign_pids_on_devices": [],
+        "own_util_max": {
+          "4": 97
+        },
+        "other_gpu_util_max": 97,
+        "loadavg1_max": 24.5576171875,
+        "loadavg1_min": 24.5576171875,
+        "cores": 64,
+        "contaminated": false,
+        "flags": [
+          "loadavg>=8 (24.6)",
+          "other-gpus-busy (97%)"
+        ]
+      },
+      "fallback_count": 0,
+      "last_fallback_reason": "",
+      "compile_count": 1
+    }
+  },
+  "attribution": {
+    "full_ms": 132.60406963527203,
+    "nearfield_split": {
+      "self_scan_saved": 1.5667999163269997,
+      "pairs_saved": 81.7285479977727
+    },
+    "downward_split": {
+      "m2l_only": 45.51297705620527,
+      "l2l_only": 30.318410135805607
+    }
+  }
+}
