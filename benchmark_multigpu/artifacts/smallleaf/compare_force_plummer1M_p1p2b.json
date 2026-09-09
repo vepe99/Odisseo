@@ -1,0 +1,364 @@
+{
+  "provenance": {
+    "timestamp_utc": "2026-09-09T22:47:26.148091+00:00",
+    "repos": {
+      "jaccpot": {
+        "sha": "c1cede7",
+        "branch": "main",
+        "dirty": true
+      },
+      "yggdrax": {
+        "sha": "a22472f",
+        "branch": "paper/differentiable-applications",
+        "dirty": true
+      },
+      "jztree": {
+        "sha": "ee82fa2",
+        "branch": "main",
+        "dirty": false
+      },
+      "odisseo_bench": {
+        "sha": "eaccb7c",
+        "branch": "bench/multi-gpu",
+        "dirty": true
+      }
+    },
+    "jax_version": "0.10.2",
+    "jax_backend": "gpu",
+    "devices": [
+      {
+        "id": 0,
+        "kind": "NVIDIA A100-PCIE-40GB",
+        "platform": "gpu"
+      }
+    ],
+    "nvidia_smi": "0, NVIDIA A100-PCIE-40GB, 40960 MiB, 595.71.05\n1, NVIDIA A100-PCIE-40GB, 40960 MiB, 595.71.05\n2, NVIDIA A100-PCIE-40GB, 40960 MiB, 595.71.05\n3, NVIDIA A100-PCIE-40GB, 40960 MiB, 595.71.05\n4, NVIDIA A100-PCIE-40GB, 40960 MiB, 595.71.05\n5, NVIDIA A100-PCIE-40GB, 40960 MiB, 595.71.05\n6, NVIDIA A100-PCIE-40GB, 40960 MiB, 595.71.05\n7, NVIDIA A100-PCIE-40GB, 40960 MiB, 595.71.05",
+    "benchmark": "compare_force",
+    "args": {
+      "n": 1000000,
+      "ic": "plummer",
+      "ndevs": [
+        1
+      ],
+      "pkd_thetas": [
+        0.4,
+        0.5,
+        0.6,
+        0.7,
+        0.8,
+        0.9,
+        1.0
+      ],
+      "jac_thetas": [
+        0.5,
+        0.6
+      ],
+      "orders": [
+        4
+      ],
+      "jac_leaf_single": [
+        128,
+        256
+      ],
+      "jac_leaf_dist": 64,
+      "jac_edge_cap": null,
+      "jac_max_interactions": 8192,
+      "jac_env": [
+        "JACCPOT_STATIC_STRICT_FUSED_M2L_CSR=1"
+      ],
+      "partitioner": "rcb",
+      "pkd_nbucket": [
+        16
+      ],
+      "pkd_ngroup": [
+        0
+      ],
+      "pkd_cores": 16,
+      "pkd_cpu": false,
+      "pkd_cpu_cores": 32,
+      "repeats": 5,
+      "warmup": 2,
+      "ref_targets": 4096,
+      "softening": 1e-07,
+      "softening_tolerance": 1e-06,
+      "G": 1.0,
+      "seed": 0,
+      "timeout": 3600.0,
+      "workdir": null,
+      "out": "/tmp/compare_force_leaf_1exb16h8/leaf128.json",
+      "allow_busy": false,
+      "skip_pkdgrav3": true,
+      "skip_jaccpot": false
+    },
+    "loadavg": [
+      43.765625,
+      41.076171875,
+      41.88134765625
+    ],
+    "cores": 64
+  },
+  "ic": {
+    "name": "plummer",
+    "n": 1000000,
+    "seed": 0,
+    "softening": 1e-07,
+    "softening_reference_shift_aggL2": 3.4071384498685964e-09,
+    "G": 1.0,
+    "reference_targets": 4096
+  },
+  "fast_lane_env": {
+    "JACCPOT_STATIC_STRICT_GPU_MODE": "on",
+    "JACCPOT_STATIC_STRICT_FUSED_MODE": "on",
+    "JACCPOT_LARGE_N_STATIC_TARGET_BLOCKS": "1",
+    "JACCPOT_LARGE_N_TARGET_BLOCK_SIZE": "4",
+    "JACCPOT_LARGE_N_STATIC_TARGET_BLOCKS_MAX_PER_LEAF": "64",
+    "JACCPOT_LARGE_N_NEIGHBOR_EDGE_PROFILE_FIXED_CAP": "67108864",
+    "JACCPOT_STATIC_STRICT_REQUIRE_EXACT_CAP_PROFILE_MATCH": "0",
+    "JACCPOT_STATIC_STRICT_FUSED_DEVICE_ONLY": "1",
+    "JACCPOT_STATIC_STRICT_FUSED_DISALLOW_HOST_SEGMENT_FALLBACK": "1",
+    "JACCPOT_STATIC_STRICT_FUSED_FLAT_COMPACT_FAR_PAIRS": "1",
+    "JACCPOT_STATIC_STRICT_FUSED_COMPACT_FAR_PAIR_CAP": "8388608",
+    "JACCPOT_LARGE_N_COMPILED_STATE_MODE": "on",
+    "JACCPOT_LARGE_N_RADIX_FAST_PAYLOAD_IN_FUSED": "1",
+    "JACCPOT_LARGE_N_RADIX_FAST_PAYLOAD_MAX_MB": "0",
+    "JACCPOT_STATIC_STRICT_FUSED_PROFILE_SET": "1000000",
+    "JACCPOT_STATIC_STRICT_FUSED_M2L_CSR": "1"
+  },
+  "devices": [
+    0
+  ],
+  "pkd_theta_scale": 1.5,
+  "pkdgrav3": [],
+  "jaccpot": [
+    {
+      "code": "jaccpot",
+      "lane": "single_gpu_fused",
+      "ndev": 1,
+      "order": 4,
+      "theta": 0.5,
+      "theta_pkd_equivalent": 0.75,
+      "leaf_size": 128,
+      "traversal_overrides": {
+        "max_interactions_per_node": 8192
+      },
+      "force_eval_s": {
+        "min": 0.5229256162419915,
+        "median": 0.5256828805431724,
+        "iqr": 0.0030800756067037582,
+        "max": 0.5268886471167207,
+        "mean": 0.5252905743196606,
+        "std": 0.0014686450335712037,
+        "samples": [
+          0.5265764240175486,
+          0.5229256162419915,
+          0.5268886471167207,
+          0.5243793036788702,
+          0.5256828805431724
+        ]
+      },
+      "walk_s": 0.0,
+      "walk_stage_s": {
+        "refresh_dual_setup_seconds": 0.0,
+        "refresh_dual_artifact_build_seconds": 0.0,
+        "refresh_dual_select_interactions_seconds": 0.0,
+        "refresh_dual_far_pair_plan_seconds": 0.0,
+        "refresh_dual_split_combined_seconds": 0.0,
+        "refresh_dual_split_far_pairs_seconds": 0.0,
+        "refresh_dual_split_leaf_neighbors_seconds": 0.0,
+        "refresh_dual_raw_combined_seconds": 0.0,
+        "refresh_tree_build_seconds": 0.0,
+        "refresh_tree_upward_seconds": 0.0,
+        "refresh_nearfield_seconds": 0.0,
+        "refresh_total_seconds": 0.0
+      },
+      "prepare_s": 55.195351959206164,
+      "peak_bytes_in_use": {
+        "0": 16584466944
+      },
+      "errors": {
+        "median": 0.00013003191184093364,
+        "p90": 0.0008917557951343515,
+        "max": 0.06988199251029051,
+        "aggL2": 0.00044047147757949375,
+        "aggL2_signflip": 2.0000039188904957,
+        "n_ref": 4096
+      },
+      "budget": {
+        "num_leaves": 7813,
+        "neighbor_entries_directed": 10379224,
+        "neighbor_pairs_undirected": 5189612,
+        "unmatched_directions": 0,
+        "self_entries": 0,
+        "mean_neighbor_leaves_per_leaf": 1328.4556508383464,
+        "max_neighbor_leaves_per_leaf": 7812,
+        "occupancy_mean": 127.99180852425445,
+        "occupancy_min": 64,
+        "occupancy_max": 128,
+        "direct_sources_per_target_mean": 170052.210112,
+        "direct_sources_per_target_median": 127935.0,
+        "direct_sources_per_target_p90": 228159.0,
+        "direct_sources_per_target_max": 999999,
+        "direct_share_of_N": 0.170052210112,
+        "p2p_pair_evaluations": 170052210112.0
+      },
+      "nearfield_kernel_layout": "leafpair_gather",
+      "contention": {
+        "devices": [
+          0
+        ],
+        "n_samples": 10,
+        "duration_s": 8.905350923538208,
+        "foreign_pids_on_devices": [],
+        "own_util_max": {
+          "0": 100
+        },
+        "other_gpu_util_max": 97,
+        "loadavg1_max": 39.9443359375,
+        "loadavg1_min": 38.9814453125,
+        "cores": 64,
+        "contaminated": false,
+        "flags": [
+          "loadavg>=8 (39.9)",
+          "other-gpus-busy (97%)"
+        ]
+      },
+      "diagnostics": {
+        "recent_dual_neighbor_count": 10379224,
+        "static_radix_far_pair_count": 0,
+        "large_n_eval_active_leaf_count": 7813
+      },
+      "fastlane": {
+        "fused_mode_active": true,
+        "fastlane_hits": 0,
+        "fastlane_attempts": 0,
+        "fallback_count": 0,
+        "last_fallback_reason": ""
+      }
+    },
+    {
+      "code": "jaccpot",
+      "lane": "single_gpu_fused",
+      "ndev": 1,
+      "order": 4,
+      "theta": 0.6,
+      "theta_pkd_equivalent": 0.8999999999999999,
+      "leaf_size": 128,
+      "traversal_overrides": {
+        "max_interactions_per_node": 8192
+      },
+      "force_eval_s": {
+        "min": 0.33110177982598543,
+        "median": 0.33270050771534443,
+        "iqr": 0.001229005865752697,
+        "max": 0.33325035963207483,
+        "mean": 0.33253324665129186,
+        "std": 0.000746840528648958,
+        "samples": [
+          0.33110177982598543,
+          0.3326520770788193,
+          0.33270050771534443,
+          0.33296150900423527,
+          0.33325035963207483
+        ]
+      },
+      "walk_s": 0.0,
+      "walk_stage_s": {
+        "refresh_dual_setup_seconds": 0.0,
+        "refresh_dual_artifact_build_seconds": 0.0,
+        "refresh_dual_select_interactions_seconds": 0.0,
+        "refresh_dual_far_pair_plan_seconds": 0.0,
+        "refresh_dual_split_combined_seconds": 0.0,
+        "refresh_dual_split_far_pairs_seconds": 0.0,
+        "refresh_dual_split_leaf_neighbors_seconds": 0.0,
+        "refresh_dual_raw_combined_seconds": 0.0,
+        "refresh_tree_build_seconds": 0.0,
+        "refresh_tree_upward_seconds": 0.0,
+        "refresh_nearfield_seconds": 0.0,
+        "refresh_total_seconds": 0.0
+      },
+      "prepare_s": 19.64750819001347,
+      "peak_bytes_in_use": {
+        "0": 16584466944
+      },
+      "errors": {
+        "median": 0.0003384908279926922,
+        "p90": 0.0018332982103008806,
+        "max": 0.4028648005653905,
+        "aggL2": 0.0009988351804283645,
+        "aggL2_signflip": 1.999951509570978,
+        "n_ref": 4096
+      },
+      "budget": {
+        "num_leaves": 7813,
+        "neighbor_entries_directed": 6358422,
+        "neighbor_pairs_undirected": 3179211,
+        "unmatched_directions": 0,
+        "self_entries": 0,
+        "mean_neighbor_leaves_per_leaf": 813.825931140407,
+        "max_neighbor_leaves_per_leaf": 7812,
+        "occupancy_mean": 127.99180852425445,
+        "occupancy_min": 64,
+        "occupancy_max": 128,
+        "direct_sources_per_target_mean": 104175.390144,
+        "direct_sources_per_target_median": 75455.0,
+        "direct_sources_per_target_p90": 129599.0,
+        "direct_sources_per_target_max": 999999,
+        "direct_share_of_N": 0.104175390144,
+        "p2p_pair_evaluations": 104175390144.0
+      },
+      "nearfield_kernel_layout": "leafpair_gather",
+      "contention": {
+        "devices": [
+          0
+        ],
+        "n_samples": 7,
+        "duration_s": 6.395984888076782,
+        "foreign_pids_on_devices": [],
+        "own_util_max": {
+          "0": 100
+        },
+        "other_gpu_util_max": 97,
+        "loadavg1_max": 43.765625,
+        "loadavg1_min": 43.048828125,
+        "cores": 64,
+        "contaminated": false,
+        "flags": [
+          "loadavg>=8 (43.8)",
+          "other-gpus-busy (97%)"
+        ]
+      },
+      "diagnostics": {
+        "recent_dual_neighbor_count": 6358422,
+        "static_radix_far_pair_count": 0,
+        "large_n_eval_active_leaf_count": 7813
+      },
+      "fastlane": {
+        "fused_mode_active": true,
+        "fastlane_hits": 0,
+        "fastlane_attempts": 0,
+        "fallback_count": 0,
+        "last_fallback_reason": ""
+      }
+    }
+  ],
+  "fast_lane_env_by_leaf": {
+    "128": {
+      "JACCPOT_STATIC_STRICT_GPU_MODE": "on",
+      "JACCPOT_STATIC_STRICT_FUSED_MODE": "on",
+      "JACCPOT_LARGE_N_STATIC_TARGET_BLOCKS": "1",
+      "JACCPOT_LARGE_N_TARGET_BLOCK_SIZE": "4",
+      "JACCPOT_LARGE_N_STATIC_TARGET_BLOCKS_MAX_PER_LEAF": "64",
+      "JACCPOT_LARGE_N_NEIGHBOR_EDGE_PROFILE_FIXED_CAP": "67108864",
+      "JACCPOT_STATIC_STRICT_REQUIRE_EXACT_CAP_PROFILE_MATCH": "0",
+      "JACCPOT_STATIC_STRICT_FUSED_DEVICE_ONLY": "1",
+      "JACCPOT_STATIC_STRICT_FUSED_DISALLOW_HOST_SEGMENT_FALLBACK": "1",
+      "JACCPOT_STATIC_STRICT_FUSED_FLAT_COMPACT_FAR_PAIRS": "1",
+      "JACCPOT_STATIC_STRICT_FUSED_COMPACT_FAR_PAIR_CAP": "8388608",
+      "JACCPOT_LARGE_N_COMPILED_STATE_MODE": "on",
+      "JACCPOT_LARGE_N_RADIX_FAST_PAYLOAD_IN_FUSED": "1",
+      "JACCPOT_LARGE_N_RADIX_FAST_PAYLOAD_MAX_MB": "0",
+      "JACCPOT_STATIC_STRICT_FUSED_PROFILE_SET": "1000000",
+      "JACCPOT_STATIC_STRICT_FUSED_M2L_CSR": "1"
+    }
+  }
+}

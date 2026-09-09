@@ -683,6 +683,7 @@ def _fan_out_per_leaf(args) -> None:
     """Run ``main`` once per single-GPU leaf size in a child process and merge."""
     import subprocess
     import tempfile
+    import time
 
     root = Path(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     out = Path(args.out or (root / "artifacts" / "compare_force.json"))
@@ -713,7 +714,18 @@ def _fan_out_per_leaf(args) -> None:
         if i > 0 and "--skip-pkdgrav3" not in cmd:
             cmd.append("--skip-pkdgrav3")
         print(f"\n=== compare_force child leaf={leaf}: {' '.join(cmd[2:])}", flush=True)
-        rc = subprocess.run(cmd).returncode
+        # The previous child's utilisation lingers in nvidia-smi for a few seconds and
+        # the idle guard then rejects the very card that child just released (it cost
+        # the 1M leaf-256 rows on 2026-09-10): settle, and retry the guard a few times.
+        if i > 0:
+            time.sleep(15)
+        rc = 1
+        for attempt in range(4):
+            rc = subprocess.run(cmd).returncode
+            if rc == 0 or child_out.exists():
+                break
+            print(f"   child leaf={leaf} rc={rc}; retrying in 30 s ({attempt + 1}/4)", flush=True)
+            time.sleep(30)
         if rc != 0 or not child_out.exists():
             print(f"!! child for leaf {leaf} failed (rc={rc}); its rows are missing", flush=True)
             continue
