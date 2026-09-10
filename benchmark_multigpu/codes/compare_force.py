@@ -327,6 +327,12 @@ FAST_LANE_ENV = {
     "JACCPOT_LARGE_N_COMPILED_STATE_MODE": "on",
     "JACCPOT_LARGE_N_RADIX_FAST_PAYLOAD_IN_FUSED": "1",
     "JACCPOT_LARGE_N_RADIX_FAST_PAYLOAD_MAX_MB": "0",
+    # int32 indices for the fused single-GPU lane (plan "tree walk" 0.2): halves every
+    # queue byte of the traced walk. Both are read at IMPORT; yggdrax falls back to the
+    # jaccpot variable but not the other way round, so both are set. Ranges at leaf 32,
+    # N=200k: leaves x neighbour cap 1e8, nodes x far cap 2e8 -- far below 2^31.
+    "YGGDRAX_INDEX_PRECISION": "int32",
+    "JACCPOT_INDEX_PRECISION": "int32",
 }
 
 
