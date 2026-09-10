@@ -186,10 +186,11 @@ def main() -> int:
     devices = _device(args.allow_busy)
     overrides: dict[str, str] = {}
     preset_trav: dict = {}
+    extra = dict(kv.split("=", 1) for kv in args.env)
     if not args.no_leaf_preset:
-        overrides.update(fast_lane_overrides_for_leaf(args.leaf, args.n))
+        overrides.update(fast_lane_overrides_for_leaf(args.leaf, args.n, extra))
         preset_trav = dict((FAST_LANE_ENV_BY_LEAF.get(args.leaf) or {}).get("_traversal_overrides", {}))
-    overrides.update(dict(kv.split("=", 1) for kv in args.env))
+    overrides.update(extra)
     env = apply_fast_lane_env(args.n, overrides=overrides)
 
     import jax

@@ -383,14 +383,22 @@ FAST_LANE_ENV_BY_LEAF: dict[int, dict] = {
     #    longest row IS num_leaves - 1 (a Plummer tail leaf sees every leaf);
     #  * leaf 32 also overflows the far-field per-node interaction cap (8192 clamp)
     #    and needs an explicit max_interactions_per_node.
-    256: {},
+    #  * FLAT WALK (jaccpot's default since 2026-09-10, PR #341): no per-leaf rows, so
+    #    the edge cap is pow2(1.5 x directed near pairs) -- 356k / 866k / 1.84M /
+    #    3.66M at leaf 256 / 128 / 64 / 32 (validated_caps.total_neighbors) ->
+    #    2^20 / 2^21 / 2^22 / 2^23; the pseudo-key ``_flat_edge_cap`` holds it and
+    #    ``fast_lane_overrides_for_leaf`` picks it unless the env sets
+    #    JACCPOT_STATIC_STRICT_FUSED_FLAT_WALK=0 (the dual-walk arm keeps the padded rule).
+    256: {"_flat_edge_cap": str(1 << 20)},
     128: {
         "JACCPOT_STATIC_STRICT_FUSED_COMPACT_FAR_PAIR_CAP": str(1 << 20),
         "JACCPOT_LARGE_N_NEIGHBOR_EDGE_PROFILE_FIXED_CAP": str(1 << 23),
+        "_flat_edge_cap": str(1 << 21),
     },
     64: {
         "JACCPOT_STATIC_STRICT_FUSED_COMPACT_FAR_PAIR_CAP": str(1 << 21),
         "JACCPOT_LARGE_N_NEIGHBOR_EDGE_PROFILE_FIXED_CAP": str(1 << 25),
+        "_flat_edge_cap": str(1 << 22),
         "JACCPOT_LARGE_N_STATIC_TARGET_BLOCKS_MAX_PER_LEAF": "auto",
         # theta 0.4 overflows the 8192 per-node far cap at leaf 64 too (U-curve 2026-09-09)
         "_traversal_overrides": {"max_neighbors_per_leaf": 4096,
@@ -399,6 +407,7 @@ FAST_LANE_ENV_BY_LEAF: dict[int, dict] = {
     32: {
         "JACCPOT_STATIC_STRICT_FUSED_COMPACT_FAR_PAIR_CAP": str(1 << 22),
         "JACCPOT_LARGE_N_NEIGHBOR_EDGE_PROFILE_FIXED_CAP": str(1 << 27),
+        "_flat_edge_cap": str(1 << 23),
         "JACCPOT_LARGE_N_STATIC_TARGET_BLOCKS_MAX_PER_LEAF": "auto",
         "_traversal_overrides": {"max_neighbors_per_leaf": 8192,
                                  "max_interactions_per_node": 16384},
@@ -406,16 +415,28 @@ FAST_LANE_ENV_BY_LEAF: dict[int, dict] = {
 }
 
 
-def fast_lane_overrides_for_leaf(leaf: int, n: int) -> dict[str, str]:
+_OFF = ("0", "false", "False", "off", "OFF")
+
+
+def fast_lane_overrides_for_leaf(leaf: int, n: int, extra: dict | None = None) -> dict[str, str]:
     """Env overrides (strings only) for ``leaf`` at particle count ``n``.
+
+    ``extra`` is the caller's own env (``--jac-env`` / ``--env``), consulted only
+    to learn which walk runs: the flat walk (jaccpot's default) takes the
+    ``_flat_edge_cap`` neighbour-edge cap, ``JACCPOT_STATIC_STRICT_FUSED_FLAT_WALK=0``
+    keeps the dual walk's padded one.
 
     The two list caps are the 200k fit scaled by ``ceil(n / 200k)`` and rounded
     up to a power of two; the pseudo-key ``_traversal_overrides`` is dropped
     (callers read it from ``FAST_LANE_ENV_BY_LEAF`` directly).
     """
-    entry = FAST_LANE_ENV_BY_LEAF.get(int(leaf))
-    if entry is None:
+    entry = dict(FAST_LANE_ENV_BY_LEAF.get(int(leaf)) or {})
+    if not entry:
         return {}
+    flag = (extra or {}).get("JACCPOT_STATIC_STRICT_FUSED_FLAT_WALK",
+                             os.environ.get("JACCPOT_STATIC_STRICT_FUSED_FLAT_WALK", "1"))
+    if flag not in _OFF and "_flat_edge_cap" in entry:
+        entry["JACCPOT_LARGE_N_NEIGHBOR_EDGE_PROFILE_FIXED_CAP"] = entry["_flat_edge_cap"]
     scale = max(1, -(-int(n) // 200_000))
     out: dict[str, str] = {}
     for k, v in entry.items():
@@ -762,9 +783,11 @@ def main():
     ap.add_argument("--jac-thetas", type=float, nargs="+",
                     default=[0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.2])
     ap.add_argument("--orders", type=int, nargs="+", default=[2, 3, 4, 5, 6])
-    ap.add_argument("--jac-leaf-single", type=int, nargs="+", default=[256],
-                    help="leaf size(s) for jaccpot's single-GPU fused lane. 256 is the "
-                         "validated 200k production value (see FAST_LANE_ENV for the "
+    ap.add_argument("--jac-leaf-single", type=int, nargs="+", default=[64],
+                    help="leaf size(s) for jaccpot's single-GPU fused lane. 64 is the "
+                         "per-step optimum at 200k with the flat walk + CSR M2L "
+                         "(63 ms vs 96 at leaf 256, theta 0.6, 2026-09-10); 256 was the "
+                         "pre-2026-09 production value (see FAST_LANE_ENV for the "
                          "streaming-kernel trap at leaf >= 512)")
     ap.add_argument("--jac-leaf-dist", type=int, default=64,
                     help="leaf size for the distributed lane (DistributedFMMConfig default)")
@@ -828,13 +851,14 @@ def main():
     if "jax" in sys.modules:
         raise SystemExit("JAX was imported before this ran; restart the process")
     overrides = {}
+    jac_env = dict(kv.split("=", 1) for kv in args.jac_env)
     if len(args.jac_leaf_single) == 1:
-        overrides.update(fast_lane_overrides_for_leaf(args.jac_leaf_single[0], args.n))
-    overrides.update(dict(kv.split("=", 1) for kv in args.jac_env))  # --jac-env wins
+        overrides.update(fast_lane_overrides_for_leaf(args.jac_leaf_single[0], args.n, jac_env))
+    overrides.update(jac_env)  # --jac-env wins
     fast_lane_env = apply_fast_lane_env(args.n, edge_cap=args.jac_edge_cap, overrides=overrides)
     if len(args.jac_leaf_single) == 1:
         # the leaf preset's edge cap must not be undone by the N-scaled default
-        preset_edge = fast_lane_overrides_for_leaf(args.jac_leaf_single[0], args.n).get(
+        preset_edge = fast_lane_overrides_for_leaf(args.jac_leaf_single[0], args.n, jac_env).get(
             "JACCPOT_LARGE_N_NEIGHBOR_EDGE_PROFILE_FIXED_CAP")
         if preset_edge is not None and args.jac_edge_cap is None:
             os.environ["JACCPOT_LARGE_N_NEIGHBOR_EDGE_PROFILE_FIXED_CAP"] = preset_edge

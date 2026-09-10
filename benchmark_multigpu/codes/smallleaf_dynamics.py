@@ -46,7 +46,7 @@ def main():
     os.environ.setdefault("JAX_ENABLE_X64", "1"); os.environ.setdefault("XLA_PYTHON_CLIENT_PREALLOCATE", "false")
     devices = pick_idle_gpus(1); set_cuda_visible(devices)
     extra = dict(kv.split("=", 1) for kv in args.env)
-    apply_fast_lane_env(args.n, overrides={**fast_lane_overrides_for_leaf(args.leaf, args.n), **extra})
+    apply_fast_lane_env(args.n, overrides={**fast_lane_overrides_for_leaf(args.leaf, args.n, extra), **extra})
     trav = dict((FAST_LANE_ENV_BY_LEAF.get(args.leaf) or {}).get("_traversal_overrides", {}))
 
     import jax, jax.numpy as jnp
