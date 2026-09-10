@@ -38,11 +38,15 @@ def main():
     ap.add_argument("--steps", type=int, default=300)
     ap.add_argument("--dt", type=float, default=0.01)
     ap.add_argument("--vel-sigma", type=float, default=0.4)
+    ap.add_argument("--flag", default="JACCPOT_STATIC_STRICT_FUSED_M2L_CSR",
+                    help="env flag toggled 0/1 between the two lanes")
+    ap.add_argument("--env", nargs="+", default=[], metavar="KEY=VAL", help="extra env for both lanes")
     ap.add_argument("--out", default=None)
     args = ap.parse_args()
     os.environ.setdefault("JAX_ENABLE_X64", "1"); os.environ.setdefault("XLA_PYTHON_CLIENT_PREALLOCATE", "false")
     devices = pick_idle_gpus(1); set_cuda_visible(devices)
-    apply_fast_lane_env(args.n, overrides=fast_lane_overrides_for_leaf(args.leaf, args.n))
+    extra = dict(kv.split("=", 1) for kv in args.env)
+    apply_fast_lane_env(args.n, overrides={**fast_lane_overrides_for_leaf(args.leaf, args.n), **extra})
     trav = dict((FAST_LANE_ENV_BY_LEAF.get(args.leaf) or {}).get("_traversal_overrides", {}))
 
     import jax, jax.numpy as jnp
@@ -67,10 +71,11 @@ def main():
         ke = 0.5 * np.sum(m[:, None] * v * v); L = np.sum(m[:, None] * np.cross(x, v), axis=0)
         return dict(KE=float(ke), Lz=float(L[2]), vmax=float(np.abs(v).max()), com=np.sum(m[:, None] * x, axis=0).tolist())
 
-    out = dict(n=args.n, leaf=args.leaf, theta=args.theta, order=args.order, steps=args.steps, dt=args.dt, lanes={})
+    out = dict(n=args.n, leaf=args.leaf, theta=args.theta, order=args.order, steps=args.steps, dt=args.dt,
+               flag=args.flag, env=extra, lanes={})
     finals = {}
     for csr in ("0", "1"):
-        os.environ["JACCPOT_STATIC_STRICT_FUSED_M2L_CSR"] = csr
+        os.environ[args.flag] = csr
         s = make()
         with GpuMonitor(devices) as mon:
             t0 = time.perf_counter()
@@ -92,7 +97,7 @@ def main():
                     force_recovered_vs_eager_rel_l2=_rel(a_last, a_eager), fallbacks=d.get("strict_fused_fallback_count"))
         out["lanes"][f"csr{csr}"] = lane
         finals[csr] = (np.asarray(final, np.float64), hist)
-        print(f"CSR={csr}: {lane['ms_per_step']:.1f} ms/step  dKE/KE {lane['dKE_rel']:+.3e}  dLz {lane['dLz']:+.3e}  "
+        print(f"{args.flag.split('_')[-1]}={csr}: {lane['ms_per_step']:.1f} ms/step  dKE/KE {lane['dKE_rel']:+.3e}  dLz {lane['dLz']:+.3e}  "
               f"vmax {s0['vmax']:.3f}->{s1['vmax']:.3f}  force(recovered vs eager @x_final) {lane['force_recovered_vs_eager_rel_l2']:.3e}  "
               f"fallbacks {lane['fallbacks']} flags={mon.summary().flags or '-'}", flush=True)
         del s, prepared, p_k, ev_k
@@ -102,7 +107,7 @@ def main():
     out["final_vel_rel_l2"] = _rel(f1[:, 1, :], f0[:, 1, :])
     print("position divergence CSR on vs off:", {k: f"{v:.2e}" for k, v in out["divergence_pos_rel_l2_at_steps"].items()},
           "final vel rel", f"{out['final_vel_rel_l2']:.2e}", flush=True)
-    p = Path(args.out or (ROOT / "artifacts" / "smallleaf" / f"dynamics_leaf{args.leaf}_th{args.theta:g}_p{args.order}_{args.steps}steps.json"))
+    p = Path(args.out or (ROOT / "artifacts" / "smallleaf" / f"dynamics_{args.flag.split('_')[-1].lower()}_leaf{args.leaf}_th{args.theta:g}_p{args.order}_{args.steps}steps.json"))
     with open(p, "w") as fh: json.dump(out, fh, indent=2, default=str)
     print("wrote", p)
 
