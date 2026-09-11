@@ -168,6 +168,10 @@ def main() -> int:
     ap.add_argument("--ref-targets", type=int, default=4096)
     ap.add_argument("--env", nargs="+", default=[], metavar="KEY=VAL")
     ap.add_argument("--no-leaf-preset", action="store_true")
+    ap.add_argument("--leaf-partition", default="buckets", choices=["buckets", "cells"],
+                    help="static_radix leaf partition (plan sub-10ms 1.2): count buckets or Morton cells")
+    ap.add_argument("--leaf-capacity", type=int, default=0,
+                    help="static leaf count for --leaf-partition cells (0 = 1.5x the eager cell count, rounded to pow2)")
     ap.add_argument("--modes", default="refresh,eval,nearfield,detail",
                     help="comma list of ablation families to run; '' = none")
     ap.add_argument("--m2l-chunk", type=int, default=0,
@@ -223,12 +227,28 @@ def main() -> int:
             traversal_config=TraversalOverrides(**{k: int(v) for k, v in preset_trav.items()})
         )
 
+    leaf_capacity = None
+    if args.leaf_partition == "cells":
+        leaf_capacity = int(args.leaf_capacity)
+        if leaf_capacity <= 0:
+            # size the static leaf capacity from the eager cell count of this IC
+            from yggdrax._cell_partition import adaptive_cell_leaf_partition_numpy
+            from yggdrax.bounds import infer_bounds
+            from yggdrax.morton import morton_encode
+            _b = infer_bounds(P)
+            _codes = np.sort(np.asarray(morton_encode(P, _b)).astype(np.uint64))
+            _k = adaptive_cell_leaf_partition_numpy(_codes, leaf_size=args.leaf)[0].size
+            leaf_capacity = 1 << int(np.ceil(np.log2(1.25 * _k)))
+            print(f"[{tag}] cell leaves: {_k} live -> leaf_capacity {leaf_capacity}", flush=True)
+    result_tree_cfg = dict(leaf_partition=args.leaf_partition, leaf_capacity=leaf_capacity)
+
     def build_solver():
         return FastMultipoleMethod(
             preset="large_n_gpu", runtime_path="large_n", basis="real", theta=args.theta,
             G=1.0, softening=args.softening, working_dtype=jnp.float32,
             advanced=FMMAdvancedConfig(
-                tree=TreeConfig(mode="static_radix", leaf_target=args.leaf),
+                tree=TreeConfig(mode="static_radix", leaf_target=args.leaf,
+                                leaf_partition=args.leaf_partition, leaf_capacity=leaf_capacity),
                 farfield=FarFieldConfig(mode="auto", **({"m2l_chunk_size": int(args.m2l_chunk)} if args.m2l_chunk else {})),
                 nearfield=NearFieldConfig(mode="auto"),
                 runtime=runtime_cfg, mac_type="dehnen"),
@@ -240,7 +260,8 @@ def main() -> int:
         steps=args.steps, reps=args.reps, dt=args.dt, vel_sigma=args.vel_sigma,
         devices=devices, env_overrides=overrides, traversal_overrides=preset_trav,
         fast_lane_env=env, worktree=os.environ.get("JACCPOT_WORKTREE"),
-        num_leaves=int(-(-n // args.leaf)),
+        num_leaves=int(-(-n // args.leaf)) if args.leaf_partition == "buckets" else leaf_capacity,
+        tree=result_tree_cfg,
     )
     out_path = Path(args.out or (ROOT / "artifacts" / "smallleaf" / f"baseline_{tag}.json"))
     out_path.parent.mkdir(parents=True, exist_ok=True)
