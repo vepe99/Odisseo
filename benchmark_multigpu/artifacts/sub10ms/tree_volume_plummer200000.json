@@ -1,0 +1,289 @@
+{
+  "n": 200000,
+  "ic": "plummer",
+  "rows": [
+    {
+      "tree": "radix64",
+      "leaf_size": 64,
+      "build_s": 1.4669760260730982,
+      "num_leaves": 3125,
+      "num_internal": 3124,
+      "leaves_last": true,
+      "occupancy": {
+        "mean": 64.0,
+        "p50": 64.0,
+        "min": 64,
+        "max": 64,
+        "empty": 0
+      },
+      "leaf_radius": {
+        "p50": 0.3381814299787019,
+        "p90": 1.5220075883411173,
+        "p99": 9.755802014396009,
+        "max": 674.6078798209898
+      },
+      "walks": [
+        {
+          "theta": 0.8,
+          "geometry": "com_exact",
+          "walk_s": 3.715108566917479,
+          "far_pairs_directed": 564890,
+          "near_edges_directed": 1193116,
+          "rows_max": 3124,
+          "direct_share_of_N": 0.12249007840000001,
+          "direct_p50": 0.082555,
+          "p2p_pair_evaluations": 4899603136.0,
+          "indegree_max": 3124
+        },
+        {
+          "theta": 0.8,
+          "geometry": "com_bound",
+          "walk_s": 0.5260408744215965,
+          "far_pairs_directed": 1541052,
+          "near_edges_directed": 1271906,
+          "rows_max": 3124,
+          "direct_share_of_N": 0.1305581744,
+          "direct_p50": 0.087355,
+          "p2p_pair_evaluations": 5222326976.0,
+          "indegree_max": 3124
+        },
+        {
+          "theta": 0.6,
+          "geometry": "com_exact",
+          "walk_s": 0.5021982695907354,
+          "far_pairs_directed": 1022920,
+          "near_edges_directed": 2299774,
+          "rows_max": 3124,
+          "direct_share_of_N": 0.2358118576,
+          "direct_p50": 0.172795,
+          "p2p_pair_evaluations": 9432474304.0,
+          "indegree_max": 3124
+        },
+        {
+          "theta": 0.6,
+          "geometry": "com_bound",
+          "walk_s": 0.5120311584323645,
+          "far_pairs_directed": 2310202,
+          "near_edges_directed": 2402326,
+          "rows_max": 3124,
+          "direct_share_of_N": 0.2463131824,
+          "direct_p50": 0.179515,
+          "p2p_pair_evaluations": 9852527296.0,
+          "indegree_max": 3124
+        }
+      ]
+    },
+    {
+      "tree": "radix32",
+      "leaf_size": 32,
+      "build_s": 0.32058279775083065,
+      "num_leaves": 6250,
+      "num_internal": 6249,
+      "leaves_last": true,
+      "occupancy": {
+        "mean": 32.0,
+        "p50": 32.0,
+        "min": 32,
+        "max": 32,
+        "empty": 0
+      },
+      "leaf_radius": {
+        "p50": 0.24573558602553025,
+        "p90": 1.117531968593408,
+        "p99": 8.15792369414015,
+        "max": 663.0514854582215
+      },
+      "walks": [
+        {
+          "theta": 0.8,
+          "geometry": "com_exact",
+          "walk_s": 2.2543179215863347,
+          "far_pairs_directed": 1165506,
+          "near_edges_directed": 2372254,
+          "rows_max": 6249,
+          "direct_share_of_N": 0.0608847024,
+          "direct_p50": 0.039035,
+          "p2p_pair_evaluations": 2435388096.0,
+          "indegree_max": 6249
+        },
+        {
+          "theta": 0.8,
+          "geometry": "com_bound",
+          "walk_s": 0.39289750903844833,
+          "far_pairs_directed": 3783510,
+          "near_edges_directed": 2549200,
+          "rows_max": 6249,
+          "direct_share_of_N": 0.06541452,
+          "direct_p50": 0.041435,
+          "p2p_pair_evaluations": 2616580800.0,
+          "indegree_max": 6249
+        },
+        {
+          "theta": 0.6,
+          "geometry": "com_exact",
+          "walk_s": 1.2663587909191847,
+          "far_pairs_directed": 2353602,
+          "near_edges_directed": 4733440,
+          "rows_max": 6249,
+          "direct_share_of_N": 0.121331064,
+          "direct_p50": 0.082555,
+          "p2p_pair_evaluations": 4853242560.0,
+          "indegree_max": 6249
+        },
+        {
+          "theta": 0.6,
+          "geometry": "com_bound",
+          "walk_s": 0.41812791116535664,
+          "far_pairs_directed": 6399560,
+          "near_edges_directed": 4992440,
+          "rows_max": 6249,
+          "direct_share_of_N": 0.127961464,
+          "direct_p50": 0.086235,
+          "p2p_pair_evaluations": 5118458560.0,
+          "indegree_max": 6249
+        }
+      ]
+    },
+    {
+      "tree": "octree64",
+      "leaf_size": 64,
+      "build_s": 11.293195431120694,
+      "num_leaves": 3125,
+      "num_internal": 3124,
+      "leaves_last": true,
+      "occupancy": {
+        "mean": 64.0,
+        "p50": 64.0,
+        "min": 64,
+        "max": 64,
+        "empty": 0
+      },
+      "leaf_radius": {
+        "p50": 0.3381814299787019,
+        "p90": 1.5220075883411173,
+        "p99": 9.755802014396009,
+        "max": 674.6078798209898
+      },
+      "walks": [
+        {
+          "theta": 0.8,
+          "geometry": "com_exact",
+          "walk_s": 0.5361618241295218,
+          "far_pairs_directed": 512838,
+          "near_edges_directed": 1187972,
+          "rows_max": 3124,
+          "direct_share_of_N": 0.1219633328,
+          "direct_p50": 0.081915,
+          "p2p_pair_evaluations": 4878533312.0,
+          "indegree_max": 3124
+        },
+        {
+          "theta": 0.6,
+          "geometry": "com_exact",
+          "walk_s": 0.5206696297973394,
+          "far_pairs_directed": 927270,
+          "near_edges_directed": 2283668,
+          "rows_max": 3124,
+          "direct_share_of_N": 0.2341626032,
+          "direct_p50": 0.171195,
+          "p2p_pair_evaluations": 9366504128.0,
+          "indegree_max": 3124
+        }
+      ]
+    },
+    {
+      "tree": "octree32",
+      "leaf_size": 32,
+      "build_s": 11.181999710388482,
+      "num_leaves": 6250,
+      "num_internal": 6249,
+      "leaves_last": true,
+      "occupancy": {
+        "mean": 32.0,
+        "p50": 32.0,
+        "min": 32,
+        "max": 32,
+        "empty": 0
+      },
+      "leaf_radius": {
+        "p50": 0.24573558602553025,
+        "p90": 1.117531968593408,
+        "p99": 8.15792369414015,
+        "max": 663.0514854582215
+      },
+      "walks": [
+        {
+          "theta": 0.8,
+          "geometry": "com_exact",
+          "walk_s": 0.43024602998048067,
+          "far_pairs_directed": 1005100,
+          "near_edges_directed": 2365426,
+          "rows_max": 6249,
+          "direct_share_of_N": 0.0607099056,
+          "direct_p50": 0.038875,
+          "p2p_pair_evaluations": 2428396224.0,
+          "indegree_max": 6249
+        },
+        {
+          "theta": 0.6,
+          "geometry": "com_exact",
+          "walk_s": 0.4256500881165266,
+          "far_pairs_directed": 2031702,
+          "near_edges_directed": 4706626,
+          "rows_max": 6249,
+          "direct_share_of_N": 0.1206446256,
+          "direct_p50": 0.082075,
+          "p2p_pair_evaluations": 4825785024.0,
+          "indegree_max": 6249
+        }
+      ]
+    },
+    {
+      "tree": "octree16",
+      "leaf_size": 16,
+      "build_s": 11.165032130666077,
+      "num_leaves": 12500,
+      "num_internal": 12499,
+      "leaves_last": true,
+      "occupancy": {
+        "mean": 16.0,
+        "p50": 16.0,
+        "min": 16,
+        "max": 16,
+        "empty": 0
+      },
+      "leaf_radius": {
+        "p50": 0.19307962544200558,
+        "p90": 0.8447422100234275,
+        "p99": 6.243039027289044,
+        "max": 647.6623058907614
+      },
+      "walks": [
+        {
+          "theta": 0.8,
+          "geometry": "com_exact",
+          "walk_s": 2.760099888779223,
+          "far_pairs_directed": 1837396,
+          "near_edges_directed": 4351786,
+          "rows_max": 12499,
+          "direct_share_of_N": 0.0279264304,
+          "direct_p50": 0.017355,
+          "p2p_pair_evaluations": 1117057216.0,
+          "indegree_max": 12499
+        },
+        {
+          "theta": 0.6,
+          "geometry": "com_exact",
+          "walk_s": 0.4401462087407708,
+          "far_pairs_directed": 4010378,
+          "near_edges_directed": 8865294,
+          "rows_max": 12499,
+          "direct_share_of_N": 0.056812881600000004,
+          "direct_p50": 0.036635,
+          "p2p_pair_evaluations": 2272515264.0,
+          "indegree_max": 12499
+        }
+      ]
+    }
+  ]
+}

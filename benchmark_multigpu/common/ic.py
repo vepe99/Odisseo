@@ -44,6 +44,44 @@ def plummer_sphere(n: int, *, seed: int = 0, a: float = 1.0, total_mass: float =
     return pos, mass
 
 
+def hernquist_sphere(n: int, *, seed: int = 0, a: float = 1.0, total_mass: float = 1.0):
+    """Hernquist sphere, ``rho = M a / (2 pi r (r + a)^3)``, isotropic positions.
+
+    jz-fmm's Fig. 9 benchmark distribution (arXiv:2609.09307). The enclosed mass
+    ``M(<r) = M r^2 / (r + a)^2`` inverts in closed form, so a uniform draw ``u``
+    gives ``r = a sqrt(u) / (1 - sqrt(u))``. The profile has no finite extent --
+    ``u -> 1`` sends a particle to infinity -- and the tree's bounding box is set
+    by that tail (memory ``disc-bulge-rollout-and-cap-cliff``), so the draw is
+    truncated at ``r_max = 1000 a``, which excludes a mass fraction of ~4e-6.
+
+    Parameters
+    ----------
+    n : int
+        Particle count.
+    seed : int
+        Draw seed.
+    a : float
+        Scale radius.
+    total_mass : float
+        Total mass, split equally.
+
+    Returns
+    -------
+    tuple[np.ndarray, np.ndarray]
+        ``(positions (n, 3), masses (n,))``, float64.
+    """
+    rng = np.random.default_rng(seed)
+    u_max = (1000.0 / (1000.0 + 1.0)) ** 2
+    u = rng.uniform(0.0, u_max, size=n)
+    s = np.sqrt(u)
+    r = a * s / (1.0 - s)
+    mu = rng.uniform(-1.0, 1.0, size=n)
+    phi = rng.uniform(0.0, 2.0 * np.pi, size=n)
+    st = np.sqrt(1.0 - mu * mu)
+    pos = np.stack([r * st * np.cos(phi), r * st * np.sin(phi), r * mu], axis=1)
+    return pos.astype(np.float64), np.full(n, total_mass / n, np.float64)
+
+
 def separated_clusters(ndev: int, per: int, *, seed: int = 4, sep: float = 6.0):
     """``ndev`` spatially separated uniform cubes (one per Morton domain).
 
@@ -117,6 +155,7 @@ def disk_ic(path: str = DISK_IC_TIPSY, *, subsample: int | None = None, seed: in
 IC_GENERATORS = {
     "uniform": uniform_box,
     "plummer": plummer_sphere,
+    "hernquist": hernquist_sphere,
     "clusters": separated_clusters,
     "disk": disk_ic,
 }

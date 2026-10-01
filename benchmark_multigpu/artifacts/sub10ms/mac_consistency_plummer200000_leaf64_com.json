@@ -1,0 +1,209 @@
+{
+  "n": 200000,
+  "ic": "plummer",
+  "leaf": 64,
+  "order": 4,
+  "env": {
+    "JACCPOT_STATIC_STRICT_FUSED_COMPACT_FAR_PAIR_CAP": "8388608",
+    "JACCPOT_LARGE_N_NEIGHBOR_EDGE_PROFILE_FIXED_CAP": "8388608",
+    "JACCPOT_LARGE_N_STATIC_TARGET_BLOCKS_MAX_PER_LEAF": "auto",
+    "JACCPOT_STATIC_STRICT_FUSED_MAC_GEOMETRY": "com"
+  },
+  "thetas": {
+    "0.6": {
+      "far_pairs_canonical": 1155101,
+      "nodes": 6249,
+      "num_internal": 3124,
+      "geometry_radius_vs_exact_aabb": {
+        "ratio_max": 1.2938820306038958,
+        "ratio_min": 0.9999998564235936
+      },
+      "com_offset_over_rmax_aabb": {
+        "p50": 0.1875600463488442,
+        "p99": 0.6227384461937382,
+        "max": 0.7886645693443398
+      },
+      "rmax_com_over_rmax_aabb": {
+        "p50": 1.102686502853526,
+        "p99": 1.5527471362234764,
+        "max": 1.7879238655150864
+      },
+      "com_bound_over_exact": {
+        "all_ge_exact": true,
+        "internal_p50": 1.3769201399477924,
+        "internal_p90": 1.9364742739506668,
+        "internal_p99": 2.7570595060097403,
+        "internal_max": 4.002781610273207
+      },
+      "ratio_mac": {
+        "n": 1155101,
+        "max": 0.7736495264163048,
+        "p50": 0.4518737369404095,
+        "p90": 0.5519432226339592,
+        "p99": 0.6242365043076066,
+        "p999": 0.6717110341578517,
+        "frac_ge_1": 0.0,
+        "frac_ge_theta": 0.024833326263244512,
+        "count_ge_1": 0
+      },
+      "ratio_aabb_exact": {
+        "n": 1155101,
+        "max": 0.687171192959769,
+        "p50": 0.41850408152130475,
+        "p90": 0.5101762917955015,
+        "p99": 0.5703418416337718,
+        "p999": 0.6054513462837101,
+        "frac_ge_1": 0.0,
+        "frac_ge_theta": 0.0014379694935767523,
+        "count_ge_1": 0
+      },
+      "ratio_com_exact": {
+        "n": 1155101,
+        "max": 0.6003030576496347,
+        "p50": 0.4856488599941064,
+        "p90": 0.575767709955685,
+        "p99": 0.5972866121807641,
+        "p999": 0.5997353957708929,
+        "frac_ge_1": 0.0,
+        "frac_ge_theta": 0.00011081282069706458,
+        "count_ge_1": 0
+      },
+      "far_pairs_rejected_by_com_mac_at_same_theta": 128,
+      "divergent_pairs_by_class": {
+        "leaf_leaf": 0,
+        "leaf_internal": 0,
+        "internal_internal": 0
+      }
+    },
+    "0.8": {
+      "far_pairs_canonical": 770526,
+      "nodes": 6249,
+      "num_internal": 3124,
+      "geometry_radius_vs_exact_aabb": {
+        "ratio_max": 1.2938820306038958,
+        "ratio_min": 0.9999998564235936
+      },
+      "com_offset_over_rmax_aabb": {
+        "p50": 0.1875600463488442,
+        "p99": 0.6227384461937382,
+        "max": 0.7886645693443398
+      },
+      "rmax_com_over_rmax_aabb": {
+        "p50": 1.102686502853526,
+        "p99": 1.5527471362234764,
+        "max": 1.7879238655150864
+      },
+      "com_bound_over_exact": {
+        "all_ge_exact": true,
+        "internal_p50": 1.3769201399477924,
+        "internal_p90": 1.9364742739506668,
+        "internal_p99": 2.7570595060097403,
+        "internal_max": 4.002781610273207
+      },
+      "ratio_mac": {
+        "n": 770526,
+        "max": 0.9834693824351795,
+        "p50": 0.5593526525427388,
+        "p90": 0.7099838483440221,
+        "p99": 0.8163900591083538,
+        "p999": 0.8789103784075278,
+        "frac_ge_1": 0.0,
+        "frac_ge_theta": 0.015681495497880667,
+        "count_ge_1": 0
+      },
+      "ratio_aabb_exact": {
+        "n": 770526,
+        "max": 0.8958843883316341,
+        "p50": 0.5201209552086883,
+        "p90": 0.6583466499428157,
+        "p99": 0.7522555700677472,
+        "p999": 0.7998751558646082,
+        "frac_ge_1": 0.0,
+        "frac_ge_theta": 0.0009928282757492933,
+        "count_ge_1": 0
+      },
+      "ratio_com_exact": {
+        "n": 770526,
+        "max": 0.8004240666200664,
+        "p50": 0.6176817204535829,
+        "p90": 0.7611445245854771,
+        "p99": 0.7957163097176607,
+        "p999": 0.799563210872555,
+        "frac_ge_1": 0.0,
+        "frac_ge_theta": 9.7336105465617e-05,
+        "count_ge_1": 0
+      },
+      "far_pairs_rejected_by_com_mac_at_same_theta": 75,
+      "divergent_pairs_by_class": {
+        "leaf_leaf": 0,
+        "leaf_internal": 0,
+        "internal_internal": 0
+      }
+    },
+    "1.0": {
+      "far_pairs_canonical": 516383,
+      "nodes": 6249,
+      "num_internal": 3124,
+      "geometry_radius_vs_exact_aabb": {
+        "ratio_max": 1.2938820306038958,
+        "ratio_min": 0.9999998564235936
+      },
+      "com_offset_over_rmax_aabb": {
+        "p50": 0.1875600463488442,
+        "p99": 0.6227384461937382,
+        "max": 0.7886645693443398
+      },
+      "rmax_com_over_rmax_aabb": {
+        "p50": 1.102686502853526,
+        "p99": 1.5527471362234764,
+        "max": 1.7879238655150864
+      },
+      "com_bound_over_exact": {
+        "all_ge_exact": true,
+        "internal_p50": 1.3769201399477924,
+        "internal_p90": 1.9364742739506668,
+        "internal_p99": 2.7570595060097403,
+        "internal_max": 4.002781610273207
+      },
+      "ratio_mac": {
+        "n": 516383,
+        "max": 1.2915111960198624,
+        "p50": 0.6604914952297893,
+        "p90": 0.8680690644163578,
+        "p99": 1.013956448541515,
+        "p999": 1.1180600829379836,
+        "frac_ge_1": 0.01288191129452364,
+        "frac_ge_theta": 0.01288191129452364,
+        "count_ge_1": 6652
+      },
+      "ratio_aabb_exact": {
+        "n": 516383,
+        "max": 1.1845479590928245,
+        "p50": 0.6156179009878832,
+        "p90": 0.8091858590878588,
+        "p99": 0.9437538190383964,
+        "p999": 1.0180770215898636,
+        "frac_ge_1": 0.00203531099978117,
+        "frac_ge_theta": 0.00203531099978117,
+        "count_ge_1": 1051
+      },
+      "ratio_com_exact": {
+        "n": 516383,
+        "max": 1.000375364887786,
+        "p50": 0.7416199321442446,
+        "p90": 0.9458843234904718,
+        "p99": 0.9944428831888732,
+        "p999": 0.999446971218594,
+        "frac_ge_1": 9.101771359630352e-05,
+        "frac_ge_theta": 9.101771359630352e-05,
+        "count_ge_1": 47
+      },
+      "far_pairs_rejected_by_com_mac_at_same_theta": 47,
+      "divergent_pairs_by_class": {
+        "leaf_leaf": 47,
+        "leaf_internal": 0,
+        "internal_internal": 0
+      }
+    }
+  }
+}
