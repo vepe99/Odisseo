@@ -58,9 +58,12 @@ ROOT = HERE.parent
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(HERE))
 
+from typing import Optional  # noqa: E402
+
 import numpy as np  # noqa: E402
 
 from common.budget import jaccpot_direct_budget  # noqa: E402
+from common.error import rel_errors  # noqa: E402
 from common.gpu_guard import GpuMonitor, idle_gpus, pick_idle_gpus, set_cuda_visible, timed_calls  # noqa: E402
 from common.ic import IC_GENERATORS  # noqa: E402
 from compare_force import (  # noqa: E402
@@ -129,10 +132,32 @@ def classify_kernels(top: list[dict], *, leaves: int, steps: int) -> dict:
     return dict(stages=stages, per_leaf_family=per_leaf_family)
 
 
-def _rel_l2(a, b) -> float:
-    a = np.asarray(a, np.float64)
-    b = np.asarray(b, np.float64)
-    return float(np.linalg.norm(a - b) / np.linalg.norm(b))
+def _peak_gib() -> Optional[float]:
+    """Peak device memory of the first local device, in GiB.
+
+    ``memory_stats`` is the allocator's own high-water mark, so it counts the
+    retries XLA makes before it gives up -- which a log grep for "OOM" misses
+    entirely (memory ``distributed-per-device-ceiling-lifted``).
+
+    ``jax`` is imported inside ``main`` (after ``set_cuda_visible``), so this
+    imports it locally. An earlier version referenced a module-level ``jax``,
+    raised ``NameError``, caught it with the backend-missing guard and returned
+    0.0 -- a fake measurement that reads like a real one. It now returns
+    ``None`` when the number is unavailable, which cannot be mistaken for data.
+
+    Returns
+    -------
+    Optional[float]
+        Peak bytes in use, in GiB, or ``None`` if the backend does not report it.
+    """
+    import jax
+
+    try:
+        stats = jax.local_devices()[0].memory_stats() or {}
+    except (AttributeError, IndexError, RuntimeError):
+        return None
+    peak = stats.get("peak_bytes_in_use")
+    return None if peak is None else float(peak) / (1 << 30)
 
 
 def _device(allow_busy: bool) -> list[int]:
@@ -166,6 +191,11 @@ def main() -> int:
     ap.add_argument("--vel-sigma", type=float, default=0.4)
     ap.add_argument("--softening", type=float, default=1e-7)
     ap.add_argument("--ref-targets", type=int, default=4096)
+    ap.add_argument("--no-accuracy", action="store_true",
+                    help="skip the direct-sum reference entirely. For CAPACITY work: the reference is an "
+                         "O(block x N) fp64 sum whose buffers are the largest single allocation in the run "
+                         "(30.5 GiB at N=4e6 with the old fixed block), so it decides the ceiling and inflates "
+                         "peak memory. Accuracy is not being measured when scaling N; measure it separately.")
     ap.add_argument("--env", nargs="+", default=[], metavar="KEY=VAL")
     ap.add_argument("--no-leaf-preset", action="store_true")
     ap.add_argument("--leaf-partition", default="buckets", choices=["buckets", "cells"],
@@ -285,14 +315,19 @@ def main() -> int:
     validated = dict(getattr(solver._impl, "_strict_fused_validated_caps", None) or {})
     budget = jaccpot_direct_budget(prepared, n)
     ref_idx = None
-    if args.ref_targets and args.ref_targets < n:
-        ref_idx = np.sort(np.random.default_rng(12345).choice(n, args.ref_targets, replace=False))
-    a_ref = direct_accelerations(pos, mass, G=1.0, softening=args.softening,
-                                 block_size=1024, target_indices=ref_idx)
-    agg = _rel_l2(a_eager if ref_idx is None else a_eager[ref_idx], a_ref)
+    if args.no_accuracy:
+        err, agg = {}, None
+    else:
+        if args.ref_targets and args.ref_targets < n:
+            ref_idx = np.sort(np.random.default_rng(12345).choice(n, args.ref_targets, replace=False))
+        a_ref = direct_accelerations(pos, mass, G=1.0, softening=args.softening,
+                                     target_indices=ref_idx)
+        err = rel_errors(a_eager if ref_idx is None else a_eager[ref_idx], a_ref)
+        agg = err["aggL2"]
+    del a_eager  # the forces are no longer needed; do not hold N x 3 fp64 through the step
     result["eval_only"] = dict(
         timing=timing, contention=cont.as_dict(), prepare_s_incl_compile=prepare_s,
-        aggL2=agg, ref_targets=None if ref_idx is None else int(len(ref_idx)),
+        aggL2=agg, error=err, ref_targets=None if ref_idx is None else int(len(ref_idx)),
         nearfield_kernel_layout=_nearfield_kernel_layout(prepared),
         fused_mode_active=bool(diag.get("strict_fused_mode_active")),
         lists=dict(neighbor_rows_max=int(rows.max()), neighbor_edges_total=int(rows.sum()),
@@ -301,7 +336,10 @@ def main() -> int:
                    active_leaves=diag.get("large_n_eval_active_leaf_count")),
         validated_caps=validated,
     )
-    print(f"[{tag}] eval-only min {timing['min']*1e3:.2f} ms (IQR {timing['iqr']*1e3:.2f}) aggL2 {agg:.4e} "
+    result["eval_only"]["peak_gib"] = _peak_gib()
+    acc_txt = ("accuracy SKIPPED" if agg is None else
+               f"aggL2 {agg:.4e} p90 {err['p90']:.3e} med {err['median']:.3e}")
+    print(f"[{tag}] eval-only min {timing['min']*1e3:.2f} ms (IQR {timing['iqr']*1e3:.2f}) {acc_txt} "
           f"direct {budget.get('direct_share_of_N'):.3f}N rows max {rows.max()} far {validated.get('far_pair_count')} "
           f"layout {result['eval_only']['nearfield_kernel_layout']} flags={cont.flags or '-'}", flush=True)
     write()
@@ -366,6 +404,7 @@ def main() -> int:
         print(f"[{tag}] strict_run_v2 FAILED: {str(exc).splitlines()[0][:300]}", flush=True)
         write()
         return 2
+    full["peak_gib"] = _peak_gib()  # after the fused scan, where its buffers are live
     result["scan_full"] = full
     write()
 
