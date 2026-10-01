@@ -50,25 +50,8 @@ sys.path.insert(0, str(HERE))
 import numpy as np  # noqa: E402
 
 from common.gpu_guard import idle_gpus, pick_idle_gpus, set_cuda_visible, timed_calls  # noqa: E402
+from common.error import rel_errors  # noqa: E402
 from common.ic import IC_GENERATORS  # noqa: E402
-
-
-def rel_errors(a: np.ndarray, a_ref: np.ndarray) -> dict:
-    """Same definition as ``compare_force.rel_errors`` (not imported: that module pulls jaccpot)."""
-    a = np.asarray(a, np.float64)
-    ref = np.asarray(a_ref, np.float64)
-    num = np.linalg.norm(a - ref, axis=1)
-    den = np.linalg.norm(ref, axis=1) + 1e-300
-    per = num / den
-    denom = np.linalg.norm(ref) + 1e-300
-    return dict(
-        median=float(np.median(per)),
-        p90=float(np.percentile(per, 90)),
-        max=float(np.max(per)),
-        aggL2=float(np.linalg.norm(a - ref) / denom),
-        aggL2_signflip=float(np.linalg.norm(-a - ref) / denom),
-        n_ref=int(ref.shape[0]),
-    )
 
 
 def _device(allow_busy: bool) -> list[int]:

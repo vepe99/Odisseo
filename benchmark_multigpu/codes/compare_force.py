@@ -60,6 +60,7 @@ import numpy as np
 
 from common.budget import jaccpot_direct_budget, pkdgrav3_direct_budget
 from common.gpu_guard import GpuMonitor, idle_gpus, pick_idle_gpus, set_cuda_visible, timed_calls
+from common.error import rel_errors  # noqa: F401  (re-exported: callers import it from here)
 from common.ic import IC_GENERATORS
 from common.pkdgrav3 import (
     PKDGRAV3_BIN,
@@ -101,36 +102,6 @@ def make_ic(name: str, n: int, ndev: int, seed: int):
     if name == "disk":
         return IC_GENERATORS["disk"](subsample=n, seed=seed)
     return IC_GENERATORS[name](n, seed=seed)
-
-
-def rel_errors(a: np.ndarray, a_ref: np.ndarray, idx=None) -> dict:
-    """Per-particle relative acceleration error plus an aggregate L2.
-
-    ``idx`` restricts the comparison to a subsample of targets (identical for
-    both codes); the memory ``rel-l2-probe-not-comparable`` applies *across*
-    subsample sizes, never within one, so ``n_ref`` is recorded on the result.
-
-    ``aggL2_signflip`` exists purely as a convention tripwire: if a code returned
-    the opposite sign convention we would otherwise report a ~2.0 "error" and
-    call it an accuracy result.  If the flipped number is the small one, the
-    comparison is wired wrong -- fix it, do not report it.
-    """
-    a = np.asarray(a, np.float64)
-    ref = np.asarray(a_ref, np.float64)
-    if idx is not None:
-        a = a[idx]
-    num = np.linalg.norm(a - ref, axis=1)
-    den = np.linalg.norm(ref, axis=1) + 1e-300
-    per = num / den
-    denom = np.linalg.norm(ref) + 1e-300
-    return dict(
-        median=float(np.median(per)),
-        p90=float(np.percentile(per, 90)),
-        max=float(np.max(per)),
-        aggL2=float(np.linalg.norm(a - ref) / denom),
-        aggL2_signflip=float(np.linalg.norm(-a - ref) / denom),
-        n_ref=int(ref.shape[0]),
-    )
 
 
 def device_pool(args) -> list[int]:
