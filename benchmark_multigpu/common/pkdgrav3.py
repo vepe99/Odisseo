@@ -153,16 +153,49 @@ _GRAVITY_LINE = re.compile(
 )
 
 
+# "  P-P per active: max=  482.86 @   13 avg=  470.72 of    15 std-dev=    8.08"
+_STAT_LINE = re.compile(
+    r"^\s*(P-P per active|P-C per active|actives   load|particle  load):"
+    r"\s*max=\s*([0-9.eE+-]+)\s*@\s*\d+\s*avg=\s*([0-9.eE+-]+)\s*of\s*(\d+)"
+    r"\s*std-dev=\s*([0-9.eE+-]+)",
+    re.MULTILINE,
+)
+_STAT_KEYS = {
+    "P-P per active": "pp_per_active",
+    "P-C per active": "pc_per_active",
+    "actives   load": "actives_per_thread",
+    "particle  load": "particles_per_thread",
+}
+
+
 def parse_gravity_lines(stdout: str) -> list[dict]:
-    """Extract pkdgrav3's own per-call gravity wallclock/Gflop report (master.cxx)."""
+    """Extract pkdgrav3's own per-call gravity report (master.cxx ``Gravity Calculated``).
+
+    Each report also carries the interaction-list statistics printed right after
+    it: ``P-P per active`` (particles on the P-P list per active sink particle,
+    ``walk2.cxx:568`` ``pdPartSum += nActive * ilp.count()``) and ``P-C per
+    active`` (cells on the P-C list).  Those two are pkdgrav3's *interaction
+    budget* -- the implementation-independent MAC-efficiency measure the
+    comparison puts beside wall time (plan T2.0).  Stored as ``{avg, max,
+    std, threads}`` per statistic, attached to the preceding gravity report.
+    """
     out = []
-    for m in _GRAVITY_LINE.finditer(stdout):
+    starts = [m.start() for m in _GRAVITY_LINE.finditer(stdout)] + [len(stdout)]
+    for i, m in enumerate(_GRAVITY_LINE.finditer(stdout)):
         secs, gflops, total = m.groups()
+        block = stdout[m.end() : starts[i + 1]]
+        stats = {}
+        for sm in _STAT_LINE.finditer(block):
+            label, mx, avg, nthreads, sd = sm.groups()
+            stats[_STAT_KEYS[label]] = dict(
+                avg=float(avg), max=float(mx), std=float(sd), threads=int(nthreads)
+            )
         out.append(
             dict(
                 wallclock_s=float(secs),
                 gflops=None if gflops in (None, "unknown") else float(gflops),
                 total_gflop=None if total is None else float(total),
+                **stats,
             )
         )
     return out

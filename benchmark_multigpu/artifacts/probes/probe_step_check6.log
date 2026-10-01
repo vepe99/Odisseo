@@ -1,0 +1,6 @@
+jaccpot /export/home/tbuck/jaccpot-strict-wt/jaccpot/__init__.py
+(1) jit(refresh+evaluate)(prep0, x1) vs eager@x1: aggL2 3.260e-08
+    eager refresh + eager evaluate vs eager@x1: aggL2 3.220e-08
+    jit(refresh) then eager evaluate vs eager@x1: aggL2 3.141e-08
+(2) nearfield diag 'zero': in-scan step-2 force vs eager same-mode@x1: aggL2 6.455e-04  (|eager comp|/|full| = 1.000)
+(2) nearfield diag 'pairs_only': in-scan step-2 force vs eager same-mode@x1: aggL2 6.455e-04  (|eager comp|/|full| = 1.000)

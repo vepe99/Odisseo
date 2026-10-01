@@ -1,0 +1,78 @@
+{
+  "devices": [
+    5
+  ],
+  "rows": [
+    {
+      "setting": "baseline",
+      "theta": 0.6,
+      "ms": 97.63685800135136,
+      "iqr": 3.7131235003471375,
+      "aggL2": NaN,
+      "vs_baseline": 0.0,
+      "flags": [
+        "loadavg>=8 (61.8)",
+        "other-gpus-busy (46%)"
+      ]
+    },
+    {
+      "setting": "both",
+      "theta": 0.6,
+      "ms": 79.59577441215515,
+      "iqr": 11.61097502335906,
+      "aggL2": NaN,
+      "vs_baseline": 1.244589386357031e-06,
+      "flags": [
+        "loadavg>=8 (61.2)",
+        "other-gpus-busy (46%)"
+      ]
+    },
+    {
+      "setting": "baseline",
+      "theta": 0.8,
+      "ms": 85.37265378981829,
+      "iqr": 11.035291943699121,
+      "aggL2": NaN,
+      "vs_baseline": 0.0,
+      "flags": [
+        "loadavg>=8 (66.1)",
+        "other-gpus-busy (38%)"
+      ]
+    },
+    {
+      "setting": "both",
+      "theta": 0.8,
+      "ms": 69.23464126884937,
+      "iqr": 9.830590337514877,
+      "aggL2": NaN,
+      "vs_baseline": 6.649637277373386e-07,
+      "flags": [
+        "loadavg>=8 (65.3)",
+        "other-gpus-busy (90%)"
+      ]
+    },
+    {
+      "setting": "baseline",
+      "theta": 1.0,
+      "ms": 74.92570951581001,
+      "iqr": 4.202985670417547,
+      "aggL2": NaN,
+      "vs_baseline": 0.0,
+      "flags": [
+        "loadavg>=8 (77.0)",
+        "other-gpus-busy (42%)"
+      ]
+    },
+    {
+      "setting": "both",
+      "theta": 1.0,
+      "ms": 57.000995613634586,
+      "iqr": 3.8281255401670933,
+      "aggL2": NaN,
+      "vs_baseline": 4.079839156872049e-07,
+      "flags": [
+        "loadavg>=8 (84.6)"
+      ]
+    }
+  ]
+}

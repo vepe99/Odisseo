@@ -1,0 +1,14 @@
+IC=plummer N=1000000 devices=[5] loadavg=(87.29833984375, 57.779296875, 33.9912109375) cores=64
+wrote + verified artifacts/compare_force_1M/plummer_n1000000_seed0.tipsy (36.0 MB)
+[force_eval] wrote artifacts/compare_force_1M/pkd_gpu_ndev1_nb16_ng0_summary.json
+  !! contention during pkdgrav3 run: ['loadavg>=8 (104.4)', 'other-gpus-busy (79%)']
+  epsilon moves the reference by aggL2 3.407e-09 (tolerance 1e-06)
+  pkdgrav3[gpu] ndev=1 nB=16 theta=0.50 (jac-eq 0.333): grav   281.38 ms  aggL2=3.203e-05  P-P 975.1 P-C 291.5  (signflip 2.000e+00)
+  pkdgrav3[gpu] ndev=1 nB=16 theta=0.60 (jac-eq 0.400): grav   218.93 ms  aggL2=7.347e-05  P-P 678.0 P-C 174.8  (signflip 2.000e+00)
+  pkdgrav3[gpu] ndev=1 nB=16 theta=0.70 (jac-eq 0.467): grav   138.09 ms  aggL2=1.513e-04  P-P 545.8 P-C 113.8  (signflip 2.000e+00)
+  pkdgrav3[gpu] ndev=1 nB=16 theta=0.80 (jac-eq 0.533): grav   106.31 ms  aggL2=2.854e-04  P-P 476.5 P-C 85.5  (signflip 2.000e+00)
+  jaccpot[1gpu] leaf=256 p=4 theta=0.50: FAILED -- jaccpot could not fit N=1000000 with preset='large_n_gpu', leaf_size=256, max_order=4, dtype=<class 'jax.numpy.float32'>.
+  jaccpot[1gpu] leaf=256 p=4 theta=0.60: FAILED -- jaccpot could not fit N=1000000 with preset='large_n_gpu', leaf_size=256, max_order=4, dtype=<class 'jax.numpy.float32'>.
+  jaccpot[1gpu] leaf=256 p=4 theta=0.80:   407.10 ms (+walk    0.0)  aggL2=4.763e-03  direct 0.089N  leafpair_gather  !! loadavg>=8 (122.8),other-gpus-busy (47%)
+  jaccpot[1gpu] leaf=256 p=4 theta=1.00:   278.18 ms (+walk    0.0)  aggL2=1.816e-02  direct 0.047N  leafpair_gather  !! loadavg>=8 (142.9),other-gpus-busy (51%)
+wrote artifacts/compare_force_plummer1M_2026-09-06.json

@@ -1,0 +1,15 @@
+bool arrays (ndim>=2) in prepared state:
+    ('prepared.neighbor_list.target_block_valid_mask', (0, 0))
+    ('prepared.nearfield_leaf_particle_mask', (782, 256))
+    ('prepared.nearfield_target_block_valid_mask', (0, 4))
+    ('prepared.nearfield_target_block_valid_mask_padded', (782, 256, 4))
+    ('prepared.radix_fast_payload.target_particle_mask', (782, 256))
+    ('prepared.radix_fast_payload.source_leaf_valid_mask', (782, 256, 4))
+    ('prepared.radix_fast_payload.source_particle_mask', (0, 0, 0))
+using prepared.radix_fast_payload.source_leaf_valid_mask shape (782, 256, 4); rows: mean 140.6 max 781 entries 109962
+cap     0:    44.99 ms  (-  0.00)  entries dropped       0 (0.0 %)  longest row 781  flags=['loadavg>=8 (9.3)', 'other-gpus-busy (80%)']
+cap   600:    40.89 ms  (-  4.11)  entries dropped    3262 (3.0 %)  longest row 600  flags=['loadavg>=8 (9.1)', 'other-gpus-busy (83%)']
+cap   400:    35.68 ms  (-  9.32)  entries dropped    8877 (8.1 %)  longest row 400  flags=['loadavg>=8 (9.1)', 'other-gpus-busy (80%)']
+cap   300:    32.82 ms  (- 12.17)  entries dropped   12773 (11.6 %)  longest row 300  flags=['loadavg>=8 (9.1)', 'other-gpus-busy (83%)']
+cap   200:    29.01 ms  (- 15.98)  entries dropped   18537 (16.9 %)  longest row 200  flags=['loadavg>=8 (8.9)', 'other-gpus-busy (78%)']
+cap   150:    26.63 ms  (- 18.36)  entries dropped   23537 (21.4 %)  longest row 150  flags=['loadavg>=8 (8.9)', 'other-gpus-busy (82%)']

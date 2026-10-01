@@ -1,0 +1,44 @@
+[run_when_idle] idle GPUs: 1,2,3,4,5 after 1680s -> running: codes/t12_and_t13_chain.sh
+=== T1.2 timing (perf worktree) ===
+jaccpot /export/home/tbuck/jaccpot-perf-wt/jaccpot/__init__.py | GPU [5]
+  setting theta       ms    iqr       aggL2 flags
+ baseline  0.40   124.21   1.03         nan  vs-baseline 0.00e+00  loadavg>=8 (59.4),other-gpus-busy (40%)
+  chunk64  0.40   115.66   2.55         nan  vs-baseline 6.06e-06  loadavg>=8 (59.5),other-gpus-busy (41%)
+  batch32  0.40   122.99   3.19         nan  vs-baseline 1.63e-08  loadavg>=8 (59.4),other-gpus-busy (12%)
+     both  0.40   115.09   1.15         nan  vs-baseline 6.06e-06  loadavg>=8 (58.7)
+ baseline  0.60    91.39   2.47         nan  vs-baseline 0.00e+00  loadavg>=8 (59.3),other-gpus-busy (14%)
+  chunk64  0.60    75.84   2.95         nan  vs-baseline 3.48e-06  loadavg>=8 (58.0)
+  batch32  0.60    91.48   5.33         nan  vs-baseline 5.89e-08  loadavg>=8 (58.7)
+     both  0.60    76.39   9.52         nan  vs-baseline 3.48e-06  loadavg>=8 (58.8)
+ baseline  0.80    60.96   4.84         nan  vs-baseline 0.00e+00  loadavg>=8 (64.9)
+  chunk64  0.80    47.35   9.75         nan  vs-baseline 1.84e-06  loadavg>=8 (63.8),other-gpus-busy (40%)
+  batch32  0.80    60.89   4.30         nan  vs-baseline 9.29e-08  loadavg>=8 (63.0),other-gpus-busy (38%)
+     both  0.80    47.53  13.58         nan  vs-baseline 1.84e-06  loadavg>=8 (62.0),other-gpus-busy (73%)
+ baseline  1.00    44.73  24.42         nan  vs-baseline 0.00e+00  loadavg>=8 (61.3),other-gpus-busy (71%)
+  chunk64  1.00    35.75   4.77         nan  vs-baseline 1.04e-06  loadavg>=8 (59.5),other-gpus-busy (68%)
+  batch32  1.00    48.78   4.60         nan  vs-baseline 1.08e-07  loadavg>=8 (64.2),other-gpus-busy (68%)
+     both  1.00    32.01  10.61         nan  vs-baseline 1.04e-06  loadavg>=8 (62.5),other-gpus-busy (49%)
+=== T1.2 timing at leaf 64 (perf worktree) ===
+jaccpot /export/home/tbuck/jaccpot-perf-wt/jaccpot/__init__.py | GPU [5]
+  setting theta       ms    iqr       aggL2 flags
+ baseline  0.60    97.64   3.71         nan  vs-baseline 0.00e+00  loadavg>=8 (61.8),other-gpus-busy (46%)
+     both  0.60    79.60  11.61         nan  vs-baseline 1.24e-06  loadavg>=8 (61.2),other-gpus-busy (46%)
+ baseline  0.80    85.37  11.04         nan  vs-baseline 0.00e+00  loadavg>=8 (66.1),other-gpus-busy (38%)
+     both  0.80    69.23   9.83         nan  vs-baseline 6.65e-07  loadavg>=8 (65.3),other-gpus-busy (90%)
+ baseline  1.00    74.93   4.20         nan  vs-baseline 0.00e+00  loadavg>=8 (77.0),other-gpus-busy (42%)
+     both  1.00    57.00   3.83         nan  vs-baseline 4.08e-07  loadavg>=8 (84.6)
+=== T1.3 N=1M, both codes (main jaccpot, 4096-target reference) ===
+IC=plummer N=1000000 devices=[5] loadavg=(87.29833984375, 57.779296875, 33.9912109375) cores=64
+wrote + verified artifacts/compare_force_1M/plummer_n1000000_seed0.tipsy (36.0 MB)
+[force_eval] wrote artifacts/compare_force_1M/pkd_gpu_ndev1_nb16_ng0_summary.json
+  !! contention during pkdgrav3 run: ['loadavg>=8 (104.4)', 'other-gpus-busy (79%)']
+  epsilon moves the reference by aggL2 3.407e-09 (tolerance 1e-06)
+  pkdgrav3[gpu] ndev=1 nB=16 theta=0.50 (jac-eq 0.333): grav   281.38 ms  aggL2=3.203e-05  P-P 975.1 P-C 291.5  (signflip 2.000e+00)
+  pkdgrav3[gpu] ndev=1 nB=16 theta=0.60 (jac-eq 0.400): grav   218.93 ms  aggL2=7.347e-05  P-P 678.0 P-C 174.8  (signflip 2.000e+00)
+  pkdgrav3[gpu] ndev=1 nB=16 theta=0.70 (jac-eq 0.467): grav   138.09 ms  aggL2=1.513e-04  P-P 545.8 P-C 113.8  (signflip 2.000e+00)
+  pkdgrav3[gpu] ndev=1 nB=16 theta=0.80 (jac-eq 0.533): grav   106.31 ms  aggL2=2.854e-04  P-P 476.5 P-C 85.5  (signflip 2.000e+00)
+  jaccpot[1gpu] leaf=256 p=4 theta=0.50: FAILED -- jaccpot could not fit N=1000000 with preset='large_n_gpu', leaf_size=256, max_order=4, dtype=<class 'jax.numpy.float32'>.
+  jaccpot[1gpu] leaf=256 p=4 theta=0.60: FAILED -- jaccpot could not fit N=1000000 with preset='large_n_gpu', leaf_size=256, max_order=4, dtype=<class 'jax.numpy.float32'>.
+  jaccpot[1gpu] leaf=256 p=4 theta=0.80:   407.10 ms (+walk    0.0)  aggL2=4.763e-03  direct 0.089N  leafpair_gather  !! loadavg>=8 (122.8),other-gpus-busy (47%)
+  jaccpot[1gpu] leaf=256 p=4 theta=1.00:   278.18 ms (+walk    0.0)  aggL2=1.816e-02  direct 0.047N  leafpair_gather  !! loadavg>=8 (142.9),other-gpus-busy (51%)
+wrote artifacts/compare_force_plummer1M_2026-09-06.json

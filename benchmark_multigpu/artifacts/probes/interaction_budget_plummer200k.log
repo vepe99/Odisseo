@@ -1,0 +1,105 @@
+GPU: physical [5] (CUDA_VISIBLE_DEVICES=5)
+N=200000: float64 direct reference ...
+ leaf theta       ms    iqr      aggL2 leaves nbr/leaf    occ direct/tgt  share      p90 self flags
+/export/home/tbuck/Odisseo-bench-multigpu/benchmark_multigpu/codes/interaction_budget.py:112: DeprecationWarning: Legacy expanse-style kwargs are deprecated in jaccpot.FastMultipoleMethod. Use preset/basis/advanced config objects instead.
+  s = FastMultipoleMethod(
+   64  0.40  FAILED: jaccpot could not fit N=200000 with preset='large_n_gpu', leaf_size=64, max_order=4, dtype=<class 'jax.numpy.float32'>.
+   64  0.50  FAILED: jaccpot could not fit N=200000 with preset='large_n_gpu', leaf_size=64, max_order=4, dtype=<class 'jax.numpy.float32'>.
+   64  0.60    90.66   3.18  1.119e-03   3125    589.5   64.0      37793  0.189    52543    0 loadavg>=8 (8.3),other-gpus-busy (82%)
+/export/home/tbuck/Odisseo-bench-multigpu/benchmark_multigpu/codes/interaction_budget.py:112: DeprecationWarning: Legacy expanse-style kwargs are deprecated in jaccpot.FastMultipoleMethod. Use preset/basis/advanced config objects instead.
+  s = FastMultipoleMethod(
+   64  0.70    89.19   9.53  2.482e-03   3125    394.3   64.0      25301  0.127    31679    0 other-gpus-busy (83%)
+/export/home/tbuck/Odisseo-bench-multigpu/benchmark_multigpu/codes/interaction_budget.py:112: DeprecationWarning: Legacy expanse-style kwargs are deprecated in jaccpot.FastMultipoleMethod. Use preset/basis/advanced config objects instead.
+  s = FastMultipoleMethod(
+   64  0.80    79.75   3.57  5.422e-03   3125    278.1   64.0      17860  0.089    21247    0 other-gpus-busy (83%)
+/export/home/tbuck/Odisseo-bench-multigpu/benchmark_multigpu/codes/interaction_budget.py:112: DeprecationWarning: Legacy expanse-style kwargs are deprecated in jaccpot.FastMultipoleMethod. Use preset/basis/advanced config objects instead.
+  s = FastMultipoleMethod(
+   64  0.90    73.12  11.47  9.254e-03   3125    197.2   64.0      12685  0.063    14655    0 other-gpus-busy (81%)
+/export/home/tbuck/Odisseo-bench-multigpu/benchmark_multigpu/codes/interaction_budget.py:112: DeprecationWarning: Legacy expanse-style kwargs are deprecated in jaccpot.FastMultipoleMethod. Use preset/basis/advanced config objects instead.
+  s = FastMultipoleMethod(
+   64  1.00    72.17   1.51  1.634e-02   3125    143.7   64.0       9258  0.046    10751    0 other-gpus-busy (81%)
+/export/home/tbuck/Odisseo-bench-multigpu/benchmark_multigpu/codes/interaction_budget.py:112: DeprecationWarning: Legacy expanse-style kwargs are deprecated in jaccpot.FastMultipoleMethod. Use preset/basis/advanced config objects instead.
+  s = FastMultipoleMethod(
+  128  0.40   127.89   4.71  1.005e-04   1563   1194.9  128.0     152996  0.765   199999    0 other-gpus-busy (81%)
+/export/home/tbuck/Odisseo-bench-multigpu/benchmark_multigpu/codes/interaction_budget.py:112: DeprecationWarning: Legacy expanse-style kwargs are deprecated in jaccpot.FastMultipoleMethod. Use preset/basis/advanced config objects instead.
+  s = FastMultipoleMethod(
+  128  0.50   105.19  12.17  4.109e-04   1563    819.8  128.0     104970  0.525   176959    0 other-gpus-busy (83%)
+/export/home/tbuck/Odisseo-bench-multigpu/benchmark_multigpu/codes/interaction_budget.py:112: DeprecationWarning: Legacy expanse-style kwargs are deprecated in jaccpot.FastMultipoleMethod. Use preset/basis/advanced config objects instead.
+  s = FastMultipoleMethod(
+  128  0.60    85.65   8.27  1.080e-03   1563    554.1  128.0      70943  0.355   116031    0 other-gpus-busy (81%)
+/export/home/tbuck/Odisseo-bench-multigpu/benchmark_multigpu/codes/interaction_budget.py:112: DeprecationWarning: Legacy expanse-style kwargs are deprecated in jaccpot.FastMultipoleMethod. Use preset/basis/advanced config objects instead.
+  s = FastMultipoleMethod(
+  128  0.70    73.05   6.07  3.136e-03   1563    380.1  128.0      48664  0.243    71871    0 other-gpus-busy (84%)
+/export/home/tbuck/Odisseo-bench-multigpu/benchmark_multigpu/codes/interaction_budget.py:112: DeprecationWarning: Legacy expanse-style kwargs are deprecated in jaccpot.FastMultipoleMethod. Use preset/basis/advanced config objects instead.
+  s = FastMultipoleMethod(
+  128  0.80    64.70   2.81  8.666e-03   1563    273.1  128.0      34963  0.175    48063    0 loadavg>=8 (8.2),other-gpus-busy (99%)
+/export/home/tbuck/Odisseo-bench-multigpu/benchmark_multigpu/codes/interaction_budget.py:112: DeprecationWarning: Legacy expanse-style kwargs are deprecated in jaccpot.FastMultipoleMethod. Use preset/basis/advanced config objects instead.
+  s = FastMultipoleMethod(
+  128  0.90    56.18   3.96  1.536e-02   1563    198.5  128.0      25420  0.127    33343    0 other-gpus-busy (84%)
+/export/home/tbuck/Odisseo-bench-multigpu/benchmark_multigpu/codes/interaction_budget.py:112: DeprecationWarning: Legacy expanse-style kwargs are deprecated in jaccpot.FastMultipoleMethod. Use preset/basis/advanced config objects instead.
+  s = FastMultipoleMethod(
+  128  1.00    55.29  17.33  2.379e-02   1563    143.9  128.0      18423  0.092    23231    0 loadavg>=8 (9.9),other-gpus-busy (83%)
+/export/home/tbuck/Odisseo-bench-multigpu/benchmark_multigpu/codes/interaction_budget.py:112: DeprecationWarning: Legacy expanse-style kwargs are deprecated in jaccpot.FastMultipoleMethod. Use preset/basis/advanced config objects instead.
+  s = FastMultipoleMethod(
+  256  0.40   122.48   0.76  3.307e-05    782    743.9  255.8     190481  0.952   199999    0 loadavg>=8 (10.0),other-gpus-busy (84%)
+/export/home/tbuck/Odisseo-bench-multigpu/benchmark_multigpu/codes/interaction_budget.py:112: DeprecationWarning: Legacy expanse-style kwargs are deprecated in jaccpot.FastMultipoleMethod. Use preset/basis/advanced config objects instead.
+  s = FastMultipoleMethod(
+  256  0.50   108.98   3.80  2.519e-04    782    609.3  255.8     155992  0.780   199999    0 loadavg>=8 (10.4),other-gpus-busy (82%)
+/export/home/tbuck/Odisseo-bench-multigpu/benchmark_multigpu/codes/interaction_budget.py:112: DeprecationWarning: Legacy expanse-style kwargs are deprecated in jaccpot.FastMultipoleMethod. Use preset/basis/advanced config objects instead.
+  s = FastMultipoleMethod(
+  256  0.60    90.98   2.04  8.435e-04    782    455.3  255.8     116552  0.583   191807    0 loadavg>=8 (10.1),other-gpus-busy (83%)
+/export/home/tbuck/Odisseo-bench-multigpu/benchmark_multigpu/codes/interaction_budget.py:112: DeprecationWarning: Legacy expanse-style kwargs are deprecated in jaccpot.FastMultipoleMethod. Use preset/basis/advanced config objects instead.
+  s = FastMultipoleMethod(
+  256  0.70    74.74   1.91  3.206e-03    782    333.9  255.8      85439  0.427   145471    0 loadavg>=8 (10.6),other-gpus-busy (80%)
+/export/home/tbuck/Odisseo-bench-multigpu/benchmark_multigpu/codes/interaction_budget.py:112: DeprecationWarning: Legacy expanse-style kwargs are deprecated in jaccpot.FastMultipoleMethod. Use preset/basis/advanced config objects instead.
+  s = FastMultipoleMethod(
+  256  0.80    61.51   8.89  1.171e-02    782    249.0  255.8      63684  0.318   102463    0 loadavg>=8 (11.2),other-gpus-busy (81%)
+/export/home/tbuck/Odisseo-bench-multigpu/benchmark_multigpu/codes/interaction_budget.py:112: DeprecationWarning: Legacy expanse-style kwargs are deprecated in jaccpot.FastMultipoleMethod. Use preset/basis/advanced config objects instead.
+  s = FastMultipoleMethod(
+  256  0.90    54.76  19.37  2.000e-02    782    188.5  255.8      48179  0.241    71487    0 loadavg>=8 (11.1),other-gpus-busy (80%)
+/export/home/tbuck/Odisseo-bench-multigpu/benchmark_multigpu/codes/interaction_budget.py:112: DeprecationWarning: Legacy expanse-style kwargs are deprecated in jaccpot.FastMultipoleMethod. Use preset/basis/advanced config objects instead.
+  s = FastMultipoleMethod(
+  256  1.00    46.39  16.64  3.507e-02    782    140.6  255.8      35903  0.180    49727    0 loadavg>=8 (10.8),other-gpus-busy (80%)
+/export/home/tbuck/Odisseo-bench-multigpu/benchmark_multigpu/codes/interaction_budget.py:112: DeprecationWarning: Legacy expanse-style kwargs are deprecated in jaccpot.FastMultipoleMethod. Use preset/basis/advanced config objects instead.
+  s = FastMultipoleMethod(
+  512  0.40   178.40   2.07  6.464e-06    391    389.7  511.5     199865  0.999   199999    0 loadavg>=8 (12.1),other-gpus-busy (80%)
+/export/home/tbuck/Odisseo-bench-multigpu/benchmark_multigpu/codes/interaction_budget.py:112: DeprecationWarning: Legacy expanse-style kwargs are deprecated in jaccpot.FastMultipoleMethod. Use preset/basis/advanced config objects instead.
+  s = FastMultipoleMethod(
+  512  0.50   178.06   2.91  8.520e-05    391    374.1  511.5     191852  0.959   199999    0 loadavg>=8 (11.7),other-gpus-busy (82%)
+/export/home/tbuck/Odisseo-bench-multigpu/benchmark_multigpu/codes/interaction_budget.py:112: DeprecationWarning: Legacy expanse-style kwargs are deprecated in jaccpot.FastMultipoleMethod. Use preset/basis/advanced config objects instead.
+  s = FastMultipoleMethod(
+  512  0.60   176.59   3.02  4.947e-04    391    324.1  511.5     166203  0.831   199999    0 loadavg>=8 (11.0),other-gpus-busy (80%)
+/export/home/tbuck/Odisseo-bench-multigpu/benchmark_multigpu/codes/interaction_budget.py:112: DeprecationWarning: Legacy expanse-style kwargs are deprecated in jaccpot.FastMultipoleMethod. Use preset/basis/advanced config objects instead.
+  s = FastMultipoleMethod(
+  512  0.70   175.52   2.07  1.950e-03    391    260.5  511.5     133629  0.668   198975    0 loadavg>=8 (12.3),other-gpus-busy (84%)
+/export/home/tbuck/Odisseo-bench-multigpu/benchmark_multigpu/codes/interaction_budget.py:112: DeprecationWarning: Legacy expanse-style kwargs are deprecated in jaccpot.FastMultipoleMethod. Use preset/basis/advanced config objects instead.
+  s = FastMultipoleMethod(
+  512  0.80   176.50   1.59  4.801e-03    391    204.5  511.5     104930  0.525   180543    0 loadavg>=8 (12.1),other-gpus-busy (83%)
+/export/home/tbuck/Odisseo-bench-multigpu/benchmark_multigpu/codes/interaction_budget.py:112: DeprecationWarning: Legacy expanse-style kwargs are deprecated in jaccpot.FastMultipoleMethod. Use preset/basis/advanced config objects instead.
+  s = FastMultipoleMethod(
+  512  0.90   176.72   0.96  8.013e-03    391    161.1  511.5      82705  0.414   147263    0 loadavg>=8 (13.0),other-gpus-busy (83%)
+/export/home/tbuck/Odisseo-bench-multigpu/benchmark_multigpu/codes/interaction_budget.py:112: DeprecationWarning: Legacy expanse-style kwargs are deprecated in jaccpot.FastMultipoleMethod. Use preset/basis/advanced config objects instead.
+  s = FastMultipoleMethod(
+  512  1.00   176.33   1.59  1.505e-02    391    126.9  511.5      65186  0.326   112959    0 loadavg>=8 (12.4),other-gpus-busy (84%)
+/export/home/tbuck/Odisseo-bench-multigpu/benchmark_multigpu/codes/interaction_budget.py:112: DeprecationWarning: Legacy expanse-style kwargs are deprecated in jaccpot.FastMultipoleMethod. Use preset/basis/advanced config objects instead.
+  s = FastMultipoleMethod(
+ 1024  0.40   176.87   1.34  6.253e-06    196    195.0 1020.4     199999  1.000   199999    0 loadavg>=8 (20.3),other-gpus-busy (84%)
+/export/home/tbuck/Odisseo-bench-multigpu/benchmark_multigpu/codes/interaction_budget.py:112: DeprecationWarning: Legacy expanse-style kwargs are deprecated in jaccpot.FastMultipoleMethod. Use preset/basis/advanced config objects instead.
+  s = FastMultipoleMethod(
+ 1024  0.50   176.07   1.83  6.551e-06    196    195.0 1020.4     199978  1.000   199999    0 loadavg>=8 (19.0),other-gpus-busy (83%)
+/export/home/tbuck/Odisseo-bench-multigpu/benchmark_multigpu/codes/interaction_budget.py:112: DeprecationWarning: Legacy expanse-style kwargs are deprecated in jaccpot.FastMultipoleMethod. Use preset/basis/advanced config objects instead.
+  s = FastMultipoleMethod(
+ 1024  0.60   173.47   2.53  9.618e-05    196    191.6 1020.4     196497  0.982   199999    0 loadavg>=8 (17.2),other-gpus-busy (82%)
+/export/home/tbuck/Odisseo-bench-multigpu/benchmark_multigpu/codes/interaction_budget.py:112: DeprecationWarning: Legacy expanse-style kwargs are deprecated in jaccpot.FastMultipoleMethod. Use preset/basis/advanced config objects instead.
+  s = FastMultipoleMethod(
+ 1024  0.70   175.53   1.49  8.247e-04    196    175.6 1020.4     180013  0.900   199999    0 loadavg>=8 (16.4),other-gpus-busy (84%)
+/export/home/tbuck/Odisseo-bench-multigpu/benchmark_multigpu/codes/interaction_budget.py:112: DeprecationWarning: Legacy expanse-style kwargs are deprecated in jaccpot.FastMultipoleMethod. Use preset/basis/advanced config objects instead.
+  s = FastMultipoleMethod(
+ 1024  0.80   174.79   1.62  2.848e-03    196    151.7 1020.4     155466  0.777   199999    0 loadavg>=8 (15.1),other-gpus-busy (83%)
+/export/home/tbuck/Odisseo-bench-multigpu/benchmark_multigpu/codes/interaction_budget.py:112: DeprecationWarning: Legacy expanse-style kwargs are deprecated in jaccpot.FastMultipoleMethod. Use preset/basis/advanced config objects instead.
+  s = FastMultipoleMethod(
+ 1024  0.90   175.69   1.77  6.550e-03    196    126.9 1020.4     130007  0.650   198975    0 loadavg>=8 (15.6),other-gpus-busy (78%)
+/export/home/tbuck/Odisseo-bench-multigpu/benchmark_multigpu/codes/interaction_budget.py:112: DeprecationWarning: Legacy expanse-style kwargs are deprecated in jaccpot.FastMultipoleMethod. Use preset/basis/advanced config objects instead.
+  s = FastMultipoleMethod(
+ 1024  1.00   174.69   1.74  1.401e-02    196    106.7 1020.4     109255  0.546   188735    0 loadavg>=8 (14.8),other-gpus-busy (83%)
+wrote /export/home/tbuck/Odisseo-bench-multigpu/benchmark_multigpu/artifacts/interaction_budget_plummer200000.json

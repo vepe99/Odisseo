@@ -1,0 +1,127 @@
+IC=plummer N=200000 devices=[5] loadavg=(14.529296875, 18.2919921875, 15.443359375) cores=64
+wrote + verified artifacts/compare_force_200k/plummer_n200000_seed0.tipsy (7.2 MB)
+
+computing float64 direct-sum reference (eps=1e-07, targets=all)...
+/export/home/tbuck/Odisseo-bench-multigpu/benchmark_multigpu/codes/compare_force.py:408: DeprecationWarning: Legacy expanse-style kwargs are deprecated in jaccpot.FastMultipoleMethod. Use preset/basis/advanced config objects instead.
+  solver = FastMultipoleMethod(
+  epsilon moves the reference by aggL2 6.286e-08 (tolerance 1e-06)
+  jaccpot[1gpu] leaf=256 p=2 theta=0.40:   122.70 ms (+walk    0.0)  aggL2=8.802e-04  direct 0.952N  leafpair_gather  !! loadavg>=8 (11.7),other-gpus-busy (77%)
+/export/home/tbuck/Odisseo-bench-multigpu/benchmark_multigpu/codes/compare_force.py:408: DeprecationWarning: Legacy expanse-style kwargs are deprecated in jaccpot.FastMultipoleMethod. Use preset/basis/advanced config objects instead.
+  solver = FastMultipoleMethod(
+  jaccpot[1gpu] leaf=256 p=2 theta=0.50:   107.74 ms (+walk    0.0)  aggL2=4.101e-03  direct 0.780N  leafpair_gather  !! loadavg>=8 (11.4),other-gpus-busy (74%)
+/export/home/tbuck/Odisseo-bench-multigpu/benchmark_multigpu/codes/compare_force.py:408: DeprecationWarning: Legacy expanse-style kwargs are deprecated in jaccpot.FastMultipoleMethod. Use preset/basis/advanced config objects instead.
+  solver = FastMultipoleMethod(
+  jaccpot[1gpu] leaf=256 p=2 theta=0.60:    89.59 ms (+walk    0.0)  aggL2=8.803e-03  direct 0.583N  leafpair_gather  !! loadavg>=8 (11.1),other-gpus-busy (77%)
+/export/home/tbuck/Odisseo-bench-multigpu/benchmark_multigpu/codes/compare_force.py:408: DeprecationWarning: Legacy expanse-style kwargs are deprecated in jaccpot.FastMultipoleMethod. Use preset/basis/advanced config objects instead.
+  solver = FastMultipoleMethod(
+  jaccpot[1gpu] leaf=256 p=2 theta=0.70:    75.35 ms (+walk    0.0)  aggL2=1.409e-02  direct 0.427N  leafpair_gather  !! loadavg>=8 (10.6),other-gpus-busy (90%)
+/export/home/tbuck/Odisseo-bench-multigpu/benchmark_multigpu/codes/compare_force.py:408: DeprecationWarning: Legacy expanse-style kwargs are deprecated in jaccpot.FastMultipoleMethod. Use preset/basis/advanced config objects instead.
+  solver = FastMultipoleMethod(
+  jaccpot[1gpu] leaf=256 p=2 theta=0.80:    62.26 ms (+walk    0.0)  aggL2=2.047e-02  direct 0.318N  leafpair_gather  !! loadavg>=8 (10.4),other-gpus-busy (77%)
+/export/home/tbuck/Odisseo-bench-multigpu/benchmark_multigpu/codes/compare_force.py:408: DeprecationWarning: Legacy expanse-style kwargs are deprecated in jaccpot.FastMultipoleMethod. Use preset/basis/advanced config objects instead.
+  solver = FastMultipoleMethod(
+  jaccpot[1gpu] leaf=256 p=2 theta=0.90:    52.97 ms (+walk    0.0)  aggL2=2.745e-02  direct 0.241N  leafpair_gather  !! loadavg>=8 (10.0),other-gpus-busy (76%)
+/export/home/tbuck/Odisseo-bench-multigpu/benchmark_multigpu/codes/compare_force.py:408: DeprecationWarning: Legacy expanse-style kwargs are deprecated in jaccpot.FastMultipoleMethod. Use preset/basis/advanced config objects instead.
+  solver = FastMultipoleMethod(
+  jaccpot[1gpu] leaf=256 p=2 theta=1.00:    46.85 ms (+walk    0.0)  aggL2=3.650e-02  direct 0.180N  leafpair_gather  !! loadavg>=8 (10.0),other-gpus-busy (79%)
+/export/home/tbuck/Odisseo-bench-multigpu/benchmark_multigpu/codes/compare_force.py:408: DeprecationWarning: Legacy expanse-style kwargs are deprecated in jaccpot.FastMultipoleMethod. Use preset/basis/advanced config objects instead.
+  solver = FastMultipoleMethod(
+  jaccpot[1gpu] leaf=256 p=2 theta=1.20:    37.73 ms (+walk    0.0)  aggL2=7.536e-02  direct 0.110N  leafpair_gather  !! loadavg>=8 (9.6),other-gpus-busy (78%)
+/export/home/tbuck/Odisseo-bench-multigpu/benchmark_multigpu/codes/compare_force.py:408: DeprecationWarning: Legacy expanse-style kwargs are deprecated in jaccpot.FastMultipoleMethod. Use preset/basis/advanced config objects instead.
+  solver = FastMultipoleMethod(
+  jaccpot[1gpu] leaf=256 p=3 theta=0.40:   123.86 ms (+walk    0.0)  aggL2=1.551e-04  direct 0.952N  leafpair_gather  !! loadavg>=8 (14.1),other-gpus-busy (77%)
+/export/home/tbuck/Odisseo-bench-multigpu/benchmark_multigpu/codes/compare_force.py:408: DeprecationWarning: Legacy expanse-style kwargs are deprecated in jaccpot.FastMultipoleMethod. Use preset/basis/advanced config objects instead.
+  solver = FastMultipoleMethod(
+  jaccpot[1gpu] leaf=256 p=3 theta=0.50:   108.78 ms (+walk    0.0)  aggL2=8.940e-04  direct 0.780N  leafpair_gather  !! loadavg>=8 (14.7),other-gpus-busy (79%)
+/export/home/tbuck/Odisseo-bench-multigpu/benchmark_multigpu/codes/compare_force.py:408: DeprecationWarning: Legacy expanse-style kwargs are deprecated in jaccpot.FastMultipoleMethod. Use preset/basis/advanced config objects instead.
+  solver = FastMultipoleMethod(
+  jaccpot[1gpu] leaf=256 p=3 theta=0.60:    89.11 ms (+walk    0.0)  aggL2=2.324e-03  direct 0.583N  leafpair_gather  !! loadavg>=8 (14.5),other-gpus-busy (75%)
+/export/home/tbuck/Odisseo-bench-multigpu/benchmark_multigpu/codes/compare_force.py:408: DeprecationWarning: Legacy expanse-style kwargs are deprecated in jaccpot.FastMultipoleMethod. Use preset/basis/advanced config objects instead.
+  solver = FastMultipoleMethod(
+  jaccpot[1gpu] leaf=256 p=3 theta=0.70:    75.05 ms (+walk    0.0)  aggL2=4.778e-03  direct 0.427N  leafpair_gather  !! loadavg>=8 (14.5),other-gpus-busy (76%)
+/export/home/tbuck/Odisseo-bench-multigpu/benchmark_multigpu/codes/compare_force.py:408: DeprecationWarning: Legacy expanse-style kwargs are deprecated in jaccpot.FastMultipoleMethod. Use preset/basis/advanced config objects instead.
+  solver = FastMultipoleMethod(
+  jaccpot[1gpu] leaf=256 p=3 theta=0.80:    62.53 ms (+walk    0.0)  aggL2=1.023e-02  direct 0.318N  leafpair_gather  !! loadavg>=8 (14.1),other-gpus-busy (78%)
+/export/home/tbuck/Odisseo-bench-multigpu/benchmark_multigpu/codes/compare_force.py:408: DeprecationWarning: Legacy expanse-style kwargs are deprecated in jaccpot.FastMultipoleMethod. Use preset/basis/advanced config objects instead.
+  solver = FastMultipoleMethod(
+  jaccpot[1gpu] leaf=256 p=3 theta=0.90:    52.02 ms (+walk    0.0)  aggL2=1.661e-02  direct 0.241N  leafpair_gather  !! loadavg>=8 (13.6),other-gpus-busy (78%)
+/export/home/tbuck/Odisseo-bench-multigpu/benchmark_multigpu/codes/compare_force.py:408: DeprecationWarning: Legacy expanse-style kwargs are deprecated in jaccpot.FastMultipoleMethod. Use preset/basis/advanced config objects instead.
+  solver = FastMultipoleMethod(
+  jaccpot[1gpu] leaf=256 p=3 theta=1.00:    46.16 ms (+walk    0.0)  aggL2=2.581e-02  direct 0.180N  leafpair_gather  !! loadavg>=8 (13.3),other-gpus-busy (73%)
+/export/home/tbuck/Odisseo-bench-multigpu/benchmark_multigpu/codes/compare_force.py:408: DeprecationWarning: Legacy expanse-style kwargs are deprecated in jaccpot.FastMultipoleMethod. Use preset/basis/advanced config objects instead.
+  solver = FastMultipoleMethod(
+  jaccpot[1gpu] leaf=256 p=3 theta=1.20:    38.01 ms (+walk    0.0)  aggL2=7.570e-02  direct 0.110N  leafpair_gather  !! loadavg>=8 (12.7),other-gpus-busy (75%)
+/export/home/tbuck/Odisseo-bench-multigpu/benchmark_multigpu/codes/compare_force.py:408: DeprecationWarning: Legacy expanse-style kwargs are deprecated in jaccpot.FastMultipoleMethod. Use preset/basis/advanced config objects instead.
+  solver = FastMultipoleMethod(
+  jaccpot[1gpu] leaf=256 p=4 theta=0.40:   123.36 ms (+walk    0.0)  aggL2=3.307e-05  direct 0.952N  leafpair_gather  !! loadavg>=8 (13.9),other-gpus-busy (89%)
+/export/home/tbuck/Odisseo-bench-multigpu/benchmark_multigpu/codes/compare_force.py:408: DeprecationWarning: Legacy expanse-style kwargs are deprecated in jaccpot.FastMultipoleMethod. Use preset/basis/advanced config objects instead.
+  solver = FastMultipoleMethod(
+  jaccpot[1gpu] leaf=256 p=4 theta=0.50:   109.98 ms (+walk    0.0)  aggL2=2.519e-04  direct 0.780N  leafpair_gather  !! loadavg>=8 (12.7),other-gpus-busy (78%)
+/export/home/tbuck/Odisseo-bench-multigpu/benchmark_multigpu/codes/compare_force.py:408: DeprecationWarning: Legacy expanse-style kwargs are deprecated in jaccpot.FastMultipoleMethod. Use preset/basis/advanced config objects instead.
+  solver = FastMultipoleMethod(
+  jaccpot[1gpu] leaf=256 p=4 theta=0.60:    90.76 ms (+walk    0.0)  aggL2=8.435e-04  direct 0.583N  leafpair_gather  !! loadavg>=8 (12.2),other-gpus-busy (76%)
+/export/home/tbuck/Odisseo-bench-multigpu/benchmark_multigpu/codes/compare_force.py:408: DeprecationWarning: Legacy expanse-style kwargs are deprecated in jaccpot.FastMultipoleMethod. Use preset/basis/advanced config objects instead.
+  solver = FastMultipoleMethod(
+  jaccpot[1gpu] leaf=256 p=4 theta=0.70:    71.48 ms (+walk    0.0)  aggL2=3.206e-03  direct 0.427N  leafpair_gather  !! loadavg>=8 (15.7),other-gpus-busy (80%)
+/export/home/tbuck/Odisseo-bench-multigpu/benchmark_multigpu/codes/compare_force.py:408: DeprecationWarning: Legacy expanse-style kwargs are deprecated in jaccpot.FastMultipoleMethod. Use preset/basis/advanced config objects instead.
+  solver = FastMultipoleMethod(
+  jaccpot[1gpu] leaf=256 p=4 theta=0.80:    62.35 ms (+walk    0.0)  aggL2=1.171e-02  direct 0.318N  leafpair_gather  !! loadavg>=8 (14.9),other-gpus-busy (78%)
+/export/home/tbuck/Odisseo-bench-multigpu/benchmark_multigpu/codes/compare_force.py:408: DeprecationWarning: Legacy expanse-style kwargs are deprecated in jaccpot.FastMultipoleMethod. Use preset/basis/advanced config objects instead.
+  solver = FastMultipoleMethod(
+  jaccpot[1gpu] leaf=256 p=4 theta=0.90:    59.19 ms (+walk    0.0)  aggL2=2.000e-02  direct 0.241N  leafpair_gather  !! loadavg>=8 (13.7),other-gpus-busy (81%)
+/export/home/tbuck/Odisseo-bench-multigpu/benchmark_multigpu/codes/compare_force.py:408: DeprecationWarning: Legacy expanse-style kwargs are deprecated in jaccpot.FastMultipoleMethod. Use preset/basis/advanced config objects instead.
+  solver = FastMultipoleMethod(
+  jaccpot[1gpu] leaf=256 p=4 theta=1.00:    47.82 ms (+walk    0.0)  aggL2=3.507e-02  direct 0.180N  leafpair_gather  !! loadavg>=8 (13.1),other-gpus-busy (77%)
+/export/home/tbuck/Odisseo-bench-multigpu/benchmark_multigpu/codes/compare_force.py:408: DeprecationWarning: Legacy expanse-style kwargs are deprecated in jaccpot.FastMultipoleMethod. Use preset/basis/advanced config objects instead.
+  solver = FastMultipoleMethod(
+  jaccpot[1gpu] leaf=256 p=4 theta=1.20:    38.15 ms (+walk    0.0)  aggL2=6.950e-01  direct 0.110N  leafpair_gather  !! loadavg>=8 (12.8),other-gpus-busy (77%)
+/export/home/tbuck/Odisseo-bench-multigpu/benchmark_multigpu/codes/compare_force.py:408: DeprecationWarning: Legacy expanse-style kwargs are deprecated in jaccpot.FastMultipoleMethod. Use preset/basis/advanced config objects instead.
+  solver = FastMultipoleMethod(
+  jaccpot[1gpu] leaf=256 p=5 theta=0.40:   121.70 ms (+walk    0.0)  aggL2=1.028e-05  direct 0.952N  leafpair_gather  !! loadavg>=8 (11.6),other-gpus-busy (79%)
+/export/home/tbuck/Odisseo-bench-multigpu/benchmark_multigpu/codes/compare_force.py:408: DeprecationWarning: Legacy expanse-style kwargs are deprecated in jaccpot.FastMultipoleMethod. Use preset/basis/advanced config objects instead.
+  solver = FastMultipoleMethod(
+  jaccpot[1gpu] leaf=256 p=5 theta=0.50:   110.61 ms (+walk    0.0)  aggL2=8.888e-05  direct 0.780N  leafpair_gather  !! loadavg>=8 (10.6),other-gpus-busy (77%)
+/export/home/tbuck/Odisseo-bench-multigpu/benchmark_multigpu/codes/compare_force.py:408: DeprecationWarning: Legacy expanse-style kwargs are deprecated in jaccpot.FastMultipoleMethod. Use preset/basis/advanced config objects instead.
+  solver = FastMultipoleMethod(
+  jaccpot[1gpu] leaf=256 p=5 theta=0.60:    91.44 ms (+walk    0.0)  aggL2=4.071e-04  direct 0.583N  leafpair_gather  !! loadavg>=8 (9.9),other-gpus-busy (77%)
+/export/home/tbuck/Odisseo-bench-multigpu/benchmark_multigpu/codes/compare_force.py:408: DeprecationWarning: Legacy expanse-style kwargs are deprecated in jaccpot.FastMultipoleMethod. Use preset/basis/advanced config objects instead.
+  solver = FastMultipoleMethod(
+  jaccpot[1gpu] leaf=256 p=5 theta=0.70:    74.94 ms (+walk    0.0)  aggL2=3.278e-03  direct 0.427N  leafpair_gather  !! loadavg>=8 (9.6),other-gpus-busy (79%)
+/export/home/tbuck/Odisseo-bench-multigpu/benchmark_multigpu/codes/compare_force.py:408: DeprecationWarning: Legacy expanse-style kwargs are deprecated in jaccpot.FastMultipoleMethod. Use preset/basis/advanced config objects instead.
+  solver = FastMultipoleMethod(
+  jaccpot[1gpu] leaf=256 p=5 theta=0.80:    64.24 ms (+walk    0.0)  aggL2=1.673e-02  direct 0.318N  leafpair_gather  !! loadavg>=8 (12.2),other-gpus-busy (79%)
+/export/home/tbuck/Odisseo-bench-multigpu/benchmark_multigpu/codes/compare_force.py:408: DeprecationWarning: Legacy expanse-style kwargs are deprecated in jaccpot.FastMultipoleMethod. Use preset/basis/advanced config objects instead.
+  solver = FastMultipoleMethod(
+  jaccpot[1gpu] leaf=256 p=5 theta=0.90:    54.08 ms (+walk    0.0)  aggL2=2.672e-02  direct 0.241N  leafpair_gather  !! loadavg>=8 (12.2),other-gpus-busy (78%)
+/export/home/tbuck/Odisseo-bench-multigpu/benchmark_multigpu/codes/compare_force.py:408: DeprecationWarning: Legacy expanse-style kwargs are deprecated in jaccpot.FastMultipoleMethod. Use preset/basis/advanced config objects instead.
+  solver = FastMultipoleMethod(
+  jaccpot[1gpu] leaf=256 p=5 theta=1.00:    45.49 ms (+walk    0.0)  aggL2=7.013e-02  direct 0.180N  leafpair_gather  !! loadavg>=8 (11.7),other-gpus-busy (75%)
+/export/home/tbuck/Odisseo-bench-multigpu/benchmark_multigpu/codes/compare_force.py:408: DeprecationWarning: Legacy expanse-style kwargs are deprecated in jaccpot.FastMultipoleMethod. Use preset/basis/advanced config objects instead.
+  solver = FastMultipoleMethod(
+  jaccpot[1gpu] leaf=256 p=5 theta=1.20:    41.19 ms (+walk    0.0)  aggL2=7.759e+00  direct 0.110N  leafpair_gather  !! loadavg>=8 (11.1),other-gpus-busy (78%)
+/export/home/tbuck/Odisseo-bench-multigpu/benchmark_multigpu/codes/compare_force.py:408: DeprecationWarning: Legacy expanse-style kwargs are deprecated in jaccpot.FastMultipoleMethod. Use preset/basis/advanced config objects instead.
+  solver = FastMultipoleMethod(
+  jaccpot[1gpu] leaf=256 p=6 theta=0.40:   124.12 ms (+walk    0.0)  aggL2=6.555e-06  direct 0.952N  leafpair_gather  !! loadavg>=8 (10.4),other-gpus-busy (96%)
+/export/home/tbuck/Odisseo-bench-multigpu/benchmark_multigpu/codes/compare_force.py:408: DeprecationWarning: Legacy expanse-style kwargs are deprecated in jaccpot.FastMultipoleMethod. Use preset/basis/advanced config objects instead.
+  solver = FastMultipoleMethod(
+  jaccpot[1gpu] leaf=256 p=6 theta=0.50:   109.35 ms (+walk    0.0)  aggL2=3.674e-05  direct 0.780N  leafpair_gather  !! loadavg>=8 (14.8),other-gpus-busy (86%)
+/export/home/tbuck/Odisseo-bench-multigpu/benchmark_multigpu/codes/compare_force.py:408: DeprecationWarning: Legacy expanse-style kwargs are deprecated in jaccpot.FastMultipoleMethod. Use preset/basis/advanced config objects instead.
+  solver = FastMultipoleMethod(
+  jaccpot[1gpu] leaf=256 p=6 theta=0.60:    89.39 ms (+walk    0.0)  aggL2=2.578e-04  direct 0.583N  leafpair_gather  !! loadavg>=8 (14.7),other-gpus-busy (78%)
+/export/home/tbuck/Odisseo-bench-multigpu/benchmark_multigpu/codes/compare_force.py:408: DeprecationWarning: Legacy expanse-style kwargs are deprecated in jaccpot.FastMultipoleMethod. Use preset/basis/advanced config objects instead.
+  solver = FastMultipoleMethod(
+  jaccpot[1gpu] leaf=256 p=6 theta=0.70:    75.19 ms (+walk    0.0)  aggL2=3.737e-03  direct 0.427N  leafpair_gather  !! loadavg>=8 (13.1),other-gpus-busy (78%)
+/export/home/tbuck/Odisseo-bench-multigpu/benchmark_multigpu/codes/compare_force.py:408: DeprecationWarning: Legacy expanse-style kwargs are deprecated in jaccpot.FastMultipoleMethod. Use preset/basis/advanced config objects instead.
+  solver = FastMultipoleMethod(
+  jaccpot[1gpu] leaf=256 p=6 theta=0.80:    61.76 ms (+walk    0.0)  aggL2=2.583e-02  direct 0.318N  leafpair_gather  !! loadavg>=8 (12.4),other-gpus-busy (78%)
+/export/home/tbuck/Odisseo-bench-multigpu/benchmark_multigpu/codes/compare_force.py:408: DeprecationWarning: Legacy expanse-style kwargs are deprecated in jaccpot.FastMultipoleMethod. Use preset/basis/advanced config objects instead.
+  solver = FastMultipoleMethod(
+  jaccpot[1gpu] leaf=256 p=6 theta=0.90:    55.52 ms (+walk    0.0)  aggL2=3.331e-02  direct 0.241N  leafpair_gather  !! loadavg>=8 (12.5),other-gpus-busy (77%)
+/export/home/tbuck/Odisseo-bench-multigpu/benchmark_multigpu/codes/compare_force.py:408: DeprecationWarning: Legacy expanse-style kwargs are deprecated in jaccpot.FastMultipoleMethod. Use preset/basis/advanced config objects instead.
+  solver = FastMultipoleMethod(
+  jaccpot[1gpu] leaf=256 p=6 theta=1.00:    46.97 ms (+walk    0.0)  aggL2=2.118e-01  direct 0.180N  leafpair_gather  !! loadavg>=8 (11.9),other-gpus-busy (78%)
+/export/home/tbuck/Odisseo-bench-multigpu/benchmark_multigpu/codes/compare_force.py:408: DeprecationWarning: Legacy expanse-style kwargs are deprecated in jaccpot.FastMultipoleMethod. Use preset/basis/advanced config objects instead.
+  solver = FastMultipoleMethod(
+  jaccpot[1gpu] leaf=256 p=6 theta=1.20:    37.48 ms (+walk    0.0)  aggL2=7.611e+01  direct 0.110N  leafpair_gather  !! loadavg>=8 (10.9),other-gpus-busy (79%)
+
+wrote artifacts/compare_force_plummer200k_jaccpot_2026-09-06.json

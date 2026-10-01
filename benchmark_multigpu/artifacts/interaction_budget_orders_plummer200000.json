@@ -1,0 +1,929 @@
+{
+  "provenance": {
+    "timestamp_utc": "2026-09-05T21:54:40.787086+00:00",
+    "repos": {
+      "jaccpot": {
+        "sha": "c1cede7",
+        "branch": "main",
+        "dirty": true
+      },
+      "yggdrax": {
+        "sha": "a22472f",
+        "branch": "paper/differentiable-applications",
+        "dirty": true
+      },
+      "jztree": {
+        "sha": "ee82fa2",
+        "branch": "main",
+        "dirty": false
+      },
+      "odisseo_bench": {
+        "sha": "2da9e8e",
+        "branch": "bench/multi-gpu",
+        "dirty": true
+      }
+    },
+    "jax_version": "0.10.2",
+    "jax_backend": "gpu",
+    "devices": [
+      {
+        "id": 0,
+        "kind": "NVIDIA A100-PCIE-40GB",
+        "platform": "gpu"
+      }
+    ],
+    "nvidia_smi": "0, NVIDIA A100-PCIE-40GB, 40960 MiB, 595.71.05\n1, NVIDIA A100-PCIE-40GB, 40960 MiB, 595.71.05\n2, NVIDIA A100-PCIE-40GB, 40960 MiB, 595.71.05\n3, NVIDIA A100-PCIE-40GB, 40960 MiB, 595.71.05\n4, NVIDIA A100-PCIE-40GB, 40960 MiB, 595.71.05\n5, NVIDIA A100-PCIE-40GB, 40960 MiB, 595.71.05\n6, NVIDIA A100-PCIE-40GB, 40960 MiB, 595.71.05\n7, NVIDIA A100-PCIE-40GB, 40960 MiB, 595.71.05",
+    "benchmark": "interaction_budget",
+    "args": {
+      "n": 200000,
+      "ic": "plummer",
+      "leafs": [
+        256
+      ],
+      "thetas": [
+        0.6,
+        0.8
+      ],
+      "orders": [
+        2,
+        3,
+        4,
+        5,
+        6
+      ],
+      "repeats": 5,
+      "warmup": 2,
+      "softening": 1e-07,
+      "edge_cap": null,
+      "set_env": [],
+      "no_reference": false,
+      "out": "artifacts/interaction_budget_orders_plummer200000.json"
+    }
+  },
+  "ic": {
+    "name": "plummer",
+    "n": 200000,
+    "softening": 1e-07
+  },
+  "devices": [
+    5
+  ],
+  "fast_lane_env": {
+    "JACCPOT_STATIC_STRICT_GPU_MODE": "on",
+    "JACCPOT_STATIC_STRICT_FUSED_MODE": "on",
+    "JACCPOT_LARGE_N_STATIC_TARGET_BLOCKS": "1",
+    "JACCPOT_LARGE_N_TARGET_BLOCK_SIZE": "4",
+    "JACCPOT_LARGE_N_STATIC_TARGET_BLOCKS_MAX_PER_LEAF": "64",
+    "JACCPOT_LARGE_N_NEIGHBOR_EDGE_PROFILE_FIXED_CAP": "2097152",
+    "JACCPOT_STATIC_STRICT_REQUIRE_EXACT_CAP_PROFILE_MATCH": "0",
+    "JACCPOT_STATIC_STRICT_FUSED_DEVICE_ONLY": "1",
+    "JACCPOT_STATIC_STRICT_FUSED_DISALLOW_HOST_SEGMENT_FALLBACK": "1",
+    "JACCPOT_STATIC_STRICT_FUSED_FLAT_COMPACT_FAR_PAIRS": "1",
+    "JACCPOT_STATIC_STRICT_FUSED_COMPACT_FAR_PAIR_CAP": "131072",
+    "JACCPOT_LARGE_N_COMPILED_STATE_MODE": "on",
+    "JACCPOT_LARGE_N_RADIX_FAST_PAYLOAD_IN_FUSED": "1",
+    "JACCPOT_STATIC_STRICT_FUSED_PROFILE_SET": "200000"
+  },
+  "rows": [
+    {
+      "leaf": 256,
+      "theta": 0.6,
+      "order": 2,
+      "n": 200000,
+      "force_eval_s": {
+        "min": 0.09066357649862766,
+        "median": 0.09389396384358406,
+        "iqr": 0.0066441637463867664,
+        "max": 0.09915277920663357,
+        "mean": 0.09481384363025427,
+        "std": 0.003120268975101807,
+        "samples": [
+          0.09915277920663357,
+          0.09277988690882921,
+          0.09066357649862766,
+          0.09389396384358406,
+          0.09757901169359684
+        ]
+      },
+      "contention": {
+        "devices": [
+          5
+        ],
+        "n_samples": 4,
+        "duration_s": 2.6812541484832764,
+        "foreign_pids_on_devices": [],
+        "own_util_max": {
+          "5": 99
+        },
+        "other_gpu_util_max": 78,
+        "loadavg1_max": 9.57275390625,
+        "loadavg1_min": 9.04638671875,
+        "cores": 64,
+        "contaminated": false,
+        "flags": [
+          "loadavg>=8 (9.6)",
+          "other-gpus-busy (78%)"
+        ]
+      },
+      "errors": {
+        "median": 0.005048158902075127,
+        "p90": 0.02523946596001121,
+        "max": 0.820421198464766,
+        "aggL2": 0.00880277129203198,
+        "aggL2_signflip": 1.9996736857049953
+      },
+      "budget": {
+        "num_leaves": 782,
+        "neighbor_entries_directed": 356082,
+        "neighbor_pairs_undirected": 178041,
+        "unmatched_directions": 0,
+        "self_entries": 0,
+        "mean_neighbor_leaves_per_leaf": 455.3478260869565,
+        "max_neighbor_leaves_per_leaf": 781,
+        "occupancy_mean": 255.7544757033248,
+        "occupancy_min": 64,
+        "occupancy_max": 256,
+        "direct_sources_per_target_mean": 116552.0112,
+        "direct_sources_per_target_median": 104255.0,
+        "direct_sources_per_target_p90": 191807.0,
+        "direct_sources_per_target_max": 199999,
+        "direct_share_of_N": 0.5827600559999999,
+        "p2p_pair_evaluations": 23310402240.0
+      },
+      "fused_mode_active": true,
+      "recent_dual_neighbor_count": 356082,
+      "recent_dual_far_pair_count": 131072,
+      "static_radix_far_pair_count": 0,
+      "walk_seconds": {
+        "refresh_dual_setup_seconds": 0.0,
+        "refresh_dual_artifact_build_seconds": 0.0,
+        "refresh_dual_select_interactions_seconds": 0.0,
+        "refresh_dual_far_pair_plan_seconds": 0.0,
+        "refresh_dual_split_combined_seconds": 0.0,
+        "refresh_dual_split_far_pairs_seconds": 0.0,
+        "refresh_dual_split_leaf_neighbors_seconds": 0.0,
+        "refresh_dual_raw_combined_seconds": 0.0,
+        "refresh_tree_build_seconds": 0.0,
+        "refresh_tree_upward_seconds": 0.0,
+        "refresh_nearfield_seconds": 0.0,
+        "refresh_total_seconds": 0.0
+      }
+    },
+    {
+      "leaf": 256,
+      "theta": 0.8,
+      "order": 2,
+      "n": 200000,
+      "force_eval_s": {
+        "min": 0.06198083236813545,
+        "median": 0.06595464237034321,
+        "iqr": 0.005819709040224552,
+        "max": 0.06876830663532019,
+        "mean": 0.06521107442677021,
+        "std": 0.0026827219285245124,
+        "samples": [
+          0.06876830663532019,
+          0.06595464237034321,
+          0.06198083236813545,
+          0.06710176728665829,
+          0.06224982347339392
+        ]
+      },
+      "contention": {
+        "devices": [
+          5
+        ],
+        "n_samples": 3,
+        "duration_s": 1.8521146774291992,
+        "foreign_pids_on_devices": [],
+        "own_util_max": {
+          "5": 99
+        },
+        "other_gpu_util_max": 79,
+        "loadavg1_max": 9.123046875,
+        "loadavg1_min": 9.123046875,
+        "cores": 64,
+        "contaminated": false,
+        "flags": [
+          "loadavg>=8 (9.1)",
+          "other-gpus-busy (79%)"
+        ]
+      },
+      "errors": {
+        "median": 0.01432638590529697,
+        "p90": 0.06406726082853521,
+        "max": 3.8732379115101283,
+        "aggL2": 0.02047268581037626,
+        "aggL2_signflip": 1.9992785178298342
+      },
+      "budget": {
+        "num_leaves": 782,
+        "neighbor_entries_directed": 194742,
+        "neighbor_pairs_undirected": 97371,
+        "unmatched_directions": 0,
+        "self_entries": 0,
+        "mean_neighbor_leaves_per_leaf": 249.0306905370844,
+        "max_neighbor_leaves_per_leaf": 781,
+        "occupancy_mean": 255.7544757033248,
+        "occupancy_min": 64,
+        "occupancy_max": 256,
+        "direct_sources_per_target_mean": 63684.12,
+        "direct_sources_per_target_median": 49983.0,
+        "direct_sources_per_target_p90": 102463.0,
+        "direct_sources_per_target_max": 199999,
+        "direct_share_of_N": 0.3184206,
+        "p2p_pair_evaluations": 12736824000.0
+      },
+      "fused_mode_active": true,
+      "recent_dual_neighbor_count": 194742,
+      "recent_dual_far_pair_count": 131072,
+      "static_radix_far_pair_count": 0,
+      "walk_seconds": {
+        "refresh_dual_setup_seconds": 0.0,
+        "refresh_dual_artifact_build_seconds": 0.0,
+        "refresh_dual_select_interactions_seconds": 0.0,
+        "refresh_dual_far_pair_plan_seconds": 0.0,
+        "refresh_dual_split_combined_seconds": 0.0,
+        "refresh_dual_split_far_pairs_seconds": 0.0,
+        "refresh_dual_split_leaf_neighbors_seconds": 0.0,
+        "refresh_dual_raw_combined_seconds": 0.0,
+        "refresh_tree_build_seconds": 0.0,
+        "refresh_tree_upward_seconds": 0.0,
+        "refresh_nearfield_seconds": 0.0,
+        "refresh_total_seconds": 0.0
+      }
+    },
+    {
+      "leaf": 256,
+      "theta": 0.6,
+      "order": 3,
+      "n": 200000,
+      "force_eval_s": {
+        "min": 0.09123547933995724,
+        "median": 0.09280840773135424,
+        "iqr": 0.0033607869409024715,
+        "max": 0.09588596224784851,
+        "mean": 0.09297368042171002,
+        "std": 0.0016842564682192384,
+        "samples": [
+          0.09143373090773821,
+          0.09123547933995724,
+          0.09280840773135424,
+          0.09350482188165188,
+          0.09588596224784851
+        ]
+      },
+      "contention": {
+        "devices": [
+          5
+        ],
+        "n_samples": 4,
+        "duration_s": 3.022373676300049,
+        "foreign_pids_on_devices": [],
+        "own_util_max": {
+          "5": 100
+        },
+        "other_gpu_util_max": 81,
+        "loadavg1_max": 8.79248046875,
+        "loadavg1_min": 8.64892578125,
+        "cores": 64,
+        "contaminated": false,
+        "flags": [
+          "loadavg>=8 (8.8)",
+          "other-gpus-busy (81%)"
+        ]
+      },
+      "errors": {
+        "median": 0.0007130482803232726,
+        "p90": 0.005750826391082653,
+        "max": 0.6547562149699321,
+        "aggL2": 0.002324144039449001,
+        "aggL2_signflip": 2.000001576933799
+      },
+      "budget": {
+        "num_leaves": 782,
+        "neighbor_entries_directed": 356082,
+        "neighbor_pairs_undirected": 178041,
+        "unmatched_directions": 0,
+        "self_entries": 0,
+        "mean_neighbor_leaves_per_leaf": 455.3478260869565,
+        "max_neighbor_leaves_per_leaf": 781,
+        "occupancy_mean": 255.7544757033248,
+        "occupancy_min": 64,
+        "occupancy_max": 256,
+        "direct_sources_per_target_mean": 116552.0112,
+        "direct_sources_per_target_median": 104255.0,
+        "direct_sources_per_target_p90": 191807.0,
+        "direct_sources_per_target_max": 199999,
+        "direct_share_of_N": 0.5827600559999999,
+        "p2p_pair_evaluations": 23310402240.0
+      },
+      "fused_mode_active": true,
+      "recent_dual_neighbor_count": 356082,
+      "recent_dual_far_pair_count": 131072,
+      "static_radix_far_pair_count": 0,
+      "walk_seconds": {
+        "refresh_dual_setup_seconds": 0.0,
+        "refresh_dual_artifact_build_seconds": 0.0,
+        "refresh_dual_select_interactions_seconds": 0.0,
+        "refresh_dual_far_pair_plan_seconds": 0.0,
+        "refresh_dual_split_combined_seconds": 0.0,
+        "refresh_dual_split_far_pairs_seconds": 0.0,
+        "refresh_dual_split_leaf_neighbors_seconds": 0.0,
+        "refresh_dual_raw_combined_seconds": 0.0,
+        "refresh_tree_build_seconds": 0.0,
+        "refresh_tree_upward_seconds": 0.0,
+        "refresh_nearfield_seconds": 0.0,
+        "refresh_total_seconds": 0.0
+      }
+    },
+    {
+      "leaf": 256,
+      "theta": 0.8,
+      "order": 3,
+      "n": 200000,
+      "force_eval_s": {
+        "min": 0.06214740313589573,
+        "median": 0.06712968926876783,
+        "iqr": 0.005464592017233372,
+        "max": 0.06827665399760008,
+        "mean": 0.06572416741400958,
+        "std": 0.002564226001395077,
+        "samples": [
+          0.0679335119202733,
+          0.06827665399760008,
+          0.06712968926876783,
+          0.06313357874751091,
+          0.06214740313589573
+        ]
+      },
+      "contention": {
+        "devices": [
+          5
+        ],
+        "n_samples": 3,
+        "duration_s": 2.19541597366333,
+        "foreign_pids_on_devices": [],
+        "own_util_max": {
+          "5": 99
+        },
+        "other_gpu_util_max": 100,
+        "loadavg1_max": 9.39794921875,
+        "loadavg1_min": 8.64892578125,
+        "cores": 64,
+        "contaminated": false,
+        "flags": [
+          "loadavg>=8 (9.4)",
+          "other-gpus-busy (100%)"
+        ]
+      },
+      "errors": {
+        "median": 0.003299094331664917,
+        "p90": 0.019163722577215533,
+        "max": 7.259138985138558,
+        "aggL2": 0.010228228497577119,
+        "aggL2_signflip": 2.000017498757375
+      },
+      "budget": {
+        "num_leaves": 782,
+        "neighbor_entries_directed": 194742,
+        "neighbor_pairs_undirected": 97371,
+        "unmatched_directions": 0,
+        "self_entries": 0,
+        "mean_neighbor_leaves_per_leaf": 249.0306905370844,
+        "max_neighbor_leaves_per_leaf": 781,
+        "occupancy_mean": 255.7544757033248,
+        "occupancy_min": 64,
+        "occupancy_max": 256,
+        "direct_sources_per_target_mean": 63684.12,
+        "direct_sources_per_target_median": 49983.0,
+        "direct_sources_per_target_p90": 102463.0,
+        "direct_sources_per_target_max": 199999,
+        "direct_share_of_N": 0.3184206,
+        "p2p_pair_evaluations": 12736824000.0
+      },
+      "fused_mode_active": true,
+      "recent_dual_neighbor_count": 194742,
+      "recent_dual_far_pair_count": 131072,
+      "static_radix_far_pair_count": 0,
+      "walk_seconds": {
+        "refresh_dual_setup_seconds": 0.0,
+        "refresh_dual_artifact_build_seconds": 0.0,
+        "refresh_dual_select_interactions_seconds": 0.0,
+        "refresh_dual_far_pair_plan_seconds": 0.0,
+        "refresh_dual_split_combined_seconds": 0.0,
+        "refresh_dual_split_far_pairs_seconds": 0.0,
+        "refresh_dual_split_leaf_neighbors_seconds": 0.0,
+        "refresh_dual_raw_combined_seconds": 0.0,
+        "refresh_tree_build_seconds": 0.0,
+        "refresh_tree_upward_seconds": 0.0,
+        "refresh_nearfield_seconds": 0.0,
+        "refresh_total_seconds": 0.0
+      }
+    },
+    {
+      "leaf": 256,
+      "theta": 0.6,
+      "order": 4,
+      "n": 200000,
+      "force_eval_s": {
+        "min": 0.08945719338953495,
+        "median": 0.0917513370513916,
+        "iqr": 0.0027723703533411026,
+        "max": 0.09266962110996246,
+        "mean": 0.09128762371838092,
+        "std": 0.0012802640909189361,
+        "samples": [
+          0.0917513370513916,
+          0.08945719338953495,
+          0.09266962110996246,
+          0.09244614001363516,
+          0.09011382702738047
+        ]
+      },
+      "contention": {
+        "devices": [
+          5
+        ],
+        "n_samples": 5,
+        "duration_s": 4.1519880294799805,
+        "foreign_pids_on_devices": [],
+        "own_util_max": {
+          "5": 99
+        },
+        "other_gpu_util_max": 81,
+        "loadavg1_max": 9.330078125,
+        "loadavg1_min": 9.330078125,
+        "cores": 64,
+        "contaminated": false,
+        "flags": [
+          "loadavg>=8 (9.3)",
+          "other-gpus-busy (81%)"
+        ]
+      },
+      "errors": {
+        "median": 0.0001643785015600131,
+        "p90": 0.0013348699401265936,
+        "max": 0.5970769613060022,
+        "aggL2": 0.0008435006781550692,
+        "aggL2_signflip": 1.999992597377943
+      },
+      "budget": {
+        "num_leaves": 782,
+        "neighbor_entries_directed": 356082,
+        "neighbor_pairs_undirected": 178041,
+        "unmatched_directions": 0,
+        "self_entries": 0,
+        "mean_neighbor_leaves_per_leaf": 455.3478260869565,
+        "max_neighbor_leaves_per_leaf": 781,
+        "occupancy_mean": 255.7544757033248,
+        "occupancy_min": 64,
+        "occupancy_max": 256,
+        "direct_sources_per_target_mean": 116552.0112,
+        "direct_sources_per_target_median": 104255.0,
+        "direct_sources_per_target_p90": 191807.0,
+        "direct_sources_per_target_max": 199999,
+        "direct_share_of_N": 0.5827600559999999,
+        "p2p_pair_evaluations": 23310402240.0
+      },
+      "fused_mode_active": true,
+      "recent_dual_neighbor_count": 356082,
+      "recent_dual_far_pair_count": 131072,
+      "static_radix_far_pair_count": 0,
+      "walk_seconds": {
+        "refresh_dual_setup_seconds": 0.0,
+        "refresh_dual_artifact_build_seconds": 0.0,
+        "refresh_dual_select_interactions_seconds": 0.0,
+        "refresh_dual_far_pair_plan_seconds": 0.0,
+        "refresh_dual_split_combined_seconds": 0.0,
+        "refresh_dual_split_far_pairs_seconds": 0.0,
+        "refresh_dual_split_leaf_neighbors_seconds": 0.0,
+        "refresh_dual_raw_combined_seconds": 0.0,
+        "refresh_tree_build_seconds": 0.0,
+        "refresh_tree_upward_seconds": 0.0,
+        "refresh_nearfield_seconds": 0.0,
+        "refresh_total_seconds": 0.0
+      }
+    },
+    {
+      "leaf": 256,
+      "theta": 0.8,
+      "order": 4,
+      "n": 200000,
+      "force_eval_s": {
+        "min": 0.06371795572340488,
+        "median": 0.06688357144594193,
+        "iqr": 0.00899176299571991,
+        "max": 0.07747331820428371,
+        "mean": 0.068610754981637,
+        "std": 0.004835720034253444,
+        "samples": [
+          0.06960354652255774,
+          0.07747331820428371,
+          0.06371795572340488,
+          0.06537538301199675,
+          0.06688357144594193
+        ]
+      },
+      "contention": {
+        "devices": [
+          5
+        ],
+        "n_samples": 4,
+        "duration_s": 3.255150556564331,
+        "foreign_pids_on_devices": [],
+        "own_util_max": {
+          "5": 96
+        },
+        "other_gpu_util_max": 80,
+        "loadavg1_max": 9.9443359375,
+        "loadavg1_min": 9.46826171875,
+        "cores": 64,
+        "contaminated": false,
+        "flags": [
+          "loadavg>=8 (9.9)",
+          "other-gpus-busy (80%)"
+        ]
+      },
+      "errors": {
+        "median": 0.0012477376499662185,
+        "p90": 0.006459742929417331,
+        "max": 12.266488871067523,
+        "aggL2": 0.011706759594835194,
+        "aggL2_signflip": 1.999964837803718
+      },
+      "budget": {
+        "num_leaves": 782,
+        "neighbor_entries_directed": 194742,
+        "neighbor_pairs_undirected": 97371,
+        "unmatched_directions": 0,
+        "self_entries": 0,
+        "mean_neighbor_leaves_per_leaf": 249.0306905370844,
+        "max_neighbor_leaves_per_leaf": 781,
+        "occupancy_mean": 255.7544757033248,
+        "occupancy_min": 64,
+        "occupancy_max": 256,
+        "direct_sources_per_target_mean": 63684.12,
+        "direct_sources_per_target_median": 49983.0,
+        "direct_sources_per_target_p90": 102463.0,
+        "direct_sources_per_target_max": 199999,
+        "direct_share_of_N": 0.3184206,
+        "p2p_pair_evaluations": 12736824000.0
+      },
+      "fused_mode_active": true,
+      "recent_dual_neighbor_count": 194742,
+      "recent_dual_far_pair_count": 131072,
+      "static_radix_far_pair_count": 0,
+      "walk_seconds": {
+        "refresh_dual_setup_seconds": 0.0,
+        "refresh_dual_artifact_build_seconds": 0.0,
+        "refresh_dual_select_interactions_seconds": 0.0,
+        "refresh_dual_far_pair_plan_seconds": 0.0,
+        "refresh_dual_split_combined_seconds": 0.0,
+        "refresh_dual_split_far_pairs_seconds": 0.0,
+        "refresh_dual_split_leaf_neighbors_seconds": 0.0,
+        "refresh_dual_raw_combined_seconds": 0.0,
+        "refresh_tree_build_seconds": 0.0,
+        "refresh_tree_upward_seconds": 0.0,
+        "refresh_nearfield_seconds": 0.0,
+        "refresh_total_seconds": 0.0
+      }
+    },
+    {
+      "leaf": 256,
+      "theta": 0.6,
+      "order": 5,
+      "n": 200000,
+      "force_eval_s": {
+        "min": 0.09105324279516935,
+        "median": 0.09288862254470587,
+        "iqr": 0.007570435758680105,
+        "max": 0.10490585770457983,
+        "mean": 0.09500334784388542,
+        "std": 0.005026505527570283,
+        "samples": [
+          0.10490585770457983,
+          0.09244037978351116,
+          0.09105324279516935,
+          0.0937286363914609,
+          0.09288862254470587
+        ]
+      },
+      "contention": {
+        "devices": [
+          5
+        ],
+        "n_samples": 8,
+        "duration_s": 6.13337516784668,
+        "foreign_pids_on_devices": [],
+        "own_util_max": {
+          "5": 99
+        },
+        "other_gpu_util_max": 83,
+        "loadavg1_max": 10.34765625,
+        "loadavg1_min": 10.1591796875,
+        "cores": 64,
+        "contaminated": false,
+        "flags": [
+          "loadavg>=8 (10.3)",
+          "other-gpus-busy (83%)"
+        ]
+      },
+      "errors": {
+        "median": 5.4374194274971806e-05,
+        "p90": 0.00034016788317611964,
+        "max": 0.564285043932755,
+        "aggL2": 0.0004070626400486573,
+        "aggL2_signflip": 1.9999953303748406
+      },
+      "budget": {
+        "num_leaves": 782,
+        "neighbor_entries_directed": 356082,
+        "neighbor_pairs_undirected": 178041,
+        "unmatched_directions": 0,
+        "self_entries": 0,
+        "mean_neighbor_leaves_per_leaf": 455.3478260869565,
+        "max_neighbor_leaves_per_leaf": 781,
+        "occupancy_mean": 255.7544757033248,
+        "occupancy_min": 64,
+        "occupancy_max": 256,
+        "direct_sources_per_target_mean": 116552.0112,
+        "direct_sources_per_target_median": 104255.0,
+        "direct_sources_per_target_p90": 191807.0,
+        "direct_sources_per_target_max": 199999,
+        "direct_share_of_N": 0.5827600559999999,
+        "p2p_pair_evaluations": 23310402240.0
+      },
+      "fused_mode_active": true,
+      "recent_dual_neighbor_count": 356082,
+      "recent_dual_far_pair_count": 131072,
+      "static_radix_far_pair_count": 0,
+      "walk_seconds": {
+        "refresh_dual_setup_seconds": 0.0,
+        "refresh_dual_artifact_build_seconds": 0.0,
+        "refresh_dual_select_interactions_seconds": 0.0,
+        "refresh_dual_far_pair_plan_seconds": 0.0,
+        "refresh_dual_split_combined_seconds": 0.0,
+        "refresh_dual_split_far_pairs_seconds": 0.0,
+        "refresh_dual_split_leaf_neighbors_seconds": 0.0,
+        "refresh_dual_raw_combined_seconds": 0.0,
+        "refresh_tree_build_seconds": 0.0,
+        "refresh_tree_upward_seconds": 0.0,
+        "refresh_nearfield_seconds": 0.0,
+        "refresh_total_seconds": 0.0
+      }
+    },
+    {
+      "leaf": 256,
+      "theta": 0.8,
+      "order": 5,
+      "n": 200000,
+      "force_eval_s": {
+        "min": 0.06412191689014435,
+        "median": 0.06665743049234152,
+        "iqr": 0.005455239675939083,
+        "max": 0.0720958998426795,
+        "mean": 0.06706891674548388,
+        "std": 0.002822344231157408,
+        "samples": [
+          0.0647664200514555,
+          0.06770291645079851,
+          0.06665743049234152,
+          0.0720958998426795,
+          0.06412191689014435
+        ]
+      },
+      "contention": {
+        "devices": [
+          5
+        ],
+        "n_samples": 6,
+        "duration_s": 4.8176186084747314,
+        "foreign_pids_on_devices": [],
+        "own_util_max": {
+          "5": 99
+        },
+        "other_gpu_util_max": 100,
+        "loadavg1_max": 9.90576171875,
+        "loadavg1_min": 9.7529296875,
+        "cores": 64,
+        "contaminated": false,
+        "flags": [
+          "loadavg>=8 (9.9)",
+          "other-gpus-busy (100%)"
+        ]
+      },
+      "errors": {
+        "median": 0.0006842476296216339,
+        "p90": 0.003699360712529258,
+        "max": 19.761998651896597,
+        "aggL2": 0.016726268339696888,
+        "aggL2_signflip": 2.0001192752816914
+      },
+      "budget": {
+        "num_leaves": 782,
+        "neighbor_entries_directed": 194742,
+        "neighbor_pairs_undirected": 97371,
+        "unmatched_directions": 0,
+        "self_entries": 0,
+        "mean_neighbor_leaves_per_leaf": 249.0306905370844,
+        "max_neighbor_leaves_per_leaf": 781,
+        "occupancy_mean": 255.7544757033248,
+        "occupancy_min": 64,
+        "occupancy_max": 256,
+        "direct_sources_per_target_mean": 63684.12,
+        "direct_sources_per_target_median": 49983.0,
+        "direct_sources_per_target_p90": 102463.0,
+        "direct_sources_per_target_max": 199999,
+        "direct_share_of_N": 0.3184206,
+        "p2p_pair_evaluations": 12736824000.0
+      },
+      "fused_mode_active": true,
+      "recent_dual_neighbor_count": 194742,
+      "recent_dual_far_pair_count": 131072,
+      "static_radix_far_pair_count": 0,
+      "walk_seconds": {
+        "refresh_dual_setup_seconds": 0.0,
+        "refresh_dual_artifact_build_seconds": 0.0,
+        "refresh_dual_select_interactions_seconds": 0.0,
+        "refresh_dual_far_pair_plan_seconds": 0.0,
+        "refresh_dual_split_combined_seconds": 0.0,
+        "refresh_dual_split_far_pairs_seconds": 0.0,
+        "refresh_dual_split_leaf_neighbors_seconds": 0.0,
+        "refresh_dual_raw_combined_seconds": 0.0,
+        "refresh_tree_build_seconds": 0.0,
+        "refresh_tree_upward_seconds": 0.0,
+        "refresh_nearfield_seconds": 0.0,
+        "refresh_total_seconds": 0.0
+      }
+    },
+    {
+      "leaf": 256,
+      "theta": 0.6,
+      "order": 6,
+      "n": 200000,
+      "force_eval_s": {
+        "min": 0.09106143191456795,
+        "median": 0.09203754737973213,
+        "iqr": 0.0033375429920852184,
+        "max": 0.09475256130099297,
+        "mean": 0.09279695320874452,
+        "std": 0.0015498751809953893,
+        "samples": [
+          0.0945585910230875,
+          0.09203754737973213,
+          0.09157463442534208,
+          0.09475256130099297,
+          0.09106143191456795
+        ]
+      },
+      "contention": {
+        "devices": [
+          5
+        ],
+        "n_samples": 13,
+        "duration_s": 10.28499984741211,
+        "foreign_pids_on_devices": [],
+        "own_util_max": {
+          "5": 99
+        },
+        "other_gpu_util_max": 99,
+        "loadavg1_max": 9.888671875,
+        "loadavg1_min": 9.7373046875,
+        "cores": 64,
+        "contaminated": false,
+        "flags": [
+          "loadavg>=8 (9.9)",
+          "other-gpus-busy (99%)"
+        ]
+      },
+      "errors": {
+        "median": 2.1549821681305383e-05,
+        "p90": 0.00012338196400721289,
+        "max": 0.613075134341803,
+        "aggL2": 0.0002578419364961699,
+        "aggL2_signflip": 2.000003237711236
+      },
+      "budget": {
+        "num_leaves": 782,
+        "neighbor_entries_directed": 356082,
+        "neighbor_pairs_undirected": 178041,
+        "unmatched_directions": 0,
+        "self_entries": 0,
+        "mean_neighbor_leaves_per_leaf": 455.3478260869565,
+        "max_neighbor_leaves_per_leaf": 781,
+        "occupancy_mean": 255.7544757033248,
+        "occupancy_min": 64,
+        "occupancy_max": 256,
+        "direct_sources_per_target_mean": 116552.0112,
+        "direct_sources_per_target_median": 104255.0,
+        "direct_sources_per_target_p90": 191807.0,
+        "direct_sources_per_target_max": 199999,
+        "direct_share_of_N": 0.5827600559999999,
+        "p2p_pair_evaluations": 23310402240.0
+      },
+      "fused_mode_active": true,
+      "recent_dual_neighbor_count": 356082,
+      "recent_dual_far_pair_count": 131072,
+      "static_radix_far_pair_count": 0,
+      "walk_seconds": {
+        "refresh_dual_setup_seconds": 0.0,
+        "refresh_dual_artifact_build_seconds": 0.0,
+        "refresh_dual_select_interactions_seconds": 0.0,
+        "refresh_dual_far_pair_plan_seconds": 0.0,
+        "refresh_dual_split_combined_seconds": 0.0,
+        "refresh_dual_split_far_pairs_seconds": 0.0,
+        "refresh_dual_split_leaf_neighbors_seconds": 0.0,
+        "refresh_dual_raw_combined_seconds": 0.0,
+        "refresh_tree_build_seconds": 0.0,
+        "refresh_tree_upward_seconds": 0.0,
+        "refresh_nearfield_seconds": 0.0,
+        "refresh_total_seconds": 0.0
+      }
+    },
+    {
+      "leaf": 256,
+      "theta": 0.8,
+      "order": 6,
+      "n": 200000,
+      "force_eval_s": {
+        "min": 0.06141506228595972,
+        "median": 0.06383279524743557,
+        "iqr": 0.01160097261890769,
+        "max": 0.07502404600381851,
+        "mean": 0.06715442892163992,
+        "std": 0.0055249724890500205,
+        "samples": [
+          0.07502404600381851,
+          0.07254660129547119,
+          0.06141506228595972,
+          0.06383279524743557,
+          0.0629536397755146
+        ]
+      },
+      "contention": {
+        "devices": [
+          5
+        ],
+        "n_samples": 12,
+        "duration_s": 8.977318525314331,
+        "foreign_pids_on_devices": [],
+        "own_util_max": {
+          "5": 100
+        },
+        "other_gpu_util_max": 83,
+        "loadavg1_max": 10.57568359375,
+        "loadavg1_min": 9.45751953125,
+        "cores": 64,
+        "contaminated": false,
+        "flags": [
+          "loadavg>=8 (10.6)",
+          "other-gpus-busy (83%)"
+        ]
+      },
+      "errors": {
+        "median": 0.00046283997646220324,
+        "p90": 0.0035014475585037137,
+        "max": 32.65316882936533,
+        "aggL2": 0.02583498376723834,
+        "aggL2_signflip": 2.0002106343594797
+      },
+      "budget": {
+        "num_leaves": 782,
+        "neighbor_entries_directed": 194742,
+        "neighbor_pairs_undirected": 97371,
+        "unmatched_directions": 0,
+        "self_entries": 0,
+        "mean_neighbor_leaves_per_leaf": 249.0306905370844,
+        "max_neighbor_leaves_per_leaf": 781,
+        "occupancy_mean": 255.7544757033248,
+        "occupancy_min": 64,
+        "occupancy_max": 256,
+        "direct_sources_per_target_mean": 63684.12,
+        "direct_sources_per_target_median": 49983.0,
+        "direct_sources_per_target_p90": 102463.0,
+        "direct_sources_per_target_max": 199999,
+        "direct_share_of_N": 0.3184206,
+        "p2p_pair_evaluations": 12736824000.0
+      },
+      "fused_mode_active": true,
+      "recent_dual_neighbor_count": 194742,
+      "recent_dual_far_pair_count": 131072,
+      "static_radix_far_pair_count": 0,
+      "walk_seconds": {
+        "refresh_dual_setup_seconds": 0.0,
+        "refresh_dual_artifact_build_seconds": 0.0,
+        "refresh_dual_select_interactions_seconds": 0.0,
+        "refresh_dual_far_pair_plan_seconds": 0.0,
+        "refresh_dual_split_combined_seconds": 0.0,
+        "refresh_dual_split_far_pairs_seconds": 0.0,
+        "refresh_dual_split_leaf_neighbors_seconds": 0.0,
+        "refresh_dual_raw_combined_seconds": 0.0,
+        "refresh_tree_build_seconds": 0.0,
+        "refresh_tree_upward_seconds": 0.0,
+        "refresh_nearfield_seconds": 0.0,
+        "refresh_total_seconds": 0.0
+      }
+    }
+  ]
+}

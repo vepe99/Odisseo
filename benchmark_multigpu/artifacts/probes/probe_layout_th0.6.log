@@ -1,0 +1,18 @@
+eval-seam state: source_leaf_ids (782, 256, 4) valid (782, 256, 4) target_leaf_ids (782,) (identity: True) rows mean 455.3 max 781 order unsorted; first rows [781, 781, 781, 781, 781, 673] last [647, 763, 781, 781, 781, 781]
+   other payload fields: {'source_particle_ids': (0, 0, 0), 'source_particle_mask': (0, 0, 0), 'batch_tile_t': 16, 'batch_tile_s': 64, 'source_slot_scan_unroll': 1, 'target_batch_scan_unroll': 1, 'fallback_block_tile_size': 4, 'fallback_tile_scan_unroll': 1, 'fallback_batch_scan_unroll': 1}
+   nearfield_target_block_leaf_ids: (0,)
+   nearfield_target_block_source_leaf_ids: (0, 4)
+   nearfield_target_block_valid_mask: (0, 4)
+   nearfield_target_block_offsets: (783,)
+   nearfield_target_block_source_leaf_ids_padded: (782, 256, 4)
+   nearfield_target_block_valid_mask_padded: (782, 256, 4)
+scan state     : source_leaf_ids (782, 256, 4) valid (782, 256, 4) target_leaf_ids (782,) (identity: True) rows mean 69.0 max 128 order unsorted; first rows [126, 62, 62, 126, 62, 62] last [63, 63, 63, 63, 63, 63]
+   other payload fields: {'source_particle_ids': (0, 0, 0), 'source_particle_mask': (0, 0, 0), 'batch_tile_t': 16, 'batch_tile_s': 64, 'source_slot_scan_unroll': 1, 'target_batch_scan_unroll': 1, 'fallback_block_tile_size': 4, 'fallback_tile_scan_unroll': 1, 'fallback_batch_scan_unroll': 1}
+   nearfield_target_block_leaf_ids: (0,)
+   nearfield_target_block_source_leaf_ids: (0, 4)
+   nearfield_target_block_valid_mask: (0, 4)
+   nearfield_target_block_offsets: (783,)
+   nearfield_target_block_source_leaf_ids_padded: (782, 256, 4)
+   nearfield_target_block_valid_mask_padded: (782, 256, 4)
+eval_fn(eval-seam state): 91.49 ms  flags=['loadavg>=8 (10.3)', 'other-gpus-busy (80%)']
+eval_fn(scan state): 21.04 ms  flags=['loadavg>=8 (10.3)', 'other-gpus-busy (76%)']

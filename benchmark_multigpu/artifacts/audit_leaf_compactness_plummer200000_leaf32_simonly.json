@@ -1,0 +1,182 @@
+{
+  "args": {
+    "n": 200000,
+    "ic": "plummer",
+    "leaf": 32,
+    "order": 4,
+    "thetas": [
+      0.6
+    ],
+    "variants": [
+      "morton",
+      "kdtree"
+    ],
+    "max_interactions": 4096,
+    "queue": 262144,
+    "softening": 1e-07,
+    "no_prepare": true,
+    "sim_only": true,
+    "no_onesided": false,
+    "out": "/export/home/tbuck/Odisseo-bench-multigpu/benchmark_multigpu/artifacts/audit_leaf_compactness_plummer200000_leaf32_simonly.json"
+  },
+  "n": 200000,
+  "devices": [
+    0
+  ],
+  "per_theta": {
+    "0.6": {
+      "variants": {
+        "morton": {
+          "variant": "morton",
+          "theta": 0.6,
+          "n": 200000,
+          "num_leaves": 6250,
+          "W": 32,
+          "sim_only": true,
+          "direct_share_median": NaN,
+          "leaf_radius_median": 0.239010788500309,
+          "leaf_radius_max": 488.8804931640625,
+          "walk_seconds": 0.0,
+          "walk_caps": null,
+          "treecode_arm": {
+            "with_m2p": false,
+            "direct_share_mean": 0.09308207839999999,
+            "direct_share_median": 0.066235,
+            "direct_share_p90": 0.113115,
+            "direct_share_max": 0.999995,
+            "D": 3723283136.0,
+            "near_rows_mean": 580.79424,
+            "near_rows_median": 413.0,
+            "near_rows_max": 6249,
+            "far_nodes_per_leaf_mean": 869.47312,
+            "far_nodes_per_leaf_max": 1574,
+            "m2p_nodes_per_leaf_mean": 0.0,
+            "m2p_nodes_per_leaf_max": 0,
+            "m2p_sources_per_target_mean": 0.0,
+            "frac_leaves_box_contains_origin": 0.00208,
+            "share_of_leaves_box_contains_origin_direct_median": 0.999995,
+            "seconds": 4.608369182795286
+          },
+          "m2p_arm": {
+            "with_m2p": true,
+            "direct_share_mean": 0.0427773872,
+            "direct_share_median": 0.039835,
+            "direct_share_p90": 0.049755,
+            "direct_share_max": 0.999995,
+            "D": 1711095488.0,
+            "near_rows_mean": 266.38992,
+            "near_rows_median": 248.0,
+            "near_rows_max": 6249,
+            "far_nodes_per_leaf_mean": 488.49008,
+            "far_nodes_per_leaf_max": 816,
+            "m2p_nodes_per_leaf_mean": 228.7048,
+            "m2p_nodes_per_leaf_max": 1377,
+            "m2p_sources_per_target_mean": 76633.07264,
+            "frac_leaves_box_contains_origin": 0.00208,
+            "share_of_leaves_box_contains_origin_direct_median": 0.969435,
+            "seconds": 4.608369182795286
+          },
+          "K2_share_ratio_treecode_over_m2p": 1.6627337768294213
+        },
+        "kdtree": {
+          "variant": "kdtree",
+          "theta": 0.6,
+          "n": 200000,
+          "num_leaves": 8192,
+          "W": 25,
+          "sim_only": true,
+          "direct_share_median": NaN,
+          "leaf_radius_median": 0.15486156940460205,
+          "leaf_radius_max": 331.8665771484375,
+          "walk_seconds": 0.0,
+          "walk_caps": null,
+          "treecode_arm": {
+            "with_m2p": false,
+            "direct_share_mean": 0.057016731225000006,
+            "direct_share_median": 0.03427,
+            "direct_share_p90": 0.0404,
+            "direct_share_max": 0.999995,
+            "D": 2280669249.0,
+            "near_rows_mean": 466.5760498046875,
+            "near_rows_median": 280.0,
+            "near_rows_max": 8191,
+            "far_nodes_per_leaf_mean": 1079.4053955078125,
+            "far_nodes_per_leaf_max": 1255,
+            "m2p_nodes_per_leaf_mean": 0.0,
+            "m2p_nodes_per_leaf_max": 0,
+            "m2p_sources_per_target_mean": 0.0,
+            "frac_leaves_box_contains_origin": 0.0,
+            "share_of_leaves_box_contains_origin_direct_median": 0.0,
+            "seconds": 6.216112692840397
+          },
+          "m2p_arm": {
+            "with_m2p": true,
+            "direct_share_mean": 0.026137867500000002,
+            "direct_share_median": 0.02577,
+            "direct_share_p90": 0.029215,
+            "direct_share_max": 0.03397,
+            "D": 1045514700.0,
+            "near_rows_mean": 213.3929443359375,
+            "near_rows_median": 210.0,
+            "near_rows_max": 278,
+            "far_nodes_per_leaf_mean": 876.444580078125,
+            "far_nodes_per_leaf_max": 1061,
+            "m2p_nodes_per_leaf_mean": 151.09375,
+            "m2p_nodes_per_leaf_max": 838,
+            "m2p_sources_per_target_mean": 29576.58581,
+            "frac_leaves_box_contains_origin": 0.0,
+            "share_of_leaves_box_contains_origin_direct_median": 0.0,
+            "seconds": 6.216112692840397
+          },
+          "K2_share_ratio_treecode_over_m2p": 1.3298409002716336
+        }
+      },
+      "gates": {
+        "K2_share_ratio_treecode_over_m2p_morton": 1.6627337768294213,
+        "K2_pass_morton": false,
+        "m2p_arm_share_median_morton": 0.039835,
+        "K2_share_ratio_treecode_over_m2p_kdtree": 1.3298409002716336,
+        "K2_pass_kdtree": false,
+        "m2p_arm_share_median_kdtree": 0.02577,
+        "residual_compact_mutual_expected_share": 0.0128
+      },
+      "d_thresh": 0.7967026034990947
+    }
+  },
+  "provenance": {
+    "timestamp_utc": "2026-09-06T19:30:31.657682+00:00",
+    "repos": {
+      "jaccpot": {
+        "sha": "c1cede7",
+        "branch": "main",
+        "dirty": true
+      },
+      "yggdrax": {
+        "sha": "a22472f",
+        "branch": "paper/differentiable-applications",
+        "dirty": true
+      },
+      "jztree": {
+        "sha": "ee82fa2",
+        "branch": "main",
+        "dirty": false
+      },
+      "odisseo_bench": {
+        "sha": "2da9e8e",
+        "branch": "bench/multi-gpu",
+        "dirty": true
+      }
+    },
+    "jax_version": "0.10.2",
+    "jax_backend": "gpu",
+    "devices": [
+      {
+        "id": 0,
+        "kind": "NVIDIA A100-PCIE-40GB",
+        "platform": "gpu"
+      }
+    ],
+    "nvidia_smi": "0, NVIDIA A100-PCIE-40GB, 40960 MiB, 595.71.05\n1, NVIDIA A100-PCIE-40GB, 40960 MiB, 595.71.05\n2, NVIDIA A100-PCIE-40GB, 40960 MiB, 595.71.05\n3, NVIDIA A100-PCIE-40GB, 40960 MiB, 595.71.05\n4, NVIDIA A100-PCIE-40GB, 40960 MiB, 595.71.05\n5, NVIDIA A100-PCIE-40GB, 40960 MiB, 595.71.05\n6, NVIDIA A100-PCIE-40GB, 40960 MiB, 595.71.05\n7, NVIDIA A100-PCIE-40GB, 40960 MiB, 595.71.05",
+    "benchmark": "audit_leaf_compactness"
+  }
+}

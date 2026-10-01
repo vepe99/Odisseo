@@ -1,0 +1,18 @@
+=== A: theta=1.0, N=200k, order sweep ===
+/tmp/claude-2701/-export-home-tbuck-Odisseo/e7762465-4c93-460a-9d8f-305ae6d85c1e/scratchpad/probe_fixed.py:15: DeprecationWarning: Legacy expanse-style kwargs are deprecated in jaccpot.FastMultipoleMethod. Use preset/basis/advanced config objects instead.
+  s = FastMultipoleMethod(preset="large_n_gpu", runtime_path="large_n", basis="real", theta=theta, G=1.0,
+  order 2:    47.10 ms   {'nbrs': 109962, 'slots': 200192, 'leaves': 782}
+  order 4:    45.22 ms   {'nbrs': 109962, 'slots': 200192, 'leaves': 782}
+  order 6:    46.72 ms   {'nbrs': 109962, 'slots': 200192, 'leaves': 782}
+=== B: theta=1.0, order 4, N sweep ===
+  N   50000:    27.24 ms   {'nbrs': 20824, 'slots': 50176, 'leaves': 196}
+  N  100000:    51.46 ms   {'nbrs': 55914, 'slots': 100096, 'leaves': 391}
+  N  200000:    47.12 ms   {'nbrs': 109962, 'slots': 200192, 'leaves': 782}
+  N  400000:    96.63 ms   {'nbrs': 229378, 'slots': 400128, 'leaves': 1563}
+  N  800000:   254.51 ms   {'nbrs': 737748, 'slots': 800000, 'leaves': 3125}
+=== C: theta=0.6, order 4, N sweep (the working point) ===
+  N   50000:    27.76 ms   {'nbrs': 37364, 'slots': 50176, 'leaves': 196}
+  N  100000:    52.22 ms   {'nbrs': 134486, 'slots': 100096, 'leaves': 391}
+  N  200000:    90.11 ms   {'nbrs': 356082, 'slots': 200192, 'leaves': 782}
+  N  400000:   219.94 ms   {'nbrs': 871452, 'slots': 400128, 'leaves': 1563}
+  N  800000: None  jaccpot could not fit N=800000 with preset='large_n_gpu', leaf_size=256, max_order=4, dtype=<class ' {}

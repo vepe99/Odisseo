@@ -1,0 +1,7 @@
+Traceback (most recent call last):
+  File "/export/home/tbuck/Odisseo-bench-multigpu/benchmark_multigpu/codes/probe_step_check3.py", line 14, in <module>
+    devices = pick_idle_gpus(1); set_cuda_visible(devices); apply_fast_lane_env(N)
+              ^^^^^^^^^^^^^^^^^
+  File "/export/home/tbuck/Odisseo-bench-multigpu/benchmark_multigpu/common/gpu_guard.py", line 186, in pick_idle_gpus
+    raise RuntimeError(
+RuntimeError: only 0 idle GPU(s) [], need 1. Non-idle: GPU 0: foreign process 2692222(psaegert); GPU 1: foreign process 2684699(iguennou); GPU 2: foreign process 2692223(psaegert); GPU 3: foreign process 2436043(iguennou); GPU 4: foreign process 2734488(iguennou); GPU 5: foreign process 2692224(psaegert); GPU 6: foreign process 2754781(iguennou); GPU 7: foreign process 2755585(iguennou)

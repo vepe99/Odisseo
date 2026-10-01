@@ -1,0 +1,8 @@
+jaccpot /export/home/tbuck/jaccpot-strict-wt/jaccpot/__init__.py
+eval_fn(refreshed state after 1 real step) vs direct@x1: aggL2 1.052e-02
+  tree.positions_sorted: shape (200000, 3); changed entries 197780
+  tree.inverse_permutation: shape (200000,); changed entries 72721
+  positions_sorted[inverse_permutation] vs x1: max |diff| 0.000e+00
+  positions_sorted[OLD inverse_permutation] vs x1: max |diff| 4.690e+00
+eval_fn(eager prepare at x1) vs direct@x1: aggL2 1.052e-02
+  eager@x1 vs refreshed: leaf count (782,) (782,) | inverse_permutation equal: True

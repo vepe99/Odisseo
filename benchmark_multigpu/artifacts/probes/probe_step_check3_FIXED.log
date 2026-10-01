@@ -1,0 +1,6 @@
+history shape (3, 200000, 2, 3)
+one call, 3 steps, theta 1.0: step-1 force vs ref aggL2 3.529e-02
+   step-2 force (second difference) vs ref aggL2 3.108e+00
+   step-3 force (second difference) vs ref aggL2 1.619e+01
+caps/overflow diagnostics: {'refresh_prepare_reuse_tier_overflow': 0, 'large_n_same_topology_refresh_miss_neighbor': 0, 'static_radix_profile_overflows': 0, 'large_n_overflow_profile_cap': 0, 'large_n_overflow_profile_reprofiles': 0, 'large_n_neighbor_edges_profile_cap': 0, 'large_n_neighbor_edges_profile_reprofiles': 0, 'strict_profiled_max_pair_queue': 0, 'strict_profiled_pair_process_block': 0, 'strict_profiled_context_key': '', 'recent_dual_neighbor_count': 109962, 'refresh_dual_split_leaf_neighbors_seconds': 0.0, 'refresh_nearfield_overflow_profile_seconds': 0.0, 'refresh_nearfield_neighbor_padding_seconds': 0.0}
+refreshed rows: max 781 mean 140.38874680306904

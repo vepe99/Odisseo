@@ -1,0 +1,86 @@
+GPU: physical [4] (CUDA_VISIBLE_DEVICES=4)
+untraced: min 90.08 ms  median 92.09 ms  flags=['loadavg>=8 (8.6)', 'other-gpus-busy (81%)']
+traced wall per call: [94.51, 98.63, 103.34, 96.79, 94.98] ms
+
+device pids [1] streams 1
+per call: window 97.52 ms, device busy 93.17 ms (96 %), kernel-sum 93.17 ms, launches 3929
+ ms/call  share  n/call  mean us  kernel
+  85.272  91.5%     1.0  85272.5  nearfield_leafpair_t32_s1024_w256_ainput
+   2.051   2.2%   782.0      2.6  loop_multiply_fusion
+   1.910   2.0%   782.0      2.4  input_reduce_fusion
+   1.344   1.4%   782.0      1.7  loop_dynamic_update_slice_fusion
+   1.337   1.4%   782.0      1.7  loop_transpose_fusion
+   1.130   1.2%   782.0      1.4  loop_add_fusion
+   0.018   0.0%     1.0     18.4  loop_broadcast_fusion
+   0.017   0.0%     1.0     17.4  input_scatter_fusion
+   0.016   0.0%     1.0     16.3  loop_gather_fusion
+   0.013   0.0%     1.0     13.2  loop_add_multiply_slice_fusion
+   0.009   0.0%     1.0      9.0  loop_add_divide_reduce_slice_subtract_fusion
+   0.009   0.0%     1.0      8.8  input_scatter_fusion_1
+   0.008   0.0%     1.0      8.3  input_scatter_fusion_2
+   0.008   0.0%     1.0      7.9  loop_broadcast_gather_select_fusion
+   0.006   0.0%     2.0      2.8  memcpy32_post
+   0.004   0.0%     1.0      4.3  loop_gather_fusion_1
+   0.004   0.0%     1.0      4.0  loop_transpose_fusion_1
+   0.004   0.0%     1.0      3.7  loop_add_divide_fusion
+   0.004   0.0%     1.0      3.6  loop_add_convert_divide_fusion
+   0.003   0.0%     1.0      3.4  loop_pad_fusion
+   0.002   0.0%     1.0      1.9  loop_divide_fusion
+   0.002   0.0%     1.0      1.8  loop_compare_fusion_1
+   0.002   0.0%     1.0      1.6  loop_exponential_fusion
+wrote /export/home/tbuck/Odisseo-bench-multigpu/benchmark_multigpu/artifacts/profile_eval_plummer200000_leaf256_th0.6_p4.json
+=== done theta 0.6 leaf 256 ===
+Traceback (most recent call last):
+  File "/export/home/tbuck/Odisseo-bench-multigpu/benchmark_multigpu/codes/profile_eval.py", line 199, in <module>
+    main()
+  File "/export/home/tbuck/Odisseo-bench-multigpu/benchmark_multigpu/codes/profile_eval.py", line 127, in main
+    devices = pick_idle_gpus(1)
+              ^^^^^^^^^^^^^^^^^
+  File "/export/home/tbuck/Odisseo-bench-multigpu/benchmark_multigpu/common/gpu_guard.py", line 186, in pick_idle_gpus
+    raise RuntimeError(
+RuntimeError: only 0 idle GPU(s) [], need 1. Non-idle: GPU 0: foreign process 2368138(iguennou); GPU 1: foreign process 2383781(iguennou); GPU 2: foreign process 2389893(iguennou); GPU 3: utilisation 11 %; GPU 4: utilisation 10 %; GPU 5: excluded by caller; GPU 6: foreign process 2426217(iguennou); GPU 7: foreign process 2427403(iguennou)
+=== done theta 1.0 leaf 64 ===
+GPU: physical [4] (CUDA_VISIBLE_DEVICES=4)
+untraced: min 175.60 ms  median 176.93 ms  flags=['loadavg>=8 (10.0)', 'other-gpus-busy (80%)']
+traced wall per call: [176.24, 177.51, 177.36, 179.01, 179.5] ms
+
+device pids [1] streams 1
+per call: window 177.74 ms, device busy 173.37 ms (98 %), kernel-sum 173.37 ms, launches 805
+ ms/call  share  n/call  mean us  kernel
+ 168.547  97.2%     1.0 168547.3  nearfield_fused_leaf_t32_k262144
+   2.049   1.2%   196.0     10.5  input_reduce_fusion
+   0.837   0.5%     1.0    836.7  loop_pad_fusion
+   0.638   0.4%     1.0    638.3  loop_convert_gather_fusion
+   0.434   0.3%   196.0      2.2  loop_dynamic_slice_transpose_fusion
+   0.434   0.3%   196.0      2.2  loop_dynamic_update_slice_fusion
+   0.300   0.2%   196.0      1.5  loop_add_fusion
+   0.019   0.0%     1.0     18.6  loop_broadcast_fusion
+   0.017   0.0%     1.0     16.7  loop_gather_fusion
+   0.015   0.0%     1.0     15.2  input_scatter_fusion
+   0.012   0.0%     1.0     11.5  loop_add_slice_fusion
+   0.011   0.0%     1.0     11.3  input_scatter_fusion_1
+   0.010   0.0%     1.0      9.8  loop_add_multiply_slice_fusion
+   0.009   0.0%     1.0      9.5  input_scatter_fusion_2
+   0.007   0.0%     1.0      6.8  loop_broadcast_gather_select_fusion
+   0.004   0.0%     1.0      4.5  loop_divide_reduce_fusion
+   0.004   0.0%     1.0      4.0  loop_transpose_fusion
+   0.004   0.0%     1.0      3.8  loop_gather_fusion_1
+   0.004   0.0%     1.0      3.5  loop_add_convert_divide_fusion
+   0.003   0.0%     1.0      3.4  loop_pad_fusion_1
+   0.003   0.0%     1.0      3.1  loop_compare_fusion_1
+   0.003   0.0%     1.0      2.9  memcpy128
+   0.002   0.0%     1.0      2.1  memcpy32_post
+   0.002   0.0%     1.0      1.7  loop_divide_fusion
+   0.002   0.0%     1.0      1.6  loop_exponential_fusion
+wrote /export/home/tbuck/Odisseo-bench-multigpu/benchmark_multigpu/artifacts/profile_eval_plummer200000_leaf1024_th1_p4.json
+=== done theta 1.0 leaf 1024 ===
+Traceback (most recent call last):
+  File "/export/home/tbuck/Odisseo-bench-multigpu/benchmark_multigpu/codes/profile_eval.py", line 199, in <module>
+    main()
+  File "/export/home/tbuck/Odisseo-bench-multigpu/benchmark_multigpu/codes/profile_eval.py", line 127, in main
+    devices = pick_idle_gpus(1)
+              ^^^^^^^^^^^^^^^^^
+  File "/export/home/tbuck/Odisseo-bench-multigpu/benchmark_multigpu/common/gpu_guard.py", line 186, in pick_idle_gpus
+    raise RuntimeError(
+RuntimeError: only 0 idle GPU(s) [], need 1. Non-idle: GPU 0: foreign process 2368138(iguennou); GPU 1: foreign process 2440520(iguennou); GPU 2: foreign process 2389893(iguennou); GPU 3: foreign process 2436043(iguennou); GPU 4: utilisation 51 %; GPU 5: excluded by caller; GPU 6: foreign process 2426217(iguennou); GPU 7: foreign process 2427403(iguennou)
+=== done theta 0.6 leaf 1024 ===

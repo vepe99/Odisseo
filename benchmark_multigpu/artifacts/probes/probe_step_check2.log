@@ -1,0 +1,6 @@
+theta 0.6: step-1 force (fresh prepare) vs ref aggL2 4.077e-03; step-2 force (refreshed state) vs ref aggL2 3.169e+00
+   refreshed state: neighbor rows max 128 mean 69.0; far_pair_count 100970 (buffer 131072); fallback_count 0 reason ''
+theta 1.0: step-1 force (fresh prepare) vs ref aggL2 3.529e-02; step-2 force (refreshed state) vs ref aggL2 3.114e+00
+   refreshed state: neighbor rows max 256 mean 81.3; far_pair_count 58424 (buffer 131072); fallback_count 0 reason ''
+theta 0.6 with far cap 2^20: far_pair_count 100970 (buffer 1048576) aggL2 8.435e-04
+theta 1.0 with far cap 2^20: far_pair_count 58424 (buffer 1048576) aggL2 3.507e-02

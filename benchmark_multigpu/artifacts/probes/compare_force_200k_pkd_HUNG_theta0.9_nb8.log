@@ -1,0 +1,5 @@
+IC=plummer N=200000 devices=[5] loadavg=(7.052734375, 8.05078125, 8.1279296875) cores=64
+wrote + verified artifacts/compare_force_200k/plummer_n200000_seed0.tipsy (7.2 MB)
+
+=== pkdgrav3 [gpu] ndev=1 nBucket=8 nGroup=default cores=16 (CUDA_VISIBLE_DEVICES=5) ===
+pkdgrav3 hung >8 min at nBucket=8 theta=0.9 (GPU 0 %, 15 threads spinning); killed 2026-09-06 00:13

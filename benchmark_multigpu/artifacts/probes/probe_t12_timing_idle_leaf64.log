@@ -1,0 +1,8 @@
+jaccpot /export/home/tbuck/jaccpot-perf-wt/jaccpot/__init__.py | GPU [5]
+  setting theta       ms    iqr       aggL2 flags
+ baseline  0.60    97.64   3.71         nan  vs-baseline 0.00e+00  loadavg>=8 (61.8),other-gpus-busy (46%)
+     both  0.60    79.60  11.61         nan  vs-baseline 1.24e-06  loadavg>=8 (61.2),other-gpus-busy (46%)
+ baseline  0.80    85.37  11.04         nan  vs-baseline 0.00e+00  loadavg>=8 (66.1),other-gpus-busy (38%)
+     both  0.80    69.23   9.83         nan  vs-baseline 6.65e-07  loadavg>=8 (65.3),other-gpus-busy (90%)
+ baseline  1.00    74.93   4.20         nan  vs-baseline 0.00e+00  loadavg>=8 (77.0),other-gpus-busy (42%)
+     both  1.00    57.00   3.83         nan  vs-baseline 4.08e-07  loadavg>=8 (84.6)
