@@ -1,0 +1,4481 @@
+{
+  "jzfmm": [
+    {
+      "code": "jzfmm",
+      "n": 1000000,
+      "leaf": 32,
+      "p": 4,
+      "theta": 0.6,
+      "ms": 83.67618545889854,
+      "aggL2": 0.0003483251488309495,
+      "p90": 0.0008173140948216078,
+      "direct_share": 0.003638449494,
+      "launches": 172.0,
+      "flags": [
+        "loadavg>=8 (24.1)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    {
+      "code": "jzfmm",
+      "n": 1000000,
+      "leaf": 32,
+      "p": 4,
+      "theta": 0.8,
+      "ms": 17.42292381823063,
+      "aggL2": 0.0005837302943596877,
+      "p90": 0.0011897912480355248,
+      "direct_share": 0.001160196924,
+      "launches": 172.0,
+      "flags": [
+        "loadavg>=8 (23.3)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    {
+      "code": "jzfmm",
+      "n": 1000000,
+      "leaf": 32,
+      "p": 4,
+      "theta": 1.0,
+      "ms": 23.662294261157513,
+      "aggL2": 0.0011483905207994285,
+      "p90": 0.0021001314439606086,
+      "direct_share": 0.00076434249,
+      "launches": 172.0,
+      "flags": [
+        "loadavg>=8 (22.7)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    {
+      "code": "jzfmm",
+      "n": 1000000,
+      "leaf": 32,
+      "p": 5,
+      "theta": 0.6,
+      "ms": 97.64280449599028,
+      "aggL2": 0.00010698150102835254,
+      "p90": 0.00017515148574270123,
+      "direct_share": 0.003638449494,
+      "launches": 172.0,
+      "flags": [
+        "loadavg>=8 (22.3)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    {
+      "code": "jzfmm",
+      "n": 1000000,
+      "leaf": 32,
+      "p": 5,
+      "theta": 0.8,
+      "ms": 22.540459409356117,
+      "aggL2": 0.0002666977574637831,
+      "p90": 0.00046553440011519703,
+      "direct_share": 0.001160196924,
+      "launches": 172.0,
+      "flags": [
+        "loadavg>=8 (21.3)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    {
+      "code": "jzfmm",
+      "n": 1000000,
+      "leaf": 32,
+      "p": 5,
+      "theta": 1.0,
+      "ms": 20.331229083240032,
+      "aggL2": 0.0006737670430217267,
+      "p90": 0.001091308489191358,
+      "direct_share": 0.00076434249,
+      "launches": 172.0,
+      "flags": [
+        "loadavg>=8 (20.8)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    {
+      "code": "jzfmm",
+      "n": 1000000,
+      "leaf": 32,
+      "p": 6,
+      "theta": 0.6,
+      "ms": 130.690042860806,
+      "aggL2": 3.7667155424008655e-05,
+      "p90": 4.891699612929582e-05,
+      "direct_share": 0.003638449494,
+      "launches": 173.0,
+      "flags": [
+        "loadavg>=8 (20.4)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    {
+      "code": "jzfmm",
+      "n": 1000000,
+      "leaf": 32,
+      "p": 6,
+      "theta": 0.8,
+      "ms": 33.96418411284685,
+      "aggL2": 0.00013043952637711533,
+      "p90": 0.00020903421066561048,
+      "direct_share": 0.001160196924,
+      "launches": 173.0,
+      "flags": [
+        "loadavg>=8 (20.4)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    {
+      "code": "jzfmm",
+      "n": 1000000,
+      "leaf": 32,
+      "p": 6,
+      "theta": 1.0,
+      "ms": 30.322756618261337,
+      "aggL2": 0.0004355535681985314,
+      "p90": 0.0006070695032112019,
+      "direct_share": 0.00076434249,
+      "launches": 173.0,
+      "flags": [
+        "loadavg>=8 (20.3)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    {
+      "code": "jzfmm",
+      "n": 1000000,
+      "leaf": 64,
+      "p": 4,
+      "theta": 0.6,
+      "ms": 84.07895732671022,
+      "aggL2": 0.0005995073428222873,
+      "p90": 0.0017423857817266135,
+      "direct_share": 0.00707740516,
+      "launches": 170.0,
+      "flags": [
+        "loadavg>=8 (19.9)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    {
+      "code": "jzfmm",
+      "n": 1000000,
+      "leaf": 64,
+      "p": 4,
+      "theta": 0.8,
+      "ms": 15.086072497069836,
+      "aggL2": 0.000917389153200252,
+      "p90": 0.002234008337126087,
+      "direct_share": 0.002359831908,
+      "launches": 170.0,
+      "flags": [
+        "loadavg>=8 (20.4)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    {
+      "code": "jzfmm",
+      "n": 1000000,
+      "leaf": 64,
+      "p": 4,
+      "theta": 1.0,
+      "ms": 18.673449754714966,
+      "aggL2": 0.0016043838422859708,
+      "p90": 0.0035751634561326327,
+      "direct_share": 0.0015199895899999998,
+      "launches": 170.0,
+      "flags": [
+        "loadavg>=8 (20.2)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    {
+      "code": "jzfmm",
+      "n": 1000000,
+      "leaf": 64,
+      "p": 5,
+      "theta": 0.6,
+      "ms": 90.42993746697903,
+      "aggL2": 0.00018791835616442743,
+      "p90": 0.0003710309501154627,
+      "direct_share": 0.00707740516,
+      "launches": 170.0,
+      "flags": [
+        "loadavg>=8 (20.4)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    {
+      "code": "jzfmm",
+      "n": 1000000,
+      "leaf": 64,
+      "p": 5,
+      "theta": 0.8,
+      "ms": 17.90616661310196,
+      "aggL2": 0.00038355394197505483,
+      "p90": 0.0007503683051827211,
+      "direct_share": 0.002359831908,
+      "launches": 170.0,
+      "flags": [
+        "loadavg>=8 (20.3)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    {
+      "code": "jzfmm",
+      "n": 1000000,
+      "leaf": 64,
+      "p": 5,
+      "theta": 1.0,
+      "ms": 14.460749924182892,
+      "aggL2": 0.0008824637690920241,
+      "p90": 0.0015441507757353553,
+      "direct_share": 0.0015199895899999998,
+      "launches": 170.0,
+      "flags": [
+        "loadavg>=8 (20.3)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    {
+      "code": "jzfmm",
+      "n": 1000000,
+      "leaf": 64,
+      "p": 6,
+      "theta": 0.6,
+      "ms": 105.52181117236614,
+      "aggL2": 6.51854608185954e-05,
+      "p90": 8.989408066800272e-05,
+      "direct_share": 0.00707740516,
+      "launches": 170.0,
+      "flags": [
+        "loadavg>=8 (20.2)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    {
+      "code": "jzfmm",
+      "n": 1000000,
+      "leaf": 64,
+      "p": 6,
+      "theta": 0.8,
+      "ms": 24.613278917968273,
+      "aggL2": 0.00017412004685263453,
+      "p90": 0.0002865082606357861,
+      "direct_share": 0.002359831908,
+      "launches": 170.0,
+      "flags": [
+        "loadavg>=8 (21.1)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    {
+      "code": "jzfmm",
+      "n": 1000000,
+      "leaf": 64,
+      "p": 6,
+      "theta": 1.0,
+      "ms": 20.21458838135004,
+      "aggL2": 0.0006011787792607685,
+      "p90": 0.0008362308899639536,
+      "direct_share": 0.0015199895899999998,
+      "launches": 170.0,
+      "flags": [
+        "loadavg>=8 (23.7)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    {
+      "code": "jzfmm",
+      "n": 200000,
+      "leaf": 32,
+      "p": 3,
+      "theta": 0.6,
+      "ms": 18.56717001646757,
+      "aggL2": 0.0016220011508838628,
+      "p90": 0.005978954883001392,
+      "direct_share": 0.0195284653,
+      "launches": 115.0,
+      "flags": [
+        "loadavg>=8 (14.8)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    {
+      "code": "jzfmm",
+      "n": 200000,
+      "leaf": 32,
+      "p": 3,
+      "theta": 0.8,
+      "ms": 10.227800346910954,
+      "aggL2": 0.00232775588192192,
+      "p90": 0.007321073217733514,
+      "direct_share": 0.0058918363,
+      "launches": 115.0,
+      "flags": [
+        "loadavg>=8 (14.8)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    {
+      "code": "jzfmm",
+      "n": 200000,
+      "leaf": 32,
+      "p": 3,
+      "theta": 1.0,
+      "ms": 13.520695269107819,
+      "aggL2": 0.004369357470334346,
+      "p90": 0.010001470638967603,
+      "direct_share": 0.00374190135,
+      "launches": 115.0,
+      "flags": [
+        "loadavg>=8 (15.0)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    {
+      "code": "jzfmm",
+      "n": 200000,
+      "leaf": 32,
+      "p": 4,
+      "theta": 0.6,
+      "ms": 22.706739604473114,
+      "aggL2": 0.000419324164093657,
+      "p90": 0.0010495052978699273,
+      "direct_share": 0.0195284653,
+      "launches": 115.0,
+      "flags": [
+        "loadavg>=8 (17.0)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    {
+      "code": "jzfmm",
+      "n": 200000,
+      "leaf": 32,
+      "p": 4,
+      "theta": 0.8,
+      "ms": 13.951997272670269,
+      "aggL2": 0.000762613370260124,
+      "p90": 0.0016460332933780422,
+      "direct_share": 0.0058918363,
+      "launches": 115.0,
+      "flags": [
+        "loadavg>=8 (17.0)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    {
+      "code": "jzfmm",
+      "n": 200000,
+      "leaf": 32,
+      "p": 4,
+      "theta": 1.0,
+      "ms": 16.5799492970109,
+      "aggL2": 0.0014641807694753357,
+      "p90": 0.0027626823657391497,
+      "direct_share": 0.00374190135,
+      "launches": 115.0,
+      "flags": [
+        "loadavg>=8 (16.8)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    {
+      "code": "jzfmm",
+      "n": 200000,
+      "leaf": 32,
+      "p": 5,
+      "theta": 0.6,
+      "ms": 26.643329299986362,
+      "aggL2": 0.0001346079320728658,
+      "p90": 0.00023513253351219258,
+      "direct_share": 0.0195284653,
+      "launches": 115.0,
+      "flags": [
+        "loadavg>=8 (18.1)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    {
+      "code": "jzfmm",
+      "n": 200000,
+      "leaf": 32,
+      "p": 5,
+      "theta": 0.8,
+      "ms": 14.537530019879341,
+      "aggL2": 0.00036052955766210855,
+      "p90": 0.000585542926799316,
+      "direct_share": 0.0058918363,
+      "launches": 115.0,
+      "flags": [
+        "loadavg>=8 (18.2)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    {
+      "code": "jzfmm",
+      "n": 200000,
+      "leaf": 32,
+      "p": 5,
+      "theta": 1.0,
+      "ms": 19.54799424856901,
+      "aggL2": 0.00086346854140157,
+      "p90": 0.0014087175008172664,
+      "direct_share": 0.00374190135,
+      "launches": 115.0,
+      "flags": [
+        "loadavg>=8 (18.9)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    {
+      "code": "jzfmm",
+      "n": 200000,
+      "leaf": 32,
+      "p": 6,
+      "theta": 0.6,
+      "ms": 37.55420260131359,
+      "aggL2": 5.0824634562002573e-05,
+      "p90": 6.731942981427752e-05,
+      "direct_share": 0.0195284653,
+      "launches": 114.0,
+      "flags": [
+        "loadavg>=8 (19.2)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    {
+      "code": "jzfmm",
+      "n": 200000,
+      "leaf": 32,
+      "p": 6,
+      "theta": 0.8,
+      "ms": 21.746516227722168,
+      "aggL2": 0.00018484156538526968,
+      "p90": 0.0002657104041876399,
+      "direct_share": 0.0058918363,
+      "launches": 114.0,
+      "flags": [
+        "loadavg>=8 (19.0)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    {
+      "code": "jzfmm",
+      "n": 200000,
+      "leaf": 32,
+      "p": 6,
+      "theta": 1.0,
+      "ms": 22.098008543252945,
+      "aggL2": 0.0005798297407208261,
+      "p90": 0.0007857451235974138,
+      "direct_share": 0.00374190135,
+      "launches": 114.0,
+      "flags": [
+        "loadavg>=8 (20.6)",
+        "other-gpus-busy (97%)"
+      ]
+    },
+    {
+      "code": "jzfmm",
+      "n": 200000,
+      "leaf": 64,
+      "p": 3,
+      "theta": 0.6,
+      "ms": 21.31036389619112,
+      "aggL2": 0.00259513011864783,
+      "p90": 0.010452165094709559,
+      "direct_share": 0.0345124961,
+      "launches": 114.0,
+      "flags": [
+        "loadavg>=8 (22.2)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    {
+      "code": "jzfmm",
+      "n": 200000,
+      "leaf": 64,
+      "p": 3,
+      "theta": 0.8,
+      "ms": 10.424620471894741,
+      "aggL2": 0.003574123191838871,
+      "p90": 0.01345839460216161,
+      "direct_share": 0.01164322345,
+      "launches": 113.0,
+      "flags": [
+        "loadavg>=8 (21.6)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    {
+      "code": "jzfmm",
+      "n": 200000,
+      "leaf": 64,
+      "p": 3,
+      "theta": 1.0,
+      "ms": 9.043163619935513,
+      "aggL2": 0.0053280075372041285,
+      "p90": 0.016322066047641158,
+      "direct_share": 0.0073248695,
+      "launches": 113.0,
+      "flags": [
+        "loadavg>=8 (21.9)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    {
+      "code": "jzfmm",
+      "n": 200000,
+      "leaf": 64,
+      "p": 4,
+      "theta": 0.6,
+      "ms": 22.464978508651257,
+      "aggL2": 0.0006885693883470755,
+      "p90": 0.002325636689241949,
+      "direct_share": 0.0345124961,
+      "launches": 115.0,
+      "flags": [
+        "loadavg>=8 (21.8)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    {
+      "code": "jzfmm",
+      "n": 200000,
+      "leaf": 64,
+      "p": 4,
+      "theta": 0.8,
+      "ms": 13.002333231270313,
+      "aggL2": 0.0010986791936335076,
+      "p90": 0.003061814276250481,
+      "direct_share": 0.01164322345,
+      "launches": 114.0,
+      "flags": [
+        "loadavg>=8 (21.1)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    {
+      "code": "jzfmm",
+      "n": 200000,
+      "leaf": 64,
+      "p": 4,
+      "theta": 1.0,
+      "ms": 10.484821163117886,
+      "aggL2": 0.0017912496936906893,
+      "p90": 0.004420618297374867,
+      "direct_share": 0.0073248695,
+      "launches": 114.0,
+      "flags": [
+        "loadavg>=8 (20.9)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    {
+      "code": "jzfmm",
+      "n": 200000,
+      "leaf": 64,
+      "p": 5,
+      "theta": 0.6,
+      "ms": 23.999447003006935,
+      "aggL2": 0.00021775869182831891,
+      "p90": 0.0004901938819904001,
+      "direct_share": 0.0345124961,
+      "launches": 115.0,
+      "flags": [
+        "loadavg>=8 (19.8)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    {
+      "code": "jzfmm",
+      "n": 200000,
+      "leaf": 64,
+      "p": 5,
+      "theta": 0.8,
+      "ms": 10.503650642931461,
+      "aggL2": 0.000462879798334702,
+      "p90": 0.0009474655983451244,
+      "direct_share": 0.01164322345,
+      "launches": 114.0,
+      "flags": [
+        "loadavg>=8 (19.8)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    {
+      "code": "jzfmm",
+      "n": 200000,
+      "leaf": 64,
+      "p": 5,
+      "theta": 1.0,
+      "ms": 14.889621175825596,
+      "aggL2": 0.000969258643820203,
+      "p90": 0.0019454609257222484,
+      "direct_share": 0.0073248695,
+      "launches": 114.0,
+      "flags": [
+        "loadavg>=8 (19.6)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    {
+      "code": "jzfmm",
+      "n": 200000,
+      "leaf": 64,
+      "p": 6,
+      "theta": 0.6,
+      "ms": 24.323527701199055,
+      "aggL2": 7.802573099374602e-05,
+      "p90": 0.00012240506409392945,
+      "direct_share": 0.0345124961,
+      "launches": 115.0,
+      "flags": [
+        "loadavg>=8 (28.3)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    {
+      "code": "jzfmm",
+      "n": 200000,
+      "leaf": 64,
+      "p": 6,
+      "theta": 0.8,
+      "ms": 22.13967777788639,
+      "aggL2": 0.00021722280242558693,
+      "p90": 0.0003916765311563894,
+      "direct_share": 0.01164322345,
+      "launches": 114.0,
+      "flags": [
+        "loadavg>=8 (27.6)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    {
+      "code": "jzfmm",
+      "n": 200000,
+      "leaf": 64,
+      "p": 6,
+      "theta": 1.0,
+      "ms": 12.336439453065395,
+      "aggL2": 0.0005953939260230834,
+      "p90": 0.0009544988257334801,
+      "direct_share": 0.0073248695,
+      "launches": 114.0,
+      "flags": [
+        "loadavg>=8 (26.6)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    {
+      "code": "jzfmm",
+      "n": 200000,
+      "leaf": 64,
+      "p": 4,
+      "theta": 0.8,
+      "ms": 12.9462955519557,
+      "aggL2": 0.0010986791936335076,
+      "p90": 0.003061814276250481,
+      "direct_share": 0.01164322345,
+      "launches": 114.0,
+      "flags": [
+        "loadavg>=8 (22.7)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    {
+      "code": "jzfmm",
+      "n": 200000,
+      "leaf": 64,
+      "p": 4,
+      "theta": 1.0,
+      "ms": 11.968439444899559,
+      "aggL2": 0.0017912496936906893,
+      "p90": 0.004420618297374867,
+      "direct_share": 0.0073248695,
+      "launches": 114.0,
+      "flags": [
+        "loadavg>=8 (22.7)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    {
+      "code": "jzfmm",
+      "n": 200000,
+      "leaf": 64,
+      "p": 5,
+      "theta": 0.8,
+      "ms": 10.751043446362019,
+      "aggL2": 0.000462879798334702,
+      "p90": 0.0009474655983451244,
+      "direct_share": 0.01164322345,
+      "launches": 114.0,
+      "flags": [
+        "loadavg>=8 (22.8)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    {
+      "code": "jzfmm",
+      "n": 200000,
+      "leaf": 64,
+      "p": 5,
+      "theta": 1.0,
+      "ms": 12.728312984108925,
+      "aggL2": 0.000969258643820203,
+      "p90": 0.0019454609257222484,
+      "direct_share": 0.0073248695,
+      "launches": 114.0,
+      "flags": [
+        "loadavg>=8 (22.8)",
+        "other-gpus-busy (100%)"
+      ]
+    }
+  ],
+  "jaccpot": [
+    {
+      "code": "jaccpot_aabb_cells",
+      "n": 200000,
+      "leaf": 64,
+      "p": 4,
+      "theta": 0.8,
+      "ms": 12.63246051967144,
+      "eval_ms": 4.268721677362919,
+      "aggL2": 0.0022613024604938668,
+      "direct_share": 0.00521143885,
+      "far_pairs": 690536,
+      "launches": 1974.6,
+      "stages": {
+        "nearfield_pallas_leafpair": 1.82,
+        "other": 3.11,
+        "memcpy": 1.19,
+        "sort": 0.84,
+        "xla_fusion_other": 1.74,
+        "scatter": 0.32,
+        "reduce": 0.36,
+        "m2l_pallas": 0.13,
+        "gather": 0.32,
+        "memset": 0.06
+      },
+      "flags": [
+        "loadavg>=8 (35.7)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    {
+      "code": "jaccpot_aabb_cells",
+      "n": 200000,
+      "leaf": 64,
+      "p": 4,
+      "theta": 0.8,
+      "ms": 12.646166607737541,
+      "eval_ms": 3.8659293204545975,
+      "aggL2": 0.002261302460494674,
+      "direct_share": 0.00521143885,
+      "far_pairs": 690536,
+      "launches": 1974.6,
+      "stages": {
+        "nearfield_pallas_leafpair": 1.8,
+        "other": 3.11,
+        "memcpy": 1.21,
+        "sort": 0.84,
+        "xla_fusion_other": 1.75,
+        "scatter": 0.32,
+        "reduce": 0.35,
+        "m2l_pallas": 0.13,
+        "gather": 0.32,
+        "memset": 0.06
+      },
+      "flags": [
+        "loadavg>=8 (31.2)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    {
+      "code": "jaccpot_aabb_cells",
+      "n": 200000,
+      "leaf": 64,
+      "p": 4,
+      "theta": 0.8,
+      "ms": 14.781573228538036,
+      "eval_ms": 4.263821989297867,
+      "aggL2": 0.0022613024604832515,
+      "direct_share": 0.00521143885,
+      "far_pairs": 690536,
+      "launches": 1974.6,
+      "stages": {
+        "nearfield_pallas_leafpair": 1.81,
+        "other": 3.16,
+        "memcpy": 1.3,
+        "sort": 0.84,
+        "xla_fusion_other": 1.81,
+        "scatter": 0.33,
+        "reduce": 0.34,
+        "m2l_pallas": 0.13,
+        "gather": 0.33,
+        "memset": 0.06
+      },
+      "flags": [
+        "loadavg>=8 (23.5)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    {
+      "code": "jaccpot_com_cells",
+      "n": 200000,
+      "leaf": 32,
+      "p": 4,
+      "theta": 0.6,
+      "ms": 66.60754531621933,
+      "eval_ms": 12.975974008440971,
+      "aggL2": 0.0006107472745613099,
+      "direct_share": 0.005146067849999999,
+      "far_pairs": 2779758,
+      "launches": 4280.4,
+      "stages": {
+        "m2l_pallas": 37.04,
+        "nearfield_pallas_leafpair": 4.92,
+        "other": 4.44,
+        "scatter": 7.73,
+        "xla_fusion_other": 4.92,
+        "sort": 1.23,
+        "reduce": 4.28,
+        "memcpy": 1.38,
+        "gather": 0.15,
+        "memset": 0.06
+      },
+      "flags": [
+        "loadavg>=8 (24.6)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    {
+      "code": "jaccpot_com_cells",
+      "n": 200000,
+      "leaf": 32,
+      "p": 5,
+      "theta": 0.6,
+      "ms": 67.14513208717108,
+      "eval_ms": 13.43744620680809,
+      "aggL2": 0.00026818339888746686,
+      "direct_share": 0.005146067849999999,
+      "far_pairs": 2779758,
+      "launches": 4281.6,
+      "stages": {
+        "m2l_pallas": 36.95,
+        "nearfield_pallas_leafpair": 4.9,
+        "other": 4.4,
+        "scatter": 7.96,
+        "xla_fusion_other": 4.99,
+        "sort": 1.23,
+        "reduce": 4.24,
+        "memcpy": 1.43,
+        "gather": 0.15
+      },
+      "flags": [
+        "loadavg>=8 (25.1)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    {
+      "code": "jaccpot_com_cells",
+      "n": 200000,
+      "leaf": 32,
+      "p": 6,
+      "theta": 0.6,
+      "ms": 68.63136924803257,
+      "eval_ms": 12.685533612966537,
+      "aggL2": 0.00010988970726088026,
+      "direct_share": 0.005146067849999999,
+      "far_pairs": 2779758,
+      "launches": 4282.8,
+      "stages": {
+        "m2l_pallas": 37.07,
+        "nearfield_pallas_leafpair": 4.92,
+        "other": 4.39,
+        "scatter": 8.09,
+        "xla_fusion_other": 5.15,
+        "sort": 1.23,
+        "reduce": 4.28,
+        "memcpy": 1.41,
+        "gather": 0.15
+      },
+      "flags": [
+        "loadavg>=8 (22.7)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    {
+      "code": "jaccpot_com_cells",
+      "n": 200000,
+      "leaf": 32,
+      "p": 4,
+      "theta": 0.8,
+      "ms": 69.01181265711784,
+      "eval_ms": 9.033533744513988,
+      "aggL2": 0.0024344740416478608,
+      "direct_share": 0.0019166368,
+      "far_pairs": 1209912,
+      "launches": 4280.4,
+      "stages": {
+        "other": 30.33,
+        "m2l_pallas": 14.85,
+        "scatter": 7.72,
+        "nearfield_pallas_leafpair": 2.13,
+        "sort": 1.22,
+        "reduce": 3.58,
+        "memcpy": 1.3,
+        "xla_fusion_other": 3.83,
+        "gather": 0.15,
+        "memset": 0.06
+      },
+      "flags": [
+        "loadavg>=8 (35.8)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    {
+      "code": "jaccpot_com_cells",
+      "n": 200000,
+      "leaf": 32,
+      "p": 5,
+      "theta": 0.8,
+      "ms": 69.46004293859005,
+      "eval_ms": 8.772272616624832,
+      "aggL2": 0.0014091954640223455,
+      "direct_share": 0.0019166368,
+      "far_pairs": 1209912,
+      "launches": 4281.6,
+      "stages": {
+        "other": 30.56,
+        "m2l_pallas": 14.9,
+        "scatter": 7.95,
+        "nearfield_pallas_leafpair": 2.12,
+        "sort": 1.15,
+        "reduce": 3.58,
+        "memcpy": 1.34,
+        "xla_fusion_other": 3.87,
+        "gather": 0.15
+      },
+      "flags": [
+        "loadavg>=8 (30.7)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    {
+      "code": "jaccpot_com_cells",
+      "n": 200000,
+      "leaf": 32,
+      "p": 6,
+      "theta": 0.8,
+      "ms": 69.8465071618557,
+      "eval_ms": 9.030085057020187,
+      "aggL2": 0.0008532410844830588,
+      "direct_share": 0.0019166368,
+      "far_pairs": 1209912,
+      "launches": 4282.8,
+      "stages": {
+        "other": 30.35,
+        "m2l_pallas": 14.86,
+        "scatter": 8.07,
+        "nearfield_pallas_leafpair": 2.12,
+        "sort": 1.15,
+        "reduce": 3.63,
+        "memcpy": 1.35,
+        "xla_fusion_other": 3.97,
+        "gather": 0.15
+      },
+      "flags": [
+        "loadavg>=8 (33.2)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    {
+      "code": "jaccpot_com_cells",
+      "n": 200000,
+      "leaf": 32,
+      "p": 4,
+      "theta": 1.0,
+      "ms": 34.32156778872013,
+      "eval_ms": 7.082625292241573,
+      "aggL2": 0.011191995717416208,
+      "direct_share": 0.00094316935,
+      "far_pairs": 618408,
+      "launches": 4209.4,
+      "stages": {
+        "m2l_pallas": 7.64,
+        "scatter": 7.76,
+        "other": 4.37,
+        "nearfield_pallas_leafpair": 1.16,
+        "sort": 1.22,
+        "reduce": 4.3,
+        "memcpy": 1.3,
+        "xla_fusion_other": 2.85,
+        "gather": 0.15,
+        "memset": 0.06
+      },
+      "flags": [
+        "loadavg>=8 (28.5)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    {
+      "code": "jaccpot_com_cells",
+      "n": 200000,
+      "leaf": 32,
+      "p": 5,
+      "theta": 1.0,
+      "ms": 60.886938124895096,
+      "eval_ms": 7.0577943697571754,
+      "aggL2": 0.009698003778027557,
+      "direct_share": 0.00094316935,
+      "far_pairs": 618408,
+      "launches": 4210.6,
+      "stages": {
+        "other": 30.49,
+        "m2l_pallas": 7.66,
+        "scatter": 7.99,
+        "nearfield_pallas_leafpair": 1.16,
+        "sort": 1.22,
+        "reduce": 4.35,
+        "memcpy": 1.31,
+        "xla_fusion_other": 2.85,
+        "gather": 0.15
+      },
+      "flags": [
+        "loadavg>=8 (33.4)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    {
+      "code": "jaccpot_com_cells",
+      "n": 200000,
+      "leaf": 32,
+      "p": 6,
+      "theta": 1.0,
+      "ms": 34.81599409133196,
+      "eval_ms": 7.06892367452383,
+      "aggL2": 0.006320658169476996,
+      "direct_share": 0.00094316935,
+      "far_pairs": 618408,
+      "launches": 4211.8,
+      "stages": {
+        "m2l_pallas": 7.64,
+        "scatter": 8.15,
+        "other": 4.42,
+        "nearfield_pallas_leafpair": 1.15,
+        "sort": 1.15,
+        "reduce": 4.31,
+        "memcpy": 1.34,
+        "xla_fusion_other": 2.99,
+        "gather": 0.15
+      },
+      "flags": [
+        "loadavg>=8 (26.6)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    {
+      "code": "jaccpot_com_cells",
+      "n": 200000,
+      "leaf": 64,
+      "p": 5,
+      "theta": 0.8,
+      "ms": 59.79218799620867,
+      "eval_ms": 15.094163827598095,
+      "aggL2": 0.0012691364824427634,
+      "direct_share": 0.00521143885,
+      "far_pairs": 690536,
+      "launches": null,
+      "stages": {},
+      "flags": [
+        "loadavg>=8 (26.6)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    {
+      "code": "jaccpot_com_cells",
+      "n": 200000,
+      "leaf": 64,
+      "p": 4,
+      "theta": 0.6,
+      "ms": 70.59149239212275,
+      "eval_ms": 20.46097069978714,
+      "aggL2": 0.0005868251186187573,
+      "direct_share": 0.01292880465,
+      "far_pairs": 1575266,
+      "launches": 4232.6,
+      "stages": {
+        "m2l_pallas": 20.9,
+        "nearfield_pallas_leafpair": 14.45,
+        "other": 13.42,
+        "scatter": 6.83,
+        "xla_fusion_other": 4.78,
+        "reduce": 4.33,
+        "memcpy": 1.41,
+        "sort": 0.65,
+        "gather": 0.14,
+        "memset": 0.05
+      },
+      "flags": [
+        "loadavg>=8 (30.8)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    {
+      "code": "jaccpot_com_cells",
+      "n": 200000,
+      "leaf": 64,
+      "p": 5,
+      "theta": 0.6,
+      "ms": 70.20182609558105,
+      "eval_ms": 20.046498626470566,
+      "aggL2": 0.0002494298338300823,
+      "direct_share": 0.01292880465,
+      "far_pairs": 1575266,
+      "launches": 4232.8,
+      "stages": {
+        "m2l_pallas": 20.87,
+        "nearfield_pallas_leafpair": 14.45,
+        "other": 13.53,
+        "scatter": 6.78,
+        "xla_fusion_other": 4.79,
+        "reduce": 4.26,
+        "memcpy": 1.3,
+        "sort": 0.65,
+        "gather": 0.15
+      },
+      "flags": [
+        "loadavg>=8 (34.3)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    {
+      "code": "jaccpot_com_cells",
+      "n": 200000,
+      "leaf": 64,
+      "p": 6,
+      "theta": 0.6,
+      "ms": 70.55145427584648,
+      "eval_ms": 18.237279728055,
+      "aggL2": 9.707196330241768e-05,
+      "direct_share": 0.01292880465,
+      "far_pairs": 1575266,
+      "launches": 4234.0,
+      "stages": {
+        "m2l_pallas": 20.9,
+        "nearfield_pallas_leafpair": 14.45,
+        "other": 13.56,
+        "scatter": 6.97,
+        "xla_fusion_other": 4.91,
+        "reduce": 4.24,
+        "memcpy": 1.34,
+        "sort": 0.65,
+        "gather": 0.09
+      },
+      "flags": [
+        "loadavg>=8 (35.8)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    {
+      "code": "jaccpot_com_cells",
+      "n": 200000,
+      "leaf": 64,
+      "p": 5,
+      "theta": 0.8,
+      "ms": 55.94508182257414,
+      "eval_ms": 14.585341326892376,
+      "aggL2": 0.0012691364824427634,
+      "direct_share": 0.00521143885,
+      "far_pairs": 690536,
+      "launches": 4243.8,
+      "stages": {
+        "m2l_pallas": 9.42,
+        "xla_fusion_other": 11.43,
+        "other": 13.34,
+        "nearfield_pallas_leafpair": 6.01,
+        "scatter": 5.69,
+        "reduce": 4.52,
+        "memcpy": 1.18,
+        "sort": 0.65,
+        "gather": 0.15,
+        "memset": 0.05
+      },
+      "flags": [
+        "loadavg>=8 (30.7)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    {
+      "code": "jaccpot_com_cells",
+      "n": 200000,
+      "leaf": 64,
+      "p": 5,
+      "theta": 0.8,
+      "ms": 47.37222623080015,
+      "eval_ms": 14.799382537603378,
+      "aggL2": 0.0012691379149722133,
+      "direct_share": 0.00521143885,
+      "far_pairs": 690536,
+      "launches": 4161.8,
+      "stages": {
+        "m2l_pallas": 9.4,
+        "other": 13.49,
+        "nearfield_pallas_leafpair": 6.02,
+        "scatter": 5.72,
+        "reduce": 4.34,
+        "memcpy": 1.16,
+        "sort": 0.65,
+        "xla_fusion_other": 2.76,
+        "gather": 0.14,
+        "memset": 0.05
+      },
+      "flags": [
+        "loadavg>=8 (33.5)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    {
+      "code": "jaccpot_com_cells",
+      "n": 200000,
+      "leaf": 64,
+      "p": 5,
+      "theta": 0.8,
+      "ms": 248.85427504777908,
+      "eval_ms": 15.38330502808094,
+      "aggL2": 0.001269141813107198,
+      "direct_share": 0.00521143885,
+      "far_pairs": 690536,
+      "launches": null,
+      "stages": {},
+      "flags": [
+        "loadavg>=8 (31.0)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    {
+      "code": "jaccpot_com_cells",
+      "n": 200000,
+      "leaf": 64,
+      "p": 5,
+      "theta": 0.8,
+      "ms": 55.80147486180067,
+      "eval_ms": 14.6576426923275,
+      "aggL2": 0.0012691364824427634,
+      "direct_share": 0.00521143885,
+      "far_pairs": 690536,
+      "launches": 4243.8,
+      "stages": {
+        "m2l_pallas": 9.44,
+        "xla_fusion_other": 11.46,
+        "other": 13.37,
+        "nearfield_pallas_leafpair": 6.03,
+        "scatter": 5.69,
+        "reduce": 4.53,
+        "memcpy": 1.18,
+        "sort": 0.65,
+        "gather": 0.14,
+        "memset": 0.05
+      },
+      "flags": [
+        "loadavg>=8 (29.2)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    {
+      "code": "jaccpot_com_cells",
+      "n": 200000,
+      "leaf": 64,
+      "p": 5,
+      "theta": 0.8,
+      "ms": 56.18049707263708,
+      "eval_ms": 12.356851249933243,
+      "aggL2": 0.0012691364824427634,
+      "direct_share": 0.00521143885,
+      "far_pairs": 690536,
+      "launches": null,
+      "stages": {},
+      "flags": [
+        "loadavg>=8 (31.0)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    {
+      "code": "jaccpot_com_cells",
+      "n": 200000,
+      "leaf": 64,
+      "p": 5,
+      "theta": 0.8,
+      "ms": 56.101576797664165,
+      "eval_ms": 14.377789571881294,
+      "aggL2": 0.001269136482467583,
+      "direct_share": 0.00521143885,
+      "far_pairs": 690536,
+      "launches": 4236.8,
+      "stages": {
+        "m2l_pallas": 9.39,
+        "xla_fusion_other": 11.49,
+        "other": 13.37,
+        "nearfield_pallas_leafpair": 5.94,
+        "scatter": 5.79,
+        "reduce": 4.53,
+        "memcpy": 1.17,
+        "sort": 0.39,
+        "gather": 0.06
+      },
+      "flags": [
+        "loadavg>=8 (33.4)",
+        "other-gpus-busy (97%)"
+      ]
+    },
+    {
+      "code": "jaccpot_com_cells",
+      "n": 200000,
+      "leaf": 64,
+      "p": 5,
+      "theta": 0.8,
+      "ms": 277.6213536038995,
+      "eval_ms": 11.691576801240444,
+      "aggL2": 0.001269141813107198,
+      "direct_share": 0.00521143885,
+      "far_pairs": 690536,
+      "launches": 26379.6,
+      "stages": {
+        "scatter": 56.75,
+        "memcpy": 22.49,
+        "m2l_pallas": 9.4,
+        "xla_fusion_other": 110.97,
+        "nearfield_pallas_leafpair": 6.04,
+        "reduce": 6.95,
+        "other": 4.74
+      },
+      "flags": [
+        "loadavg>=8 (37.5)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    {
+      "code": "jaccpot_com_cells",
+      "n": 200000,
+      "leaf": 64,
+      "p": 5,
+      "theta": 0.8,
+      "ms": 248.08966927230358,
+      "eval_ms": 14.732892625033855,
+      "aggL2": 0.0012691418131071982,
+      "direct_share": 0.00521143885,
+      "far_pairs": 690536,
+      "launches": 23362.8,
+      "stages": {
+        "scatter": 54.19,
+        "memcpy": 19.8,
+        "m2l_pallas": 9.4,
+        "xla_fusion_other": 96.51,
+        "nearfield_pallas_leafpair": 6.01,
+        "reduce": 5.94,
+        "other": 4.0
+      },
+      "flags": [
+        "loadavg>=8 (31.9)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    {
+      "code": "jaccpot_com_cells",
+      "n": 200000,
+      "leaf": 64,
+      "p": 5,
+      "theta": 0.8,
+      "ms": 137.5711502507329,
+      "eval_ms": 15.180164016783237,
+      "aggL2": 0.001269141813107198,
+      "direct_share": 0.00521143885,
+      "far_pairs": 690536,
+      "launches": 23205.8,
+      "stages": {
+        "m2l_pallas": 9.42,
+        "xla_fusion_other": 56.72,
+        "memcpy": 11.02,
+        "nearfield_pallas_leafpair": 6.04,
+        "scatter": 7.45,
+        "reduce": 4.79,
+        "other": 1.44,
+        "sort": 0.54
+      },
+      "flags": [
+        "loadavg>=8 (27.1)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    {
+      "code": "jaccpot_com_cells",
+      "n": 200000,
+      "leaf": 64,
+      "p": 5,
+      "theta": 0.8,
+      "ms": 47.12004512548447,
+      "eval_ms": 14.911833219230175,
+      "aggL2": 0.0012691379149722133,
+      "direct_share": 0.00521143885,
+      "far_pairs": 690536,
+      "launches": 4161.8,
+      "stages": {
+        "m2l_pallas": 9.35,
+        "other": 13.37,
+        "nearfield_pallas_leafpair": 5.99,
+        "scatter": 5.67,
+        "reduce": 4.39,
+        "memcpy": 1.16,
+        "sort": 0.65,
+        "xla_fusion_other": 2.73,
+        "gather": 0.14,
+        "memset": 0.05
+      },
+      "flags": [
+        "loadavg>=8 (43.4)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    {
+      "code": "jaccpot_com_cells",
+      "n": 200000,
+      "leaf": 64,
+      "p": 5,
+      "theta": 0.8,
+      "ms": 41.51543080806732,
+      "eval_ms": 14.627300202846527,
+      "aggL2": 0.001269136113988304,
+      "direct_share": 0.00521143885,
+      "far_pairs": 690536,
+      "launches": 2114.8,
+      "stages": {
+        "m2l_pallas": 9.38,
+        "other": 13.98,
+        "nearfield_pallas_leafpair": 6.03,
+        "scatter": 4.29,
+        "sort": 0.84,
+        "memcpy": 1.37,
+        "xla_fusion_other": 2.12,
+        "reduce": 0.36,
+        "gather": 0.25,
+        "memset": 0.06
+      },
+      "flags": [
+        "loadavg>=8 (40.5)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    {
+      "code": "jaccpot_com_cells",
+      "n": 200000,
+      "leaf": 64,
+      "p": 5,
+      "theta": 0.8,
+      "ms": 29.45905551314354,
+      "eval_ms": 15.220005065202713,
+      "aggL2": 0.0012691361139883035,
+      "direct_share": 0.00521143885,
+      "far_pairs": 690536,
+      "launches": 1818.8,
+      "stages": {
+        "m2l_pallas": 9.36,
+        "nearfield_pallas_leafpair": 5.97,
+        "scatter": 4.26,
+        "other": 3.17,
+        "sort": 0.84,
+        "memcpy": 1.15,
+        "xla_fusion_other": 1.84,
+        "reduce": 0.35,
+        "gather": 0.25,
+        "memset": 0.06
+      },
+      "flags": [
+        "loadavg>=8 (24.6)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    {
+      "code": "jaccpot_com_cells",
+      "n": 200000,
+      "leaf": 64,
+      "p": 5,
+      "theta": 0.8,
+      "ms": 27.91482601314783,
+      "eval_ms": 13.684757053852081,
+      "aggL2": 0.0012691361139883423,
+      "direct_share": 0.00521143885,
+      "far_pairs": 690536,
+      "launches": 1907.8,
+      "stages": {
+        "m2l_pallas": 9.39,
+        "nearfield_pallas_leafpair": 5.99,
+        "scatter": 2.14,
+        "other": 3.19,
+        "memcpy": 1.22,
+        "sort": 0.84,
+        "xla_fusion_other": 1.91,
+        "reduce": 0.34,
+        "gather": 0.29,
+        "memset": 0.06
+      },
+      "flags": [
+        "loadavg>=8 (26.4)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    {
+      "code": "jaccpot_com_cells",
+      "n": 200000,
+      "leaf": 64,
+      "p": 5,
+      "theta": 0.8,
+      "ms": 20.825965888798237,
+      "eval_ms": 11.407166719436646,
+      "aggL2": 0.0012691383477255133,
+      "direct_share": 0.00521143885,
+      "far_pairs": 690536,
+      "launches": 1907.8,
+      "stages": {
+        "nearfield_pallas_leafpair": 6.01,
+        "m2l_pallas": 4.27,
+        "other": 3.2,
+        "memcpy": 1.22,
+        "sort": 0.84,
+        "xla_fusion_other": 1.99,
+        "scatter": 0.4,
+        "reduce": 0.35,
+        "gather": 0.29,
+        "memset": 0.06
+      },
+      "flags": [
+        "loadavg>=8 (24.1)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    {
+      "code": "jaccpot_com_cells",
+      "n": 200000,
+      "leaf": 64,
+      "p": 5,
+      "theta": 0.8,
+      "ms": 16.764309629797935,
+      "eval_ms": 11.337325908243656,
+      "aggL2": 0.0012691470096074869,
+      "direct_share": 0.00521143885,
+      "far_pairs": 690536,
+      "launches": 1904.8,
+      "stages": {
+        "nearfield_pallas_leafpair": 5.99,
+        "other": 3.18,
+        "memcpy": 1.2,
+        "sort": 0.84,
+        "xla_fusion_other": 1.93,
+        "m2l_pallas": 0.19,
+        "scatter": 0.36,
+        "reduce": 0.35,
+        "gather": 0.29,
+        "memset": 0.06
+      },
+      "flags": [
+        "loadavg>=8 (28.2)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    {
+      "code": "jaccpot_com_cells",
+      "n": 200000,
+      "leaf": 64,
+      "p": 5,
+      "theta": 0.8,
+      "ms": 14.80459589511156,
+      "eval_ms": 4.484961740672588,
+      "aggL2": 0.001269147009607449,
+      "direct_share": 0.00521143885,
+      "far_pairs": 690536,
+      "launches": 1904.8,
+      "stages": {
+        "nearfield_pallas_leafpair": 1.81,
+        "other": 3.2,
+        "memcpy": 1.21,
+        "sort": 0.84,
+        "xla_fusion_other": 1.9,
+        "m2l_pallas": 0.19,
+        "scatter": 0.36,
+        "reduce": 0.34,
+        "gather": 0.32,
+        "memset": 0.06
+      },
+      "flags": [
+        "loadavg>=8 (24.4)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    {
+      "code": "jaccpot_com_cells",
+      "n": 200000,
+      "leaf": 64,
+      "p": 5,
+      "theta": 0.8,
+      "ms": 9.637065976858139,
+      "eval_ms": 4.381852224469185,
+      "aggL2": 0.001269147009607449,
+      "direct_share": 0.00521143885,
+      "far_pairs": 690536,
+      "launches": 796.0,
+      "stages": {
+        "sort": 0.79,
+        "memcpy": 0.43,
+        "other": 0.51,
+        "scatter": 0.33,
+        "nearfield_pallas_leafpair": 0.15,
+        "xla_fusion_other": 0.94,
+        "gather": 0.17,
+        "memset": 0.06,
+        "m2l_pallas": 0.06,
+        "reduce": 0.2
+      },
+      "flags": [
+        "loadavg>=8 (28.4)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    {
+      "code": "jaccpot_aabb_cells",
+      "n": 200000,
+      "leaf": 64,
+      "p": 5,
+      "theta": 0.8,
+      "ms": 14.481355622410774,
+      "eval_ms": 4.07744012773037,
+      "aggL2": 0.0012691470096074873,
+      "direct_share": 0.00521143885,
+      "far_pairs": 690536,
+      "launches": 1694.8,
+      "stages": {
+        "nearfield_pallas_leafpair": 1.8,
+        "other": 3.23,
+        "memcpy": 1.03,
+        "sort": 0.84,
+        "xla_fusion_other": 1.61,
+        "m2l_pallas": 0.19,
+        "scatter": 0.36,
+        "reduce": 0.36,
+        "gather": 0.31,
+        "memset": 0.06
+      },
+      "flags": [
+        "loadavg>=8 (39.0)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    {
+      "code": "jaccpot_com_cells",
+      "n": 200000,
+      "leaf": 64,
+      "p": 5,
+      "theta": 0.8,
+      "ms": 29.36196904629469,
+      "eval_ms": 14.701173640787601,
+      "aggL2": 0.00126914042073669,
+      "direct_share": 0.00521143885,
+      "far_pairs": 690536,
+      "launches": 1804.8,
+      "stages": {
+        "m2l_pallas": 9.34,
+        "nearfield_pallas_leafpair": 5.99,
+        "scatter": 4.29,
+        "other": 3.16,
+        "memcpy": 1.12,
+        "sort": 0.72,
+        "xla_fusion_other": 1.81,
+        "reduce": 0.35,
+        "gather": 0.27,
+        "memset": 0.05
+      },
+      "flags": [
+        "loadavg>=8 (24.3)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    {
+      "code": "jaccpot_com_cells",
+      "n": 200000,
+      "leaf": 64,
+      "p": 5,
+      "theta": 0.8,
+      "ms": 316.88625533133745,
+      "eval_ms": 27.433352544903755,
+      "aggL2": 0.0012691418131325193,
+      "direct_share": 0.00521143885,
+      "far_pairs": 690536,
+      "launches": null,
+      "stages": {},
+      "flags": [
+        "loadavg>=8 (188.9)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    {
+      "code": "jaccpot_com_cells",
+      "n": 200000,
+      "leaf": 64,
+      "p": 6,
+      "theta": 0.8,
+      "ms": 50.200351513922215,
+      "eval_ms": 13.537377119064331,
+      "aggL2": 0.0007412104227628439,
+      "direct_share": 0.00521143885,
+      "far_pairs": 690536,
+      "launches": 4261.0,
+      "stages": {
+        "m2l_pallas": 9.4,
+        "other": 13.33,
+        "nearfield_pallas_leafpair": 6.03,
+        "xla_fusion_other": 5.13,
+        "scatter": 5.83,
+        "reduce": 4.59,
+        "memcpy": 1.18,
+        "sort": 0.65,
+        "gather": 0.09
+      },
+      "flags": [
+        "loadavg>=8 (48.1)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    {
+      "code": "jaccpot_com_cells",
+      "n": 200000,
+      "leaf": 64,
+      "p": 4,
+      "theta": 1.0,
+      "ms": 40.28889536857605,
+      "eval_ms": 10.970653034746647,
+      "aggL2": 0.010476607751469963,
+      "direct_share": 0.0032230325499999998,
+      "far_pairs": 365922,
+      "launches": 4161.6,
+      "stages": {
+        "other": 13.38,
+        "m2l_pallas": 4.63,
+        "nearfield_pallas_leafpair": 3.6,
+        "scatter": 5.96,
+        "reduce": 4.4,
+        "memcpy": 1.18,
+        "sort": 0.65,
+        "xla_fusion_other": 2.8,
+        "gather": 0.14,
+        "memset": 0.05
+      },
+      "flags": [
+        "loadavg>=8 (36.3)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    {
+      "code": "jaccpot_com_cells",
+      "n": 200000,
+      "leaf": 64,
+      "p": 5,
+      "theta": 1.0,
+      "ms": 49.16885066777468,
+      "eval_ms": 11.388865299522877,
+      "aggL2": 0.008992960204236075,
+      "direct_share": 0.0032230325499999998,
+      "far_pairs": 365922,
+      "launches": 4243.8,
+      "stages": {
+        "xla_fusion_other": 11.44,
+        "other": 13.32,
+        "m2l_pallas": 4.65,
+        "nearfield_pallas_leafpair": 3.63,
+        "scatter": 5.97,
+        "reduce": 4.53,
+        "memcpy": 1.18,
+        "sort": 0.64,
+        "gather": 0.14,
+        "memset": 0.05
+      },
+      "flags": [
+        "loadavg>=8 (30.0)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    {
+      "code": "jaccpot_com_cells",
+      "n": 200000,
+      "leaf": 64,
+      "p": 6,
+      "theta": 1.0,
+      "ms": 41.64014607667923,
+      "eval_ms": 11.567195877432823,
+      "aggL2": 0.005567366187051555,
+      "direct_share": 0.0032230325499999998,
+      "far_pairs": 365922,
+      "launches": 4163.0,
+      "stages": {
+        "other": 13.47,
+        "m2l_pallas": 4.66,
+        "nearfield_pallas_leafpair": 3.61,
+        "scatter": 6.16,
+        "reduce": 4.36,
+        "memcpy": 1.17,
+        "sort": 0.64,
+        "xla_fusion_other": 2.84,
+        "gather": 0.14
+      },
+      "flags": [
+        "loadavg>=8 (56.5)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    {
+      "code": "jaccpot_com",
+      "n": 200000,
+      "leaf": 32,
+      "p": 4,
+      "theta": 0.6,
+      "ms": 90.45953582972288,
+      "eval_ms": 20.972412079572678,
+      "aggL2": 0.0006220814146752053,
+      "direct_share": 0.121331064,
+      "far_pairs": 2353602,
+      "launches": null,
+      "stages": {},
+      "flags": [
+        "loadavg>=8 (144.2)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    {
+      "code": "jaccpot_com",
+      "n": 200000,
+      "leaf": 32,
+      "p": 5,
+      "theta": 0.6,
+      "ms": 102.09307000041008,
+      "eval_ms": 16.293439082801342,
+      "aggL2": 0.00021391474391517287,
+      "direct_share": 0.121331064,
+      "far_pairs": 2353602,
+      "launches": null,
+      "stages": {},
+      "flags": [
+        "loadavg>=8 (43.4)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    {
+      "code": "jaccpot_com",
+      "n": 200000,
+      "leaf": 32,
+      "p": 6,
+      "theta": 0.6,
+      "ms": 107.74957537651062,
+      "eval_ms": 16.60584006458521,
+      "aggL2": 8.598701961110017e-05,
+      "direct_share": 0.121331064,
+      "far_pairs": 2353602,
+      "launches": null,
+      "stages": {},
+      "flags": [
+        "loadavg>=8 (23.1)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    {
+      "code": "jaccpot_com",
+      "n": 200000,
+      "leaf": 32,
+      "p": 4,
+      "theta": 0.8,
+      "ms": 57.60229621082544,
+      "eval_ms": 16.21473953127861,
+      "aggL2": 0.002205222409891678,
+      "direct_share": 0.0608847024,
+      "far_pairs": 1165506,
+      "launches": null,
+      "stages": {},
+      "flags": [
+        "loadavg>=8 (23.3)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    {
+      "code": "jaccpot_com",
+      "n": 200000,
+      "leaf": 32,
+      "p": 5,
+      "theta": 0.8,
+      "ms": 69.72310692071915,
+      "eval_ms": 16.206289641559124,
+      "aggL2": 0.0011121310200528749,
+      "direct_share": 0.0608847024,
+      "far_pairs": 1165506,
+      "launches": null,
+      "stages": {},
+      "flags": [
+        "loadavg>=8 (18.1)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    {
+      "code": "jaccpot_com",
+      "n": 200000,
+      "leaf": 32,
+      "p": 6,
+      "theta": 0.8,
+      "ms": 76.07306204736233,
+      "eval_ms": 9.844006970524788,
+      "aggL2": 0.0006407978305233124,
+      "direct_share": 0.0608847024,
+      "far_pairs": 1165506,
+      "launches": null,
+      "stages": {},
+      "flags": [
+        "loadavg>=8 (16.6)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    {
+      "code": "jaccpot_com",
+      "n": 200000,
+      "leaf": 32,
+      "p": 4,
+      "theta": 1.0,
+      "ms": 45.14959752559662,
+      "eval_ms": 11.117254383862019,
+      "aggL2": 0.009519340101239351,
+      "direct_share": 0.0347821232,
+      "far_pairs": 662840,
+      "launches": null,
+      "stages": {},
+      "flags": [
+        "loadavg>=8 (15.9)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    {
+      "code": "jaccpot_com",
+      "n": 200000,
+      "leaf": 32,
+      "p": 5,
+      "theta": 1.0,
+      "ms": 57.97875411808491,
+      "eval_ms": 11.143313720822334,
+      "aggL2": 0.007196029516096602,
+      "direct_share": 0.0347821232,
+      "far_pairs": 662840,
+      "launches": null,
+      "stages": {},
+      "flags": [
+        "loadavg>=8 (16.4)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    {
+      "code": "jaccpot_com",
+      "n": 200000,
+      "leaf": 32,
+      "p": 6,
+      "theta": 1.0,
+      "ms": 63.89856301248073,
+      "eval_ms": 11.175454594194889,
+      "aggL2": 0.005289791349932307,
+      "direct_share": 0.0347821232,
+      "far_pairs": 662840,
+      "launches": null,
+      "stages": {},
+      "flags": [
+        "loadavg>=8 (16.5)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    {
+      "code": "jaccpot_com",
+      "n": 200000,
+      "leaf": 64,
+      "p": 4,
+      "theta": 0.6,
+      "ms": 72.22369723021984,
+      "eval_ms": 29.290941543877125,
+      "aggL2": 0.0006564942974852426,
+      "direct_share": 0.2358118576,
+      "far_pairs": 1022918,
+      "launches": 4587.0,
+      "stages": {
+        "nearfield_pallas_leafpair": 32.66,
+        "m2l_pallas": 13.93,
+        "scatter": 6.25,
+        "xla_fusion_other": 6.71,
+        "memcpy": 1.45,
+        "sort": 0.82,
+        "reduce": 2.05,
+        "other": 0.26,
+        "gather": 0.08
+      },
+      "flags": [
+        "loadavg>=8 (25.1)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    {
+      "code": "jaccpot_com",
+      "n": 200000,
+      "leaf": 64,
+      "p": 5,
+      "theta": 0.6,
+      "ms": 80.40308486670256,
+      "eval_ms": 29.330313205718994,
+      "aggL2": 0.00021510712145054808,
+      "direct_share": 0.2358118576,
+      "far_pairs": 1022918,
+      "launches": 5863.4,
+      "stages": {
+        "nearfield_pallas_leafpair": 32.35,
+        "m2l_pallas": 13.93,
+        "scatter": 8.02,
+        "xla_fusion_other": 10.26,
+        "memcpy": 1.73,
+        "sort": 0.82,
+        "reduce": 2.17,
+        "other": 0.1
+      },
+      "flags": [
+        "loadavg>=8 (19.6)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    {
+      "code": "jaccpot_com",
+      "n": 200000,
+      "leaf": 64,
+      "p": 6,
+      "theta": 0.6,
+      "ms": 85.72598472237587,
+      "eval_ms": 28.69413886219263,
+      "aggL2": 8.275340550826363e-05,
+      "direct_share": 0.2358118576,
+      "far_pairs": 1022918,
+      "launches": 7416.6,
+      "stages": {
+        "nearfield_pallas_leafpair": 32.63,
+        "m2l_pallas": 13.91,
+        "scatter": 7.16,
+        "memcpy": 2.62,
+        "xla_fusion_other": 12.4,
+        "sort": 0.7,
+        "reduce": 1.89
+      },
+      "flags": [
+        "loadavg>=8 (31.5)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    {
+      "code": "jaccpot_com",
+      "n": 200000,
+      "leaf": 64,
+      "p": 4,
+      "theta": 0.8,
+      "ms": 47.93450087308884,
+      "eval_ms": 19.524075090885162,
+      "aggL2": 0.00206024328677018,
+      "direct_share": 0.12249007840000001,
+      "far_pairs": 564890,
+      "launches": 4539.0,
+      "stages": {
+        "nearfield_pallas_leafpair": 17.14,
+        "m2l_pallas": 8.0,
+        "scatter": 5.58,
+        "xla_fusion_other": 5.79,
+        "memcpy": 1.37,
+        "sort": 0.81,
+        "reduce": 1.6,
+        "other": 0.26,
+        "gather": 0.08
+      },
+      "flags": [
+        "loadavg>=8 (24.6)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    {
+      "code": "jaccpot_com_bound",
+      "n": 200000,
+      "leaf": 64,
+      "p": 4,
+      "theta": 0.8,
+      "ms": 63.02943620830774,
+      "eval_ms": 16.49699080735445,
+      "aggL2": 0.0014654009180260182,
+      "direct_share": 0.1305581744,
+      "far_pairs": 1541052,
+      "launches": 4608.0,
+      "stages": {
+        "m2l_pallas": 20.08,
+        "nearfield_pallas_leafpair": 18.12,
+        "scatter": 5.73,
+        "xla_fusion_other": 6.7,
+        "memcpy": 1.48,
+        "sort": 0.81,
+        "reduce": 2.01,
+        "other": 0.26
+      },
+      "flags": [
+        "loadavg>=8 (18.7)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    {
+      "code": "jaccpot_com",
+      "n": 200000,
+      "leaf": 64,
+      "p": 5,
+      "theta": 0.8,
+      "ms": 56.36570993810892,
+      "eval_ms": 15.699067153036594,
+      "aggL2": 0.001020382167633477,
+      "direct_share": 0.12249007840000001,
+      "far_pairs": 564890,
+      "launches": 5815.4,
+      "stages": {
+        "nearfield_pallas_leafpair": 17.15,
+        "m2l_pallas": 8.08,
+        "scatter": 7.44,
+        "xla_fusion_other": 9.57,
+        "memcpy": 1.72,
+        "sort": 0.81,
+        "reduce": 1.67,
+        "other": 0.1
+      },
+      "flags": [
+        "loadavg>=8 (19.9)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    {
+      "code": "jaccpot_com_bound",
+      "n": 200000,
+      "leaf": 64,
+      "p": 5,
+      "theta": 0.8,
+      "ms": 71.85242306441069,
+      "eval_ms": 17.061431892216206,
+      "aggL2": 0.0006821894721965341,
+      "direct_share": 0.1305581744,
+      "far_pairs": 1541052,
+      "launches": 5884.4,
+      "stages": {
+        "m2l_pallas": 20.29,
+        "nearfield_pallas_leafpair": 18.21,
+        "scatter": 7.62,
+        "xla_fusion_other": 10.2,
+        "memcpy": 1.91,
+        "sort": 0.81,
+        "reduce": 2.16,
+        "other": 0.1
+      },
+      "flags": [
+        "loadavg>=8 (21.9)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    {
+      "code": "jaccpot_com",
+      "n": 200000,
+      "leaf": 64,
+      "p": 6,
+      "theta": 0.8,
+      "ms": 61.175243370234966,
+      "eval_ms": 16.60862099379301,
+      "aggL2": 0.0005856799796159417,
+      "direct_share": 0.12249007840000001,
+      "far_pairs": 564890,
+      "launches": 7368.6,
+      "stages": {
+        "nearfield_pallas_leafpair": 17.17,
+        "m2l_pallas": 8.08,
+        "scatter": 6.44,
+        "memcpy": 2.29,
+        "sort": 0.7,
+        "xla_fusion_other": 11.64,
+        "reduce": 1.5
+      },
+      "flags": [
+        "loadavg>=8 (22.5)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    {
+      "code": "jaccpot_com_bound",
+      "n": 200000,
+      "leaf": 64,
+      "p": 6,
+      "theta": 0.8,
+      "ms": 76.5822621062398,
+      "eval_ms": 27.892986312508583,
+      "aggL2": 0.0003653176014186007,
+      "direct_share": 0.1305581744,
+      "far_pairs": 1541052,
+      "launches": 7437.6,
+      "stages": {
+        "m2l_pallas": 20.29,
+        "nearfield_pallas_leafpair": 18.21,
+        "scatter": 6.63,
+        "memcpy": 2.37,
+        "xla_fusion_other": 12.34,
+        "sort": 0.7,
+        "reduce": 1.87
+      },
+      "flags": [
+        "loadavg>=8 (20.4)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    {
+      "code": "jaccpot_com",
+      "n": 200000,
+      "leaf": 64,
+      "p": 4,
+      "theta": 1.0,
+      "ms": 37.35156562179327,
+      "eval_ms": 17.840037122368813,
+      "aggL2": 0.008136987805455385,
+      "direct_share": 0.0715296944,
+      "far_pairs": 343422,
+      "launches": 4539.0,
+      "stages": {
+        "nearfield_pallas_leafpair": 10.49,
+        "m2l_pallas": 5.2,
+        "scatter": 5.29,
+        "xla_fusion_other": 5.53,
+        "memcpy": 1.27,
+        "sort": 0.81,
+        "reduce": 1.36,
+        "other": 0.24,
+        "gather": 0.08
+      },
+      "flags": [
+        "loadavg>=8 (22.6)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    {
+      "code": "jaccpot_com_bound",
+      "n": 200000,
+      "leaf": 64,
+      "p": 4,
+      "theta": 1.0,
+      "ms": 47.694629803299904,
+      "eval_ms": 19.10531148314476,
+      "aggL2": 0.004495475401896492,
+      "direct_share": 0.0779944112,
+      "far_pairs": 1032766,
+      "launches": 4560.0,
+      "stages": {
+        "m2l_pallas": 13.98,
+        "nearfield_pallas_leafpair": 11.38,
+        "scatter": 5.17,
+        "xla_fusion_other": 5.73,
+        "memcpy": 1.37,
+        "sort": 0.81,
+        "reduce": 1.61,
+        "other": 0.26,
+        "gather": 0.08
+      },
+      "flags": [
+        "loadavg>=8 (18.2)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    {
+      "code": "jaccpot_com",
+      "n": 200000,
+      "leaf": 64,
+      "p": 5,
+      "theta": 1.0,
+      "ms": 46.189482510089874,
+      "eval_ms": 17.588415183126926,
+      "aggL2": 0.005921234067402421,
+      "direct_share": 0.0715296944,
+      "far_pairs": 343422,
+      "launches": 5815.4,
+      "stages": {
+        "nearfield_pallas_leafpair": 10.5,
+        "m2l_pallas": 5.19,
+        "scatter": 7.15,
+        "xla_fusion_other": 9.33,
+        "memcpy": 1.6,
+        "sort": 0.82,
+        "reduce": 1.35,
+        "other": 0.1
+      },
+      "flags": [
+        "loadavg>=8 (22.3)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    {
+      "code": "jaccpot_com_bound",
+      "n": 200000,
+      "leaf": 64,
+      "p": 5,
+      "theta": 1.0,
+      "ms": 56.65732137858868,
+      "eval_ms": 18.951532430946827,
+      "aggL2": 0.0031223946823854573,
+      "direct_share": 0.0779944112,
+      "far_pairs": 1032766,
+      "launches": 5836.4,
+      "stages": {
+        "m2l_pallas": 14.17,
+        "nearfield_pallas_leafpair": 11.34,
+        "scatter": 7.11,
+        "xla_fusion_other": 9.41,
+        "memcpy": 1.69,
+        "sort": 0.82,
+        "reduce": 1.77,
+        "other": 0.1
+      },
+      "flags": [
+        "loadavg>=8 (17.5)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    {
+      "code": "jaccpot_com",
+      "n": 200000,
+      "leaf": 64,
+      "p": 6,
+      "theta": 1.0,
+      "ms": 51.134826615452766,
+      "eval_ms": 17.42163486778736,
+      "aggL2": 0.00439744630445975,
+      "direct_share": 0.0715296944,
+      "far_pairs": 343422,
+      "launches": 7368.6,
+      "stages": {
+        "nearfield_pallas_leafpair": 10.49,
+        "m2l_pallas": 5.15,
+        "scatter": 6.12,
+        "memcpy": 2.41,
+        "sort": 0.7,
+        "xla_fusion_other": 11.26,
+        "reduce": 1.29
+      },
+      "flags": [
+        "loadavg>=8 (35.8)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    {
+      "code": "jaccpot_com_bound",
+      "n": 200000,
+      "leaf": 64,
+      "p": 6,
+      "theta": 1.0,
+      "ms": 61.12011894583702,
+      "eval_ms": 16.742730513215065,
+      "aggL2": 0.002321834828081769,
+      "direct_share": 0.0779944112,
+      "far_pairs": 1032766,
+      "launches": 7389.6,
+      "stages": {
+        "m2l_pallas": 13.92,
+        "nearfield_pallas_leafpair": 11.32,
+        "scatter": 6.04,
+        "memcpy": 2.42,
+        "sort": 0.7,
+        "xla_fusion_other": 11.47,
+        "reduce": 1.49
+      },
+      "flags": [
+        "loadavg>=8 (33.8)",
+        "other-gpus-busy (98%)"
+      ]
+    },
+    {
+      "code": "jaccpot_aabb",
+      "n": 200000,
+      "leaf": 32,
+      "p": 4,
+      "theta": 0.6,
+      "ms": 72.21174295991659,
+      "eval_ms": 23.173891939222813,
+      "aggL2": 0.0012999058224365803,
+      "direct_share": 0.0938284208,
+      "far_pairs": 2336206,
+      "launches": null,
+      "stages": {},
+      "flags": [
+        "loadavg>=8 (17.9)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    {
+      "code": "jaccpot_aabb",
+      "n": 200000,
+      "leaf": 32,
+      "p": 5,
+      "theta": 0.6,
+      "ms": 85.01513730734587,
+      "eval_ms": 23.14196340739727,
+      "aggL2": 0.000995089144427238,
+      "direct_share": 0.0938284208,
+      "far_pairs": 2336206,
+      "launches": null,
+      "stages": {},
+      "flags": [
+        "loadavg>=8 (20.1)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    {
+      "code": "jaccpot_aabb",
+      "n": 200000,
+      "leaf": 32,
+      "p": 6,
+      "theta": 0.6,
+      "ms": 90.87508786469698,
+      "eval_ms": 23.002580739557743,
+      "aggL2": 0.0012178048137188864,
+      "direct_share": 0.0938284208,
+      "far_pairs": 2336206,
+      "launches": null,
+      "stages": {},
+      "flags": [
+        "loadavg>=8 (18.5)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    {
+      "code": "jaccpot_aabb",
+      "n": 200000,
+      "leaf": 32,
+      "p": 4,
+      "theta": 0.8,
+      "ms": 50.25170426815748,
+      "eval_ms": 12.82880362123251,
+      "aggL2": 0.014370043351796294,
+      "direct_share": 0.0431820976,
+      "far_pairs": 1103582,
+      "launches": null,
+      "stages": {},
+      "flags": [
+        "loadavg>=8 (20.1)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    {
+      "code": "jaccpot_aabb",
+      "n": 200000,
+      "leaf": 32,
+      "p": 5,
+      "theta": 0.8,
+      "ms": 63.76506611704827,
+      "eval_ms": 13.289443217217922,
+      "aggL2": 0.027872792706509143,
+      "direct_share": 0.0431820976,
+      "far_pairs": 1103582,
+      "launches": null,
+      "stages": {},
+      "flags": [
+        "loadavg>=8 (31.7)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    {
+      "code": "jaccpot_aabb",
+      "n": 200000,
+      "leaf": 32,
+      "p": 6,
+      "theta": 0.8,
+      "ms": 69.94869615882635,
+      "eval_ms": 12.949942611157894,
+      "aggL2": 0.052207127639807546,
+      "direct_share": 0.0431820976,
+      "far_pairs": 1103582,
+      "launches": null,
+      "stages": {},
+      "flags": [
+        "loadavg>=8 (29.3)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    {
+      "code": "jaccpot_aabb",
+      "n": 200000,
+      "leaf": 32,
+      "p": 4,
+      "theta": 1.0,
+      "ms": 41.846915520727634,
+      "eval_ms": 8.64948146045208,
+      "aggL2": 0.02323548295097368,
+      "direct_share": 0.0219047088,
+      "far_pairs": 601508,
+      "launches": null,
+      "stages": {},
+      "flags": [
+        "loadavg>=8 (23.5)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    {
+      "code": "jaccpot_aabb",
+      "n": 200000,
+      "leaf": 32,
+      "p": 5,
+      "theta": 1.0,
+      "ms": 54.82259076088667,
+      "eval_ms": 8.499450981616974,
+      "aggL2": 0.04163406322524158,
+      "direct_share": 0.0219047088,
+      "far_pairs": 601508,
+      "launches": null,
+      "stages": {},
+      "flags": [
+        "loadavg>=8 (18.4)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    {
+      "code": "jaccpot_aabb",
+      "n": 200000,
+      "leaf": 32,
+      "p": 6,
+      "theta": 1.0,
+      "ms": 60.94905827194452,
+      "eval_ms": 8.556672371923923,
+      "aggL2": 0.09214913685264946,
+      "direct_share": 0.0219047088,
+      "far_pairs": 601508,
+      "launches": null,
+      "stages": {},
+      "flags": [
+        "loadavg>=8 (29.5)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    {
+      "code": "jaccpot_aabb",
+      "n": 200000,
+      "leaf": 64,
+      "p": 4,
+      "theta": 0.6,
+      "ms": 59.452130272984505,
+      "eval_ms": 23.067631758749485,
+      "aggL2": 0.0012010875621498356,
+      "direct_share": 0.18896283360000002,
+      "far_pairs": 992074,
+      "launches": 4464.0,
+      "stages": {
+        "nearfield_pallas_leafpair": 26.45,
+        "m2l_pallas": 12.96,
+        "scatter": 2.66,
+        "xla_fusion_other": 5.36,
+        "memcpy": 1.35,
+        "sort": 0.65,
+        "reduce": 0.7,
+        "other": 0.31,
+        "gather": 0.08
+      },
+      "flags": [
+        "loadavg>=8 (28.3)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    {
+      "code": "jaccpot_aabb",
+      "n": 200000,
+      "leaf": 64,
+      "p": 5,
+      "theta": 0.6,
+      "ms": 68.32378916442394,
+      "eval_ms": 23.440802469849586,
+      "aggL2": 0.0006322815304411137,
+      "direct_share": 0.18896283360000002,
+      "far_pairs": 992074,
+      "launches": 5740.4,
+      "stages": {
+        "nearfield_pallas_leafpair": 26.49,
+        "m2l_pallas": 13.05,
+        "scatter": 4.51,
+        "xla_fusion_other": 9.24,
+        "memcpy": 1.71,
+        "sort": 0.65,
+        "reduce": 0.88,
+        "other": 0.1,
+        "gather": 0.08
+      },
+      "flags": [
+        "loadavg>=8 (20.4)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    {
+      "code": "jaccpot_aabb",
+      "n": 200000,
+      "leaf": 64,
+      "p": 6,
+      "theta": 0.6,
+      "ms": 73.29706735908985,
+      "eval_ms": 26.312507688999176,
+      "aggL2": 0.00036536600778704304,
+      "direct_share": 0.18896283360000002,
+      "far_pairs": 992074,
+      "launches": 7299.6,
+      "stages": {
+        "nearfield_pallas_leafpair": 26.61,
+        "m2l_pallas": 13.08,
+        "memcpy": 2.49,
+        "scatter": 3.26,
+        "xla_fusion_other": 11.26,
+        "sort": 0.65,
+        "reduce": 0.92,
+        "other": 0.12
+      },
+      "flags": [
+        "loadavg>=8 (16.7)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    {
+      "code": "jaccpot_aabb",
+      "n": 200000,
+      "leaf": 64,
+      "p": 4,
+      "theta": 0.8,
+      "ms": 39.16480205953121,
+      "eval_ms": 21.039252169430256,
+      "aggL2": 0.005326132286247191,
+      "direct_share": 0.0893010096,
+      "far_pairs": 509488,
+      "launches": 4455.0,
+      "stages": {
+        "nearfield_pallas_leafpair": 13.03,
+        "m2l_pallas": 7.03,
+        "scatter": 2.78,
+        "xla_fusion_other": 5.34,
+        "memcpy": 1.27,
+        "sort": 0.64,
+        "reduce": 0.65,
+        "other": 0.3,
+        "gather": 0.08
+      },
+      "flags": [
+        "loadavg>=8 (19.8)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    {
+      "code": "jaccpot_aabb",
+      "n": 200000,
+      "leaf": 64,
+      "p": 5,
+      "theta": 0.8,
+      "ms": 47.66788128763437,
+      "eval_ms": 12.398631311953068,
+      "aggL2": 0.004054903974583178,
+      "direct_share": 0.0893010096,
+      "far_pairs": 509488,
+      "launches": 5731.4,
+      "stages": {
+        "nearfield_pallas_leafpair": 13.01,
+        "m2l_pallas": 7.08,
+        "scatter": 4.43,
+        "xla_fusion_other": 9.3,
+        "memcpy": 1.63,
+        "sort": 0.65,
+        "reduce": 0.83,
+        "other": 0.18,
+        "gather": 0.08
+      },
+      "flags": [
+        "loadavg>=8 (18.0)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    {
+      "code": "jaccpot_aabb",
+      "n": 200000,
+      "leaf": 64,
+      "p": 6,
+      "theta": 0.8,
+      "ms": 52.727014012634754,
+      "eval_ms": 21.02488186210394,
+      "aggL2": 0.0035011757053509973,
+      "direct_share": 0.0893010096,
+      "far_pairs": 509488,
+      "launches": 7285.6,
+      "stages": {
+        "nearfield_pallas_leafpair": 13.0,
+        "m2l_pallas": 7.18,
+        "memcpy": 2.38,
+        "scatter": 3.34,
+        "xla_fusion_other": 11.48,
+        "sort": 0.64,
+        "reduce": 0.8,
+        "other": 0.12
+      },
+      "flags": [
+        "loadavg>=8 (21.3)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    {
+      "code": "jaccpot_aabb",
+      "n": 200000,
+      "leaf": 64,
+      "p": 4,
+      "theta": 1.0,
+      "ms": 31.616869382560253,
+      "eval_ms": 11.392824351787567,
+      "aggL2": 0.01695509682950916,
+      "direct_share": 0.0462911664,
+      "far_pairs": 290560,
+      "launches": 4433.0,
+      "stages": {
+        "nearfield_pallas_leafpair": 7.6,
+        "m2l_pallas": 4.32,
+        "scatter": 2.74,
+        "xla_fusion_other": 5.44,
+        "memcpy": 1.27,
+        "sort": 0.65,
+        "reduce": 0.65,
+        "other": 0.36,
+        "gather": 0.08
+      },
+      "flags": [
+        "loadavg>=8 (40.9)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    {
+      "code": "jaccpot_aabb",
+      "n": 200000,
+      "leaf": 64,
+      "p": 5,
+      "theta": 1.0,
+      "ms": 39.630644395947456,
+      "eval_ms": 12.262069620192051,
+      "aggL2": 0.01787989546283733,
+      "direct_share": 0.0462911664,
+      "far_pairs": 290560,
+      "launches": 5709.4,
+      "stages": {
+        "nearfield_pallas_leafpair": 7.58,
+        "m2l_pallas": 4.36,
+        "scatter": 4.61,
+        "xla_fusion_other": 9.39,
+        "memcpy": 1.57,
+        "sort": 0.65,
+        "reduce": 0.66,
+        "other": 0.25,
+        "gather": 0.08
+      },
+      "flags": [
+        "loadavg>=8 (23.1)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    {
+      "code": "jaccpot_aabb",
+      "n": 200000,
+      "leaf": 64,
+      "p": 6,
+      "theta": 1.0,
+      "ms": 44.610920548439026,
+      "eval_ms": 12.255149893462658,
+      "aggL2": 0.03650350734604259,
+      "direct_share": 0.0462911664,
+      "far_pairs": 290560,
+      "launches": 7269.6,
+      "stages": {
+        "nearfield_pallas_leafpair": 7.6,
+        "m2l_pallas": 4.33,
+        "memcpy": 2.36,
+        "scatter": 3.54,
+        "xla_fusion_other": 11.39,
+        "sort": 0.64,
+        "reduce": 0.79,
+        "other": 0.11
+      },
+      "flags": [
+        "loadavg>=8 (21.9)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    {
+      "code": "jaccpot_com_cells",
+      "n": 200000,
+      "leaf": 32,
+      "p": 4,
+      "theta": 0.6,
+      "ms": 17.804335802793503,
+      "eval_ms": 5.251545459032059,
+      "aggL2": 0.0006107434581055049,
+      "direct_share": 0.005146067849999999,
+      "far_pairs": 2779758,
+      "launches": 1830.4,
+      "stages": {
+        "nearfield_pallas_leafpair": 2.5,
+        "other": 6.02,
+        "sort": 2.35,
+        "memcpy": 1.29,
+        "m2l_pallas": 0.38,
+        "xla_fusion_other": 1.94,
+        "scatter": 0.42,
+        "gather": 0.58,
+        "reduce": 0.36,
+        "memset": 0.11
+      },
+      "flags": [
+        "loadavg>=8 (40.1)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    {
+      "code": "jaccpot_com_cells",
+      "n": 200000,
+      "leaf": 32,
+      "p": 5,
+      "theta": 0.6,
+      "ms": 18.568931333720684,
+      "eval_ms": 5.522237159311771,
+      "aggL2": 0.00026817982247900413,
+      "direct_share": 0.005146067849999999,
+      "far_pairs": 2779758,
+      "launches": 1831.6,
+      "stages": {
+        "nearfield_pallas_leafpair": 2.52,
+        "other": 6.2,
+        "sort": 2.35,
+        "memcpy": 1.29,
+        "m2l_pallas": 0.59,
+        "xla_fusion_other": 2.04,
+        "scatter": 0.5,
+        "gather": 0.53,
+        "reduce": 0.36,
+        "memset": 0.11
+      },
+      "flags": [
+        "loadavg>=8 (29.6)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    {
+      "code": "jaccpot_com_cells",
+      "n": 200000,
+      "leaf": 32,
+      "p": 6,
+      "theta": 0.6,
+      "ms": 18.698456324636936,
+      "eval_ms": 5.281864665448666,
+      "aggL2": 0.00010989353378742134,
+      "direct_share": 0.005146067849999999,
+      "far_pairs": 2779758,
+      "launches": 1832.8,
+      "stages": {
+        "nearfield_pallas_leafpair": 2.52,
+        "other": 6.11,
+        "sort": 2.36,
+        "m2l_pallas": 0.82,
+        "memcpy": 1.3,
+        "xla_fusion_other": 2.18,
+        "scatter": 0.56,
+        "gather": 0.53,
+        "reduce": 0.36,
+        "memset": 0.11
+      },
+      "flags": [
+        "loadavg>=8 (30.5)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    {
+      "code": "jaccpot_com_cells",
+      "n": 200000,
+      "leaf": 32,
+      "p": 4,
+      "theta": 0.8,
+      "ms": 17.25027821958065,
+      "eval_ms": 3.350446932017803,
+      "aggL2": 0.002434475357068295,
+      "direct_share": 0.0019166368,
+      "far_pairs": 1209912,
+      "launches": 1830.4,
+      "stages": {
+        "other": 5.29,
+        "sort": 2.32,
+        "nearfield_pallas_leafpair": 1.21,
+        "memcpy": 1.21,
+        "xla_fusion_other": 1.88,
+        "m2l_pallas": 0.2,
+        "reduce": 0.36,
+        "scatter": 0.4,
+        "gather": 0.55,
+        "memset": 0.11
+      },
+      "flags": [
+        "loadavg>=8 (46.3)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    {
+      "code": "jaccpot_com_cells",
+      "n": 200000,
+      "leaf": 32,
+      "p": 5,
+      "theta": 0.8,
+      "ms": 16.525376588106155,
+      "eval_ms": 3.176414407789707,
+      "aggL2": 0.0014092000399302984,
+      "direct_share": 0.0019166368,
+      "far_pairs": 1209912,
+      "launches": 1831.6,
+      "stages": {
+        "other": 5.45,
+        "sort": 2.32,
+        "nearfield_pallas_leafpair": 1.21,
+        "memcpy": 1.21,
+        "m2l_pallas": 0.3,
+        "xla_fusion_other": 2.0,
+        "scatter": 0.48,
+        "gather": 0.5,
+        "reduce": 0.36,
+        "memset": 0.11
+      },
+      "flags": [
+        "loadavg>=8 (46.1)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    {
+      "code": "jaccpot_com_cells",
+      "n": 200000,
+      "leaf": 32,
+      "p": 6,
+      "theta": 0.8,
+      "ms": 16.647055372595787,
+      "eval_ms": 3.6364076659083366,
+      "aggL2": 0.0008532440103251047,
+      "direct_share": 0.0019166368,
+      "far_pairs": 1209912,
+      "launches": 1832.8,
+      "stages": {
+        "other": 5.37,
+        "sort": 2.32,
+        "nearfield_pallas_leafpair": 1.22,
+        "memcpy": 1.22,
+        "m2l_pallas": 0.43,
+        "xla_fusion_other": 2.17,
+        "scatter": 0.55,
+        "reduce": 0.36,
+        "gather": 0.47,
+        "memset": 0.11
+      },
+      "flags": [
+        "loadavg>=8 (45.3)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    {
+      "code": "jaccpot_com_cells",
+      "n": 200000,
+      "leaf": 32,
+      "p": 4,
+      "theta": 1.0,
+      "ms": 14.923634938895702,
+      "eval_ms": 2.3838020861148834,
+      "aggL2": 0.011192000078159792,
+      "direct_share": 0.00094316935,
+      "far_pairs": 618408,
+      "launches": 1830.4,
+      "stages": {
+        "other": 5.08,
+        "sort": 2.31,
+        "memcpy": 1.22,
+        "nearfield_pallas_leafpair": 0.82,
+        "xla_fusion_other": 1.88,
+        "m2l_pallas": 0.15,
+        "reduce": 0.36,
+        "scatter": 0.4,
+        "gather": 0.54,
+        "memset": 0.11
+      },
+      "flags": [
+        "loadavg>=8 (43.8)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    {
+      "code": "jaccpot_com_cells",
+      "n": 200000,
+      "leaf": 32,
+      "p": 5,
+      "theta": 1.0,
+      "ms": 15.782794915139675,
+      "eval_ms": 3.895178437232971,
+      "aggL2": 0.009698001769027274,
+      "direct_share": 0.00094316935,
+      "far_pairs": 618408,
+      "launches": 1831.6,
+      "stages": {
+        "other": 5.22,
+        "sort": 2.31,
+        "memcpy": 1.23,
+        "nearfield_pallas_leafpair": 0.82,
+        "xla_fusion_other": 1.99,
+        "m2l_pallas": 0.23,
+        "reduce": 0.36,
+        "scatter": 0.51,
+        "gather": 0.46,
+        "memset": 0.11
+      },
+      "flags": [
+        "loadavg>=8 (43.0)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    {
+      "code": "jaccpot_com_cells",
+      "n": 200000,
+      "leaf": 32,
+      "p": 6,
+      "theta": 1.0,
+      "ms": 16.09738878905773,
+      "eval_ms": 2.81718373298645,
+      "aggL2": 0.006320654615415339,
+      "direct_share": 0.00094316935,
+      "far_pairs": 618408,
+      "launches": 1832.8,
+      "stages": {
+        "other": 5.14,
+        "sort": 2.31,
+        "memcpy": 1.23,
+        "nearfield_pallas_leafpair": 0.82,
+        "m2l_pallas": 0.33,
+        "xla_fusion_other": 2.14,
+        "scatter": 0.55,
+        "reduce": 0.32,
+        "gather": 0.5,
+        "memset": 0.11
+      },
+      "flags": [
+        "loadavg>=8 (33.7)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    {
+      "code": "jaccpot_com_cells",
+      "n": 200000,
+      "leaf": 64,
+      "p": 4,
+      "theta": 0.6,
+      "ms": 14.13402296602726,
+      "eval_ms": 7.355424575507641,
+      "aggL2": 0.0005868211152422357,
+      "direct_share": 0.01292880465,
+      "far_pairs": 1575266,
+      "launches": 1763.6,
+      "stages": {
+        "nearfield_pallas_leafpair": 4.14,
+        "other": 3.62,
+        "sort": 0.87,
+        "memcpy": 1.2,
+        "xla_fusion_other": 1.59,
+        "m2l_pallas": 0.22,
+        "scatter": 0.35,
+        "reduce": 0.36,
+        "gather": 0.33,
+        "memset": 0.06
+      },
+      "flags": [
+        "loadavg>=8 (40.0)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    {
+      "code": "jaccpot_com_cells",
+      "n": 200000,
+      "leaf": 64,
+      "p": 5,
+      "theta": 0.6,
+      "ms": 14.65338934212923,
+      "eval_ms": 7.459946908056736,
+      "aggL2": 0.00024942679511473314,
+      "direct_share": 0.01292880465,
+      "far_pairs": 1575266,
+      "launches": 1694.8,
+      "stages": {
+        "nearfield_pallas_leafpair": 4.13,
+        "other": 3.69,
+        "sort": 0.87,
+        "memcpy": 1.1,
+        "m2l_pallas": 0.33,
+        "xla_fusion_other": 1.62,
+        "scatter": 0.39,
+        "reduce": 0.37,
+        "gather": 0.32,
+        "memset": 0.06
+      },
+      "flags": [
+        "loadavg>=8 (40.8)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    {
+      "code": "jaccpot_com_cells",
+      "n": 200000,
+      "leaf": 64,
+      "p": 6,
+      "theta": 0.6,
+      "ms": 15.736438706517218,
+      "eval_ms": 7.998889312148094,
+      "aggL2": 9.707442433484275e-05,
+      "direct_share": 0.01292880465,
+      "far_pairs": 1575266,
+      "launches": 1696.0,
+      "stages": {
+        "nearfield_pallas_leafpair": 4.13,
+        "other": 3.67,
+        "sort": 0.87,
+        "memcpy": 1.1,
+        "m2l_pallas": 0.46,
+        "xla_fusion_other": 1.73,
+        "scatter": 0.42,
+        "reduce": 0.36,
+        "gather": 0.33,
+        "memset": 0.06
+      },
+      "flags": [
+        "loadavg>=8 (38.4)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    {
+      "code": "jaccpot_com_cells",
+      "n": 200000,
+      "leaf": 64,
+      "p": 4,
+      "theta": 0.8,
+      "ms": 11.412520706653595,
+      "eval_ms": 4.319251514971256,
+      "aggL2": 0.002261302460494462,
+      "direct_share": 0.00521143885,
+      "far_pairs": 690536,
+      "launches": 1763.6,
+      "stages": {
+        "nearfield_pallas_leafpair": 1.83,
+        "other": 3.15,
+        "memcpy": 1.14,
+        "sort": 0.84,
+        "xla_fusion_other": 1.56,
+        "scatter": 0.32,
+        "reduce": 0.34,
+        "m2l_pallas": 0.13,
+        "gather": 0.32,
+        "memset": 0.06
+      },
+      "flags": [
+        "loadavg>=8 (39.1)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    {
+      "code": "jaccpot_com_cells",
+      "n": 200000,
+      "leaf": 64,
+      "p": 5,
+      "theta": 0.8,
+      "ms": 14.432799629867077,
+      "eval_ms": 4.260720685124397,
+      "aggL2": 0.0012691470096074873,
+      "direct_share": 0.00521143885,
+      "far_pairs": 690536,
+      "launches": 1905.8,
+      "stages": {
+        "nearfield_pallas_leafpair": 1.79,
+        "other": 3.19,
+        "memcpy": 1.1,
+        "sort": 0.84,
+        "xla_fusion_other": 1.81,
+        "m2l_pallas": 0.19,
+        "scatter": 0.36,
+        "reduce": 0.38,
+        "gather": 0.31,
+        "memset": 0.06
+      },
+      "flags": [
+        "loadavg>=8 (38.7)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    {
+      "code": "jaccpot_com_cells",
+      "n": 200000,
+      "leaf": 64,
+      "p": 6,
+      "theta": 0.8,
+      "ms": 11.945643275976181,
+      "eval_ms": 4.187081009149551,
+      "aggL2": 0.0007412118690221958,
+      "direct_share": 0.00521143885,
+      "far_pairs": 690536,
+      "launches": 1696.0,
+      "stages": {
+        "nearfield_pallas_leafpair": 1.84,
+        "other": 3.21,
+        "memcpy": 1.03,
+        "sort": 0.84,
+        "m2l_pallas": 0.26,
+        "xla_fusion_other": 1.7,
+        "scatter": 0.41,
+        "reduce": 0.37,
+        "gather": 0.32,
+        "memset": 0.06
+      },
+      "flags": [
+        "loadavg>=8 (48.4)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    {
+      "code": "jaccpot_com_cells",
+      "n": 200000,
+      "leaf": 64,
+      "p": 4,
+      "theta": 1.0,
+      "ms": 11.874701827764511,
+      "eval_ms": 3.0062850564718246,
+      "aggL2": 0.010476607979154713,
+      "direct_share": 0.0032230325499999998,
+      "far_pairs": 365922,
+      "launches": 1763.6,
+      "stages": {
+        "other": 3.01,
+        "nearfield_pallas_leafpair": 1.24,
+        "memcpy": 1.14,
+        "sort": 0.83,
+        "xla_fusion_other": 1.55,
+        "scatter": 0.33,
+        "reduce": 0.36,
+        "gather": 0.32,
+        "m2l_pallas": 0.08,
+        "memset": 0.06
+      },
+      "flags": [
+        "loadavg>=8 (36.1)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    {
+      "code": "jaccpot_com_cells",
+      "n": 200000,
+      "leaf": 64,
+      "p": 5,
+      "theta": 1.0,
+      "ms": 10.814880579710007,
+      "eval_ms": 3.1985165551304817,
+      "aggL2": 0.008992962104895435,
+      "direct_share": 0.0032230325499999998,
+      "far_pairs": 365922,
+      "launches": 1694.8,
+      "stages": {
+        "other": 3.11,
+        "nearfield_pallas_leafpair": 1.22,
+        "memcpy": 1.04,
+        "sort": 0.83,
+        "xla_fusion_other": 1.58,
+        "scatter": 0.36,
+        "reduce": 0.37,
+        "m2l_pallas": 0.13,
+        "gather": 0.3,
+        "memset": 0.06
+      },
+      "flags": [
+        "loadavg>=8 (40.3)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    {
+      "code": "jaccpot_com_cells",
+      "n": 200000,
+      "leaf": 64,
+      "p": 6,
+      "theta": 1.0,
+      "ms": 14.533230662345886,
+      "eval_ms": 3.3239461481571198,
+      "aggL2": 0.005567366185755651,
+      "direct_share": 0.0032230325499999998,
+      "far_pairs": 365922,
+      "launches": 1696.0,
+      "stages": {
+        "other": 3.08,
+        "nearfield_pallas_leafpair": 1.22,
+        "memcpy": 1.05,
+        "sort": 0.83,
+        "xla_fusion_other": 1.7,
+        "m2l_pallas": 0.18,
+        "scatter": 0.4,
+        "reduce": 0.38,
+        "gather": 0.31,
+        "memset": 0.06
+      },
+      "flags": [
+        "loadavg>=8 (35.3)",
+        "other-gpus-busy (100%)"
+      ]
+    }
+  ],
+  "fronts": {
+    "200000": {
+      "jaccpot_aabb": [
+        {
+          "code": "jaccpot_aabb",
+          "n": 200000,
+          "leaf": 64,
+          "p": 6,
+          "theta": 0.6,
+          "ms": 73.29706735908985,
+          "eval_ms": 26.312507688999176,
+          "aggL2": 0.00036536600778704304,
+          "direct_share": 0.18896283360000002,
+          "far_pairs": 992074,
+          "launches": 7299.6,
+          "stages": {
+            "nearfield_pallas_leafpair": 26.61,
+            "m2l_pallas": 13.08,
+            "memcpy": 2.49,
+            "scatter": 3.26,
+            "xla_fusion_other": 11.26,
+            "sort": 0.65,
+            "reduce": 0.92,
+            "other": 0.12
+          },
+          "flags": [
+            "loadavg>=8 (16.7)",
+            "other-gpus-busy (100%)"
+          ]
+        },
+        {
+          "code": "jaccpot_aabb",
+          "n": 200000,
+          "leaf": 64,
+          "p": 5,
+          "theta": 0.6,
+          "ms": 68.32378916442394,
+          "eval_ms": 23.440802469849586,
+          "aggL2": 0.0006322815304411137,
+          "direct_share": 0.18896283360000002,
+          "far_pairs": 992074,
+          "launches": 5740.4,
+          "stages": {
+            "nearfield_pallas_leafpair": 26.49,
+            "m2l_pallas": 13.05,
+            "scatter": 4.51,
+            "xla_fusion_other": 9.24,
+            "memcpy": 1.71,
+            "sort": 0.65,
+            "reduce": 0.88,
+            "other": 0.1,
+            "gather": 0.08
+          },
+          "flags": [
+            "loadavg>=8 (20.4)",
+            "other-gpus-busy (100%)"
+          ]
+        },
+        {
+          "code": "jaccpot_aabb",
+          "n": 200000,
+          "leaf": 64,
+          "p": 4,
+          "theta": 0.6,
+          "ms": 59.452130272984505,
+          "eval_ms": 23.067631758749485,
+          "aggL2": 0.0012010875621498356,
+          "direct_share": 0.18896283360000002,
+          "far_pairs": 992074,
+          "launches": 4464.0,
+          "stages": {
+            "nearfield_pallas_leafpair": 26.45,
+            "m2l_pallas": 12.96,
+            "scatter": 2.66,
+            "xla_fusion_other": 5.36,
+            "memcpy": 1.35,
+            "sort": 0.65,
+            "reduce": 0.7,
+            "other": 0.31,
+            "gather": 0.08
+          },
+          "flags": [
+            "loadavg>=8 (28.3)",
+            "other-gpus-busy (100%)"
+          ]
+        },
+        {
+          "code": "jaccpot_aabb",
+          "n": 200000,
+          "leaf": 64,
+          "p": 6,
+          "theta": 0.8,
+          "ms": 52.727014012634754,
+          "eval_ms": 21.02488186210394,
+          "aggL2": 0.0035011757053509973,
+          "direct_share": 0.0893010096,
+          "far_pairs": 509488,
+          "launches": 7285.6,
+          "stages": {
+            "nearfield_pallas_leafpair": 13.0,
+            "m2l_pallas": 7.18,
+            "memcpy": 2.38,
+            "scatter": 3.34,
+            "xla_fusion_other": 11.48,
+            "sort": 0.64,
+            "reduce": 0.8,
+            "other": 0.12
+          },
+          "flags": [
+            "loadavg>=8 (21.3)",
+            "other-gpus-busy (100%)"
+          ]
+        },
+        {
+          "code": "jaccpot_aabb",
+          "n": 200000,
+          "leaf": 64,
+          "p": 5,
+          "theta": 0.8,
+          "ms": 47.66788128763437,
+          "eval_ms": 12.398631311953068,
+          "aggL2": 0.004054903974583178,
+          "direct_share": 0.0893010096,
+          "far_pairs": 509488,
+          "launches": 5731.4,
+          "stages": {
+            "nearfield_pallas_leafpair": 13.01,
+            "m2l_pallas": 7.08,
+            "scatter": 4.43,
+            "xla_fusion_other": 9.3,
+            "memcpy": 1.63,
+            "sort": 0.65,
+            "reduce": 0.83,
+            "other": 0.18,
+            "gather": 0.08
+          },
+          "flags": [
+            "loadavg>=8 (18.0)",
+            "other-gpus-busy (100%)"
+          ]
+        },
+        {
+          "code": "jaccpot_aabb",
+          "n": 200000,
+          "leaf": 64,
+          "p": 4,
+          "theta": 0.8,
+          "ms": 39.16480205953121,
+          "eval_ms": 21.039252169430256,
+          "aggL2": 0.005326132286247191,
+          "direct_share": 0.0893010096,
+          "far_pairs": 509488,
+          "launches": 4455.0,
+          "stages": {
+            "nearfield_pallas_leafpair": 13.03,
+            "m2l_pallas": 7.03,
+            "scatter": 2.78,
+            "xla_fusion_other": 5.34,
+            "memcpy": 1.27,
+            "sort": 0.64,
+            "reduce": 0.65,
+            "other": 0.3,
+            "gather": 0.08
+          },
+          "flags": [
+            "loadavg>=8 (19.8)",
+            "other-gpus-busy (100%)"
+          ]
+        },
+        {
+          "code": "jaccpot_aabb",
+          "n": 200000,
+          "leaf": 64,
+          "p": 4,
+          "theta": 1.0,
+          "ms": 31.616869382560253,
+          "eval_ms": 11.392824351787567,
+          "aggL2": 0.01695509682950916,
+          "direct_share": 0.0462911664,
+          "far_pairs": 290560,
+          "launches": 4433.0,
+          "stages": {
+            "nearfield_pallas_leafpair": 7.6,
+            "m2l_pallas": 4.32,
+            "scatter": 2.74,
+            "xla_fusion_other": 5.44,
+            "memcpy": 1.27,
+            "sort": 0.65,
+            "reduce": 0.65,
+            "other": 0.36,
+            "gather": 0.08
+          },
+          "flags": [
+            "loadavg>=8 (40.9)",
+            "other-gpus-busy (100%)"
+          ]
+        }
+      ],
+      "jaccpot_aabb_cells": [
+        {
+          "code": "jaccpot_aabb_cells",
+          "n": 200000,
+          "leaf": 64,
+          "p": 5,
+          "theta": 0.8,
+          "ms": 14.481355622410774,
+          "eval_ms": 4.07744012773037,
+          "aggL2": 0.0012691470096074873,
+          "direct_share": 0.00521143885,
+          "far_pairs": 690536,
+          "launches": 1694.8,
+          "stages": {
+            "nearfield_pallas_leafpair": 1.8,
+            "other": 3.23,
+            "memcpy": 1.03,
+            "sort": 0.84,
+            "xla_fusion_other": 1.61,
+            "m2l_pallas": 0.19,
+            "scatter": 0.36,
+            "reduce": 0.36,
+            "gather": 0.31,
+            "memset": 0.06
+          },
+          "flags": [
+            "loadavg>=8 (39.0)",
+            "other-gpus-busy (100%)"
+          ]
+        },
+        {
+          "code": "jaccpot_aabb_cells",
+          "n": 200000,
+          "leaf": 64,
+          "p": 4,
+          "theta": 0.8,
+          "ms": 12.63246051967144,
+          "eval_ms": 4.268721677362919,
+          "aggL2": 0.0022613024604938668,
+          "direct_share": 0.00521143885,
+          "far_pairs": 690536,
+          "launches": 1974.6,
+          "stages": {
+            "nearfield_pallas_leafpair": 1.82,
+            "other": 3.11,
+            "memcpy": 1.19,
+            "sort": 0.84,
+            "xla_fusion_other": 1.74,
+            "scatter": 0.32,
+            "reduce": 0.36,
+            "m2l_pallas": 0.13,
+            "gather": 0.32,
+            "memset": 0.06
+          },
+          "flags": [
+            "loadavg>=8 (35.7)",
+            "other-gpus-busy (100%)"
+          ]
+        }
+      ],
+      "jaccpot_com": [
+        {
+          "code": "jaccpot_com",
+          "n": 200000,
+          "leaf": 64,
+          "p": 6,
+          "theta": 0.6,
+          "ms": 85.72598472237587,
+          "eval_ms": 28.69413886219263,
+          "aggL2": 8.275340550826363e-05,
+          "direct_share": 0.2358118576,
+          "far_pairs": 1022918,
+          "launches": 7416.6,
+          "stages": {
+            "nearfield_pallas_leafpair": 32.63,
+            "m2l_pallas": 13.91,
+            "scatter": 7.16,
+            "memcpy": 2.62,
+            "xla_fusion_other": 12.4,
+            "sort": 0.7,
+            "reduce": 1.89
+          },
+          "flags": [
+            "loadavg>=8 (31.5)",
+            "other-gpus-busy (100%)"
+          ]
+        },
+        {
+          "code": "jaccpot_com",
+          "n": 200000,
+          "leaf": 64,
+          "p": 5,
+          "theta": 0.6,
+          "ms": 80.40308486670256,
+          "eval_ms": 29.330313205718994,
+          "aggL2": 0.00021510712145054808,
+          "direct_share": 0.2358118576,
+          "far_pairs": 1022918,
+          "launches": 5863.4,
+          "stages": {
+            "nearfield_pallas_leafpair": 32.35,
+            "m2l_pallas": 13.93,
+            "scatter": 8.02,
+            "xla_fusion_other": 10.26,
+            "memcpy": 1.73,
+            "sort": 0.82,
+            "reduce": 2.17,
+            "other": 0.1
+          },
+          "flags": [
+            "loadavg>=8 (19.6)",
+            "other-gpus-busy (100%)"
+          ]
+        },
+        {
+          "code": "jaccpot_com",
+          "n": 200000,
+          "leaf": 64,
+          "p": 6,
+          "theta": 0.8,
+          "ms": 61.175243370234966,
+          "eval_ms": 16.60862099379301,
+          "aggL2": 0.0005856799796159417,
+          "direct_share": 0.12249007840000001,
+          "far_pairs": 564890,
+          "launches": 7368.6,
+          "stages": {
+            "nearfield_pallas_leafpair": 17.17,
+            "m2l_pallas": 8.08,
+            "scatter": 6.44,
+            "memcpy": 2.29,
+            "sort": 0.7,
+            "xla_fusion_other": 11.64,
+            "reduce": 1.5
+          },
+          "flags": [
+            "loadavg>=8 (22.5)",
+            "other-gpus-busy (100%)"
+          ]
+        },
+        {
+          "code": "jaccpot_com",
+          "n": 200000,
+          "leaf": 64,
+          "p": 5,
+          "theta": 0.8,
+          "ms": 56.36570993810892,
+          "eval_ms": 15.699067153036594,
+          "aggL2": 0.001020382167633477,
+          "direct_share": 0.12249007840000001,
+          "far_pairs": 564890,
+          "launches": 5815.4,
+          "stages": {
+            "nearfield_pallas_leafpair": 17.15,
+            "m2l_pallas": 8.08,
+            "scatter": 7.44,
+            "xla_fusion_other": 9.57,
+            "memcpy": 1.72,
+            "sort": 0.81,
+            "reduce": 1.67,
+            "other": 0.1
+          },
+          "flags": [
+            "loadavg>=8 (19.9)",
+            "other-gpus-busy (100%)"
+          ]
+        },
+        {
+          "code": "jaccpot_com",
+          "n": 200000,
+          "leaf": 64,
+          "p": 4,
+          "theta": 0.8,
+          "ms": 47.93450087308884,
+          "eval_ms": 19.524075090885162,
+          "aggL2": 0.00206024328677018,
+          "direct_share": 0.12249007840000001,
+          "far_pairs": 564890,
+          "launches": 4539.0,
+          "stages": {
+            "nearfield_pallas_leafpair": 17.14,
+            "m2l_pallas": 8.0,
+            "scatter": 5.58,
+            "xla_fusion_other": 5.79,
+            "memcpy": 1.37,
+            "sort": 0.81,
+            "reduce": 1.6,
+            "other": 0.26,
+            "gather": 0.08
+          },
+          "flags": [
+            "loadavg>=8 (24.6)",
+            "other-gpus-busy (100%)"
+          ]
+        },
+        {
+          "code": "jaccpot_com",
+          "n": 200000,
+          "leaf": 64,
+          "p": 5,
+          "theta": 1.0,
+          "ms": 46.189482510089874,
+          "eval_ms": 17.588415183126926,
+          "aggL2": 0.005921234067402421,
+          "direct_share": 0.0715296944,
+          "far_pairs": 343422,
+          "launches": 5815.4,
+          "stages": {
+            "nearfield_pallas_leafpair": 10.5,
+            "m2l_pallas": 5.19,
+            "scatter": 7.15,
+            "xla_fusion_other": 9.33,
+            "memcpy": 1.6,
+            "sort": 0.82,
+            "reduce": 1.35,
+            "other": 0.1
+          },
+          "flags": [
+            "loadavg>=8 (22.3)",
+            "other-gpus-busy (100%)"
+          ]
+        },
+        {
+          "code": "jaccpot_com",
+          "n": 200000,
+          "leaf": 64,
+          "p": 4,
+          "theta": 1.0,
+          "ms": 37.35156562179327,
+          "eval_ms": 17.840037122368813,
+          "aggL2": 0.008136987805455385,
+          "direct_share": 0.0715296944,
+          "far_pairs": 343422,
+          "launches": 4539.0,
+          "stages": {
+            "nearfield_pallas_leafpair": 10.49,
+            "m2l_pallas": 5.2,
+            "scatter": 5.29,
+            "xla_fusion_other": 5.53,
+            "memcpy": 1.27,
+            "sort": 0.81,
+            "reduce": 1.36,
+            "other": 0.24,
+            "gather": 0.08
+          },
+          "flags": [
+            "loadavg>=8 (22.6)",
+            "other-gpus-busy (100%)"
+          ]
+        }
+      ],
+      "jaccpot_com_bound": [
+        {
+          "code": "jaccpot_com_bound",
+          "n": 200000,
+          "leaf": 64,
+          "p": 6,
+          "theta": 0.8,
+          "ms": 76.5822621062398,
+          "eval_ms": 27.892986312508583,
+          "aggL2": 0.0003653176014186007,
+          "direct_share": 0.1305581744,
+          "far_pairs": 1541052,
+          "launches": 7437.6,
+          "stages": {
+            "m2l_pallas": 20.29,
+            "nearfield_pallas_leafpair": 18.21,
+            "scatter": 6.63,
+            "memcpy": 2.37,
+            "xla_fusion_other": 12.34,
+            "sort": 0.7,
+            "reduce": 1.87
+          },
+          "flags": [
+            "loadavg>=8 (20.4)",
+            "other-gpus-busy (100%)"
+          ]
+        },
+        {
+          "code": "jaccpot_com_bound",
+          "n": 200000,
+          "leaf": 64,
+          "p": 5,
+          "theta": 0.8,
+          "ms": 71.85242306441069,
+          "eval_ms": 17.061431892216206,
+          "aggL2": 0.0006821894721965341,
+          "direct_share": 0.1305581744,
+          "far_pairs": 1541052,
+          "launches": 5884.4,
+          "stages": {
+            "m2l_pallas": 20.29,
+            "nearfield_pallas_leafpair": 18.21,
+            "scatter": 7.62,
+            "xla_fusion_other": 10.2,
+            "memcpy": 1.91,
+            "sort": 0.81,
+            "reduce": 2.16,
+            "other": 0.1
+          },
+          "flags": [
+            "loadavg>=8 (21.9)",
+            "other-gpus-busy (100%)"
+          ]
+        },
+        {
+          "code": "jaccpot_com_bound",
+          "n": 200000,
+          "leaf": 64,
+          "p": 4,
+          "theta": 0.8,
+          "ms": 63.02943620830774,
+          "eval_ms": 16.49699080735445,
+          "aggL2": 0.0014654009180260182,
+          "direct_share": 0.1305581744,
+          "far_pairs": 1541052,
+          "launches": 4608.0,
+          "stages": {
+            "m2l_pallas": 20.08,
+            "nearfield_pallas_leafpair": 18.12,
+            "scatter": 5.73,
+            "xla_fusion_other": 6.7,
+            "memcpy": 1.48,
+            "sort": 0.81,
+            "reduce": 2.01,
+            "other": 0.26
+          },
+          "flags": [
+            "loadavg>=8 (18.7)",
+            "other-gpus-busy (100%)"
+          ]
+        },
+        {
+          "code": "jaccpot_com_bound",
+          "n": 200000,
+          "leaf": 64,
+          "p": 6,
+          "theta": 1.0,
+          "ms": 61.12011894583702,
+          "eval_ms": 16.742730513215065,
+          "aggL2": 0.002321834828081769,
+          "direct_share": 0.0779944112,
+          "far_pairs": 1032766,
+          "launches": 7389.6,
+          "stages": {
+            "m2l_pallas": 13.92,
+            "nearfield_pallas_leafpair": 11.32,
+            "scatter": 6.04,
+            "memcpy": 2.42,
+            "sort": 0.7,
+            "xla_fusion_other": 11.47,
+            "reduce": 1.49
+          },
+          "flags": [
+            "loadavg>=8 (33.8)",
+            "other-gpus-busy (98%)"
+          ]
+        },
+        {
+          "code": "jaccpot_com_bound",
+          "n": 200000,
+          "leaf": 64,
+          "p": 5,
+          "theta": 1.0,
+          "ms": 56.65732137858868,
+          "eval_ms": 18.951532430946827,
+          "aggL2": 0.0031223946823854573,
+          "direct_share": 0.0779944112,
+          "far_pairs": 1032766,
+          "launches": 5836.4,
+          "stages": {
+            "m2l_pallas": 14.17,
+            "nearfield_pallas_leafpair": 11.34,
+            "scatter": 7.11,
+            "xla_fusion_other": 9.41,
+            "memcpy": 1.69,
+            "sort": 0.82,
+            "reduce": 1.77,
+            "other": 0.1
+          },
+          "flags": [
+            "loadavg>=8 (17.5)",
+            "other-gpus-busy (100%)"
+          ]
+        },
+        {
+          "code": "jaccpot_com_bound",
+          "n": 200000,
+          "leaf": 64,
+          "p": 4,
+          "theta": 1.0,
+          "ms": 47.694629803299904,
+          "eval_ms": 19.10531148314476,
+          "aggL2": 0.004495475401896492,
+          "direct_share": 0.0779944112,
+          "far_pairs": 1032766,
+          "launches": 4560.0,
+          "stages": {
+            "m2l_pallas": 13.98,
+            "nearfield_pallas_leafpair": 11.38,
+            "scatter": 5.17,
+            "xla_fusion_other": 5.73,
+            "memcpy": 1.37,
+            "sort": 0.81,
+            "reduce": 1.61,
+            "other": 0.26,
+            "gather": 0.08
+          },
+          "flags": [
+            "loadavg>=8 (18.2)",
+            "other-gpus-busy (100%)"
+          ]
+        }
+      ],
+      "jaccpot_com_cells": [
+        {
+          "code": "jaccpot_com_cells",
+          "n": 200000,
+          "leaf": 64,
+          "p": 6,
+          "theta": 0.6,
+          "ms": 70.55145427584648,
+          "eval_ms": 18.237279728055,
+          "aggL2": 9.707196330241768e-05,
+          "direct_share": 0.01292880465,
+          "far_pairs": 1575266,
+          "launches": 4234.0,
+          "stages": {
+            "m2l_pallas": 20.9,
+            "nearfield_pallas_leafpair": 14.45,
+            "other": 13.56,
+            "scatter": 6.97,
+            "xla_fusion_other": 4.91,
+            "reduce": 4.24,
+            "memcpy": 1.34,
+            "sort": 0.65,
+            "gather": 0.09
+          },
+          "flags": [
+            "loadavg>=8 (35.8)",
+            "other-gpus-busy (100%)"
+          ]
+        },
+        {
+          "code": "jaccpot_com_cells",
+          "n": 200000,
+          "leaf": 64,
+          "p": 6,
+          "theta": 0.6,
+          "ms": 15.736438706517218,
+          "eval_ms": 7.998889312148094,
+          "aggL2": 9.707442433484275e-05,
+          "direct_share": 0.01292880465,
+          "far_pairs": 1575266,
+          "launches": 1696.0,
+          "stages": {
+            "nearfield_pallas_leafpair": 4.13,
+            "other": 3.67,
+            "sort": 0.87,
+            "memcpy": 1.1,
+            "m2l_pallas": 0.46,
+            "xla_fusion_other": 1.73,
+            "scatter": 0.42,
+            "reduce": 0.36,
+            "gather": 0.33,
+            "memset": 0.06
+          },
+          "flags": [
+            "loadavg>=8 (38.4)",
+            "other-gpus-busy (100%)"
+          ]
+        },
+        {
+          "code": "jaccpot_com_cells",
+          "n": 200000,
+          "leaf": 64,
+          "p": 5,
+          "theta": 0.6,
+          "ms": 14.65338934212923,
+          "eval_ms": 7.459946908056736,
+          "aggL2": 0.00024942679511473314,
+          "direct_share": 0.01292880465,
+          "far_pairs": 1575266,
+          "launches": 1694.8,
+          "stages": {
+            "nearfield_pallas_leafpair": 4.13,
+            "other": 3.69,
+            "sort": 0.87,
+            "memcpy": 1.1,
+            "m2l_pallas": 0.33,
+            "xla_fusion_other": 1.62,
+            "scatter": 0.39,
+            "reduce": 0.37,
+            "gather": 0.32,
+            "memset": 0.06
+          },
+          "flags": [
+            "loadavg>=8 (40.8)",
+            "other-gpus-busy (100%)"
+          ]
+        },
+        {
+          "code": "jaccpot_com_cells",
+          "n": 200000,
+          "leaf": 64,
+          "p": 4,
+          "theta": 0.6,
+          "ms": 14.13402296602726,
+          "eval_ms": 7.355424575507641,
+          "aggL2": 0.0005868211152422357,
+          "direct_share": 0.01292880465,
+          "far_pairs": 1575266,
+          "launches": 1763.6,
+          "stages": {
+            "nearfield_pallas_leafpair": 4.14,
+            "other": 3.62,
+            "sort": 0.87,
+            "memcpy": 1.2,
+            "xla_fusion_other": 1.59,
+            "m2l_pallas": 0.22,
+            "scatter": 0.35,
+            "reduce": 0.36,
+            "gather": 0.33,
+            "memset": 0.06
+          },
+          "flags": [
+            "loadavg>=8 (40.0)",
+            "other-gpus-busy (100%)"
+          ]
+        },
+        {
+          "code": "jaccpot_com_cells",
+          "n": 200000,
+          "leaf": 64,
+          "p": 6,
+          "theta": 0.8,
+          "ms": 11.945643275976181,
+          "eval_ms": 4.187081009149551,
+          "aggL2": 0.0007412118690221958,
+          "direct_share": 0.00521143885,
+          "far_pairs": 690536,
+          "launches": 1696.0,
+          "stages": {
+            "nearfield_pallas_leafpair": 1.84,
+            "other": 3.21,
+            "memcpy": 1.03,
+            "sort": 0.84,
+            "m2l_pallas": 0.26,
+            "xla_fusion_other": 1.7,
+            "scatter": 0.41,
+            "reduce": 0.37,
+            "gather": 0.32,
+            "memset": 0.06
+          },
+          "flags": [
+            "loadavg>=8 (48.4)",
+            "other-gpus-busy (100%)"
+          ]
+        },
+        {
+          "code": "jaccpot_com_cells",
+          "n": 200000,
+          "leaf": 64,
+          "p": 5,
+          "theta": 0.8,
+          "ms": 9.637065976858139,
+          "eval_ms": 4.381852224469185,
+          "aggL2": 0.001269147009607449,
+          "direct_share": 0.00521143885,
+          "far_pairs": 690536,
+          "launches": 796.0,
+          "stages": {
+            "sort": 0.79,
+            "memcpy": 0.43,
+            "other": 0.51,
+            "scatter": 0.33,
+            "nearfield_pallas_leafpair": 0.15,
+            "xla_fusion_other": 0.94,
+            "gather": 0.17,
+            "memset": 0.06,
+            "m2l_pallas": 0.06,
+            "reduce": 0.2
+          },
+          "flags": [
+            "loadavg>=8 (28.4)",
+            "other-gpus-busy (100%)"
+          ]
+        }
+      ],
+      "jzfmm": [
+        {
+          "code": "jzfmm",
+          "n": 200000,
+          "leaf": 32,
+          "p": 6,
+          "theta": 0.6,
+          "ms": 37.55420260131359,
+          "aggL2": 5.0824634562002573e-05,
+          "p90": 6.731942981427752e-05,
+          "direct_share": 0.0195284653,
+          "launches": 114.0,
+          "flags": [
+            "loadavg>=8 (19.2)",
+            "other-gpus-busy (100%)"
+          ]
+        },
+        {
+          "code": "jzfmm",
+          "n": 200000,
+          "leaf": 64,
+          "p": 6,
+          "theta": 0.6,
+          "ms": 24.323527701199055,
+          "aggL2": 7.802573099374602e-05,
+          "p90": 0.00012240506409392945,
+          "direct_share": 0.0345124961,
+          "launches": 115.0,
+          "flags": [
+            "loadavg>=8 (28.3)",
+            "other-gpus-busy (100%)"
+          ]
+        },
+        {
+          "code": "jzfmm",
+          "n": 200000,
+          "leaf": 32,
+          "p": 6,
+          "theta": 0.8,
+          "ms": 21.746516227722168,
+          "aggL2": 0.00018484156538526968,
+          "p90": 0.0002657104041876399,
+          "direct_share": 0.0058918363,
+          "launches": 114.0,
+          "flags": [
+            "loadavg>=8 (19.0)",
+            "other-gpus-busy (100%)"
+          ]
+        },
+        {
+          "code": "jzfmm",
+          "n": 200000,
+          "leaf": 32,
+          "p": 5,
+          "theta": 0.8,
+          "ms": 14.537530019879341,
+          "aggL2": 0.00036052955766210855,
+          "p90": 0.000585542926799316,
+          "direct_share": 0.0058918363,
+          "launches": 115.0,
+          "flags": [
+            "loadavg>=8 (18.2)",
+            "other-gpus-busy (100%)"
+          ]
+        },
+        {
+          "code": "jzfmm",
+          "n": 200000,
+          "leaf": 64,
+          "p": 5,
+          "theta": 0.8,
+          "ms": 10.503650642931461,
+          "aggL2": 0.000462879798334702,
+          "p90": 0.0009474655983451244,
+          "direct_share": 0.01164322345,
+          "launches": 114.0,
+          "flags": [
+            "loadavg>=8 (19.8)",
+            "other-gpus-busy (100%)"
+          ]
+        },
+        {
+          "code": "jzfmm",
+          "n": 200000,
+          "leaf": 64,
+          "p": 4,
+          "theta": 1.0,
+          "ms": 10.484821163117886,
+          "aggL2": 0.0017912496936906893,
+          "p90": 0.004420618297374867,
+          "direct_share": 0.0073248695,
+          "launches": 114.0,
+          "flags": [
+            "loadavg>=8 (20.9)",
+            "other-gpus-busy (100%)"
+          ]
+        },
+        {
+          "code": "jzfmm",
+          "n": 200000,
+          "leaf": 32,
+          "p": 3,
+          "theta": 0.8,
+          "ms": 10.227800346910954,
+          "aggL2": 0.00232775588192192,
+          "p90": 0.007321073217733514,
+          "direct_share": 0.0058918363,
+          "launches": 115.0,
+          "flags": [
+            "loadavg>=8 (14.8)",
+            "other-gpus-busy (100%)"
+          ]
+        },
+        {
+          "code": "jzfmm",
+          "n": 200000,
+          "leaf": 64,
+          "p": 3,
+          "theta": 1.0,
+          "ms": 9.043163619935513,
+          "aggL2": 0.0053280075372041285,
+          "p90": 0.016322066047641158,
+          "direct_share": 0.0073248695,
+          "launches": 113.0,
+          "flags": [
+            "loadavg>=8 (21.9)",
+            "other-gpus-busy (100%)"
+          ]
+        }
+      ]
+    },
+    "1000000": {
+      "jzfmm": [
+        {
+          "code": "jzfmm",
+          "n": 1000000,
+          "leaf": 32,
+          "p": 6,
+          "theta": 0.6,
+          "ms": 130.690042860806,
+          "aggL2": 3.7667155424008655e-05,
+          "p90": 4.891699612929582e-05,
+          "direct_share": 0.003638449494,
+          "launches": 173.0,
+          "flags": [
+            "loadavg>=8 (20.4)",
+            "other-gpus-busy (100%)"
+          ]
+        },
+        {
+          "code": "jzfmm",
+          "n": 1000000,
+          "leaf": 64,
+          "p": 6,
+          "theta": 0.6,
+          "ms": 105.52181117236614,
+          "aggL2": 6.51854608185954e-05,
+          "p90": 8.989408066800272e-05,
+          "direct_share": 0.00707740516,
+          "launches": 170.0,
+          "flags": [
+            "loadavg>=8 (20.2)",
+            "other-gpus-busy (100%)"
+          ]
+        },
+        {
+          "code": "jzfmm",
+          "n": 1000000,
+          "leaf": 32,
+          "p": 5,
+          "theta": 0.6,
+          "ms": 97.64280449599028,
+          "aggL2": 0.00010698150102835254,
+          "p90": 0.00017515148574270123,
+          "direct_share": 0.003638449494,
+          "launches": 172.0,
+          "flags": [
+            "loadavg>=8 (22.3)",
+            "other-gpus-busy (100%)"
+          ]
+        },
+        {
+          "code": "jzfmm",
+          "n": 1000000,
+          "leaf": 32,
+          "p": 6,
+          "theta": 0.8,
+          "ms": 33.96418411284685,
+          "aggL2": 0.00013043952637711533,
+          "p90": 0.00020903421066561048,
+          "direct_share": 0.001160196924,
+          "launches": 173.0,
+          "flags": [
+            "loadavg>=8 (20.4)",
+            "other-gpus-busy (100%)"
+          ]
+        },
+        {
+          "code": "jzfmm",
+          "n": 1000000,
+          "leaf": 64,
+          "p": 6,
+          "theta": 0.8,
+          "ms": 24.613278917968273,
+          "aggL2": 0.00017412004685263453,
+          "p90": 0.0002865082606357861,
+          "direct_share": 0.002359831908,
+          "launches": 170.0,
+          "flags": [
+            "loadavg>=8 (21.1)",
+            "other-gpus-busy (100%)"
+          ]
+        },
+        {
+          "code": "jzfmm",
+          "n": 1000000,
+          "leaf": 32,
+          "p": 5,
+          "theta": 0.8,
+          "ms": 22.540459409356117,
+          "aggL2": 0.0002666977574637831,
+          "p90": 0.00046553440011519703,
+          "direct_share": 0.001160196924,
+          "launches": 172.0,
+          "flags": [
+            "loadavg>=8 (21.3)",
+            "other-gpus-busy (100%)"
+          ]
+        },
+        {
+          "code": "jzfmm",
+          "n": 1000000,
+          "leaf": 64,
+          "p": 5,
+          "theta": 0.8,
+          "ms": 17.90616661310196,
+          "aggL2": 0.00038355394197505483,
+          "p90": 0.0007503683051827211,
+          "direct_share": 0.002359831908,
+          "launches": 170.0,
+          "flags": [
+            "loadavg>=8 (20.3)",
+            "other-gpus-busy (100%)"
+          ]
+        },
+        {
+          "code": "jzfmm",
+          "n": 1000000,
+          "leaf": 32,
+          "p": 4,
+          "theta": 0.8,
+          "ms": 17.42292381823063,
+          "aggL2": 0.0005837302943596877,
+          "p90": 0.0011897912480355248,
+          "direct_share": 0.001160196924,
+          "launches": 172.0,
+          "flags": [
+            "loadavg>=8 (23.3)",
+            "other-gpus-busy (100%)"
+          ]
+        },
+        {
+          "code": "jzfmm",
+          "n": 1000000,
+          "leaf": 64,
+          "p": 5,
+          "theta": 1.0,
+          "ms": 14.460749924182892,
+          "aggL2": 0.0008824637690920241,
+          "p90": 0.0015441507757353553,
+          "direct_share": 0.0015199895899999998,
+          "launches": 170.0,
+          "flags": [
+            "loadavg>=8 (20.3)",
+            "other-gpus-busy (100%)"
+          ]
+        }
+      ]
+    }
+  },
+  "g0": {
+    "200000": {
+      "time_ms_at_aggL2<=0.0012": {
+        "jaccpot_aabb": 68.32378916442394,
+        "jaccpot_aabb_cells": null,
+        "jaccpot_com": 56.36570993810892,
+        "jaccpot_com_bound": 71.85242306441069,
+        "jaccpot_com_cells": 11.945643275976181,
+        "jzfmm": 10.503650642931461
+      },
+      "ratio_jaccpot_aabb_over_jzfmm_at_0.0012": 6.504765960623713,
+      "ratio_jaccpot_com_over_jzfmm_at_0.0012": 5.36629709557608,
+      "time_ms_at_aggL2<=0.00046": {
+        "jaccpot_aabb": 73.29706735908985,
+        "jaccpot_aabb_cells": null,
+        "jaccpot_com": 80.40308486670256,
+        "jaccpot_com_bound": 76.5822621062398,
+        "jaccpot_com_cells": 14.65338934212923,
+        "jzfmm": 14.537530019879341
+      },
+      "ratio_jaccpot_aabb_over_jzfmm_at_0.00046": 5.0419202752365635,
+      "ratio_jaccpot_com_over_jzfmm_at_0.00046": 5.530725285296428,
+      "jzfmm_default_p5_theta0.8": [
+        {
+          "leaf": 32,
+          "ms": 14.537530019879341,
+          "aggL2": 0.00036052955766210855,
+          "p90": 0.000585542926799316
+        },
+        {
+          "leaf": 64,
+          "ms": 10.503650642931461,
+          "aggL2": 0.000462879798334702,
+          "p90": 0.0009474655983451244
+        },
+        {
+          "leaf": 64,
+          "ms": 10.751043446362019,
+          "aggL2": 0.000462879798334702,
+          "p90": 0.0009474655983451244
+        }
+      ]
+    },
+    "1000000": {
+      "time_ms_at_aggL2<=0.0012": {
+        "jaccpot_aabb": null,
+        "jaccpot_aabb_cells": null,
+        "jaccpot_com": null,
+        "jaccpot_com_bound": null,
+        "jaccpot_com_cells": null,
+        "jzfmm": 14.460749924182892
+      },
+      "time_ms_at_aggL2<=0.00046": {
+        "jaccpot_aabb": null,
+        "jaccpot_aabb_cells": null,
+        "jaccpot_com": null,
+        "jaccpot_com_bound": null,
+        "jaccpot_com_cells": null,
+        "jzfmm": 17.90616661310196
+      },
+      "jzfmm_default_p5_theta0.8": [
+        {
+          "leaf": 32,
+          "ms": 22.540459409356117,
+          "aggL2": 0.0002666977574637831,
+          "p90": 0.00046553440011519703
+        },
+        {
+          "leaf": 64,
+          "ms": 17.90616661310196,
+          "aggL2": 0.00038355394197505483,
+          "p90": 0.0007503683051827211
+        }
+      ]
+    }
+  }
+}
