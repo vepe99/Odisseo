@@ -1,0 +1,78 @@
+GPU: physical [4] (CUDA_VISIBLE_DEVICES=4)
+untraced: min 24.63 ms  median 24.87 ms  flags=['loadavg>=8 (9.0)', 'other-gpus-busy (82%)']
+traced wall per call: [18.93, 19.32, 20.07, 18.41, 19.31] ms
+
+device pids [1] streams 1
+per call: window 19.04 ms, device busy 17.43 ms (92 %), kernel-sum 17.43 ms, launches 1000
+ ms/call  share  n/call  mean us  kernel
+  14.793  84.9%     1.0  14792.7  nearfield_fused_leaf_t32_k65536
+   0.582   3.3%   196.0      3.0  loop_multiply_fusion
+   0.547   3.1%   196.0      2.8  input_reduce_fusion
+   0.395   2.3%   196.0      2.0  loop_transpose_fusion
+   0.378   2.2%   196.0      1.9  loop_dynamic_update_slice_fusion
+   0.303   1.7%   196.0      1.5  loop_add_fusion
+   0.206   1.2%     1.0    205.8  loop_pad_fusion
+   0.154   0.9%     1.0    153.6  loop_convert_gather_fusion
+wrote /export/home/tbuck/Odisseo-bench-multigpu/benchmark_multigpu/artifacts/profile_eval_plummer50000_leaf256_th1_p4.json
+=== done N 50000 theta 1.0 leaf 256 ===
+GPU: physical [5] (CUDA_VISIBLE_DEVICES=5)
+untraced: min 51.26 ms  median 51.56 ms  flags=['other-gpus-busy (80%)']
+traced wall per call: [52.95, 54.13, 54.52, 55.62, 53.07] ms
+
+device pids [1] streams 1
+per call: window 53.90 ms, device busy 50.62 ms (94 %), kernel-sum 50.62 ms, launches 1976
+ ms/call  share  n/call  mean us  kernel
+  45.232  89.4%     1.0  45232.1  nearfield_fused_leaf_t32_k131072
+   1.011   2.0%   391.0      2.6  loop_multiply_fusion
+   0.948   1.9%   391.0      2.4  input_reduce_fusion
+   0.823   1.6%     1.0    823.2  loop_pad_fusion
+   0.687   1.4%   391.0      1.8  loop_transpose_fusion
+   0.660   1.3%   391.0      1.7  loop_dynamic_update_slice_fusion
+   0.631   1.2%     1.0    630.5  loop_convert_gather_fusion
+   0.536   1.1%   391.0      1.4  loop_add_fusion
+wrote /export/home/tbuck/Odisseo-bench-multigpu/benchmark_multigpu/artifacts/profile_eval_plummer100000_leaf256_th1_p4.json
+=== done N 100000 theta 1.0 leaf 256 ===
+GPU: physical [4] (CUDA_VISIBLE_DEVICES=4)
+untraced: min 96.06 ms  median 99.88 ms  flags=['other-gpus-busy (83%)']
+traced wall per call: [112.51, 106.97, 105.27, 97.92, 96.98] ms
+
+device pids [1] streams 1
+per call: window 103.76 ms, device busy 96.95 ms (93 %), kernel-sum 96.95 ms, launches 7834
+ ms/call  share  n/call  mean us  kernel
+  81.828  84.4%     1.0  81828.1  nearfield_leafpair_t32_s2048_w256_ainput
+   3.967   4.1%  1563.0      2.5  loop_multiply_fusion
+   3.597   3.7%  1563.0      2.3  input_reduce_fusion
+   2.576   2.7%  1563.0      1.6  loop_transpose_fusion
+   2.567   2.6%  1563.0      1.6  loop_dynamic_update_slice_fusion
+   2.175   2.2%  1563.0      1.4  loop_add_fusion
+wrote /export/home/tbuck/Odisseo-bench-multigpu/benchmark_multigpu/artifacts/profile_eval_plummer400000_leaf256_th1_p4.json
+=== done N 400000 theta 1.0 leaf 256 ===
+GPU: physical [5] (CUDA_VISIBLE_DEVICES=5)
+untraced: min 59.90 ms  median 63.98 ms  flags=['loadavg>=8 (10.5)', 'other-gpus-busy (82%)']
+traced wall per call: [69.26, 68.37, 67.64, 70.07, 67.41] ms
+
+device pids [1] streams 1
+per call: window 68.36 ms, device busy 63.82 ms (93 %), kernel-sum 63.82 ms, launches 3929
+ ms/call  share  n/call  mean us  kernel
+  56.215  88.1%     1.0  56215.3  nearfield_leafpair_t32_s1024_w256_ainput
+   1.959   3.1%   782.0      2.5  loop_multiply_fusion
+   1.853   2.9%   782.0      2.4  input_reduce_fusion
+   1.298   2.0%   782.0      1.7  loop_dynamic_update_slice_fusion
+   1.283   2.0%   782.0      1.6  loop_transpose_fusion
+   1.091   1.7%   782.0      1.4  loop_add_fusion
+wrote /export/home/tbuck/Odisseo-bench-multigpu/benchmark_multigpu/artifacts/profile_eval_plummer200000_leaf256_th0.8_p4.json
+=== done N 200000 theta 0.8 leaf 256 ===
+GPU: physical [4] (CUDA_VISIBLE_DEVICES=4)
+untraced: min 53.57 ms  median 54.23 ms  flags=['loadavg>=8 (9.3)', 'other-gpus-busy (84%)']
+traced wall per call: [72.65, 73.33, 77.4, 68.99, 73.6] ms
+
+device pids [1] streams 1
+per call: window 73.03 ms, device busy 42.81 ms (59 %), kernel-sum 42.81 ms, launches 6271
+ ms/call  share  n/call  mean us  kernel
+  29.752  69.5%     1.0  29752.4  nearfield_leafpair_t32_s2048_w128_ainput
+   4.284  10.0%  1563.0      2.7  input_reduce_fusion
+   3.187   7.4%  1563.0      2.0  loop_transpose_fusion
+   3.105   7.3%  1563.0      2.0  loop_dynamic_update_slice_fusion
+   2.342   5.5%  1563.0      1.5  loop_add_fusion
+wrote /export/home/tbuck/Odisseo-bench-multigpu/benchmark_multigpu/artifacts/profile_eval_plummer200000_leaf128_th1_p4.json
+=== done N 200000 theta 1.0 leaf 128 ===

@@ -1,0 +1,147 @@
+{
+  "n": 200000,
+  "ic": "plummer",
+  "rows": [
+    {
+      "tree": "cells64",
+      "leaf_size": 64,
+      "build_s": 6.1173747116699815,
+      "num_leaves": 10956,
+      "num_internal": 10955,
+      "leaves_last": true,
+      "occupancy": {
+        "mean": 18.254837531945967,
+        "p50": 14.0,
+        "min": 1,
+        "max": 64,
+        "empty": 0
+      },
+      "leaf_radius": {
+        "p50": 0.11809684096784151,
+        "p90": 0.49269938622227266,
+        "p99": 4.1225681082568215,
+        "max": 216.96744462693954
+      },
+      "walks": [
+        {
+          "theta": 0.8,
+          "geometry": "com_exact",
+          "walk_s": 3.7591788936406374,
+          "far_pairs_directed": 690536,
+          "near_edges_directed": 372012,
+          "rows_max": 10950,
+          "direct_share_of_N": 0.00521143885,
+          "direct_p50": 0.004015,
+          "p2p_pair_evaluations": 208457554.0,
+          "indegree_max": 10950
+        },
+        {
+          "theta": 0.6,
+          "geometry": "com_exact",
+          "walk_s": 0.4767558379098773,
+          "far_pairs_directed": 1575266,
+          "near_edges_directed": 976774,
+          "rows_max": 10951,
+          "direct_share_of_N": 0.01292880465,
+          "direct_p50": 0.01016,
+          "p2p_pair_evaluations": 517152186.0,
+          "indegree_max": 10951
+        }
+      ]
+    },
+    {
+      "tree": "cells32",
+      "leaf_size": 32,
+      "build_s": 4.272861008532345,
+      "num_leaves": 20701,
+      "num_internal": 20700,
+      "leaves_last": true,
+      "occupancy": {
+        "mean": 9.661369015989566,
+        "p50": 8.0,
+        "min": 1,
+        "max": 32,
+        "empty": 0
+      },
+      "leaf_radius": {
+        "p50": 0.08691577567331012,
+        "p90": 0.37746612584327055,
+        "p99": 2.6244615250794916,
+        "max": 216.96744462693954
+      },
+      "walks": [
+        {
+          "theta": 0.8,
+          "geometry": "com_exact",
+          "walk_s": 2.532551254145801,
+          "far_pairs_directed": 1209912,
+          "near_edges_directed": 491368,
+          "rows_max": 20695,
+          "direct_share_of_N": 0.0019166368,
+          "direct_p50": 0.001595,
+          "p2p_pair_evaluations": 76665472.0,
+          "indegree_max": 20695
+        },
+        {
+          "theta": 0.6,
+          "geometry": "com_exact",
+          "walk_s": 0.4707970470190048,
+          "far_pairs_directed": 2779758,
+          "near_edges_directed": 1326686,
+          "rows_max": 20696,
+          "direct_share_of_N": 0.005146067849999999,
+          "direct_p50": 0.004055,
+          "p2p_pair_evaluations": 205842714.0,
+          "indegree_max": 20696
+        }
+      ]
+    },
+    {
+      "tree": "cells16",
+      "leaf_size": 16,
+      "build_s": 4.212192955426872,
+      "num_leaves": 40972,
+      "num_internal": 40971,
+      "leaves_last": true,
+      "occupancy": {
+        "mean": 4.881382407497803,
+        "p50": 4.0,
+        "min": 1,
+        "max": 16,
+        "empty": 0
+      },
+      "leaf_radius": {
+        "p50": 0.05245161908310485,
+        "p90": 0.22167559256218491,
+        "p99": 1.5728008076287152,
+        "max": 216.96744462693954
+      },
+      "walks": [
+        {
+          "theta": 0.8,
+          "geometry": "com_exact",
+          "walk_s": 2.589799272827804,
+          "far_pairs_directed": 2078784,
+          "near_edges_directed": 580244,
+          "rows_max": 40727,
+          "direct_share_of_N": 0.00076267025,
+          "direct_p50": 0.00059,
+          "p2p_pair_evaluations": 30506810.0,
+          "indegree_max": 40727
+        },
+        {
+          "theta": 0.6,
+          "geometry": "com_exact",
+          "walk_s": 0.5153713943436742,
+          "far_pairs_directed": 4772418,
+          "near_edges_directed": 1549070,
+          "rows_max": 40957,
+          "direct_share_of_N": 0.0018149902000000001,
+          "direct_p50": 0.00138,
+          "p2p_pair_evaluations": 72599608.0,
+          "indegree_max": 40957
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,238 @@
+{
+  "process_names": {
+    "1": "/device:GPU:0",
+    "701": "/host:CPU"
+  },
+  "device_pids": [
+    1
+  ],
+  "streams": [
+    "(1, 14, 'Stream #14(Compute)')"
+  ],
+  "window_us": 341781.566,
+  "busy_us": 319122.26599998,
+  "kernel_time_sum_us": 319122.2660000001,
+  "launches": 19645,
+  "per_call": {
+    "window_ms": 68.3563132,
+    "busy_ms": 63.82445319999599,
+    "kernel_sum_ms": 63.82445320000003,
+    "launches": 3929.0
+  },
+  "top": [
+    {
+      "name": "nearfield_leafpair_t32_s1024_w256_ainput",
+      "total_ms_per_call": 56.215255,
+      "count_per_call": 1.0,
+      "mean_us": 56215.255000000005,
+      "share": 0.8807792653365024
+    },
+    {
+      "name": "loop_multiply_fusion",
+      "total_ms_per_call": 1.9592093999999893,
+      "count_per_call": 782.0,
+      "mean_us": 2.505382864450114,
+      "share": 0.030696845828990016
+    },
+    {
+      "name": "input_reduce_fusion",
+      "total_ms_per_call": 1.8526970000000413,
+      "count_per_call": 782.0,
+      "mean_us": 2.369177749360667,
+      "share": 0.029028012103675036
+    },
+    {
+      "name": "loop_dynamic_update_slice_fusion",
+      "total_ms_per_call": 1.297668599999962,
+      "count_per_call": 782.0,
+      "mean_us": 1.659422762148289,
+      "share": 0.020331840461423046
+    },
+    {
+      "name": "loop_transpose_fusion",
+      "total_ms_per_call": 1.2833559999999669,
+      "count_per_call": 782.0,
+      "mean_us": 1.6411202046035382,
+      "share": 0.020107590988338718
+    },
+    {
+      "name": "loop_add_fusion",
+      "total_ms_per_call": 1.0905690000000559,
+      "count_per_call": 782.0,
+      "mean_us": 1.3945895140665674,
+      "share": 0.01708700890209985
+    },
+    {
+      "name": "loop_broadcast_fusion",
+      "total_ms_per_call": 0.017894599999999997,
+      "count_per_call": 1.0,
+      "mean_us": 17.894599999999997,
+      "share": 0.0002803721630630435
+    },
+    {
+      "name": "input_scatter_fusion",
+      "total_ms_per_call": 0.0169536,
+      "count_per_call": 1.0,
+      "mean_us": 16.9536,
+      "share": 0.00026562859766106063
+    },
+    {
+      "name": "loop_gather_fusion",
+      "total_ms_per_call": 0.0159296,
+      "count_per_call": 1.0,
+      "mean_us": 15.929599999999999,
+      "share": 0.00024958459025231405
+    },
+    {
+      "name": "loop_add_multiply_slice_fusion",
+      "total_ms_per_call": 0.012684800000000001,
+      "count_per_call": 1.0,
+      "mean_us": 12.684800000000001,
+      "share": 0.00019874514177584834
+    },
+    {
+      "name": "input_scatter_fusion_1",
+      "total_ms_per_call": 0.0086658,
+      "count_per_call": 1.0,
+      "mean_us": 8.6658,
+      "share": 0.000135775546291715
+    },
+    {
+      "name": "loop_add_divide_reduce_slice_subtract_fusion",
+      "total_ms_per_call": 0.008505799999999999,
+      "count_per_call": 1.0,
+      "mean_us": 8.505799999999999,
+      "share": 0.00013326867013409833
+    },
+    {
+      "name": "input_scatter_fusion_2",
+      "total_ms_per_call": 0.008115399999999998,
+      "count_per_call": 1.0,
+      "mean_us": 8.1154,
+      "share": 0.0001271518923095137
+    },
+    {
+      "name": "loop_broadcast_gather_select_fusion",
+      "total_ms_per_call": 0.0079234,
+      "count_per_call": 1.0,
+      "mean_us": 7.923399999999999,
+      "share": 0.0001241436409203737
+    },
+    {
+      "name": "memcpy32_post",
+      "total_ms_per_call": 0.005574400000000001,
+      "count_per_call": 2.0,
+      "mean_us": 2.7872000000000003,
+      "share": 8.733956533136423e-05
+    },
+    {
+      "name": "loop_gather_fusion_1",
+      "total_ms_per_call": 0.0040896000000000005,
+      "count_per_call": 1.0,
+      "mean_us": 4.0896,
+      "share": 6.407575458868167e-05
+    },
+    {
+      "name": "loop_transpose_fusion_1",
+      "total_ms_per_call": 0.0039426,
+      "count_per_call": 1.0,
+      "mean_us": 3.9426,
+      "share": 6.177256211887137e-05
+    },
+    {
+      "name": "loop_add_divide_fusion",
+      "total_ms_per_call": 0.0036289999999999994,
+      "count_per_call": 1.0,
+      "mean_us": 3.629,
+      "share": 5.6859084849942724e-05
+    },
+    {
+      "name": "loop_add_convert_divide_fusion",
+      "total_ms_per_call": 0.0034561999999999996,
+      "count_per_call": 1.0,
+      "mean_us": 3.4562,
+      "share": 5.415165859971674e-05
+    },
+    {
+      "name": "loop_pad_fusion",
+      "total_ms_per_call": 0.0032832,
+      "count_per_call": 1.0,
+      "mean_us": 3.2832,
+      "share": 5.1441098754293735e-05
+    },
+    {
+      "name": "loop_compare_fusion_1",
+      "total_ms_per_call": 0.00176,
+      "count_per_call": 1.0,
+      "mean_us": 1.7600000000000002,
+      "share": 2.7575637733783194e-05
+    },
+    {
+      "name": "loop_divide_fusion",
+      "total_ms_per_call": 0.0016902,
+      "count_per_call": 1.0,
+      "mean_us": 1.6902000000000001,
+      "share": 2.6482013010022928e-05
+    },
+    {
+      "name": "loop_exponential_fusion",
+      "total_ms_per_call": 0.0016,
+      "count_per_call": 1.0,
+      "mean_us": 1.6,
+      "share": 2.506876157616654e-05
+    }
+  ],
+  "config": {
+    "n": 200000,
+    "ic": "plummer",
+    "leaf": 256,
+    "theta": 0.8,
+    "order": 4,
+    "calls": 5
+  },
+  "untraced_timing": {
+    "min": 0.05989544279873371,
+    "median": 0.06398325320333242,
+    "iqr": 0.0037767747417092323,
+    "max": 0.06590873468667269,
+    "mean": 0.06382132265716792,
+    "std": 0.0021160164699750438,
+    "samples": [
+      0.06590873468667269,
+      0.05989544279873371,
+      0.06398325320333242,
+      0.06542972009629011,
+      0.06388946250081062
+    ]
+  },
+  "contention": {
+    "devices": [
+      5
+    ],
+    "n_samples": 5,
+    "duration_s": 4.353946208953857,
+    "foreign_pids_on_devices": [],
+    "own_util_max": {
+      "5": 99
+    },
+    "other_gpu_util_max": 82,
+    "loadavg1_max": 10.46240234375,
+    "loadavg1_min": 10.26513671875,
+    "cores": 64,
+    "contaminated": false,
+    "flags": [
+      "loadavg>=8 (10.5)",
+      "other-gpus-busy (82%)"
+    ]
+  },
+  "traced_wall_ms": [
+    69.25512012094259,
+    68.36973503232002,
+    67.63513293117285,
+    70.06832398474216,
+    67.40799080580473
+  ],
+  "nbrs": 194742,
+  "leaves": 782,
+  "far_pairs": 0
+}

@@ -1,0 +1,342 @@
+{
+  "tag": "phase0_baseline_m2lcsr0",
+  "n": 200000,
+  "leaf": 64,
+  "order": 5,
+  "theta": 0.8,
+  "reps": 7,
+  "devices": [
+    2
+  ],
+  "env_overrides": {
+    "JACCPOT_STATIC_STRICT_FUSED_COMPACT_FAR_PAIR_CAP": "2097152",
+    "JACCPOT_LARGE_N_NEIGHBOR_EDGE_PROFILE_FIXED_CAP": "4194304",
+    "JACCPOT_LARGE_N_STATIC_TARGET_BLOCKS_MAX_PER_LEAF": "auto",
+    "JACCPOT_STATIC_STRICT_FUSED_M2L_CSR": "0"
+  },
+  "traversal_overrides": {
+    "max_neighbors_per_leaf": 4096,
+    "max_interactions_per_node": 16384
+  },
+  "fast_lane_env": {
+    "JACCPOT_STATIC_STRICT_GPU_MODE": "on",
+    "JACCPOT_STATIC_STRICT_FUSED_MODE": "on",
+    "JACCPOT_LARGE_N_STATIC_TARGET_BLOCKS": "1",
+    "JACCPOT_LARGE_N_TARGET_BLOCK_SIZE": "4",
+    "JACCPOT_LARGE_N_STATIC_TARGET_BLOCKS_MAX_PER_LEAF": "auto",
+    "JACCPOT_LARGE_N_NEIGHBOR_EDGE_PROFILE_FIXED_CAP": "4194304",
+    "JACCPOT_STATIC_STRICT_REQUIRE_EXACT_CAP_PROFILE_MATCH": "0",
+    "JACCPOT_STATIC_STRICT_FUSED_DEVICE_ONLY": "1",
+    "JACCPOT_STATIC_STRICT_FUSED_DISALLOW_HOST_SEGMENT_FALLBACK": "1",
+    "JACCPOT_STATIC_STRICT_FUSED_FLAT_COMPACT_FAR_PAIRS": "1",
+    "JACCPOT_STATIC_STRICT_FUSED_COMPACT_FAR_PAIR_CAP": "2097152",
+    "JACCPOT_LARGE_N_COMPILED_STATE_MODE": "on",
+    "JACCPOT_LARGE_N_RADIX_FAST_PAYLOAD_IN_FUSED": "1",
+    "JACCPOT_LARGE_N_RADIX_FAST_PAYLOAD_MAX_MB": "0",
+    "YGGDRAX_INDEX_PRECISION": "int32",
+    "JACCPOT_INDEX_PRECISION": "int32",
+    "JACCPOT_STATIC_STRICT_FUSED_PROFILE_SET": "200000",
+    "JACCPOT_STATIC_STRICT_FUSED_M2L_CSR": "0"
+  },
+  "worktree": "/export/home/tbuck/jaccpot-grad-wt",
+  "leaf_partition": "cells",
+  "leaf_capacity": 16384,
+  "load_at_start": [
+    34.20947265625,
+    42.17529296875,
+    41.4755859375
+  ],
+  "pallas_cascades_enabled_outside_grad": true,
+  "git_head": "d06dee0",
+  "prepare_eval_s_incl_compile": 52.049523876048625,
+  "eval_production_aggL2": 0.0012691405337174133,
+  "eval_production": {
+    "timing": {
+      "min": 0.0025395629927515984,
+      "median": 0.003944128751754761,
+      "iqr": 0.005463547073304653,
+      "max": 0.009419145993888378,
+      "mean": 0.004823967548353332,
+      "std": 0.0025639609290843694,
+      "samples": [
+        0.003944128751754761,
+        0.008025558665394783,
+        0.00256201159209013,
+        0.009419145993888378,
+        0.0030334750190377235,
+        0.004243889823555946,
+        0.0025395629927515984
+      ]
+    },
+    "contention": {
+      "devices": [
+        2
+      ],
+      "n_samples": 2,
+      "duration_s": 1.5105102062225342,
+      "foreign_pids_on_devices": [
+        [
+          2,
+          4091554,
+          "szhang"
+        ]
+      ],
+      "own_util_max": {
+        "2": 100
+      },
+      "other_gpu_util_max": 100,
+      "loadavg1_max": 44.6064453125,
+      "loadavg1_min": 44.6064453125,
+      "cores": 64,
+      "contaminated": true,
+      "flags": [
+        "foreign-process-on-device",
+        "loadavg>=8 (44.6)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    "load": [
+      44.6064453125,
+      43.70556640625,
+      42.0634765625
+    ]
+  },
+  "prepare_state_s": 9.791891973465681,
+  "state_type": "LargeNPreparedState",
+  "far_pairs": 2097152,
+  "far_pairs_active": 690536,
+  "near_csr": {
+    "edges": 372012,
+    "rows": 16384,
+    "row_max": 10950,
+    "symmetric": true,
+    "asymmetric_edges": 0
+  },
+  "tree": {
+    "total_nodes": 32767,
+    "num_internal": 16383,
+    "levels_live": 40,
+    "widest_level": 5430,
+    "single_child_parents": 0
+  },
+  "grad_options": {
+    "nearfield_lane": "bucketed",
+    "cascade_pallas": false,
+    "fused_m2l_pallas": false
+  },
+  "forward_differentiable_eager": {
+    "timing": {
+      "min": 6.219991150312126,
+      "median": 6.317304981872439,
+      "iqr": 0.13105510734021664,
+      "max": 6.61540845874697,
+      "mean": 6.357904827754412,
+      "std": 0.12002413469538309,
+      "samples": [
+        6.295808676630259,
+        6.317304981872439,
+        6.61540845874697,
+        6.271884861402214,
+        6.3819956965744495,
+        6.40293996874243,
+        6.219991150312126
+      ]
+    },
+    "contention": {
+      "devices": [
+        2
+      ],
+      "n_samples": 85,
+      "duration_s": 72.8402783870697,
+      "foreign_pids_on_devices": [
+        [
+          2,
+          4091554,
+          "szhang"
+        ]
+      ],
+      "own_util_max": {
+        "2": 83
+      },
+      "other_gpu_util_max": 100,
+      "loadavg1_max": 60.6669921875,
+      "loadavg1_min": 39.3447265625,
+      "cores": 64,
+      "contaminated": true,
+      "flags": [
+        "foreign-process-on-device",
+        "loadavg>=8 (60.7)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    "load": [
+      58.291015625,
+      47.76318359375,
+      43.58984375
+    ]
+  },
+  "forward_vs_eval_relL2": 0.04898008433172253,
+  "forward_differentiable_aggL2": 0.05003041688153493,
+  "grad_eager": {
+    "timing": {
+      "min": 119.05871675815433,
+      "median": 122.86681250762194,
+      "iqr": 3.6077209440991282,
+      "max": 125.51214116252959,
+      "mean": 122.84176895873887,
+      "std": 2.087357726704553,
+      "samples": [
+        122.86681250762194,
+        122.3049561465159,
+        125.51214116252959,
+        124.70738479681313,
+        121.099663852714,
+        124.3427074868232,
+        119.05871675815433
+      ]
+    },
+    "contention": {
+      "devices": [
+        2
+      ],
+      "n_samples": 1615,
+      "duration_s": 1346.4873700141907,
+      "foreign_pids_on_devices": [
+        [
+          2,
+          4091554,
+          "szhang"
+        ],
+        [
+          2,
+          4097669,
+          "szhang"
+        ],
+        [
+          2,
+          4101486,
+          "szhang"
+        ]
+      ],
+      "own_util_max": {
+        "2": 100
+      },
+      "other_gpu_util_max": 100,
+      "loadavg1_max": 68.4365234375,
+      "loadavg1_min": 33.4013671875,
+      "cores": 64,
+      "contaminated": true,
+      "flags": [
+        "foreign-process-on-device",
+        "loadavg>=8 (68.4)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    "load": [
+      49.96337890625,
+      44.5390625,
+      45.2314453125
+    ],
+    "finite": true,
+    "norm_pos": 71619713.18640919,
+    "norm_mass": 1252959589.938293
+  },
+  "grad_jit_compile_s": 233.68873590044677,
+  "grad_jit": {
+    "timing": {
+      "min": 0.9424421675503254,
+      "median": 0.9435268715023994,
+      "iqr": 0.00129624642431736,
+      "max": 0.944498848170042,
+      "mean": 0.9436683545687369,
+      "std": 0.000723842211132736,
+      "samples": [
+        0.9432924212887883,
+        0.9444405771791935,
+        0.9431443307548761,
+        0.9435268715023994,
+        0.944498848170042,
+        0.9424421675503254,
+        0.9443332655355334
+      ]
+    },
+    "contention": {
+      "devices": [
+        2
+      ],
+      "n_samples": 11,
+      "duration_s": 8.772012710571289,
+      "foreign_pids_on_devices": [],
+      "own_util_max": {
+        "2": 100
+      },
+      "other_gpu_util_max": 100,
+      "loadavg1_max": 46.8291015625,
+      "loadavg1_min": 45.4013671875,
+      "cores": 64,
+      "contaminated": false,
+      "flags": [
+        "loadavg>=8 (46.8)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    "load": [
+      45.4013671875,
+      44.64990234375,
+      45.076171875
+    ]
+  },
+  "upward_forward_eager": {
+    "timing": {
+      "min": 1.790145673789084,
+      "median": 2.154712988063693,
+      "iqr": 0.49577607307583094,
+      "max": 2.3546229107305408,
+      "mean": 2.1293294581451585,
+      "std": 0.21559680568111603,
+      "samples": [
+        1.8463859967887402,
+        1.790145673789084,
+        2.106187630444765,
+        2.3546229107305408,
+        2.3110889373347163,
+        2.342162069864571,
+        2.154712988063693
+      ]
+    },
+    "contention": {
+      "devices": [
+        2
+      ],
+      "n_samples": 23,
+      "duration_s": 19.241755485534668,
+      "foreign_pids_on_devices": [],
+      "own_util_max": {
+        "2": 2
+      },
+      "other_gpu_util_max": 100,
+      "loadavg1_max": 55.548828125,
+      "loadavg1_min": 43.607421875,
+      "cores": 64,
+      "contaminated": false,
+      "flags": [
+        "loadavg>=8 (55.5)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    "load": [
+      55.548828125,
+      46.904296875,
+      45.802734375
+    ]
+  },
+  "upward_grad_eager": {
+    "error": "AssertionError: ",
+    "traceback": "Traceback (most recent call last):\n  File \"/export/home/tbuck/jaccpot/.venv/lib/python3.12/site-packages/jax/_src/pallas/primitives.py\", line 652, in wrap_with_transforms\n    return f(*new_args)\n  File \"/export/home/tbuck/jaccpot-grad-wt/jaccpot/pallas/p2m_real_leaf.py\", line 112, in _p2m_leaf_kernel\n    leaf = pl.program_id(0)\n  File \"/export/home/tbuck/jaccpot/.venv/lib/python3.12/site-packages/jax/_src/pallas/primitives.py\", line 74, in program_id\n    return program_id_p.bind(axis=axis)\n  File \"/export/home/tbuck/jaccpot/.venv/lib/python3.12/site-packages/jax/_src/pallas/primitives.py\", line 85, in program_id_bind_with_trace\n    return jax_core.Primitive.bind_with_trace(program_id_p, trace, (), avals,\njax._src.source_info_util.JaxStackTraceBeforeTransformation: AssertionError\n\nThe preceding stack trace is the source of the JAX operation that, once transformed by JAX, triggered the following exception.\n\n--------------------\n\nThe above exception was the direct cause of the following exception:\n\nTraceback (most recent call last):\n  File \"/export/home/tbuck/jaccpot-grad-wt/bench/grad_step_profile.py\", line 199, in timed\n    runtime_path=\"large_n\",\n                        ^^^^\n  File \"/export/home/tbuck/Odisseo-bench-multigpu/benchmark_multigpu/common/gpu_guard.py\", line 344, in timed_calls\n    block(fn())\n          ^^^^\n  File \"/export/home/tbuck/jaccpot-grad-wt/bench/grad_step_profile.py\", line 332, in <lambda>\n    result[\"far_pairs\"] = int(plan.num_far_pairs)\n                                               ^^^\n  File \"/export/home/tbuck/jaccpot-grad-wt/bench/grad_step_profile.py\", line 318, in upward_loss\n    # ------------------------------------------------------------ differentiable state\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/export/home/tbuck/jaccpot-grad-wt/jaccpot/runtime/fmm_sweeps.py\", line 341, in prepare_upward_sweep\n    real_upward = prepare_real_upward_sweep(\n                  ^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/export/home/tbuck/jaccpot-grad-wt/jaccpot/upward/real_tree_expansions.py\", line 477, in prepare_real_upward_sweep\n    from jaccpot._env import env_flag\n             ^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/export/home/tbuck/jaccpot-grad-wt/jaccpot/pallas/p2m_real_leaf.py\", line 277, in p2m_real_leaves_pallas\n    backend_kwargs[\"compiler_params\"] = type(backend_kwargs[\"compiler_params\"])(\n       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/usr/lib/python3.12/contextlib.py\", line 81, in inner\n    return func(*args, **kwds)\n           ^^^^^^^^^^^^^^^^^^^\n  File \"/export/home/tbuck/jaccpot/.venv/lib/python3.12/site-packages/jax/_src/pallas/pallas_call.py\", line 278, in _pallas_call_jvp_rule\n    jvp_jaxpr_, _ = ad.jvp_jaxpr(closed_jaxpr, nonzero_tangents_with_outputs, [])\n                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/export/home/tbuck/jaccpot/.venv/lib/python3.12/site-packages/jax/_src/pallas/primitives.py\", line 81, in program_id_bind_with_trace\n    frame = pallas_core.axis_frame()\n            ^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/export/home/tbuck/jaccpot/.venv/lib/python3.12/site-packages/jax/_src/pallas/core.py\", line 361, in axis_frame\n    assert env.grid_context is not None\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError\n--------------------\nFor simplicity, JAX has removed its internal frames from the traceback of the following exception. Set JAX_TRACEBACK_FILTERING=off to include these.\n",
+    "innermost_jaccpot_frames": [
+      "File \"/export/home/tbuck/jaccpot/.venv/lib/python3.12/site-packages/jax/_src/pallas/pallas_call.py\", line 278, in _pallas_call_jvp_rule",
+      "File \"/export/home/tbuck/jaccpot/.venv/lib/python3.12/site-packages/jax/_src/pallas/primitives.py\", line 81, in program_id_bind_with_trace",
+      "File \"/export/home/tbuck/jaccpot/.venv/lib/python3.12/site-packages/jax/_src/pallas/core.py\", line 361, in axis_frame"
+    ]
+  }
+}

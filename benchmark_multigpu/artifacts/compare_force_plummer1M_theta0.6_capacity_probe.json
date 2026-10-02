@@ -1,0 +1,141 @@
+{
+  "provenance": {
+    "timestamp_utc": "2026-09-06T08:39:35.122499+00:00",
+    "repos": {
+      "jaccpot": {
+        "sha": "c1cede7",
+        "branch": "main",
+        "dirty": true
+      },
+      "yggdrax": {
+        "sha": "a22472f",
+        "branch": "paper/differentiable-applications",
+        "dirty": true
+      },
+      "jztree": {
+        "sha": "ee82fa2",
+        "branch": "main",
+        "dirty": false
+      },
+      "odisseo_bench": {
+        "sha": "2da9e8e",
+        "branch": "bench/multi-gpu",
+        "dirty": true
+      }
+    },
+    "jax_version": "0.10.2",
+    "jax_backend": "gpu",
+    "devices": [
+      {
+        "id": 0,
+        "kind": "NVIDIA A100-PCIE-40GB",
+        "platform": "gpu"
+      }
+    ],
+    "nvidia_smi": "0, NVIDIA A100-PCIE-40GB, 40960 MiB, 595.71.05\n1, NVIDIA A100-PCIE-40GB, 40960 MiB, 595.71.05\n2, NVIDIA A100-PCIE-40GB, 40960 MiB, 595.71.05\n3, NVIDIA A100-PCIE-40GB, 40960 MiB, 595.71.05\n4, NVIDIA A100-PCIE-40GB, 40960 MiB, 595.71.05\n5, NVIDIA A100-PCIE-40GB, 40960 MiB, 595.71.05\n6, NVIDIA A100-PCIE-40GB, 40960 MiB, 595.71.05\n7, NVIDIA A100-PCIE-40GB, 40960 MiB, 595.71.05",
+    "benchmark": "compare_force",
+    "args": {
+      "n": 1000000,
+      "ic": "plummer",
+      "ndevs": [
+        1
+      ],
+      "pkd_thetas": [
+        0.4,
+        0.5,
+        0.6,
+        0.7,
+        0.8,
+        0.9,
+        1.0
+      ],
+      "jac_thetas": [
+        0.6
+      ],
+      "orders": [
+        4
+      ],
+      "jac_leaf_single": [
+        256
+      ],
+      "jac_leaf_dist": 64,
+      "jac_edge_cap": null,
+      "jac_env": [],
+      "partitioner": "rcb",
+      "pkd_nbucket": [
+        16
+      ],
+      "pkd_ngroup": [
+        0
+      ],
+      "pkd_cores": 16,
+      "pkd_cpu": false,
+      "pkd_cpu_cores": 32,
+      "repeats": 3,
+      "warmup": 1,
+      "ref_targets": 4096,
+      "softening": 1e-07,
+      "softening_tolerance": 1e-06,
+      "G": 1.0,
+      "seed": 0,
+      "timeout": 3600.0,
+      "workdir": "artifacts/compare_force_1M",
+      "out": "artifacts/compare_force_plummer1M_theta0.6_capacity_probe.json",
+      "allow_busy": false,
+      "skip_pkdgrav3": true,
+      "skip_jaccpot": false
+    },
+    "loadavg": [
+      28.9609375,
+      58.888671875,
+      49.4052734375
+    ],
+    "cores": 64
+  },
+  "ic": {
+    "name": "plummer",
+    "n": 1000000,
+    "seed": 0,
+    "softening": 1e-07,
+    "softening_reference_shift_aggL2": 3.4071384558992935e-09,
+    "G": 1.0,
+    "reference_targets": 4096
+  },
+  "fast_lane_env": {
+    "JACCPOT_STATIC_STRICT_GPU_MODE": "on",
+    "JACCPOT_STATIC_STRICT_FUSED_MODE": "on",
+    "JACCPOT_LARGE_N_STATIC_TARGET_BLOCKS": "1",
+    "JACCPOT_LARGE_N_TARGET_BLOCK_SIZE": "4",
+    "JACCPOT_LARGE_N_STATIC_TARGET_BLOCKS_MAX_PER_LEAF": "64",
+    "JACCPOT_LARGE_N_NEIGHBOR_EDGE_PROFILE_FIXED_CAP": "10485760",
+    "JACCPOT_STATIC_STRICT_REQUIRE_EXACT_CAP_PROFILE_MATCH": "0",
+    "JACCPOT_STATIC_STRICT_FUSED_DEVICE_ONLY": "1",
+    "JACCPOT_STATIC_STRICT_FUSED_DISALLOW_HOST_SEGMENT_FALLBACK": "1",
+    "JACCPOT_STATIC_STRICT_FUSED_FLAT_COMPACT_FAR_PAIRS": "1",
+    "JACCPOT_STATIC_STRICT_FUSED_COMPACT_FAR_PAIR_CAP": "131072",
+    "JACCPOT_LARGE_N_COMPILED_STATE_MODE": "on",
+    "JACCPOT_LARGE_N_RADIX_FAST_PAYLOAD_IN_FUSED": "1",
+    "JACCPOT_LARGE_N_RADIX_FAST_PAYLOAD_MAX_MB": "0",
+    "JACCPOT_STATIC_STRICT_FUSED_PROFILE_SET": "1000000"
+  },
+  "devices": [
+    6
+  ],
+  "pkd_theta_scale": 1.5,
+  "pkdgrav3": [],
+  "jaccpot": [
+    {
+      "code": "jaccpot",
+      "lane": "single_gpu_fused",
+      "ndev": 1,
+      "order": 4,
+      "theta": 0.6,
+      "leaf_size": 256,
+      "failed": "jaccpot could not fit N=1000000 with preset='large_n_gpu', leaf_size=256, max_order=4, dtype=<class 'jax.numpy.float32'>.",
+      "failed_full": "jaccpot could not fit N=1000000 with preset='large_n_gpu', leaf_size=256, max_order=4, dtype=<class 'jax.numpy.float32'>.\nDevice: 0.28 GiB in use of 29.62 GiB.\nLargest statically-sized buffers for this configuration:\n      1.19 GiB  fast-lane source payload (num_leaves x max_neighbors_per_leaf x leaf)\n           sized by: leaf_size, or JACCPOT_LARGE_N_RADIX_FAST_PAYLOAD_MAX_MB to decline it\n      0.03 GiB  far-field interaction buffer (total_nodes x max_interactions_per_node)\n           sized by: TraversalOverrides(max_interactions_per_node=...)\n      0.01 GiB  leaf-major particle payload (num_leaves x leaf x 4)\n           sized by: leaf_size\n      0.00 GiB  near-field neighbour buffer (num_leaves x max_neighbors_per_leaf)\n           sized by: TraversalOverrides(max_neighbors_per_leaf=...)\n      0.00 GiB  pair queue (max_pair_queue x 2 indices)\n           sized by: TraversalOverrides(max_pair_queue=...)\nWhat usually fits: preset='large_n_gpu' with leaf_size=256 keeps the fast-lane payload and the near-field neighbour buffer bounded (it is the path built for this N); raising leaf_size shrinks num_leaves and every per-leaf buffer with it, at some accuracy cost. To change ONE traversal capacity without disturbing the preset's other tuning, pass jaccpot.TraversalOverrides(...) rather than a full DualTreeTraversalConfig.",
+      "failed_causes": [
+        "RuntimeError: Interaction list capacity exceeded; increase max_interactions_per_node and rebuild."
+      ]
+    }
+  ]
+}

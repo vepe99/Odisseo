@@ -1,0 +1,90 @@
+{
+  "n": 200000,
+  "leaf": 64,
+  "theta": 0.6,
+  "order": 4,
+  "steps": 300,
+  "dt": 0.01,
+  "flag": "JACCPOT_STATIC_STRICT_FUSED_FLAT_WALK",
+  "env": {
+    "JACCPOT_STATIC_STRICT_FUSED_M2L_CSR": "1"
+  },
+  "lanes": {
+    "csr0": {
+      "wall_s": 102.6161251263693,
+      "ms_per_step": 342.053750421231,
+      "contention": {
+        "devices": [
+          6
+        ],
+        "n_samples": 119,
+        "duration_s": 102.95618033409119,
+        "foreign_pids_on_devices": [],
+        "own_util_max": {
+          "6": 99
+        },
+        "other_gpu_util_max": 100,
+        "loadavg1_max": 42.6796875,
+        "loadavg1_min": 36.52490234375,
+        "cores": 64,
+        "contaminated": false,
+        "flags": [
+          "loadavg>=8 (42.7)",
+          "other-gpus-busy (100%)"
+        ]
+      },
+      "KE0": 0.23975561383645044,
+      "KE1": 0.19622205252963548,
+      "dKE_rel": -0.18157473191226892,
+      "Lz0": -0.0039746891087755025,
+      "Lz1": -0.0039640601323401,
+      "dLz": 1.0628976435402525e-05,
+      "vmax0": 1.9791486263275146,
+      "vmax1": 3.612792491912842,
+      "force_recovered_vs_eager_rel_l2": 0.0055068032469503085,
+      "fallbacks": 0
+    },
+    "csr1": {
+      "wall_s": 43.358603313565254,
+      "ms_per_step": 144.52867771188417,
+      "contention": {
+        "devices": [
+          6
+        ],
+        "n_samples": 50,
+        "duration_s": 43.65314030647278,
+        "foreign_pids_on_devices": [],
+        "own_util_max": {
+          "6": 98
+        },
+        "other_gpu_util_max": 98,
+        "loadavg1_max": 35.68212890625,
+        "loadavg1_min": 34.06982421875,
+        "cores": 64,
+        "contaminated": false,
+        "flags": [
+          "loadavg>=8 (35.7)",
+          "other-gpus-busy (98%)"
+        ]
+      },
+      "KE0": 0.23975561383645044,
+      "KE1": 0.19624493621829664,
+      "dKE_rel": -0.18147928601928237,
+      "Lz0": -0.0039746891087755025,
+      "Lz1": -0.003964032717619408,
+      "dLz": 1.0656391156094874e-05,
+      "vmax0": 1.9791486263275146,
+      "vmax1": 4.019996166229248,
+      "force_recovered_vs_eager_rel_l2": 0.005515806115176929,
+      "fallbacks": 0
+    }
+  },
+  "divergence_pos_rel_l2_at_steps": {
+    "1": 1.1080436961324559e-10,
+    "10": 1.16808153127485e-09,
+    "50": 1.6773354465966887e-08,
+    "100": 9.123670287438993e-08,
+    "300": 0.0006266940421785469
+  },
+  "final_vel_rel_l2": 0.004250694466859547
+}

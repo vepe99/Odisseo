@@ -1,0 +1,278 @@
+{
+  "code": "jzfmm",
+  "tag": "q4jz_leaf64_th0.8_p5",
+  "n": 200000,
+  "ic": "plummer",
+  "softening": 1e-07,
+  "G": 1.0,
+  "devices": [
+    6
+  ],
+  "host": "compgpu9",
+  "versions": {
+    "jax": "0.11.1",
+    "jzfmm": null,
+    "jztree": null
+  },
+  "ref_targets": 4096,
+  "repeats": 7,
+  "warmup": 3,
+  "defaults": {
+    "FMMConfig": "FMMConfig(tree=TreeConfig(max_leaf_size=32, coarse_fac=4.0, stop_coarsen=1024, regularization=None, alloc_fac_nodes=1.2, nsamp=1024, mass_centered=False), kernel=PlummerKernel(softening=0.001), p=5, opening=OpeningByAngle(theta=0.8), alloc_fac_ilist=64.0, alloc_fac_comm_nodes=1.5, alloc_fac_comm_particles=1.5, kahan_summation=False, remove_self_interaction=True)"
+  },
+  "rows": [
+    {
+      "leaf": 64,
+      "p": 5,
+      "theta": 0.8,
+      "compile_s_incl_first_call": 1.5613324353471398,
+      "alloc_fac_ilist": 64.0,
+      "cfg": "FMMConfig(tree=TreeConfig(max_leaf_size=64, coarse_fac=4.0, stop_coarsen=1024, regularization=None, alloc_fac_nodes=1.2, nsamp=1024, mass_centered=False), kernel=PlummerKernel(softening=1e-07), p=5, opening=OpeningByAngle(theta=0.8), alloc_fac_ilist=64.0, alloc_fac_comm_nodes=1.5, alloc_fac_comm_particles=1.5, kahan_summation=False, remove_self_interaction=True)",
+      "timing": {
+        "min": 0.012277048081159592,
+        "median": 0.016419279389083385,
+        "iqr": 0.004057669080793858,
+        "max": 0.01708643138408661,
+        "mean": 0.01538133913917201,
+        "std": 0.0019018004355285556,
+        "samples": [
+          0.016358117572963238,
+          0.01708643138408661,
+          0.01657466869801283,
+          0.016419279389083385,
+          0.01643682923167944,
+          0.012516999617218971,
+          0.012277048081159592
+        ]
+      },
+      "contention": {
+        "devices": [
+          6
+        ],
+        "n_samples": 2,
+        "duration_s": 1.010310411453247,
+        "foreign_pids_on_devices": [],
+        "own_util_max": {
+          "6": 1
+        },
+        "other_gpu_util_max": 85,
+        "loadavg1_max": 13.80859375,
+        "loadavg1_min": 13.80859375,
+        "cores": 64,
+        "contaminated": false,
+        "flags": [
+          "loadavg>=8 (13.8)",
+          "other-gpus-busy (85%)"
+        ]
+      },
+      "error": {
+        "median": 0.00018887716644745884,
+        "p90": 0.0009474655983451244,
+        "max": 0.09887773230087865,
+        "aggL2": 0.000462879798334702,
+        "aggL2_signflip": 2.0000126422452387,
+        "n_ref": 4096
+      },
+      "lists": {
+        "num_leaves": 4687,
+        "planes": 2,
+        "size_leaves_alloc": 6251,
+        "near_entries_directed": 242727,
+        "ilist_capacity": 400064,
+        "self_entries": 4687,
+        "occupancy_mean": 42.67121826328142,
+        "occupancy_max": 64,
+        "mean_neighbor_leaves_per_leaf": 51.78728397695754,
+        "max_neighbor_leaves_per_leaf": 287,
+        "direct_sources_per_target_mean": 2328.64469,
+        "direct_share_of_N": 0.01164322345,
+        "p2p_pair_evaluations": 465728938.0
+      },
+      "trace": {
+        "per_call": {
+          "window_ms": 18.013687,
+          "busy_ms": 15.910864333333357,
+          "kernel_sum_ms": 15.910864333333334,
+          "launches": 114.0
+        },
+        "top": [
+          {
+            "name": "void CountInteractionsAndM2L<0, 5, 3, float>(int2 const*, int const*, int const*, int const*, int const*, Node<3, float> const*, Node<3, float> const*, float const*, float const*, float const*, int const*, float const*, float*, int*, int)",
+            "total_ms_per_call": 10.849373,
+            "count_per_call": 2.0,
+            "mean_us": 5424.686500000001,
+            "share": 0.6818845772740652
+          },
+          {
+            "name": "void LeafLeafPairSummation<false, 0, 3, float>(int2 const*, int const*, int const*, int const*, int const*, PosMass<3, float> const*, PosMass<3, float> const*, float const*, LocalExp<3, float> const*, LocalExp<3, float>*, bool)",
+            "total_ms_per_call": 2.1837623333333336,
+            "count_per_call": 1.0,
+            "mean_us": 2183.7623333333336,
+            "share": 0.13724976139469314
+          },
+          {
+            "name": "void InsertInteractions<0, 3, float>(int2 const*, int const*, int const*, int const*, int const*, Node<3, float> const*, Node<3, float> const*, int const*, float const*, int*)",
+            "total_ms_per_call": 0.851715,
+            "count_per_call": 2.0,
+            "mean_us": 425.8575,
+            "share": 0.05353040426695445
+          },
+          {
+            "name": "void TranslateLocalToLocal<5, 3, float>(int const*, float const*, Node<3, float> const*, Node<3, float> const*, float*, int, int)",
+            "total_ms_per_call": 0.5294416666666667,
+            "count_per_call": 3.0,
+            "mean_us": 176.48055555555555,
+            "share": 0.03327548117907611
+          },
+          {
+            "name": "void SummarizeMultipoles<5, 3, float>(int const*, float const*, Node<3, float> const*, Node<3, float> const*, float*, int, int, bool)",
+            "total_ms_per_call": 0.414125,
+            "count_per_call": 2.0,
+            "mean_us": 207.0625,
+            "share": 0.026027812903438956
+          },
+          {
+            "name": "void cub::DeviceMergeSortPartitionKernel<Vec<3, float>*, long, PosLess<3, float>, Vec<3, float> >(bool, Vec<3, float>*, Vec<3, float>*, long, long, long*, PosLess<3, float>, long, int)",
+            "total_ms_per_call": 0.2262833333333333,
+            "count_per_call": 8.0,
+            "mean_us": 28.285416666666663,
+            "share": 0.014221938456182338
+          },
+          {
+            "name": "void cub::DeviceMergeSortMergeKernel<cub::detail::merge_sort::policy_hub<Vec<3, float>*>::Policy600, Vec<3, float>*, int*, Vec<3, float>*, int*, long, PosLess<3, float>, Vec<3, float>, int>(bool, Vec<3, float>*, int*, long, Vec<3, float>*, int*, PosLess<3, float>, long*, long, cub::detail::vsmem_t)",
+            "total_ms_per_call": 0.19465733333333327,
+            "count_per_call": 8.0,
+            "mean_us": 24.332166666666662,
+            "share": 0.012234240029658557
+          },
+          {
+            "name": "void cub::DeviceMergeSortBlockSortKernel<cub::detail::merge_sort::policy_hub<Vec<3, float>*>::Policy600, Vec<3, float>*, int*, Vec<3, float>*, int*, long, PosLess<3, float>, Vec<3, float>, int>(bool, Vec<3, float>*, int*, Vec<3, float>*, int*, long, Vec<3, float>*, int*, PosLess<3, float>, cub::detail::vsmem_t)",
+            "total_ms_per_call": 0.13394166666666665,
+            "count_per_call": 1.0,
+            "mean_us": 133.94166666666666,
+            "share": 0.008418252073588376
+          },
+          {
+            "name": "void FlagLeafBoundaries<3, float>(Vec<3, float> const*, unsigned char const*, int const*, int const*, signed char*, int*, int, int, int, int)",
+            "total_ms_per_call": 0.04528033333333333,
+            "count_per_call": 1.0,
+            "mean_us": 45.280333333333324,
+            "share": 0.0028458751444741326
+          },
+          {
+            "name": "loop_reduce_window_fusion_2",
+            "total_ms_per_call": 0.037578999999999994,
+            "count_per_call": 2.0,
+            "mean_us": 18.789499999999997,
+            "share": 0.002361845290910552
+          },
+          {
+            "name": "MemcpyD2D",
+            "total_ms_per_call": 0.03068866666666667,
+            "count_per_call": 7.0,
+            "mean_us": 4.384095238095238,
+            "share": 0.0019287868982940022
+          },
+          {
+            "name": "void FindNodeBoundaries<3, float>(Vec<3, float> const*, Vec<3, float> const*, int const*, int*, int*, int*, int, int, int)",
+            "total_ms_per_call": 0.029824000000000003,
+            "count_per_call": 1.0,
+            "mean_us": 29.824,
+            "share": 0.0018744424800052242
+          },
+          {
+            "name": "input_scatter_fusion_3",
+            "total_ms_per_call": 0.023872,
+            "count_per_call": 1.0,
+            "mean_us": 23.872,
+            "share": 0.0015003584657552545
+          },
+          {
+            "name": "Memset 3",
+            "total_ms_per_call": 0.01988266666666667,
+            "count_per_call": 5.0,
+            "mean_us": 3.9765333333333337,
+            "share": 0.0012496283200034827
+          },
+          {
+            "name": "MemcpyD2H",
+            "total_ms_per_call": 0.017237000000000002,
+            "count_per_call": 5.0,
+            "mean_us": 3.4474000000000005,
+            "share": 0.0010833478080690066
+          },
+          {
+            "name": "loop_reduce_window_fusion_11",
+            "total_ms_per_call": 0.013578666666666664,
+            "count_per_call": 1.0,
+            "mean_us": 13.578666666666665,
+            "share": 0.000853421057598945
+          },
+          {
+            "name": "input_scatter_fusion",
+            "total_ms_per_call": 0.012896,
+            "count_per_call": 1.0,
+            "mean_us": 12.896,
+            "share": 0.0008105153642082675
+          },
+          {
+            "name": "loop_add_pad_fusion_1",
+            "total_ms_per_call": 0.011509333333333331,
+            "count_per_call": 2.0,
+            "mean_us": 5.754666666666666,
+            "share": 0.0007233631745084538
+          },
+          {
+            "name": "wrapped_concatenate",
+            "total_ms_per_call": 0.010656,
+            "count_per_call": 1.0,
+            "mean_us": 10.656,
+            "share": 0.000669731057770107
+          },
+          {
+            "name": "loop_gather_fusion",
+            "total_ms_per_call": 0.010538666666666667,
+            "count_per_call": 1.0,
+            "mean_us": 10.538666666666666,
+            "share": 0.0006623566417185842
+          },
+          {
+            "name": "loop_reduce_window_fusion_8",
+            "total_ms_per_call": 0.009610666666666667,
+            "count_per_call": 1.0,
+            "mean_us": 9.610666666666667,
+            "share": 0.000604031714765632
+          },
+          {
+            "name": "loop_broadcast_gather_select_fusion",
+            "total_ms_per_call": 0.009269333333333333,
+            "count_per_call": 1.0,
+            "mean_us": 9.269333333333334,
+            "share": 0.0005825788680702932
+          },
+          {
+            "name": "MemcpyH2D",
+            "total_ms_per_call": 0.008693333333333332,
+            "count_per_call": 2.0,
+            "mean_us": 4.346666666666667,
+            "share": 0.000546377189271909
+          },
+          {
+            "name": "loop_reduce_window_fusion_3",
+            "total_ms_per_call": 0.008106666666666667,
+            "count_per_call": 2.0,
+            "mean_us": 4.053333333333334,
+            "share": 0.0005095051090142956
+          },
+          {
+            "name": "loop_dynamic_slice_fusion",
+            "total_ms_per_call": 0.007754666666666667,
+            "count_per_call": 1.0,
+            "mean_us": 7.754666666666666,
+            "share": 0.0004873818608597274
+          }
+        ]
+      }
+    }
+  ]
+}

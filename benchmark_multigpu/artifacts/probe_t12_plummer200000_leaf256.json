@@ -1,0 +1,194 @@
+{
+  "devices": [
+    5
+  ],
+  "rows": [
+    {
+      "setting": "baseline",
+      "theta": 0.4,
+      "ms": 124.20699652284384,
+      "iqr": 1.0294546373188496,
+      "aggL2": NaN,
+      "vs_baseline": 0.0,
+      "flags": [
+        "loadavg>=8 (59.4)",
+        "other-gpus-busy (40%)"
+      ]
+    },
+    {
+      "setting": "chunk64",
+      "theta": 0.4,
+      "ms": 115.65639171749353,
+      "iqr": 2.5545875541865826,
+      "aggL2": NaN,
+      "vs_baseline": 6.064590943029253e-06,
+      "flags": [
+        "loadavg>=8 (59.5)",
+        "other-gpus-busy (41%)"
+      ]
+    },
+    {
+      "setting": "batch32",
+      "theta": 0.4,
+      "ms": 122.9923302307725,
+      "iqr": 3.1885714270174503,
+      "aggL2": NaN,
+      "vs_baseline": 1.6282218689396208e-08,
+      "flags": [
+        "loadavg>=8 (59.4)",
+        "other-gpus-busy (12%)"
+      ]
+    },
+    {
+      "setting": "both",
+      "theta": 0.4,
+      "ms": 115.08551798760891,
+      "iqr": 1.1452208273112774,
+      "aggL2": NaN,
+      "vs_baseline": 6.064578127000458e-06,
+      "flags": [
+        "loadavg>=8 (58.7)"
+      ]
+    },
+    {
+      "setting": "baseline",
+      "theta": 0.6,
+      "ms": 91.38575475662947,
+      "iqr": 2.474553417414427,
+      "aggL2": NaN,
+      "vs_baseline": 0.0,
+      "flags": [
+        "loadavg>=8 (59.3)",
+        "other-gpus-busy (14%)"
+      ]
+    },
+    {
+      "setting": "chunk64",
+      "theta": 0.6,
+      "ms": 75.83500351756811,
+      "iqr": 2.9515009373426437,
+      "aggL2": NaN,
+      "vs_baseline": 3.4805968121152347e-06,
+      "flags": [
+        "loadavg>=8 (58.0)"
+      ]
+    },
+    {
+      "setting": "batch32",
+      "theta": 0.6,
+      "ms": 91.47586673498154,
+      "iqr": 5.330326966941357,
+      "aggL2": NaN,
+      "vs_baseline": 5.890238335374359e-08,
+      "flags": [
+        "loadavg>=8 (58.7)"
+      ]
+    },
+    {
+      "setting": "both",
+      "theta": 0.6,
+      "ms": 76.39133743941784,
+      "iqr": 9.515075013041496,
+      "aggL2": NaN,
+      "vs_baseline": 3.480429856640209e-06,
+      "flags": [
+        "loadavg>=8 (58.8)"
+      ]
+    },
+    {
+      "setting": "baseline",
+      "theta": 0.8,
+      "ms": 60.96136663109064,
+      "iqr": 4.838060587644577,
+      "aggL2": NaN,
+      "vs_baseline": 0.0,
+      "flags": [
+        "loadavg>=8 (64.9)"
+      ]
+    },
+    {
+      "setting": "chunk64",
+      "theta": 0.8,
+      "ms": 47.354127280414104,
+      "iqr": 9.745075833052397,
+      "aggL2": NaN,
+      "vs_baseline": 1.8431013832139408e-06,
+      "flags": [
+        "loadavg>=8 (63.8)",
+        "other-gpus-busy (40%)"
+      ]
+    },
+    {
+      "setting": "batch32",
+      "theta": 0.8,
+      "ms": 60.88584754616022,
+      "iqr": 4.304232075810432,
+      "aggL2": NaN,
+      "vs_baseline": 9.290355736257316e-08,
+      "flags": [
+        "loadavg>=8 (63.0)",
+        "other-gpus-busy (38%)"
+      ]
+    },
+    {
+      "setting": "both",
+      "theta": 0.8,
+      "ms": 47.526637092232704,
+      "iqr": 13.576366007328033,
+      "aggL2": NaN,
+      "vs_baseline": 1.8426899546712422e-06,
+      "flags": [
+        "loadavg>=8 (62.0)",
+        "other-gpus-busy (73%)"
+      ]
+    },
+    {
+      "setting": "baseline",
+      "theta": 1.0,
+      "ms": 44.72644254565239,
+      "iqr": 24.424982257187366,
+      "aggL2": NaN,
+      "vs_baseline": 0.0,
+      "flags": [
+        "loadavg>=8 (61.3)",
+        "other-gpus-busy (71%)"
+      ]
+    },
+    {
+      "setting": "chunk64",
+      "theta": 1.0,
+      "ms": 35.75464617460966,
+      "iqr": 4.770200699567795,
+      "aggL2": NaN,
+      "vs_baseline": 1.0430029159315602e-06,
+      "flags": [
+        "loadavg>=8 (59.5)",
+        "other-gpus-busy (68%)"
+      ]
+    },
+    {
+      "setting": "batch32",
+      "theta": 1.0,
+      "ms": 48.7820440903306,
+      "iqr": 4.597719293087721,
+      "aggL2": NaN,
+      "vs_baseline": 1.0840813260166308e-07,
+      "flags": [
+        "loadavg>=8 (64.2)",
+        "other-gpus-busy (68%)"
+      ]
+    },
+    {
+      "setting": "both",
+      "theta": 1.0,
+      "ms": 32.01298601925373,
+      "iqr": 10.61480026692152,
+      "aggL2": NaN,
+      "vs_baseline": 1.0433887110851425e-06,
+      "flags": [
+        "loadavg>=8 (62.5)",
+        "other-gpus-busy (49%)"
+      ]
+    }
+  ]
+}

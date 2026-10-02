@@ -1,0 +1,4 @@
+jaccpot /export/home/tbuck/jaccpot-strict-wt/jaccpot/__init__.py
+dt=0.01 mode=full: pos-recovered force errors per step ['4.026e-03', '3.107e+00', '1.619e+01']; vel-recovered ['1.554e+00', '8.243e+00', '9.189e+00']; refreshed rows max 781 mean 140.4
+dt=0.001 mode=full: pos-recovered force errors per step ['2.099e-01', '1.972e-01', '2.212e+00']; vel-recovered ['7.277e-02', '1.172e+00', '1.121e+01']; refreshed rows max 781 mean 140.6
+dt=0.01 mode=eval_only: pos-recovered force errors per step ['4.026e-03', '2.075e-03', '3.253e-03']; vel-recovered ['1.126e-07', '1.126e-07', '1.423e-07']; refreshed rows max 781 mean 140.6

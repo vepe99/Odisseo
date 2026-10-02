@@ -1,0 +1,7 @@
+jaccpot /export/home/tbuck/jaccpot/jaccpot/__init__.py
+|a| stats at x0: median 0.280  max 4.396e+01  top-10 share of ||a||^2: 0.293
+max |x1-x0| = 2.081e-03, |x2-x1| = 1.885e-02, |x3-x2| = 1.124e-01
+step 1: in-scan force at x0 vs eager@x0: 4.026e-03   (vs eager@x0: 4.026e-03;  eager@x0 vs eager@x0: 1.095e-07)
+step 2: in-scan force at x1 vs eager@x1: 5.844e-02   (vs eager@x0: 3.113e+00;  eager@x1 vs eager@x0: 3.107e+00)
+step 3: in-scan force at x2 vs eager@x2: 1.176e-02   (vs eager@x0: 1.620e+01;  eager@x2 vs eager@x0: 1.620e+01)
+refreshed rows max 256 mean 81.3

@@ -1,0 +1,101 @@
+{
+  "n": 200000,
+  "leaf": 64,
+  "theta": 0.8,
+  "mac_geometry": "com",
+  "num_leaves": 3125,
+  "near_edges_directed": 1271906,
+  "direct_share_of_N": 0.1305581744,
+  "per_target": {
+    "p50": 0.087355,
+    "p90": 0.171195,
+    "max": 0.999995
+  },
+  "leaf_radius": {
+    "p50": 0.3381587176499361,
+    "p90": 1.5220122141425922,
+    "p99": 9.75560543518906,
+    "max": 674.6078794910393
+  },
+  "indegree": {
+    "p50": 272.0,
+    "p90": 533.5999999999999,
+    "p99": 3124.0,
+    "max": 3124,
+    "leaves_seen_by_half_of_all_rows": 117
+  },
+  "volume_share_from_top_indegree_leaves": {
+    "top0.01": {
+      "leaves": 31,
+      "volume_share": 0.07595714052815371,
+      "particles": 1984,
+      "radius_p50": 20.092525551822654,
+      "dist_p50": 14.046037184386192,
+      "indegree_min": 3124
+    },
+    "top0.02": {
+      "leaves": 62,
+      "volume_share": 0.15094956168443482,
+      "particles": 3968,
+      "radius_p50": 10.452600769130282,
+      "dist_p50": 9.700186842182134,
+      "indegree_min": 2979
+    },
+    "top0.05": {
+      "leaves": 156,
+      "volume_share": 0.286851854141735,
+      "particles": 9984,
+      "radius_p50": 3.5785450113934947,
+      "dist_p50": 3.330047414775539,
+      "indegree_min": 1090
+    },
+    "top0.1": {
+      "leaves": 312,
+      "volume_share": 0.3752813259312854,
+      "particles": 19968,
+      "radius_p50": 1.4584447347430474,
+      "dist_p50": 2.138502195459766,
+      "indegree_min": 536
+    },
+    "top0.2": {
+      "leaves": 625,
+      "volume_share": 0.4834993097146126,
+      "particles": 40000,
+      "radius_p50": 0.689728245279862,
+      "dist_p50": 1.4932482002382454,
+      "indegree_min": 380
+    }
+  },
+  "volume_share_from_pairs_with_big_leaf": {
+    "r>2xmedian": {
+      "big_leaves": 754,
+      "big_leaf_particles": 48256,
+      "volume_share": 0.7148617605057443,
+      "volume_share_big_as_source_only": 0.27157320913028943
+    },
+    "r>4xmedian": {
+      "big_leaves": 341,
+      "big_leaf_particles": 21824,
+      "volume_share": 0.5589019326851127,
+      "volume_share_big_as_source_only": 0.25156430189789786
+    },
+    "r>8xmedian": {
+      "big_leaves": 157,
+      "big_leaf_particles": 10048,
+      "volume_share": 0.4171681861384851,
+      "volume_share_big_as_source_only": 0.2004310378898803
+    },
+    "r>16xmedian": {
+      "big_leaves": 71,
+      "big_leaf_particles": 4544,
+      "volume_share": 0.2814109937493121,
+      "volume_share_big_as_source_only": 0.13879096030006988
+    }
+  },
+  "big_leaves": {
+    "radius_gt_2median": 754,
+    "radius_gt_4median": 341,
+    "radius_gt_8median": 157,
+    "dist_of_leaves_radius_gt_4median_p50": 5.001874293781938
+  }
+}

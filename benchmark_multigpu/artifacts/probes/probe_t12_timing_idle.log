@@ -1,0 +1,18 @@
+jaccpot /export/home/tbuck/jaccpot-perf-wt/jaccpot/__init__.py | GPU [5]
+  setting theta       ms    iqr       aggL2 flags
+ baseline  0.40   124.21   1.03         nan  vs-baseline 0.00e+00  loadavg>=8 (59.4),other-gpus-busy (40%)
+  chunk64  0.40   115.66   2.55         nan  vs-baseline 6.06e-06  loadavg>=8 (59.5),other-gpus-busy (41%)
+  batch32  0.40   122.99   3.19         nan  vs-baseline 1.63e-08  loadavg>=8 (59.4),other-gpus-busy (12%)
+     both  0.40   115.09   1.15         nan  vs-baseline 6.06e-06  loadavg>=8 (58.7)
+ baseline  0.60    91.39   2.47         nan  vs-baseline 0.00e+00  loadavg>=8 (59.3),other-gpus-busy (14%)
+  chunk64  0.60    75.84   2.95         nan  vs-baseline 3.48e-06  loadavg>=8 (58.0)
+  batch32  0.60    91.48   5.33         nan  vs-baseline 5.89e-08  loadavg>=8 (58.7)
+     both  0.60    76.39   9.52         nan  vs-baseline 3.48e-06  loadavg>=8 (58.8)
+ baseline  0.80    60.96   4.84         nan  vs-baseline 0.00e+00  loadavg>=8 (64.9)
+  chunk64  0.80    47.35   9.75         nan  vs-baseline 1.84e-06  loadavg>=8 (63.8),other-gpus-busy (40%)
+  batch32  0.80    60.89   4.30         nan  vs-baseline 9.29e-08  loadavg>=8 (63.0),other-gpus-busy (38%)
+     both  0.80    47.53  13.58         nan  vs-baseline 1.84e-06  loadavg>=8 (62.0),other-gpus-busy (73%)
+ baseline  1.00    44.73  24.42         nan  vs-baseline 0.00e+00  loadavg>=8 (61.3),other-gpus-busy (71%)
+  chunk64  1.00    35.75   4.77         nan  vs-baseline 1.04e-06  loadavg>=8 (59.5),other-gpus-busy (68%)
+  batch32  1.00    48.78   4.60         nan  vs-baseline 1.08e-07  loadavg>=8 (64.2),other-gpus-busy (68%)
+     both  1.00    32.01  10.61         nan  vs-baseline 1.04e-06  loadavg>=8 (62.5),other-gpus-busy (49%)

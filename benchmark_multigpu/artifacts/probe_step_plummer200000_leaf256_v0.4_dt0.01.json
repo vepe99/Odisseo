@@ -1,0 +1,217 @@
+{
+  "devices": [
+    5
+  ],
+  "results": [
+    {
+      "theta": 0.6,
+      "leaf": 256,
+      "order": 4,
+      "n": 200000,
+      "dt": 0.01,
+      "vel_sigma": 0.4,
+      "cold_s": 32.609336726367474,
+      "calls": [
+        {
+          "rep": 0,
+          "steps": 5,
+          "wall_per_step_s": 1.8458301657810807,
+          "refresh_total_seconds": 0.0,
+          "refresh_input_seconds": 0.0,
+          "refresh_tree_build_seconds": 0.0,
+          "refresh_tree_upward_seconds": 0.0,
+          "refresh_upward_compute_seconds": 0.0,
+          "refresh_dual_downward_seconds": 0.0,
+          "refresh_dual_setup_seconds": 0.0,
+          "refresh_dual_artifact_build_seconds": 0.0,
+          "refresh_dual_select_interactions_seconds": 0.0,
+          "refresh_dual_far_pair_plan_seconds": 0.0,
+          "refresh_dual_m2l_compute_seconds": 0.0,
+          "refresh_dual_l2l_compute_seconds": 0.0,
+          "refresh_nearfield_seconds": 0.0,
+          "refresh_nearfield_radix_payload_seconds": 0.0,
+          "refresh_evaluate_seconds": 0.0,
+          "refresh_compile_or_sync_suspect_seconds": 0.0
+        },
+        {
+          "rep": 1,
+          "steps": 5,
+          "wall_per_step_s": 0.04609088022261858,
+          "refresh_total_seconds": 0.0,
+          "refresh_input_seconds": 0.0,
+          "refresh_tree_build_seconds": 0.0,
+          "refresh_tree_upward_seconds": 0.0,
+          "refresh_upward_compute_seconds": 0.0,
+          "refresh_dual_downward_seconds": 0.0,
+          "refresh_dual_setup_seconds": 0.0,
+          "refresh_dual_artifact_build_seconds": 0.0,
+          "refresh_dual_select_interactions_seconds": 0.0,
+          "refresh_dual_far_pair_plan_seconds": 0.0,
+          "refresh_dual_m2l_compute_seconds": 0.0,
+          "refresh_dual_l2l_compute_seconds": 0.0,
+          "refresh_nearfield_seconds": 0.0,
+          "refresh_nearfield_radix_payload_seconds": 0.0,
+          "refresh_evaluate_seconds": 0.0,
+          "refresh_compile_or_sync_suspect_seconds": 0.0
+        },
+        {
+          "rep": 2,
+          "steps": 5,
+          "wall_per_step_s": 0.04537326823920011,
+          "refresh_total_seconds": 0.0,
+          "refresh_input_seconds": 0.0,
+          "refresh_tree_build_seconds": 0.0,
+          "refresh_tree_upward_seconds": 0.0,
+          "refresh_upward_compute_seconds": 0.0,
+          "refresh_dual_downward_seconds": 0.0,
+          "refresh_dual_setup_seconds": 0.0,
+          "refresh_dual_artifact_build_seconds": 0.0,
+          "refresh_dual_select_interactions_seconds": 0.0,
+          "refresh_dual_far_pair_plan_seconds": 0.0,
+          "refresh_dual_m2l_compute_seconds": 0.0,
+          "refresh_dual_l2l_compute_seconds": 0.0,
+          "refresh_nearfield_seconds": 0.0,
+          "refresh_nearfield_radix_payload_seconds": 0.0,
+          "refresh_evaluate_seconds": 0.0,
+          "refresh_compile_or_sync_suspect_seconds": 0.0
+        }
+      ],
+      "contention": {
+        "devices": [
+          5
+        ],
+        "n_samples": 13,
+        "duration_s": 9.961010456085205,
+        "foreign_pids_on_devices": [],
+        "own_util_max": {
+          "5": 97
+        },
+        "other_gpu_util_max": 81,
+        "loadavg1_max": 13.53564453125,
+        "loadavg1_min": 13.01220703125,
+        "cores": 64,
+        "contaminated": false,
+        "flags": [
+          "loadavg>=8 (13.5)",
+          "other-gpus-busy (81%)"
+        ]
+      },
+      "counters": {
+        "strict_runner_compile_count": 1,
+        "strict_runner_execute_count": 16,
+        "strict_fused_fastlane_hits": 2,
+        "strict_fused_fastlane_attempts": 2,
+        "strict_fused_fallback_count": 0,
+        "compiled_profile_refresh_reuse_tier_full": null,
+        "refresh_dual_planner_compile_count": 0,
+        "refresh_dual_planner_execute_count": 1,
+        "recent_dual_neighbor_count": 356082
+      }
+    },
+    {
+      "theta": 1.0,
+      "leaf": 256,
+      "order": 4,
+      "n": 200000,
+      "dt": 0.01,
+      "vel_sigma": 0.4,
+      "cold_s": 17.376488144509494,
+      "calls": [
+        {
+          "rep": 0,
+          "steps": 5,
+          "wall_per_step_s": 1.9592803502455354,
+          "refresh_total_seconds": 0.0,
+          "refresh_input_seconds": 0.0,
+          "refresh_tree_build_seconds": 0.0,
+          "refresh_tree_upward_seconds": 0.0,
+          "refresh_upward_compute_seconds": 0.0,
+          "refresh_dual_downward_seconds": 0.0,
+          "refresh_dual_setup_seconds": 0.0,
+          "refresh_dual_artifact_build_seconds": 0.0,
+          "refresh_dual_select_interactions_seconds": 0.0,
+          "refresh_dual_far_pair_plan_seconds": 0.0,
+          "refresh_dual_m2l_compute_seconds": 0.0,
+          "refresh_dual_l2l_compute_seconds": 0.0,
+          "refresh_nearfield_seconds": 0.0,
+          "refresh_nearfield_radix_payload_seconds": 0.0,
+          "refresh_evaluate_seconds": 0.0,
+          "refresh_compile_or_sync_suspect_seconds": 0.0
+        },
+        {
+          "rep": 1,
+          "steps": 5,
+          "wall_per_step_s": 0.05873363148421049,
+          "refresh_total_seconds": 0.0,
+          "refresh_input_seconds": 0.0,
+          "refresh_tree_build_seconds": 0.0,
+          "refresh_tree_upward_seconds": 0.0,
+          "refresh_upward_compute_seconds": 0.0,
+          "refresh_dual_downward_seconds": 0.0,
+          "refresh_dual_setup_seconds": 0.0,
+          "refresh_dual_artifact_build_seconds": 0.0,
+          "refresh_dual_select_interactions_seconds": 0.0,
+          "refresh_dual_far_pair_plan_seconds": 0.0,
+          "refresh_dual_m2l_compute_seconds": 0.0,
+          "refresh_dual_l2l_compute_seconds": 0.0,
+          "refresh_nearfield_seconds": 0.0,
+          "refresh_nearfield_radix_payload_seconds": 0.0,
+          "refresh_evaluate_seconds": 0.0,
+          "refresh_compile_or_sync_suspect_seconds": 0.0
+        },
+        {
+          "rep": 2,
+          "steps": 5,
+          "wall_per_step_s": 0.05833861734718084,
+          "refresh_total_seconds": 0.0,
+          "refresh_input_seconds": 0.0,
+          "refresh_tree_build_seconds": 0.0,
+          "refresh_tree_upward_seconds": 0.0,
+          "refresh_upward_compute_seconds": 0.0,
+          "refresh_dual_downward_seconds": 0.0,
+          "refresh_dual_setup_seconds": 0.0,
+          "refresh_dual_artifact_build_seconds": 0.0,
+          "refresh_dual_select_interactions_seconds": 0.0,
+          "refresh_dual_far_pair_plan_seconds": 0.0,
+          "refresh_dual_m2l_compute_seconds": 0.0,
+          "refresh_dual_l2l_compute_seconds": 0.0,
+          "refresh_nearfield_seconds": 0.0,
+          "refresh_nearfield_radix_payload_seconds": 0.0,
+          "refresh_evaluate_seconds": 0.0,
+          "refresh_compile_or_sync_suspect_seconds": 0.0
+        }
+      ],
+      "contention": {
+        "devices": [
+          5
+        ],
+        "n_samples": 14,
+        "duration_s": 10.896654844284058,
+        "foreign_pids_on_devices": [],
+        "own_util_max": {
+          "5": 93
+        },
+        "other_gpu_util_max": 77,
+        "loadavg1_max": 15.73095703125,
+        "loadavg1_min": 12.66064453125,
+        "cores": 64,
+        "contaminated": false,
+        "flags": [
+          "loadavg>=8 (15.7)",
+          "other-gpus-busy (77%)"
+        ]
+      },
+      "counters": {
+        "strict_runner_compile_count": 1,
+        "strict_runner_execute_count": 16,
+        "strict_fused_fastlane_hits": 2,
+        "strict_fused_fastlane_attempts": 2,
+        "strict_fused_fallback_count": 0,
+        "compiled_profile_refresh_reuse_tier_full": null,
+        "refresh_dual_planner_compile_count": 0,
+        "refresh_dual_planner_execute_count": 1,
+        "recent_dual_neighbor_count": 109962
+      }
+    }
+  ]
+}

@@ -1,0 +1,3 @@
+wrote /export/home/tbuck/Odisseo-bench-multigpu/benchmark_multigpu/artifacts/traces/eval_hlo_plummer200000_leaf256_th1_p4.txt (0.5 MB)
+
+top-level fusion instructions: 22; custom calls: ['__gpu$xla.gpu.triton']

@@ -1,0 +1,388 @@
+{
+  "provenance": {
+    "timestamp_utc": "2026-09-07T11:24:31.821510+00:00",
+    "repos": {
+      "jaccpot": {
+        "sha": "c1cede7",
+        "branch": "main",
+        "dirty": true
+      },
+      "yggdrax": {
+        "sha": "a22472f",
+        "branch": "paper/differentiable-applications",
+        "dirty": true
+      },
+      "jztree": {
+        "sha": "ee82fa2",
+        "branch": "main",
+        "dirty": false
+      },
+      "odisseo_bench": {
+        "sha": "2da9e8e",
+        "branch": "bench/multi-gpu",
+        "dirty": true
+      }
+    },
+    "jax_version": "0.10.2",
+    "jax_backend": "gpu",
+    "devices": [
+      {
+        "id": 0,
+        "kind": "NVIDIA A100-PCIE-40GB",
+        "platform": "gpu"
+      }
+    ],
+    "nvidia_smi": "0, NVIDIA A100-PCIE-40GB, 40960 MiB, 595.71.05\n1, NVIDIA A100-PCIE-40GB, 40960 MiB, 595.71.05\n2, NVIDIA A100-PCIE-40GB, 40960 MiB, 595.71.05\n3, NVIDIA A100-PCIE-40GB, 40960 MiB, 595.71.05\n4, NVIDIA A100-PCIE-40GB, 40960 MiB, 595.71.05\n5, NVIDIA A100-PCIE-40GB, 40960 MiB, 595.71.05\n6, NVIDIA A100-PCIE-40GB, 40960 MiB, 595.71.05\n7, NVIDIA A100-PCIE-40GB, 40960 MiB, 595.71.05",
+    "benchmark": "compare_force",
+    "args": {
+      "n": 70000,
+      "ic": "plummer",
+      "ndevs": [
+        1
+      ],
+      "pkd_thetas": [
+        0.4,
+        0.5,
+        0.6,
+        0.7,
+        0.8,
+        0.9,
+        1.0
+      ],
+      "jac_thetas": [
+        0.8
+      ],
+      "orders": [
+        2
+      ],
+      "jac_leaf_single": [
+        128,
+        256
+      ],
+      "jac_leaf_dist": 64,
+      "jac_edge_cap": null,
+      "jac_max_interactions": 0,
+      "jac_env": [],
+      "partitioner": "rcb",
+      "pkd_nbucket": [
+        16
+      ],
+      "pkd_ngroup": [
+        0
+      ],
+      "pkd_cores": 16,
+      "pkd_cpu": false,
+      "pkd_cpu_cores": 32,
+      "repeats": 1,
+      "warmup": 1,
+      "ref_targets": 1024,
+      "softening": 1e-07,
+      "softening_tolerance": 1e-06,
+      "G": 1.0,
+      "seed": 0,
+      "timeout": 3600.0,
+      "workdir": null,
+      "out": "/tmp/compare_force_leaf_dsmnm7o2/leaf128.json",
+      "allow_busy": true,
+      "skip_pkdgrav3": true,
+      "skip_jaccpot": false
+    },
+    "loadavg": [
+      36.9208984375,
+      43.07421875,
+      45.43017578125
+    ],
+    "cores": 64
+  },
+  "ic": {
+    "name": "plummer",
+    "n": 70000,
+    "seed": 0,
+    "softening": 1e-07,
+    "softening_reference_shift_aggL2": 1.4718131492182054e-10,
+    "G": 1.0,
+    "reference_targets": 1024
+  },
+  "fast_lane_env": {
+    "JACCPOT_STATIC_STRICT_GPU_MODE": "on",
+    "JACCPOT_STATIC_STRICT_FUSED_MODE": "on",
+    "JACCPOT_LARGE_N_STATIC_TARGET_BLOCKS": "1",
+    "JACCPOT_LARGE_N_TARGET_BLOCK_SIZE": "4",
+    "JACCPOT_LARGE_N_STATIC_TARGET_BLOCKS_MAX_PER_LEAF": "64",
+    "JACCPOT_LARGE_N_NEIGHBOR_EDGE_PROFILE_FIXED_CAP": "8388608",
+    "JACCPOT_STATIC_STRICT_REQUIRE_EXACT_CAP_PROFILE_MATCH": "0",
+    "JACCPOT_STATIC_STRICT_FUSED_DEVICE_ONLY": "1",
+    "JACCPOT_STATIC_STRICT_FUSED_DISALLOW_HOST_SEGMENT_FALLBACK": "1",
+    "JACCPOT_STATIC_STRICT_FUSED_FLAT_COMPACT_FAR_PAIRS": "1",
+    "JACCPOT_STATIC_STRICT_FUSED_COMPACT_FAR_PAIR_CAP": "1048576",
+    "JACCPOT_LARGE_N_COMPILED_STATE_MODE": "on",
+    "JACCPOT_LARGE_N_RADIX_FAST_PAYLOAD_IN_FUSED": "1",
+    "JACCPOT_LARGE_N_RADIX_FAST_PAYLOAD_MAX_MB": "0",
+    "JACCPOT_STATIC_STRICT_FUSED_PROFILE_SET": "70000"
+  },
+  "devices": [
+    5
+  ],
+  "pkd_theta_scale": 1.5,
+  "pkdgrav3": [],
+  "jaccpot": [
+    {
+      "code": "jaccpot",
+      "lane": "single_gpu_fused",
+      "ndev": 1,
+      "order": 2,
+      "theta": 0.8,
+      "theta_pkd_equivalent": 1.2000000000000002,
+      "leaf_size": 128,
+      "traversal_overrides": {},
+      "force_eval_s": {
+        "min": 0.007157584652304649,
+        "median": 0.007157584652304649,
+        "iqr": 0.0,
+        "max": 0.007157584652304649,
+        "mean": 0.007157584652304649,
+        "std": 0.0,
+        "samples": [
+          0.007157584652304649
+        ]
+      },
+      "walk_s": 0.0,
+      "walk_stage_s": {
+        "refresh_dual_setup_seconds": 0.0,
+        "refresh_dual_artifact_build_seconds": 0.0,
+        "refresh_dual_select_interactions_seconds": 0.0,
+        "refresh_dual_far_pair_plan_seconds": 0.0,
+        "refresh_dual_split_combined_seconds": 0.0,
+        "refresh_dual_split_far_pairs_seconds": 0.0,
+        "refresh_dual_split_leaf_neighbors_seconds": 0.0,
+        "refresh_dual_raw_combined_seconds": 0.0,
+        "refresh_tree_build_seconds": 0.0,
+        "refresh_tree_upward_seconds": 0.0,
+        "refresh_nearfield_seconds": 0.0,
+        "refresh_total_seconds": 0.0
+      },
+      "prepare_s": 20.753040208481252,
+      "peak_bytes_in_use": {
+        "0": 1284355840
+      },
+      "errors": {
+        "median": 0.014021447256855786,
+        "p90": 0.05805647064073508,
+        "max": 0.9793909871204646,
+        "aggL2": 0.025240442982666332,
+        "aggL2_signflip": 1.9984922796433005,
+        "n_ref": 1024
+      },
+      "budget": {
+        "num_leaves": 547,
+        "neighbor_entries_directed": 124836,
+        "neighbor_pairs_undirected": 62418,
+        "unmatched_directions": 0,
+        "self_entries": 0,
+        "mean_neighbor_leaves_per_leaf": 228.21937842778794,
+        "max_neighbor_leaves_per_leaf": 546,
+        "occupancy_mean": 127.97074954296161,
+        "occupancy_min": 112,
+        "occupancy_max": 128,
+        "direct_sources_per_target_mean": 29313.783085714287,
+        "direct_sources_per_target_median": 24559.0,
+        "direct_sources_per_target_p90": 48367.0,
+        "direct_sources_per_target_max": 69999,
+        "direct_share_of_N": 0.4187683297959184,
+        "p2p_pair_evaluations": 2051964816.0
+      },
+      "nearfield_kernel_layout": "leafpair_gather",
+      "contention": {
+        "devices": [
+          5
+        ],
+        "n_samples": 2,
+        "duration_s": 1.8476736545562744,
+        "foreign_pids_on_devices": [
+          [
+            5,
+            537093,
+            "rremme"
+          ],
+          [
+            5,
+            3830889,
+            "psaegert"
+          ]
+        ],
+        "own_util_max": {
+          "5": 88
+        },
+        "other_gpu_util_max": 84,
+        "loadavg1_max": 36.9208984375,
+        "loadavg1_min": 36.9208984375,
+        "cores": 64,
+        "contaminated": true,
+        "flags": [
+          "foreign-process-on-device",
+          "loadavg>=8 (36.9)",
+          "other-gpus-busy (84%)"
+        ]
+      },
+      "diagnostics": {
+        "recent_dual_neighbor_count": 124836,
+        "static_radix_far_pair_count": 0,
+        "large_n_eval_active_leaf_count": 547
+      },
+      "fastlane": {
+        "fused_mode_active": true,
+        "fastlane_hits": 0,
+        "fastlane_attempts": 0,
+        "fallback_count": 0,
+        "last_fallback_reason": ""
+      }
+    },
+    {
+      "code": "jaccpot",
+      "lane": "single_gpu_fused",
+      "ndev": 1,
+      "order": 2,
+      "theta": 0.8,
+      "theta_pkd_equivalent": 1.2000000000000002,
+      "leaf_size": 256,
+      "traversal_overrides": {},
+      "force_eval_s": {
+        "min": 0.026998871937394142,
+        "median": 0.026998871937394142,
+        "iqr": 0.0,
+        "max": 0.026998871937394142,
+        "mean": 0.026998871937394142,
+        "std": 0.0,
+        "samples": [
+          0.026998871937394142
+        ]
+      },
+      "walk_s": 0.0,
+      "walk_stage_s": {
+        "refresh_dual_setup_seconds": 0.0,
+        "refresh_dual_artifact_build_seconds": 0.0,
+        "refresh_dual_select_interactions_seconds": 0.0,
+        "refresh_dual_far_pair_plan_seconds": 0.0,
+        "refresh_dual_split_combined_seconds": 0.0,
+        "refresh_dual_split_far_pairs_seconds": 0.0,
+        "refresh_dual_split_leaf_neighbors_seconds": 0.0,
+        "refresh_dual_raw_combined_seconds": 0.0,
+        "refresh_tree_build_seconds": 0.0,
+        "refresh_tree_upward_seconds": 0.0,
+        "refresh_nearfield_seconds": 0.0,
+        "refresh_total_seconds": 0.0
+      },
+      "prepare_s": 16.625914976000786,
+      "peak_bytes_in_use": {
+        "0": 1283943168
+      },
+      "errors": {
+        "median": 0.009147088715261351,
+        "p90": 0.04147554513931884,
+        "max": 0.7334853813665714,
+        "aggL2": 0.02075437560644071,
+        "aggL2_signflip": 1.997638020592105,
+        "n_ref": 1024
+      },
+      "budget": {
+        "num_leaves": 274,
+        "neighbor_entries_directed": 50412,
+        "neighbor_pairs_undirected": 25206,
+        "unmatched_directions": 0,
+        "self_entries": 0,
+        "mean_neighbor_leaves_per_leaf": 183.98540145985402,
+        "max_neighbor_leaves_per_leaf": 273,
+        "occupancy_mean": 255.47445255474452,
+        "occupancy_min": 112,
+        "occupancy_max": 256,
+        "direct_sources_per_target_mean": 47164.38514285714,
+        "direct_sources_per_target_median": 44143.0,
+        "direct_sources_per_target_p90": 69231.0,
+        "direct_sources_per_target_max": 69999,
+        "direct_share_of_N": 0.6737769306122449,
+        "p2p_pair_evaluations": 3301506960.0
+      },
+      "nearfield_kernel_layout": "leafpair_gather",
+      "contention": {
+        "devices": [
+          5
+        ],
+        "n_samples": 2,
+        "duration_s": 1.869246244430542,
+        "foreign_pids_on_devices": [
+          [
+            5,
+            537093,
+            "rremme"
+          ],
+          [
+            5,
+            3830889,
+            "psaegert"
+          ]
+        ],
+        "own_util_max": {
+          "5": 75
+        },
+        "other_gpu_util_max": 100,
+        "loadavg1_max": 48.572265625,
+        "loadavg1_min": 48.572265625,
+        "cores": 64,
+        "contaminated": true,
+        "flags": [
+          "foreign-process-on-device",
+          "loadavg>=8 (48.6)",
+          "other-gpus-busy (100%)"
+        ]
+      },
+      "diagnostics": {
+        "recent_dual_neighbor_count": 50412,
+        "static_radix_far_pair_count": 0,
+        "large_n_eval_active_leaf_count": 274
+      },
+      "fastlane": {
+        "fused_mode_active": true,
+        "fastlane_hits": 0,
+        "fastlane_attempts": 0,
+        "fallback_count": 0,
+        "last_fallback_reason": ""
+      }
+    }
+  ],
+  "fast_lane_env_by_leaf": {
+    "128": {
+      "JACCPOT_STATIC_STRICT_GPU_MODE": "on",
+      "JACCPOT_STATIC_STRICT_FUSED_MODE": "on",
+      "JACCPOT_LARGE_N_STATIC_TARGET_BLOCKS": "1",
+      "JACCPOT_LARGE_N_TARGET_BLOCK_SIZE": "4",
+      "JACCPOT_LARGE_N_STATIC_TARGET_BLOCKS_MAX_PER_LEAF": "64",
+      "JACCPOT_LARGE_N_NEIGHBOR_EDGE_PROFILE_FIXED_CAP": "8388608",
+      "JACCPOT_STATIC_STRICT_REQUIRE_EXACT_CAP_PROFILE_MATCH": "0",
+      "JACCPOT_STATIC_STRICT_FUSED_DEVICE_ONLY": "1",
+      "JACCPOT_STATIC_STRICT_FUSED_DISALLOW_HOST_SEGMENT_FALLBACK": "1",
+      "JACCPOT_STATIC_STRICT_FUSED_FLAT_COMPACT_FAR_PAIRS": "1",
+      "JACCPOT_STATIC_STRICT_FUSED_COMPACT_FAR_PAIR_CAP": "1048576",
+      "JACCPOT_LARGE_N_COMPILED_STATE_MODE": "on",
+      "JACCPOT_LARGE_N_RADIX_FAST_PAYLOAD_IN_FUSED": "1",
+      "JACCPOT_LARGE_N_RADIX_FAST_PAYLOAD_MAX_MB": "0",
+      "JACCPOT_STATIC_STRICT_FUSED_PROFILE_SET": "70000"
+    },
+    "256": {
+      "JACCPOT_STATIC_STRICT_GPU_MODE": "on",
+      "JACCPOT_STATIC_STRICT_FUSED_MODE": "on",
+      "JACCPOT_LARGE_N_STATIC_TARGET_BLOCKS": "1",
+      "JACCPOT_LARGE_N_TARGET_BLOCK_SIZE": "4",
+      "JACCPOT_LARGE_N_STATIC_TARGET_BLOCKS_MAX_PER_LEAF": "64",
+      "JACCPOT_LARGE_N_NEIGHBOR_EDGE_PROFILE_FIXED_CAP": "2097152",
+      "JACCPOT_STATIC_STRICT_REQUIRE_EXACT_CAP_PROFILE_MATCH": "0",
+      "JACCPOT_STATIC_STRICT_FUSED_DEVICE_ONLY": "1",
+      "JACCPOT_STATIC_STRICT_FUSED_DISALLOW_HOST_SEGMENT_FALLBACK": "1",
+      "JACCPOT_STATIC_STRICT_FUSED_FLAT_COMPACT_FAR_PAIRS": "1",
+      "JACCPOT_STATIC_STRICT_FUSED_COMPACT_FAR_PAIR_CAP": "131072",
+      "JACCPOT_LARGE_N_COMPILED_STATE_MODE": "on",
+      "JACCPOT_LARGE_N_RADIX_FAST_PAYLOAD_IN_FUSED": "1",
+      "JACCPOT_LARGE_N_RADIX_FAST_PAYLOAD_MAX_MB": "0",
+      "JACCPOT_STATIC_STRICT_FUSED_PROFILE_SET": "70000"
+    }
+  }
+}

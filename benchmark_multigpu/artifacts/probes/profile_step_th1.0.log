@@ -1,0 +1,28 @@
+warm 5-step call: 57.0 ms/step
+traced 5-step call: 64.5 ms/step
+per step: window 64.03 ms, device busy 54.48 ms (85 %), kernel-sum 54.49 ms, launches 10512
+ ms/step  share  n/step  mean us  kernel
+  21.127  38.8%     1.2  17605.5  nearfield_leafpair_t32_s1024_w256_ainput
+   2.933   5.4%     1.0   2932.9  input_transpose_fusion
+   2.482   4.6%   938.4      2.6  loop_multiply_fusion
+   1.877   3.4%   782.0      2.4  input_reduce_fusion_3
+   1.571   2.9%   938.4      1.7  loop_transpose_fusion
+   1.428   2.6%  1002.4      1.4  loop_add_fusion
+   1.322   2.4%   782.0      1.7  loop_dynamic_update_slice_fusion_2
+   1.130   2.1%    22.0     51.4  input_scatter_fusion_4
+   1.126   2.1%    12.0     93.9  input_scatter_fusion_15
+   0.984   1.8%   526.2      1.9  memcpy32_post
+   0.947   1.7%    16.0     59.2  input_scatter_fusion_9
+   0.839   1.5%   114.6      7.3  memcpy128
+   0.803   1.5%    19.0     42.3  loop_add_fusion_6
+   0.486   0.9%    12.0     40.5  input_scatter_fusion_14
+   0.405   0.7%   171.4      2.4  input_reduce_fusion
+   0.368   0.7%    12.0     30.7  sort_47_1
+   0.307   0.6%   176.4      1.7  loop_dynamic_update_slice_fusion
+   0.299   0.5%    11.0     27.2  sort_14_1
+   0.249   0.5%    18.0     13.8  input_and_reduce_fusion
+   0.215   0.4%     8.0     26.9  sort_17_1
+   0.191   0.4%    19.0     10.1  loop_maximum_fusion_2
+   0.183   0.3%    10.2     18.0  input_scatter_fusion
+   0.182   0.3%    12.0     15.2  gemm_fusion_dot_97
+   0.173   0.3%    12.0     14.4  input_scatter_fusion_16

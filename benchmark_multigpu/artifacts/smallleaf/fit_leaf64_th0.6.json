@@ -1,0 +1,80 @@
+{
+  "n": 200000,
+  "ic": "plummer",
+  "leaf": 64,
+  "order": 4,
+  "theta": 0.6,
+  "devices": [
+    4
+  ],
+  "env_overrides": {
+    "JACCPOT_STATIC_STRICT_FUSED_COMPACT_FAR_PAIR_CAP": "2097152",
+    "JACCPOT_LARGE_N_NEIGHBOR_EDGE_PROFILE_FIXED_CAP": "4194304",
+    "JACCPOT_LARGE_N_STATIC_TARGET_BLOCKS_MAX_PER_LEAF": "auto"
+  },
+  "traversal_overrides": {
+    "max_neighbors_per_leaf": 4096
+  },
+  "fast_lane_env": {
+    "JACCPOT_STATIC_STRICT_GPU_MODE": "on",
+    "JACCPOT_STATIC_STRICT_FUSED_MODE": "on",
+    "JACCPOT_LARGE_N_STATIC_TARGET_BLOCKS": "1",
+    "JACCPOT_LARGE_N_TARGET_BLOCK_SIZE": "4",
+    "JACCPOT_LARGE_N_STATIC_TARGET_BLOCKS_MAX_PER_LEAF": "auto",
+    "JACCPOT_LARGE_N_NEIGHBOR_EDGE_PROFILE_FIXED_CAP": "4194304",
+    "JACCPOT_STATIC_STRICT_REQUIRE_EXACT_CAP_PROFILE_MATCH": "0",
+    "JACCPOT_STATIC_STRICT_FUSED_DEVICE_ONLY": "1",
+    "JACCPOT_STATIC_STRICT_FUSED_DISALLOW_HOST_SEGMENT_FALLBACK": "1",
+    "JACCPOT_STATIC_STRICT_FUSED_FLAT_COMPACT_FAR_PAIRS": "1",
+    "JACCPOT_STATIC_STRICT_FUSED_COMPACT_FAR_PAIR_CAP": "2097152",
+    "JACCPOT_LARGE_N_COMPILED_STATE_MODE": "on",
+    "JACCPOT_LARGE_N_RADIX_FAST_PAYLOAD_IN_FUSED": "1",
+    "JACCPOT_LARGE_N_RADIX_FAST_PAYLOAD_MAX_MB": "0",
+    "JACCPOT_STATIC_STRICT_FUSED_PROFILE_SET": "200000"
+  },
+  "fits": false,
+  "stage": "scan",
+  "caps": {
+    "compact_far_pair_cap": 2097152,
+    "neighbor_edge_cap": 4194304,
+    "static_target_blocks_max_per_leaf": "auto",
+    "num_leaves": 3125
+  },
+  "lists": {
+    "neighbor_rows_max": 3124,
+    "neighbor_edges_total": 1842264,
+    "neighbor_rows_over_2048": 109,
+    "far_pairs": 0,
+    "direct_share_of_N": 0.18896283360000002,
+    "active_leaves": 3125,
+    "nearfield_kernel_layout": "leafpair_gather",
+    "fused_mode_active": true,
+    "prepare_s_incl_compile": 29.44466390926391
+  },
+  "validated_caps": {
+    "traced": false,
+    "max_pair_queue_requested": 524288,
+    "queue_capacity": 524288,
+    "compact_far_pair_capacity": 2097152,
+    "max_neighbors_per_leaf_used": 4096,
+    "grew": [
+      "max_pair_queue 65536->131072",
+      "max_pair_queue 131072->262144",
+      "max_pair_queue 262144->524288"
+    ],
+    "far_pair_count": 992074,
+    "max_neighbors_observed": 3124,
+    "total_neighbors": 1842264
+  },
+  "headroom": {
+    "far_pairs_over_cap": 0.0,
+    "edges_over_cap": 0.43922996520996094,
+    "max_row_over_num_leaves": 1.0
+  },
+  "errors": {
+    "aggL2": 0.0012010850430318263,
+    "ref_targets": 4096
+  },
+  "failed": "strict fused velocity-Verlet scan failed while host fallback is disallowed",
+  "failed_full": "Traceback (most recent call last):\n  File \"/export/home/tbuck/jaccpot-smallleaf-wt/jaccpot/runtime/fmm_strict_run.py\", line 1032, in strict_run_v2\n    ), history_out = compiled_runner(\n                     ^^^^^^^^^^^^^^^^\n  File \"/export/home/tbuck/jaccpot-smallleaf-wt/jaccpot/runtime/fmm_strict_run.py\", line 1010, in _compiled_runner\n    return jax.lax.scan(\n           ^^^^^^^^^^^^^\n  File \"/export/home/tbuck/jaccpot-smallleaf-wt/jaccpot/runtime/fmm_strict_run.py\", line 956, in _step\n    _refresh_and_evaluate_endpoint(prepared_now, state_position)\n  File \"/export/home/tbuck/jaccpot-smallleaf-wt/jaccpot/runtime/fmm_strict_run.py\", line 878, in _refresh_and_evaluate_endpoint\n    prepared_new = self._refresh_large_n_same_topology(\n                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/export/home/tbuck/jaccpot-smallleaf-wt/jaccpot/runtime/fmm_strict_run.py\", line 1733, in _refresh_large_n_same_topology\n    refreshed_state = prepare_large_n_state(\n                      ^^^^^^^^^^^^^^^^^^^^^^\n  File \"/export/home/tbuck/jaccpot-smallleaf-wt/jaccpot/runtime/_large_n_pipeline.py\", line 1893, in prepare_large_n_state\n    ) = _trim_radix_fast_lane_neighbor_list(\n        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/export/home/tbuck/jaccpot-smallleaf-wt/jaccpot/runtime/_large_n_pipeline.py\", line 988, in _trim_radix_fast_lane_neighbor_list\n    raise RuntimeError(\nRuntimeError: static runtime sizing neighbor-edge cap exceeded: active_edges=25600000 cap=4194304. Increase JACCPOT_LARGE_N_NEIGHBOR_EDGE_PROFILE_FIXED_CAP.\n--------------------\nFor simplicity, JAX has removed its internal frames from the traceback of the following exception. Set JAX_TRACEBACK_FILTERING=off to include these.\n\nThe above exception was the direct cause of the following exception:\n\nTraceback (most recent call last):\n  File \"/export/home/tbuck/Odisseo-bench-multigpu/benchmark_multigpu/codes/fit_smallleaf_caps.py\", line 280, in main\n    final, prepared_out, history = solver.strict_run_v2(\n                                   ^^^^^^^^^^^^^^^^^^^^^\n  File \"/export/home/tbuck/jaccpot-smallleaf-wt/jaccpot/solver.py\", line 2017, in strict_run_v2\n    return self._impl.strict_run_v2(\n           ^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/export/home/tbuck/jaccpot-smallleaf-wt/jaccpot/runtime/fmm_strict_run.py\", line 1061, in strict_run_v2\n    raise RuntimeError(\nRuntimeError: strict fused velocity-Verlet scan failed while host fallback is disallowed\n"
+}

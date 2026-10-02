@@ -1,0 +1,343 @@
+{
+  "n": 200000,
+  "leaves": 16384,
+  "W": 64,
+  "nodes": 32767,
+  "far_cap": 2097152,
+  "near_edges": 372012,
+  "rows": [
+    {
+      "fusion": "input_scatter_fusion.10",
+      "ms_per_call": null,
+      "result": "f32[200000,3]{1,0}",
+      "scatters": [
+        [
+          "combiner",
+          "region_0.1.clone.24"
+        ]
+      ],
+      "feeders": [
+        "get-tuple-element.1845: get-tuple-element f32[200000,3]{1,0}",
+        "get-tuple-element.1699: get-tuple-element f32[16384,64]{1,0}",
+        "wrapped_gather: fusion f32[200000,1,3]{2,1,0}",
+        "get-tuple-element.1798: get-tuple-element f32[16384,1,3]{2,1,0}",
+        "constant_778_0: constant s32[16384]{0}",
+        "get-tuple-element.1732: get-tuple-element f32[16384,64]{1,0}",
+        "get-tuple-element.1797: get-tuple-element f32[16384,64]{1,0}",
+        "constant_5941_0: constant s32[16384]{0}",
+        "loop_add_fusion.4: fusion f32[16384,64]{1,0}",
+        "get-tuple-element.1655: get-tuple-element f32[16384,64]{1,0}",
+        "get-tuple-element.1656: get-tuple-element f32[16384,64,1]{2,1,0}",
+        "get-tuple-element.1657: get-tuple-element f32[16384,64]{1,0}"
+      ]
+    },
+    {
+      "fusion": "input_scatter_fusion.9",
+      "ms_per_call": null,
+      "result": "f32[16384,64,4]{2,1,0}",
+      "scatters": [
+        [
+          "combiner",
+          "region_0.1.clone.34"
+        ]
+      ],
+      "feeders": [
+        "loop_broadcast_fusion.1: fusion f32[16384,64,4]{2,1,0}",
+        "pallas_call.29: custom-call f32[81920,64,4]{2,1,0}",
+        "get-tuple-element.1653: get-tuple-element s32[81920]{0}"
+      ]
+    },
+    {
+      "fusion": "input_scatter_fusion.8",
+      "ms_per_call": null,
+      "result": "f32[200000,3]{1,0}",
+      "scatters": [
+        [
+          "combiner",
+          "region_0.1.clone.25"
+        ]
+      ],
+      "feeders": [
+        "loop_multiply_fusion: fusion f32[200000,3]{1,0}",
+        "input_scatter_fusion.9: fusion f32[16384,64,4]{2,1,0}",
+        "constant_747_0: constant pred[1048576]{0}",
+        "constant_7998_0: constant s32[1048576]{0}"
+      ]
+    },
+    {
+      "fusion": "input_scatter_fusion.11",
+      "ms_per_call": null,
+      "result": "f32[200000,3]{1,0}",
+      "scatters": [
+        [
+          "combiner",
+          "region_0.1.clone.26"
+        ]
+      ],
+      "feeders": [
+        "get-tuple-element.1846: get-tuple-element f32[200000,3]{1,0}",
+        "constant_743_0: constant s32[200000,1]{1,0}",
+        "input_scatter_fusion.8: fusion f32[200000,3]{1,0}"
+      ]
+    },
+    {
+      "fusion": "input_scatter_fusion.6",
+      "ms_per_call": null,
+      "result": "f32[32767,36]{1,0}",
+      "scatters": [
+        [
+          "combiner",
+          "region_0.1.clone.28"
+        ]
+      ],
+      "feeders": [
+        "loop_broadcast_fusion.4: fusion f32[32767,36]{1,0}",
+        "constant_7860_0: constant s32[16384,1]{1,0}",
+        "get-tuple-element.1619: get-tuple-element f32[16384,64]{1,0}",
+        "get-tuple-element.1701: get-tuple-element f32[16384,64]{1,0}",
+        "get-tuple-element.1692: get-tuple-element f32[16384,64]{1,0}",
+        "get-tuple-element.1609: get-tuple-element f32[16384,64]{1,0}",
+        "get-tuple-element.1694: get-tuple-element f32[16384,64]{1,0}",
+        "get-tuple-element.1604: get-tuple-element f32[16384,64]{1,0}",
+        "get-tuple-element.1623: get-tuple-element f32[16384,64]{1,0}",
+        "get-tuple-element.1687: get-tuple-element f32[16384,64]{1,0}",
+        "get-tuple-element.1620: get-tuple-element f32[16384,64]{1,0}",
+        "get-tuple-element.1702: get-tuple-element f32[16384,64]{1,0}",
+        "get-tuple-element.1595: get-tuple-element f32[16384,64]{1,0}",
+        "get-tuple-element.1630: get-tuple-element f32[16384,64]{1,0}",
+        "get-tuple-element.1676: get-tuple-element f32[16384,64]{1,0}",
+        "get-tuple-element.1626: get-tuple-element f32[16384,64]{1,0}",
+        "get-tuple-element.1705: get-tuple-element f32[16384,64]{1,0}",
+        "get-tuple-element.1579: get-tuple-element f32[16384,64]{1,0}",
+        "get-tuple-element.1704: get-tuple-element f32[16384,64]{1,0}",
+        "get-tuple-element.1582: get-tuple-element f32[16384,64]{1,0}",
+        "get-tuple-element.1682: get-tuple-element f32[16384,64]{1,0}",
+        "get-tuple-element.1562: get-tuple-element f32[16384,64]{1,0}",
+        "get-tuple-element.1706: get-tuple-element f32[16384,64]{1,0}",
+        "get-tuple-element.1668: get-tuple-element f32[16384,64]{1,0}",
+        "get-tuple-element.1564: get-tuple-element f32[16384,64]{1,0}",
+        "get-tuple-element.1670: get-tuple-element f32[16384,64]{1,0}",
+        "get-tuple-element.1547: get-tuple-element f32[16384,64]{1,0}",
+        "get-tuple-element.1672: get-tuple-element f32[16384,64]{1,0}",
+        "get-tuple-element.1566: get-tuple-element f32[16384,64]{1,0}",
+        "get-tuple-element.1674: get-tuple-element f32[16384,64]{1,0}",
+        "get-tuple-element.1540: get-tuple-element f32[16384,64]{1,0}",
+        "get-tuple-element.1786: get-tuple-element f32[16384,64]{1,0}",
+        "get-tuple-element.1787: get-tuple-element f32[16384,64]{1,0}",
+        "get-tuple-element.1788: get-tuple-element f32[16384,64]{1,0}",
+        "get-tuple-element.1791: get-tuple-element f32[16384,64]{1,0}",
+        "constant_7881_0: constant f32[6]{0}",
+        "get-tuple-element.1571: get-tuple-element f32[16384,64]{1,0}",
+        "get-tuple-element.1541: get-tuple-element f32[16384,64]{1,0}",
+        "get-tuple-element.1797: get-tuple-element f32[16384,64]{1,0}",
+        "get-tuple-element.1725: get-tuple-element f32[16384,64]{1,0}",
+        "get-tuple-element.1724: get-tuple-element f32[16384,64]{1,0}",
+        "get-tuple-element.1715: get-tuple-element f32[16384,64]{1,0}",
+        "get-tuple-element.1554: get-tuple-element f32[16384,64]{1,0}",
+        "get-tuple-element.1703: get-tuple-element f32[16384,64]{1,0}",
+        "get-tuple-element.1549: get-tuple-element f32[16384,64]{1,0}",
+        "get-tuple-element.1719: get-tuple-element f32[16384,64]{1,0}",
+        "get-tuple-element.1711: get-tuple-element f32[16384,64]{1,0}",
+        "get-tuple-element.1795: get-tuple-element f32[16384,64]{1,0}",
+        "loop_exponential_fusion: fusion f32[11]{0}",
+        "get-tuple-element.1729: get-tuple-element f32[16384,64]{1,0}",
+        "get-tuple-element.1718: get-tuple-element f32[16384,64]{1,0}",
+        "get-tuple-element.1723: get-tuple-element f32[16384,64]{1,0}",
+        "get-tuple-element.1714: get-tuple-element f32[16384,64]{1,0}",
+        "get-tuple-element.1709: get-tuple-element f32[16384,64]{1,0}",
+        "get-tuple-element.1716: get-tuple-element f32[16384,64]{1,0}",
+        "get-tuple-element.1710: get-tuple-element f32[16384,64]{1,0}",
+        "get-tuple-element.1720: get-tuple-element f32[16384,64]{1,0}",
+        "get-tuple-element.1726: get-tuple-element f32[16384,64]{1,0}",
+        "get-tuple-element.1717: get-tuple-element f32[16384,64]{1,0}",
+        "get-tuple-element.1722: get-tuple-element f32[16384,64]{1,0}",
+        "get-tuple-element.1728: get-tuple-element f32[16384,64]{1,0}",
+        "get-tuple-element.1721: get-tuple-element f32[16384,64]{1,0}",
+        "get-tuple-element.1727: get-tuple-element f32[16384,64]{1,0}",
+        "get-tuple-element.1596: get-tuple-element f32[16384,64,1]{2,1,0}",
+        "get-tuple-element.1640: get-tuple-element f32[16384,64,1]{2,1,0}",
+        "get-tuple-element.1644: get-tuple-element f32[16384,64]{1,0}",
+        "get-tuple-element.1569: get-tuple-element f32[16384,64]{1,0}",
+        "get-tuple-element.1550: get-tuple-element f32[16384,64]{1,0}",
+        "get-tuple-element.1563: get-tuple-element f32[16384,64]{1,0}",
+        "get-tuple-element.1610: get-tuple-element f32[16384,64]{1,0}",
+        "get-tuple-element.1570: get-tuple-element f32[16384,64]{1,0}",
+        "get-tuple-element.1627: get-tuple-element f32[16384,64]{1,0}",
+        "get-tuple-element.1548: get-tuple-element f32[16384,64]{1,0}",
+        "get-tuple-element.1631: get-tuple-element f32[16384,64]{1,0}",
+        "get-tuple-element.1565: get-tuple-element f32[16384,64]{1,0}",
+        "get-tuple-element.1624: get-tuple-element f32[16384,64]{1,0}",
+        "get-tuple-element.1583: get-tuple-element f32[16384,64]{1,0}",
+        "get-tuple-element.1555: get-tuple-element f32[16384,64]{1,0}",
+        "get-tuple-element.1621: get-tuple-element f32[16384,64]{1,0}",
+        "get-tuple-element.1605: get-tuple-element f32[16384,64]{1,0}",
+        "get-tuple-element.1580: get-tuple-element f32[16384,64]{1,0}",
+        "get-tuple-element.1567: get-tuple-element f32[16384,64]{1,0}",
+        "get-tuple-element.1635: get-tuple-element f32[16384,64]{1,0}",
+        "get-tuple-element.1634: get-tuple-element f32[16384,64]{1,0}",
+        "get-tuple-element.1778: get-tuple-element f32[]"
+      ]
+    },
+    {
+      "fusion": "input_scatter_fusion.4",
+      "ms_per_call": null,
+      "result": "f32[32767,3]{1,0}",
+      "scatters": [
+        [
+          "combiner",
+          "region_0.1.clone.31"
+        ]
+      ],
+      "feeders": [
+        "get-tuple-element.1849: get-tuple-element f32[32767,3]{1,0}",
+        "constant_10368_0: constant s32[32767,1]{1,0}",
+        "get-tuple-element.1800: get-tuple-element f32[32767,3]{1,0}"
+      ]
+    },
+    {
+      "fusion": "input_scatter_fusion.5",
+      "ms_per_call": null,
+      "result": "f32[32767,3]{1,0}",
+      "scatters": [
+        [
+          "combiner",
+          "region_0.1.clone.30"
+        ]
+      ],
+      "feeders": [
+        "get-tuple-element.1848: get-tuple-element f32[32767,3]{1,0}",
+        "constant_10368_0: constant s32[32767,1]{1,0}",
+        "get-tuple-element.1801: get-tuple-element f32[32767,3]{1,0}"
+      ]
+    },
+    {
+      "fusion": "input_scatter_fusion.3",
+      "ms_per_call": null,
+      "result": "f32[32767,3]{1,0}",
+      "scatters": [
+        [
+          "combiner",
+          "region_0.1.clone.27"
+        ]
+      ],
+      "feeders": [
+        "loop_add_fusion.6: fusion f32[32767,3]{1,0}",
+        "constant_7860_0: constant s32[16384,1]{1,0}",
+        "loop_select_fusion.4: fusion f32[16384,64,3]{2,1,0}"
+      ]
+    },
+    {
+      "fusion": "input_scatter_fusion.13",
+      "ms_per_call": null,
+      "result": "f32[200001]{0}",
+      "scatters": [
+        [
+          "combiner",
+          "region_0.1.clone.39"
+        ]
+      ],
+      "feeders": [
+        "loop_broadcast_fusion: fusion f32[200001]{0}",
+        "constant_10361_0: constant s32[65534,1]{1,0}",
+        "loop_subtract_fusion: fusion f32[32767,1,3]{2,1,0}",
+        "get-tuple-element.1847: get-tuple-element f32[32767,3]{1,0}",
+        "input_scatter_fusion.3: fusion f32[32767,3]{1,0}",
+        "loop_subtract_fusion.1: fusion f32[32767,1]{1,0}"
+      ]
+    },
+    {
+      "fusion": "input_scatter_fusion.12",
+      "ms_per_call": null,
+      "result": "f32[200001,3]{1,0}",
+      "scatters": [
+        [
+          "combiner",
+          "region_0.1.clone.38"
+        ]
+      ],
+      "feeders": [
+        "loop_broadcast_fusion.8: fusion f32[200001,3]{1,0}",
+        "constant_10361_0: constant s32[65534,1]{1,0}",
+        "get-tuple-element.1847: get-tuple-element f32[32767,3]{1,0}",
+        "input_scatter_fusion.3: fusion f32[32767,3]{1,0}",
+        "loop_subtract_fusion.1: fusion f32[32767,1]{1,0}"
+      ]
+    },
+    {
+      "fusion": "input_scatter_fusion.7",
+      "ms_per_call": null,
+      "result": "f32[16384,64,8]{2,1,0}",
+      "scatters": [
+        [
+          "combiner",
+          "region_0.1.clone.35"
+        ]
+      ],
+      "feeders": [
+        "loop_broadcast_fusion.2: fusion f32[16384,64,8]{2,1,0}",
+        "pallas_call.30: custom-call f32[81920,64,8]{2,1,0}",
+        "get-tuple-element.1653: get-tuple-element s32[81920]{0}"
+      ]
+    },
+    {
+      "fusion": "input_scatter_fusion",
+      "ms_per_call": null,
+      "result": "f32[200000]{0}",
+      "scatters": [
+        [
+          "combiner",
+          "region_0.1.clone.33"
+        ]
+      ],
+      "feeders": [
+        "loop_broadcast_fusion.3: fusion f32[200000]{0}",
+        "constant_825_0: constant s32[200000,1]{1,0}",
+        "wrapped_gather: fusion f32[200000,1,3]{2,1,0}",
+        "loop_reduce_window_fusion.2: fusion f32[12500,16,3]{2,1,0}",
+        "pallas_call.37: custom-call f32[16384,64,4]{2,1,0}",
+        "constant_10653_0: constant s32[200000,2]{1,0}",
+        "constant_737_0: constant s32[200000,1]{1,0}",
+        "input_scatter_fusion.7: fusion f32[16384,64,8]{2,1,0}",
+        "input_scatter_fusion.13: fusion f32[200001]{0}",
+        "loop_reduce_window_fusion.6: fusion f32[782,16]{1,0}",
+        "loop_reduce_window_fusion.1: fusion f32[782,16,3]{2,1,0}",
+        "loop_add_fusion.7: fusion f32[49,16,3]{2,1,0}",
+        "loop_reduce_window_fusion.5: fusion f32[49,16]{1,0}",
+        "loop_slice_fusion.6: fusion f32[49]{0}"
+      ]
+    },
+    {
+      "fusion": "input_scatter_fusion.2",
+      "ms_per_call": null,
+      "result": "f32[200000,3]{1,0}",
+      "scatters": [
+        [
+          "combiner",
+          "region_0.1.clone.29"
+        ]
+      ],
+      "feeders": [
+        "loop_add_fusion.5: fusion f32[200000,3]{1,0}",
+        "loop_select_fusion.4: fusion f32[16384,64,3]{2,1,0}",
+        "constant_778_0: constant s32[16384]{0}",
+        "constant_5941_0: constant s32[16384]{0}"
+      ]
+    },
+    {
+      "fusion": "input_scatter_fusion.1",
+      "ms_per_call": null,
+      "result": "f32[200000,3]{1,0}",
+      "scatters": [
+        [
+          "combiner",
+          "region_0.1.clone.32"
+        ]
+      ],
+      "feeders": [
+        "get-tuple-element.1844: get-tuple-element f32[200000,3]{1,0}",
+        "constant_825_0: constant s32[200000,1]{1,0}",
+        "input_scatter_fusion.2: fusion f32[200000,3]{1,0}"
+      ]
+    }
+  ]
+}

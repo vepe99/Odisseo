@@ -1,0 +1,12 @@
+env overrides: ['JACCPOT_LARGE_N_RADIX_FAST_PAYLOAD_MAX_MB=1024'] | MAX_MB 1024 | MAX_PER_LEAF 64
+theta 0.6: step-1 force (fresh prepare) vs ref aggL2 4.077e-03; step-2 force (refreshed state) vs ref aggL2 3.169e+00
+   refreshed state: neighbor rows max 128 mean 69.0; far_pair_count 100970 (buffer 131072); fallback_count 0 reason ''
+theta 1.0: step-1 force (fresh prepare) vs ref aggL2 3.529e-02; step-2 force (refreshed state) vs ref aggL2 3.114e+00
+   refreshed state: neighbor rows max 256 mean 81.3; far_pair_count 58424 (buffer 131072); fallback_count 0 reason ''
+----
+env overrides: ['JACCPOT_LARGE_N_RADIX_FAST_PAYLOAD_MAX_MB=1024', 'JACCPOT_LARGE_N_STATIC_TARGET_BLOCKS_MAX_PER_LEAF=auto'] | MAX_MB 1024 | MAX_PER_LEAF auto
+theta 0.6: step-1 force (fresh prepare) vs ref aggL2 4.077e-03; step-2 force (refreshed state) vs ref aggL2 3.169e+00
+   refreshed state: neighbor rows max 128 mean 69.0; far_pair_count 100970 (buffer 131072); fallback_count 0 reason ''
+theta 1.0: step-1 force (fresh prepare) vs ref aggL2 3.529e-02; step-2 force (refreshed state) vs ref aggL2 3.114e+00
+   refreshed state: neighbor rows max 256 mean 81.3; far_pair_count 58424 (buffer 131072); fallback_count 0 reason ''
+----

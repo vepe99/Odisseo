@@ -1,0 +1,5 @@
+jaccpot /export/home/tbuck/jaccpot-strict-wt/jaccpot/__init__.py
+A fresh -> strict_run_v2: step forces vs eager@x0 ['4.026e-03', '3.107e+00', '1.619e+01']  refreshed rows max 781 mean 140.4
+B eval-seam prepare only -> strict_run_v2: step forces vs eager@x0 ['4.026e-03', '3.107e+00', '1.619e+01']  refreshed rows max 781 mean 140.4
+C eval-seam prepare + evaluate -> strict_run_v2: step forces vs eager@x0 ['4.026e-03', '3.107e+00', '1.619e+01']  refreshed rows max 781 mean 140.4
+D eval-seam state passed in -> strict_run_v2: ['4.026e-03', '3.107e+00', '1.619e+01']

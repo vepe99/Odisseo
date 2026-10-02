@@ -1,0 +1,86 @@
+{
+  "n": 200000,
+  "leaf": 256,
+  "theta": 0.6,
+  "order": 4,
+  "steps": 300,
+  "dt": 0.01,
+  "lanes": {
+    "csr0": {
+      "wall_s": 77.97239527944475,
+      "ms_per_step": 259.90798426481587,
+      "contention": {
+        "devices": [
+          0
+        ],
+        "n_samples": 87,
+        "duration_s": 78.34718418121338,
+        "foreign_pids_on_devices": [],
+        "own_util_max": {
+          "0": 99
+        },
+        "other_gpu_util_max": 98,
+        "loadavg1_max": 42.2275390625,
+        "loadavg1_min": 35.748046875,
+        "cores": 64,
+        "contaminated": false,
+        "flags": [
+          "loadavg>=8 (42.2)",
+          "other-gpus-busy (98%)"
+        ]
+      },
+      "KE0": 0.23975561383645044,
+      "KE1": 0.1962165928070791,
+      "dKE_rel": -0.18159750394446048,
+      "Lz0": -0.0039746891087755025,
+      "Lz1": -0.003965131008196662,
+      "dLz": 9.558100578840184e-06,
+      "vmax0": 1.9791486263275146,
+      "vmax1": 3.835907459259033,
+      "force_recovered_vs_eager_rel_l2": 0.005528311406054535,
+      "fallbacks": 0
+    },
+    "csr1": {
+      "wall_s": 52.31791394483298,
+      "ms_per_step": 174.3930464827766,
+      "contention": {
+        "devices": [
+          0
+        ],
+        "n_samples": 60,
+        "duration_s": 52.99980187416077,
+        "foreign_pids_on_devices": [],
+        "own_util_max": {
+          "0": 99
+        },
+        "other_gpu_util_max": 97,
+        "loadavg1_max": 42.15625,
+        "loadavg1_min": 41.02490234375,
+        "cores": 64,
+        "contaminated": false,
+        "flags": [
+          "loadavg>=8 (42.2)",
+          "other-gpus-busy (97%)"
+        ]
+      },
+      "KE0": 0.23975561383645044,
+      "KE1": 0.1962100410171949,
+      "dKE_rel": -0.18162483089534742,
+      "Lz0": -0.0039746891087755025,
+      "Lz1": -0.003965133932335037,
+      "dLz": 9.55517644046517e-06,
+      "vmax0": 1.9791486263275146,
+      "vmax1": 3.821380615234375,
+      "force_recovered_vs_eager_rel_l2": 0.00553005720964942,
+      "fallbacks": 0
+    }
+  },
+  "divergence_pos_rel_l2_at_steps": {
+    "1": 2.2888843008338577e-11,
+    "10": 6.644247735628611e-10,
+    "50": 5.0356773783345864e-09,
+    "100": 2.0716634048046883e-07,
+    "300": 5.434679673112573e-05
+  },
+  "final_vel_rel_l2": 0.0010314766589687504
+}

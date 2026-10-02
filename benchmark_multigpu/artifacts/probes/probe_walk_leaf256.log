@@ -1,0 +1,21 @@
+
+theta 0.6: leaf 256 p 4 N 200000  flags=['loadavg>=8 (29.5)', 'other-gpus-busy (79%)']
+step  wall ms   input  tree+up     dual    walk  farplan     m2l     near     eval   unattr
+   0   5936.3     0.0      0.0      0.0     0.0      0.0     0.0      0.0      0.0      0.0
+   1   3544.7     0.0      0.0      0.0     0.0      0.0     0.0      0.0      0.0      0.0
+   2   3464.8     0.0      0.0      0.0     0.0      0.0     0.0      0.0      0.0      0.0
+   3   3524.4     0.0      0.0      0.0     0.0      0.0     0.0      0.0      0.0      0.0
+   4   3451.4     0.0      0.0      0.0     0.0      0.0     0.0      0.0      0.0      0.0
+   5   3582.0     0.0      0.0      0.0     0.0      0.0     0.0      0.0      0.0      0.0
+  reuse: {'compiled_profile_refresh_reuse_tier_full': None, 'strict_runner_compile_count': 1, 'strict_fused_fastlane_hits': 6, 'recent_dual_neighbor_count': 356082}
+
+theta 1.0: leaf 256 p 4 N 200000  flags=['loadavg>=8 (30.0)', 'other-gpus-busy (79%)']
+step  wall ms   input  tree+up     dual    walk  farplan     m2l     near     eval   unattr
+   0   5894.3     0.0      0.0      0.0     0.0      0.0     0.0      0.0      0.0      0.0
+   1   3398.7     0.0      0.0      0.0     0.0      0.0     0.0      0.0      0.0      0.0
+   2   3353.2     0.0      0.0      0.0     0.0      0.0     0.0      0.0      0.0      0.0
+   3   3314.2     0.0      0.0      0.0     0.0      0.0     0.0      0.0      0.0      0.0
+   4   3574.5     0.0      0.0      0.0     0.0      0.0     0.0      0.0      0.0      0.0
+   5   3418.5     0.0      0.0      0.0     0.0      0.0     0.0      0.0      0.0      0.0
+  reuse: {'compiled_profile_refresh_reuse_tier_full': None, 'strict_runner_compile_count': 1, 'strict_fused_fastlane_hits': 6, 'recent_dual_neighbor_count': 109962}
+wrote /export/home/tbuck/Odisseo-bench-multigpu/benchmark_multigpu/artifacts/probe_walk_plummer200000_leaf256.json

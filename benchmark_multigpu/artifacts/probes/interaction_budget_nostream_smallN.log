@@ -1,0 +1,10 @@
+GPU: physical [5] (CUDA_VISIBLE_DEVICES=5)
+ leaf  p theta       ms    iqr      aggL2 leaves nbr/leaf    occ direct/tgt  share      p90 self flags
+  256  4  1.00    17.88   0.47        nan    196    106.2  255.1      27198  0.544    47183    0 loadavg>=8 (8.0),other-gpus-busy (81%)
+  256  4  0.60    19.79   0.11        nan    196    190.6  255.1      48877  0.978    49999    0 other-gpus-busy (80%)
+wrote artifacts/interaction_budget_nostream_plummer50000.json
+GPU: physical [5] (CUDA_VISIBLE_DEVICES=5)
+ leaf  p theta       ms    iqr      aggL2 leaves nbr/leaf    occ direct/tgt  share      p90 self flags
+  256  4  1.00    24.41  13.07        nan    391    143.0  255.8      36707  0.367    61087    0 loadavg>=8 (11.8),other-gpus-busy (81%)
+  256  4  0.60    35.68   9.16        nan    391    344.0  255.8      88200  0.882    99999    0 loadavg>=8 (12.7),other-gpus-busy (81%)
+wrote artifacts/interaction_budget_nostream_plummer100000.json

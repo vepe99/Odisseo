@@ -1,0 +1,82 @@
+{
+  "0.6": {
+    "leaf256": {
+      "num_leaves": 782,
+      "neighbor_entries_directed": 356082,
+      "neighbor_pairs_undirected": 178041,
+      "unmatched_directions": 0,
+      "self_entries": 0,
+      "mean_neighbor_leaves_per_leaf": 455.3478260869565,
+      "max_neighbor_leaves_per_leaf": 781,
+      "occupancy_mean": 255.7544757033248,
+      "occupancy_min": 64,
+      "occupancy_max": 256,
+      "direct_sources_per_target_mean": 116552.0112,
+      "direct_sources_per_target_median": 104255.0,
+      "direct_sources_per_target_p90": 191807.0,
+      "direct_sources_per_target_max": 199999,
+      "direct_share_of_N": 0.5827600559999999,
+      "p2p_pair_evaluations": 23310402240.0
+    },
+    "leaf64": {
+      "num_leaves": 3125,
+      "neighbor_entries_directed": 1842264,
+      "neighbor_pairs_undirected": 921132,
+      "unmatched_directions": 0,
+      "self_entries": 0,
+      "mean_neighbor_leaves_per_leaf": 589.52448,
+      "max_neighbor_leaves_per_leaf": 3124,
+      "occupancy_mean": 64.0,
+      "occupancy_min": 64,
+      "occupancy_max": 64,
+      "direct_sources_per_target_mean": 37792.56672,
+      "direct_sources_per_target_median": 28351.0,
+      "direct_sources_per_target_p90": 52543.0,
+      "direct_sources_per_target_max": 199999,
+      "direct_share_of_N": 0.18896283360000002,
+      "p2p_pair_evaluations": 7558513344.0
+    },
+    "hybrid_share": 0.313806456,
+    "hybrid_pairs": 12552258240.0
+  },
+  "0.8": {
+    "leaf256": {
+      "num_leaves": 782,
+      "neighbor_entries_directed": 194742,
+      "neighbor_pairs_undirected": 97371,
+      "unmatched_directions": 0,
+      "self_entries": 0,
+      "mean_neighbor_leaves_per_leaf": 249.0306905370844,
+      "max_neighbor_leaves_per_leaf": 781,
+      "occupancy_mean": 255.7544757033248,
+      "occupancy_min": 64,
+      "occupancy_max": 256,
+      "direct_sources_per_target_mean": 63684.12,
+      "direct_sources_per_target_median": 49983.0,
+      "direct_sources_per_target_p90": 102463.0,
+      "direct_sources_per_target_max": 199999,
+      "direct_share_of_N": 0.3184206,
+      "p2p_pair_evaluations": 12736824000.0
+    },
+    "leaf64": {
+      "num_leaves": 3125,
+      "neighbor_entries_directed": 869004,
+      "neighbor_pairs_undirected": 434502,
+      "unmatched_directions": 0,
+      "self_entries": 0,
+      "mean_neighbor_leaves_per_leaf": 278.08128,
+      "max_neighbor_leaves_per_leaf": 3124,
+      "occupancy_mean": 64.0,
+      "occupancy_min": 64,
+      "occupancy_max": 64,
+      "direct_sources_per_target_mean": 17860.20192,
+      "direct_sources_per_target_median": 12607.0,
+      "direct_sources_per_target_p90": 21247.0,
+      "direct_sources_per_target_max": 199999,
+      "direct_share_of_N": 0.0893010096,
+      "p2p_pair_evaluations": 3572040384.0
+    },
+    "hybrid_share": 0.1596993712,
+    "hybrid_pairs": 6387974848.0
+  }
+}

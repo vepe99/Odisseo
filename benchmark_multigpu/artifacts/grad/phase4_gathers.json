@@ -1,0 +1,987 @@
+{
+  "tag": "phase4_gathers",
+  "n": 200000,
+  "leaf": 64,
+  "order": 5,
+  "theta": 0.8,
+  "reps": 7,
+  "devices": [
+    7
+  ],
+  "env_overrides": {
+    "JACCPOT_STATIC_STRICT_FUSED_COMPACT_FAR_PAIR_CAP": "2097152",
+    "JACCPOT_LARGE_N_NEIGHBOR_EDGE_PROFILE_FIXED_CAP": "4194304",
+    "JACCPOT_LARGE_N_STATIC_TARGET_BLOCKS_MAX_PER_LEAF": "auto"
+  },
+  "traversal_overrides": {
+    "max_neighbors_per_leaf": 4096,
+    "max_interactions_per_node": 16384
+  },
+  "fast_lane_env": {
+    "JACCPOT_STATIC_STRICT_GPU_MODE": "on",
+    "JACCPOT_STATIC_STRICT_FUSED_MODE": "on",
+    "JACCPOT_LARGE_N_STATIC_TARGET_BLOCKS": "1",
+    "JACCPOT_LARGE_N_TARGET_BLOCK_SIZE": "4",
+    "JACCPOT_LARGE_N_STATIC_TARGET_BLOCKS_MAX_PER_LEAF": "auto",
+    "JACCPOT_LARGE_N_NEIGHBOR_EDGE_PROFILE_FIXED_CAP": "4194304",
+    "JACCPOT_STATIC_STRICT_REQUIRE_EXACT_CAP_PROFILE_MATCH": "0",
+    "JACCPOT_STATIC_STRICT_FUSED_DEVICE_ONLY": "1",
+    "JACCPOT_STATIC_STRICT_FUSED_DISALLOW_HOST_SEGMENT_FALLBACK": "1",
+    "JACCPOT_STATIC_STRICT_FUSED_FLAT_COMPACT_FAR_PAIRS": "1",
+    "JACCPOT_STATIC_STRICT_FUSED_COMPACT_FAR_PAIR_CAP": "2097152",
+    "JACCPOT_LARGE_N_COMPILED_STATE_MODE": "on",
+    "JACCPOT_LARGE_N_RADIX_FAST_PAYLOAD_IN_FUSED": "1",
+    "JACCPOT_LARGE_N_RADIX_FAST_PAYLOAD_MAX_MB": "0",
+    "YGGDRAX_INDEX_PRECISION": "int32",
+    "JACCPOT_INDEX_PRECISION": "int32",
+    "JACCPOT_STATIC_STRICT_FUSED_PROFILE_SET": "200000"
+  },
+  "worktree": "/export/home/tbuck/jaccpot-grad-wt",
+  "leaf_partition": "cells",
+  "leaf_capacity": 16384,
+  "load_at_start": [
+    17.298828125,
+    16.546875,
+    17.2099609375
+  ],
+  "pallas_cascades_enabled_outside_grad": true,
+  "git_head": "115bb00",
+  "prepare_eval_s_incl_compile": 47.543089426122606,
+  "eval_production_aggL2": 0.0012691470096074485,
+  "eval_production": {
+    "timing": {
+      "min": 0.0027092425152659416,
+      "median": 0.0031608855351805687,
+      "iqr": 0.0022494522854685783,
+      "max": 0.007279145531356335,
+      "mean": 0.0039843867665955,
+      "std": 0.0015572385805846189,
+      "samples": [
+        0.0027500130236148834,
+        0.00412216130644083,
+        0.004999465309083462,
+        0.0031608855351805687,
+        0.0028697941452264786,
+        0.0027092425152659416,
+        0.007279145531356335
+      ]
+    },
+    "contention": {
+      "devices": [
+        7
+      ],
+      "n_samples": 2,
+      "duration_s": 2.293578863143921,
+      "foreign_pids_on_devices": [],
+      "own_util_max": {
+        "7": 35
+      },
+      "other_gpu_util_max": 100,
+      "loadavg1_max": 16.0400390625,
+      "loadavg1_min": 16.0400390625,
+      "cores": 64,
+      "contaminated": false,
+      "flags": [
+        "loadavg>=8 (16.0)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    "load": [
+      16.0400390625,
+      16.34228515625,
+      17.09375
+    ]
+  },
+  "prepare_state_s": 9.637824954465032,
+  "state_type": "LargeNPreparedState",
+  "far_pairs": 2097152,
+  "far_pairs_active": 690536,
+  "near_csr": {
+    "edges": 372012,
+    "rows": 16384,
+    "row_max": 10950,
+    "symmetric": true,
+    "asymmetric_edges": 0
+  },
+  "tree": {
+    "total_nodes": 32767,
+    "num_internal": 16383,
+    "levels_live": 40,
+    "widest_level": 5430,
+    "single_child_parents": 0
+  },
+  "grad_options": {
+    "nearfield_lane": "bucketed",
+    "cascade_pallas": true,
+    "fused_m2l_pallas": false
+  },
+  "forward_differentiable_eager": {
+    "timing": {
+      "min": 3.5526587776839733,
+      "median": 3.6509094266220927,
+      "iqr": 0.09115029126405716,
+      "max": 3.939190016128123,
+      "mean": 3.6921415042930414,
+      "std": 0.11236433826454682,
+      "samples": [
+        3.5526587776839733,
+        3.939190016128123,
+        3.6767068346962333,
+        3.7332385759800673,
+        3.6509094266220927,
+        3.6501986142247915,
+        3.64208828471601
+      ]
+    },
+    "contention": {
+      "devices": [
+        7
+      ],
+      "n_samples": 45,
+      "duration_s": 41.631471395492554,
+      "foreign_pids_on_devices": [],
+      "own_util_max": {
+        "7": 4
+      },
+      "other_gpu_util_max": 100,
+      "loadavg1_max": 18.498046875,
+      "loadavg1_min": 16.64306640625,
+      "cores": 64,
+      "contaminated": false,
+      "flags": [
+        "loadavg>=8 (18.5)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    "load": [
+      17.64599609375,
+      16.80859375,
+      17.21728515625
+    ]
+  },
+  "forward_vs_eval_relL2": 1.9547566343750365e-11,
+  "forward_differentiable_aggL2": 0.0012691470096074485,
+  "grad_jit_compile_s": 28.775254847481847,
+  "grad_jit": {
+    "timing": {
+      "min": 0.022097909823060036,
+      "median": 0.022238759323954582,
+      "iqr": 0.014178500510752201,
+      "max": 0.03760363720357418,
+      "mean": 0.026484141392367228,
+      "std": 0.006644472769814793,
+      "samples": [
+        0.03760363720357418,
+        0.036340910010039806,
+        0.022226940840482712,
+        0.022718423046171665,
+        0.022238759323954582,
+        0.022097909823060036,
+        0.022162409499287605
+      ]
+    },
+    "contention": {
+      "devices": [
+        7
+      ],
+      "n_samples": 2,
+      "duration_s": 2.221696376800537,
+      "foreign_pids_on_devices": [],
+      "own_util_max": {
+        "7": 0
+      },
+      "other_gpu_util_max": 100,
+      "loadavg1_max": 17.94677734375,
+      "loadavg1_min": 17.71044921875,
+      "cores": 64,
+      "contaminated": false,
+      "flags": [
+        "loadavg>=8 (17.9)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    "load": [
+      17.71044921875,
+      16.92333984375,
+      17.240234375
+    ]
+  },
+  "upward_forward_eager": {
+    "timing": {
+      "min": 1.723223453387618,
+      "median": 1.773667455650866,
+      "iqr": 0.03778427746146917,
+      "max": 1.7897862745448947,
+      "mean": 1.762885479522603,
+      "std": 0.021888853585530183,
+      "samples": [
+        1.7897862745448947,
+        1.7643167078495026,
+        1.773667455650866,
+        1.738053667359054,
+        1.7753128530457616,
+        1.723223453387618,
+        1.7758379448205233
+      ]
+    },
+    "contention": {
+      "devices": [
+        7
+      ],
+      "n_samples": 18,
+      "duration_s": 16.743998050689697,
+      "foreign_pids_on_devices": [],
+      "own_util_max": {
+        "7": 2
+      },
+      "other_gpu_util_max": 100,
+      "loadavg1_max": 17.71044921875,
+      "loadavg1_min": 17.12158203125,
+      "cores": 64,
+      "contaminated": false,
+      "flags": [
+        "loadavg>=8 (17.7)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    "load": [
+      17.12158203125,
+      16.8291015625,
+      17.20361328125
+    ]
+  },
+  "upward_grad_eager": {
+    "timing": {
+      "min": 4.6880768379196525,
+      "median": 4.758644481189549,
+      "iqr": 0.05089181009680033,
+      "max": 4.795295757241547,
+      "mean": 4.743846716492304,
+      "std": 0.03386374472798463,
+      "samples": [
+        4.795295757241547,
+        4.76341572124511,
+        4.6880768379196525,
+        4.725963056087494,
+        4.763007250614464,
+        4.71252391114831,
+        4.758644481189549
+      ]
+    },
+    "contention": {
+      "devices": [
+        7
+      ],
+      "n_samples": 56,
+      "duration_s": 51.69173622131348,
+      "foreign_pids_on_devices": [],
+      "own_util_max": {
+        "7": 3
+      },
+      "other_gpu_util_max": 100,
+      "loadavg1_max": 18.28857421875,
+      "loadavg1_min": 16.6416015625,
+      "cores": 64,
+      "contaminated": false,
+      "flags": [
+        "loadavg>=8 (18.3)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    "load": [
+      18.26513671875,
+      17.1318359375,
+      17.28271484375
+    ]
+  },
+  "upward_grad_jit": {
+    "timing": {
+      "min": 0.006876823492348194,
+      "median": 0.007850779220461845,
+      "iqr": 3.661029040813446e-05,
+      "max": 0.007891620509326458,
+      "mean": 0.0077165595388838226,
+      "std": 0.0003433066023583991,
+      "samples": [
+        0.006876823492348194,
+        0.007891620509326458,
+        0.007872188463807106,
+        0.00785129889845848,
+        0.007850779220461845,
+        0.007835578173398972,
+        0.0078376280143857
+      ]
+    },
+    "contention": {
+      "devices": [
+        7
+      ],
+      "n_samples": 2,
+      "duration_s": 2.2307419776916504,
+      "foreign_pids_on_devices": [],
+      "own_util_max": {
+        "7": 35
+      },
+      "other_gpu_util_max": 100,
+      "loadavg1_max": 18.08349609375,
+      "loadavg1_min": 18.08349609375,
+      "cores": 64,
+      "contaminated": false,
+      "flags": [
+        "loadavg>=8 (18.1)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    "load": [
+      18.08349609375,
+      17.11279296875,
+      17.275390625
+    ]
+  },
+  "far_forward_eager": {
+    "timing": {
+      "min": 3.333822838962078,
+      "median": 3.391993595287204,
+      "iqr": 0.03766463603824377,
+      "max": 3.410775882191956,
+      "mean": 3.3820849606501207,
+      "std": 0.0249422097267153,
+      "samples": [
+        3.369589795358479,
+        3.391993595287204,
+        3.4047648794949055,
+        3.333822838962078,
+        3.396547489799559,
+        3.3671002434566617,
+        3.410775882191956
+      ]
+    },
+    "contention": {
+      "devices": [
+        7
+      ],
+      "n_samples": 34,
+      "duration_s": 31.06958293914795,
+      "foreign_pids_on_devices": [],
+      "own_util_max": {
+        "7": 3
+      },
+      "other_gpu_util_max": 100,
+      "loadavg1_max": 17.99658203125,
+      "loadavg1_min": 17.35009765625,
+      "cores": 64,
+      "contaminated": false,
+      "flags": [
+        "loadavg>=8 (18.0)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    "load": [
+      17.35009765625,
+      17.04931640625,
+      17.248046875
+    ]
+  },
+  "far_grad_eager": {
+    "timing": {
+      "min": 18.88036673516035,
+      "median": 19.318126184865832,
+      "iqr": 0.979083769954741,
+      "max": 20.013713878579438,
+      "mean": 19.402957340303278,
+      "std": 0.42559866771939175,
+      "samples": [
+        19.318126184865832,
+        18.88036673516035,
+        20.013713878579438,
+        18.980924346484244,
+        19.575266708619893,
+        19.09229541197419,
+        19.960008116438985
+      ]
+    },
+    "contention": {
+      "devices": [
+        7
+      ],
+      "n_samples": 222,
+      "duration_s": 197.25135374069214,
+      "foreign_pids_on_devices": [],
+      "own_util_max": {
+        "7": 10
+      },
+      "other_gpu_util_max": 100,
+      "loadavg1_max": 19.2666015625,
+      "loadavg1_min": 16.04736328125,
+      "cores": 64,
+      "contaminated": false,
+      "flags": [
+        "loadavg>=8 (19.3)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    "load": [
+      16.04736328125,
+      17.02978515625,
+      17.2392578125
+    ]
+  },
+  "far_grad_jit": {
+    "timing": {
+      "min": 0.01676548458635807,
+      "median": 0.0276322178542614,
+      "iqr": 0.010925534181296825,
+      "max": 0.028417522087693214,
+      "mean": 0.023397294006177356,
+      "std": 0.005211660432889442,
+      "samples": [
+        0.02774152811616659,
+        0.028417522087693214,
+        0.02771808858960867,
+        0.0276322178542614,
+        0.01869022287428379,
+        0.016815993934869766,
+        0.01676548458635807
+      ]
+    },
+    "contention": {
+      "devices": [
+        7
+      ],
+      "n_samples": 2,
+      "duration_s": 0.9823644161224365,
+      "foreign_pids_on_devices": [],
+      "own_util_max": {
+        "7": 3
+      },
+      "other_gpu_util_max": 100,
+      "loadavg1_max": 15.13720703125,
+      "loadavg1_min": 15.13720703125,
+      "cores": 64,
+      "contaminated": false,
+      "flags": [
+        "loadavg>=8 (15.1)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    "load": [
+      15.13720703125,
+      16.73681640625,
+      17.1357421875
+    ]
+  },
+  "near_forward_eager": {
+    "timing": {
+      "min": 0.2457622056826949,
+      "median": 0.24930773302912712,
+      "iqr": 0.004421493038535118,
+      "max": 0.2622053660452366,
+      "mean": 0.25075637123414446,
+      "std": 0.0049901040095754025,
+      "samples": [
+        0.24924954213202,
+        0.24748005252331495,
+        0.25190154556185007,
+        0.24938815366476774,
+        0.2457622056826949,
+        0.2622053660452366,
+        0.24930773302912712
+      ]
+    },
+    "contention": {
+      "devices": [
+        7
+      ],
+      "n_samples": 4,
+      "duration_s": 2.698563814163208,
+      "foreign_pids_on_devices": [],
+      "own_util_max": {
+        "7": 4
+      },
+      "other_gpu_util_max": 100,
+      "loadavg1_max": 15.13720703125,
+      "loadavg1_min": 14.8056640625,
+      "cores": 64,
+      "contaminated": false,
+      "flags": [
+        "loadavg>=8 (15.1)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    "load": [
+      14.8056640625,
+      16.64111328125,
+      17.1025390625
+    ]
+  },
+  "near_grad_eager": {
+    "timing": {
+      "min": 0.6429318739101291,
+      "median": 0.6490873051807284,
+      "iqr": 0.011324727907776833,
+      "max": 0.703690736554563,
+      "mean": 0.6567328042749848,
+      "std": 0.01958796440818921,
+      "samples": [
+        0.6429318739101291,
+        0.6519308891147375,
+        0.6447005122900009,
+        0.703690736554563,
+        0.6487630726769567,
+        0.6560252401977777,
+        0.6490873051807284
+      ]
+    },
+    "contention": {
+      "devices": [
+        7
+      ],
+      "n_samples": 10,
+      "duration_s": 8.31669569015503,
+      "foreign_pids_on_devices": [],
+      "own_util_max": {
+        "7": 6
+      },
+      "other_gpu_util_max": 99,
+      "loadavg1_max": 15.1416015625,
+      "loadavg1_min": 14.8056640625,
+      "cores": 64,
+      "contaminated": false,
+      "flags": [
+        "loadavg>=8 (15.1)",
+        "other-gpus-busy (99%)"
+      ]
+    },
+    "load": [
+      15.1416015625,
+      16.6806640625,
+      17.11279296875
+    ]
+  },
+  "near_grad_jit": {
+    "timing": {
+      "min": 0.010449342429637909,
+      "median": 0.010581201873719692,
+      "iqr": 0.00012955069541931152,
+      "max": 0.01065515261143446,
+      "mean": 0.010572782584599085,
+      "std": 6.7559320838672e-05,
+      "samples": [
+        0.01051701232790947,
+        0.010555652901530266,
+        0.010646563023328781,
+        0.010581201873719692,
+        0.010449342429637909,
+        0.01065515261143446,
+        0.010604552924633026
+      ]
+    },
+    "contention": {
+      "devices": [
+        7
+      ],
+      "n_samples": 2,
+      "duration_s": 1.0085244178771973,
+      "foreign_pids_on_devices": [],
+      "own_util_max": {
+        "7": 0
+      },
+      "other_gpu_util_max": 76,
+      "loadavg1_max": 15.0498046875,
+      "loadavg1_min": 15.0498046875,
+      "cores": 64,
+      "contaminated": false,
+      "flags": [
+        "loadavg>=8 (15.0)",
+        "other-gpus-busy (76%)"
+      ]
+    },
+    "load": [
+      15.0498046875,
+      16.6357421875,
+      17.095703125
+    ]
+  },
+  "grad_trace": {
+    "per_call": {
+      "window_ms": 31.11596366666666,
+      "busy_ms": 30.24456733333336,
+      "kernel_sum_ms": 30.25165266666667,
+      "launches": 567.0
+    },
+    "stages": {
+      "l2l_rev_pallas": {
+        "ms_per_call": 5.713999000000001,
+        "launches_per_call": 47.0,
+        "kernels": 1
+      },
+      "near_rev_pallas": {
+        "ms_per_call": 4.531463,
+        "launches_per_call": 1.0,
+        "kernels": 1
+      },
+      "scatter": {
+        "ms_per_call": 6.173808,
+        "launches_per_call": 14.0,
+        "kernels": 13
+      },
+      "m2m_rev_pallas": {
+        "ms_per_call": 2.381939999999999,
+        "launches_per_call": 47.0,
+        "kernels": 1
+      },
+      "near_csr_pallas": {
+        "ms_per_call": 2.1787929999999998,
+        "launches_per_call": 1.0,
+        "kernels": 1
+      },
+      "m2m_pallas": {
+        "ms_per_call": 1.8491709999999992,
+        "launches_per_call": 47.0,
+        "kernels": 1
+      },
+      "l2l_pallas": {
+        "ms_per_call": 1.0404076666666675,
+        "launches_per_call": 47.0,
+        "kernels": 1
+      },
+      "m2l_other": {
+        "ms_per_call": 1.3699510000000001,
+        "launches_per_call": 2.0,
+        "kernels": 2
+      },
+      "sort": {
+        "ms_per_call": 0.523541,
+        "launches_per_call": 10.0,
+        "kernels": 2
+      },
+      "memcpy": {
+        "ms_per_call": 0.3938406666666674,
+        "launches_per_call": 121.0,
+        "kernels": 1
+      },
+      "p2m_rev_pallas": {
+        "ms_per_call": 0.33299199999999995,
+        "launches_per_call": 1.0,
+        "kernels": 1
+      },
+      "m2l_csr_pallas": {
+        "ms_per_call": 0.284405,
+        "launches_per_call": 1.0,
+        "kernels": 1
+      },
+      "p2m_pallas": {
+        "ms_per_call": 0.24946133333333334,
+        "launches_per_call": 1.0,
+        "kernels": 1
+      },
+      "xla_fusion_other": {
+        "ms_per_call": 2.6989663333333347,
+        "launches_per_call": 147.0,
+        "kernels": 29
+      },
+      "gather": {
+        "ms_per_call": 0.11406866666666668,
+        "launches_per_call": 4.0,
+        "kernels": 2
+      },
+      "other": {
+        "ms_per_call": 0.05495466666666667,
+        "launches_per_call": 2.0,
+        "kernels": 1
+      },
+      "memset": {
+        "ms_per_call": 0.03593600000000001,
+        "launches_per_call": 12.0,
+        "kernels": 1
+      }
+    },
+    "top": [
+      {
+        "name": "l2l_rev_real_level_p5",
+        "total_ms_per_call": 5.713999000000001,
+        "count_per_call": 47.0,
+        "mean_us": 121.57444680851066,
+        "share": 0.1888822096088679
+      },
+      {
+        "name": "near_rev_leafpair_csr_t32_c64_w64_ainput_self",
+        "total_ms_per_call": 4.531463,
+        "count_per_call": 1.0,
+        "mean_us": 4531.463,
+        "share": 0.14979224606109123
+      },
+      {
+        "name": "input_scatter_fusion_6",
+        "total_ms_per_call": 4.2537139999999996,
+        "count_per_call": 1.0,
+        "mean_us": 4253.714,
+        "share": 0.1406109625437764
+      },
+      {
+        "name": "m2m_rev_real_level_p5",
+        "total_ms_per_call": 2.381939999999999,
+        "count_per_call": 47.0,
+        "mean_us": 50.679574468085086,
+        "share": 0.07873751646714439
+      },
+      {
+        "name": "nearfield_leafpair_csr_t32_c64_w64_ainput_self",
+        "total_ms_per_call": 2.1787929999999998,
+        "count_per_call": 1.0,
+        "mean_us": 2178.7929999999997,
+        "share": 0.0720222800389594
+      },
+      {
+        "name": "m2m_real_level_p5",
+        "total_ms_per_call": 1.8491709999999992,
+        "count_per_call": 47.0,
+        "mean_us": 39.344063829787224,
+        "share": 0.061126280285425265
+      },
+      {
+        "name": "l2l_real_level_p5",
+        "total_ms_per_call": 1.0404076666666675,
+        "count_per_call": 47.0,
+        "mean_us": 22.13633333333335,
+        "share": 0.034391762927156025
+      },
+      {
+        "name": "input_scatter_fusion_2",
+        "total_ms_per_call": 0.9604473333333333,
+        "count_per_call": 1.0,
+        "mean_us": 960.4473333333334,
+        "share": 0.03174859052879513
+      },
+      {
+        "name": "m2l_rev_real_csr_lanes_src_p5_k32",
+        "total_ms_per_call": 0.7581540000000001,
+        "count_per_call": 1.0,
+        "mean_us": 758.154,
+        "share": 0.025061572944587777
+      },
+      {
+        "name": "m2l_rev_real_csr_lanes_tgt_p5_k32",
+        "total_ms_per_call": 0.611797,
+        "count_per_call": 1.0,
+        "mean_us": 611.797,
+        "share": 0.020223589327207886
+      },
+      {
+        "name": "void cub::_V_300200_SM_500_600_700_800_900_1000_1010_1200::detail::radix_sort::DeviceRadixSortOnesweepKernel<cub::_V_300200_SM_500_600_700_800_900_1000_1010_1200::detail::radix::policy_hub<int, unsigned long, unsigned long long>::Policy1000, (cub::_V_300200_SM_500_600_700_800_900_1000_1010_1200::SortOrder)0, int, unsigned long, unsigned long long, int, int, cub::_V_300200_SM_500_600_700_800_900_1000_1010_1200::detail::identity_decomposer_t>(int*, int*, unsigned long long*, unsigned long long const*, int*, int const*, unsigned long*, unsigned long const*, int, int, int, cub::_V_300200_SM_500_600_700_800_900_1000_1010_1200::detail::identity_decomposer_t)",
+        "total_ms_per_call": 0.488661,
+        "count_per_call": 8.0,
+        "mean_us": 61.082625,
+        "share": 0.016153200137010697
+      },
+      {
+        "name": "MemcpyD2D",
+        "total_ms_per_call": 0.3938406666666674,
+        "count_per_call": 121.0,
+        "mean_us": 3.2548815426997306,
+        "share": 0.01301881490595811
+      },
+      {
+        "name": "input_scatter_fusion_7",
+        "total_ms_per_call": 0.35732233333333335,
+        "count_per_call": 1.0,
+        "mean_us": 357.32233333333335,
+        "share": 0.011811663226156748
+      },
+      {
+        "name": "p2m_rev_real_leaf_p5_w64",
+        "total_ms_per_call": 0.33299199999999995,
+        "count_per_call": 1.0,
+        "mean_us": 332.99199999999996,
+        "share": 0.011007398626089385
+      },
+      {
+        "name": "m2l_real_csr_lanes_p5_k32",
+        "total_ms_per_call": 0.284405,
+        "count_per_call": 1.0,
+        "mean_us": 284.40500000000003,
+        "share": 0.00940130455462279
+      },
+      {
+        "name": "p2m_real_leaf_p5_w64",
+        "total_ms_per_call": 0.24946133333333334,
+        "count_per_call": 1.0,
+        "mean_us": 249.46133333333333,
+        "share": 0.008246205127437777
+      },
+      {
+        "name": "loop_add_multiply_fusion",
+        "total_ms_per_call": 0.199221,
+        "count_per_call": 1.0,
+        "mean_us": 199.221,
+        "share": 0.006585458394460389
+      },
+      {
+        "name": "loop_add_multiply_slice_subtract_fusion",
+        "total_ms_per_call": 0.19614933333333331,
+        "count_per_call": 1.0,
+        "mean_us": 196.14933333333332,
+        "share": 0.006483921242076934
+      },
+      {
+        "name": "loop_add_divide_multiply_slice_fusion",
+        "total_ms_per_call": 0.19107166666666664,
+        "count_per_call": 1.0,
+        "mean_us": 191.07166666666663,
+        "share": 0.006316073662884621
+      },
+      {
+        "name": "loop_add_divide_multiply_fusion_1",
+        "total_ms_per_call": 0.18754133333333334,
+        "count_per_call": 1.0,
+        "mean_us": 187.54133333333334,
+        "share": 0.006199374804404626
+      },
+      {
+        "name": "loop_select_fusion_4",
+        "total_ms_per_call": 0.187168,
+        "count_per_call": 1.0,
+        "mean_us": 187.168,
+        "share": 0.006187033880837673
+      },
+      {
+        "name": "input_scatter_fusion_9",
+        "total_ms_per_call": 0.181589,
+        "count_per_call": 1.0,
+        "mean_us": 181.58900000000003,
+        "share": 0.0060026142042840245
+      },
+      {
+        "name": "loop_select_fusion",
+        "total_ms_per_call": 0.17833633333333335,
+        "count_per_call": 44.0,
+        "mean_us": 4.053098484848485,
+        "share": 0.005895093907706949
+      },
+      {
+        "name": "loop_add_compare_divide_multiply_slice_fusion",
+        "total_ms_per_call": 0.17656533333333335,
+        "count_per_call": 1.0,
+        "mean_us": 176.56533333333334,
+        "share": 0.005836551651536217
+      },
+      {
+        "name": "loop_add_divide_multiply_fusion",
+        "total_ms_per_call": 0.16236799999999998,
+        "count_per_call": 1.0,
+        "mean_us": 162.368,
+        "share": 0.005367243958175816
+      },
+      {
+        "name": "loop_add_divide_multiply_subtract_fusion",
+        "total_ms_per_call": 0.145141,
+        "count_per_call": 1.0,
+        "mean_us": 145.141,
+        "share": 0.004797787466333244
+      },
+      {
+        "name": "loop_add_multiply_slice_fusion",
+        "total_ms_per_call": 0.14238933333333334,
+        "count_per_call": 1.0,
+        "mean_us": 142.38933333333333,
+        "share": 0.004706828248435749
+      },
+      {
+        "name": "loop_add_slice_fusion_1",
+        "total_ms_per_call": 0.14050133333333334,
+        "count_per_call": 1.0,
+        "mean_us": 140.50133333333335,
+        "share": 0.004644418434968589
+      },
+      {
+        "name": "loop_add_fusion",
+        "total_ms_per_call": 0.12913166666666684,
+        "count_per_call": 59.0,
+        "mean_us": 2.1886723163841837,
+        "share": 0.004268582218946105
+      },
+      {
+        "name": "loop_add_divide_multiply_slice_fusion_1",
+        "total_ms_per_call": 0.11656533333333334,
+        "count_per_call": 1.0,
+        "mean_us": 116.56533333333334,
+        "share": 0.0038531889354188236
+      },
+      {
+        "name": "input_scatter_fusion_12",
+        "total_ms_per_call": 0.114325,
+        "count_per_call": 1.0,
+        "mean_us": 114.32499999999999,
+        "share": 0.0037791323753353506
+      },
+      {
+        "name": "loop_add_slice_fusion",
+        "total_ms_per_call": 0.10996266666666667,
+        "count_per_call": 1.0,
+        "mean_us": 109.96266666666668,
+        "share": 0.0036349308871918605
+      },
+      {
+        "name": "loop_gather_select_fusion",
+        "total_ms_per_call": 0.09563700000000001,
+        "count_per_call": 2.0,
+        "mean_us": 47.8185,
+        "share": 0.00316138100135532
+      },
+      {
+        "name": "input_scatter_fusion_13",
+        "total_ms_per_call": 0.08849066666666666,
+        "count_per_call": 1.0,
+        "mean_us": 88.49066666666666,
+        "share": 0.002925151483183982
+      },
+      {
+        "name": "loop_select_fusion_1",
+        "total_ms_per_call": 0.06308266666666665,
+        "count_per_call": 15.0,
+        "mean_us": 4.205511111111109,
+        "share": 0.0020852634849988024
+      },
+      {
+        "name": "wrapped_iota_1",
+        "total_ms_per_call": 0.05495466666666667,
+        "count_per_call": 2.0,
+        "mean_us": 27.477333333333334,
+        "share": 0.0018165839490554335
+      },
+      {
+        "name": "loop_pad_fusion_6",
+        "total_ms_per_call": 0.049290999999999995,
+        "count_per_call": 3.0,
+        "mean_us": 16.430333333333333,
+        "share": 0.0016293655273357077
+      },
+      {
+        "name": "loop_divide_maximum_multiply_slice_subtract_fusion",
+        "total_ms_per_call": 0.04825633333333334,
+        "count_per_call": 1.0,
+        "mean_us": 48.25633333333334,
+        "share": 0.001595163539164439
+      },
+      {
+        "name": "input_scatter_fusion_10",
+        "total_ms_per_call": 0.04180266666666666,
+        "count_per_call": 1.0,
+        "mean_us": 41.80266666666667,
+        "share": 0.0013818308416825007
+      },
+      {
+        "name": "Memset 3",
+        "total_ms_per_call": 0.03593600000000001,
+        "count_per_call": 12.0,
+        "mean_us": 2.9946666666666677,
+        "share": 0.0011879020427732448
+      }
+    ]
+  },
+  "load_at_end": [
+    15.0498046875,
+    16.6357421875,
+    17.095703125
+  ]
+}

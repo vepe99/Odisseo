@@ -1,0 +1,36 @@
+GPU: physical [0] (CUDA_VISIBLE_DEVICES=0)
+
+=== theta 0.6  N 200000  leaf 32  p 4 ===
+  kdtree build + geometry 24.4s (L=8192, W=25)
+          morton  6250   32  (sim-only; med_r 0.239 max_r 488.88)
+                 simulation 9s
+          kdtree  8192   25  (sim-only; med_r 0.155 max_r 331.87)
+                 simulation 12s
+
+  per-leaf treecode walk (host simulation), dual-mutual share for reference:
+         variant dual_med | tc_mean  tc_med  tc_p90 tc_rows | m2p_mean m2p_med m2p_p90 m2p_max  rows m2p/tgt m2psrc/N far/leaf | tc/m2p  box0
+          morton      nan |   0.093   0.066   0.113     413 |    0.043   0.040   0.050   1.000   248   228.7    0.383    488.5 |   1.66  0.00
+          kdtree      nan |   0.057   0.034   0.040     280 |    0.026   0.026   0.029   0.034   210   151.1    0.148    876.4 |   1.33  0.00
+  gates: {"K2_share_ratio_treecode_over_m2p_morton": 1.6627337768294213, "K2_pass_morton": false, "m2p_arm_share_median_morton": 0.039835, "K2_share_ratio_treecode_over_m2p_kdtree": 1.3298409002716336, "K2_pass_kdtree": false, "m2p_arm_share_median_kdtree": 0.02577, "residual_compact_mutual_expected_share": 0.0128}
+
+wrote /export/home/tbuck/Odisseo-bench-multigpu/benchmark_multigpu/artifacts/audit_leaf_compactness_plummer200000_leaf32_simonly.json
+      /export/home/tbuck/Odisseo-bench-multigpu/benchmark_multigpu/artifacts/audit_leaf_compactness_plummer200000_leaf32_simonly.per_leaf.npz
+leaf32 rc=0
+GPU: physical [0] (CUDA_VISIBLE_DEVICES=0)
+
+=== theta 0.6  N 200000  leaf 16  p 4 ===
+  kdtree build + geometry 24.2s (L=16384, W=13)
+          morton 12500   16  (sim-only; med_r 0.187 max_r 486.78)
+                 simulation 19s
+          kdtree 16384   13  (sim-only; med_r 0.114 max_r 328.97)
+                 simulation 29s
+
+  per-leaf treecode walk (host simulation), dual-mutual share for reference:
+         variant dual_med | tc_mean  tc_med  tc_p90 tc_rows | m2p_mean m2p_med m2p_p90 m2p_max  rows m2p/tgt m2psrc/N far/leaf | tc/m2p  box0
+          morton      nan |   0.042   0.028   0.047     354 |    0.019   0.018   0.022   1.000   221   230.7    0.299    671.5 |   1.60  0.00
+          kdtree      nan |   0.019   0.012   0.015     188 |    0.009   0.008   0.010   0.014   136   137.2    0.106   1140.6 |   1.38  0.00
+  gates: {"K2_share_ratio_treecode_over_m2p_morton": 1.6015206983948183, "K2_pass_morton": false, "m2p_arm_share_median_morton": 0.017755, "K2_share_ratio_treecode_over_m2p_kdtree": 1.382686567164179, "K2_pass_kdtree": false, "m2p_arm_share_median_kdtree": 0.008375, "residual_compact_mutual_expected_share": 0.0064}
+
+wrote /export/home/tbuck/Odisseo-bench-multigpu/benchmark_multigpu/artifacts/audit_leaf_compactness_plummer200000_leaf16_simonly.json
+      /export/home/tbuck/Odisseo-bench-multigpu/benchmark_multigpu/artifacts/audit_leaf_compactness_plummer200000_leaf16_simonly.per_leaf.npz
+leaf16 rc=0

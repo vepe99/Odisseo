@@ -1,0 +1,8 @@
+theta 0.6: eval_fn vs ref  aggL2 8.435e-04
+           step(v) vs ref  aggL2 1.584e+00   step(v) vs eval_fn 1.584e+00
+           step(x) vs ref  aggL2 4.077e-03
+           diag: {'strict_fused_fastlane_hits': 1, 'strict_fused_fallback_count': 0, 'strict_fused_last_fallback_reason': '', 'recent_dual_neighbor_count': 356082, 'large_n_eval_active_leaf_count': 782}
+theta 1.0: eval_fn vs ref  aggL2 3.507e-02
+           step(v) vs ref  aggL2 1.557e+00   step(v) vs eval_fn 1.557e+00
+           step(x) vs ref  aggL2 3.529e-02
+           diag: {'strict_fused_fastlane_hits': 1, 'strict_fused_fallback_count': 0, 'strict_fused_last_fallback_reason': '', 'recent_dual_neighbor_count': 109962, 'large_n_eval_active_leaf_count': 782}

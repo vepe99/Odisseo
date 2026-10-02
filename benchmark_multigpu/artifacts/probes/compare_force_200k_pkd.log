@@ -1,0 +1,375 @@
+IC=plummer N=200000 devices=[5] loadavg=(16.609375, 20.3681640625, 15.005859375) cores=64
+wrote + verified artifacts/compare_force_200k/plummer_n200000_seed0.tipsy (7.2 MB)
+
+=== pkdgrav3 [gpu] ndev=1 nBucket=8 nGroup=default cores=16 (CUDA_VISIBLE_DEVICES=5) ===
+  92.231 of    15 std-dev=   3.876
+     %   waiting: max=   0.000 @    0 avg=   0.000 of    15 std-dev=   0.000
+     %   syncing: max=  14.051 @    8 avg=   7.769 of    15 std-dev=   3.876
+free memory (GB): min= 900.866 @    0 avg= 900.866 of    15 std-dev=   0.000
+   resident size: max=   3.419 @    0 avg=   3.419 of    15 std-dev=   0.000
+  (cache access statistics are given per active particle)
+  P-cache access: max=     1.7 @   13 avg=     1.5 of    15 std-dev=     0.1
+  C-cache access: max=     7.5 @   11 avg=     7.1 of    15 std-dev=     0.3
+  P-cache miss %: max=    0.00 @    0 avg=    0.00 of    15 std-dev=    0.00
+  C-cache miss %: max=    0.00 @    0 avg=    0.00 of    15 std-dev=    0.00
+Total tiles processed: 1.30970e+04, on the GPU: 1.30970e+04, ratio: 100.00 %
+Reordering decorator...
+Domain Decomposition complete, Wallclock: 0.021755 secs
+
+Tree built, Wallclock: 0.0040629 secs
+
+Calculating Gravity, Step:0.000000 (rung 0), Time:0.000000
+Gravity Calculated, Wallclock: 0.021459 secs, Gflops:393.8, Total Gflop:8.45
+  Gflops: CPU:13.4,0.1 GPU:380.3,0.0  Gflop: CPU:0.287,0.00156 GPU:8.16,0
+  particle  load: max=   13334 @    3 avg=   13333 of    15 std-dev=       0
+  actives   load: max=   13334 @    3 avg=   13333 of    15 std-dev=       0
+  Gflop     load: max=     0.6 @    7 avg=     0.6 of    15 std-dev=     0.0
+  P-P per active: max=  317.49 @   13 avg=  310.38 of    15 std-dev=    6.36
+  P-C per active: max=  119.69 @    7 avg=  113.28 of    15 std-dev=    2.94
+     % computing: max=  99.645 @   13 avg=  92.316 of    15 std-dev=   3.961
+     %   waiting: max=   0.000 @    0 avg=   0.000 of    15 std-dev=   0.000
+     %   syncing: max=  15.711 @    8 avg=   7.684 of    15 std-dev=   3.961
+free memory (GB): min= 900.865 @    0 avg= 900.865 of    15 std-dev=   0.000
+   resident size: max=   3.420 @    0 avg=   3.420 of    15 std-dev=   0.000
+  (cache access statistics are given per active particle)
+  P-cache access: max=     1.7 @   13 avg=     1.5 of    15 std-dev=     0.1
+  C-cache access: max=     7.5 @   11 avg=     7.1 of    15 std-dev=     0.3
+  P-cache miss %: max=    0.00 @    0 avg=    0.00 of    15 std-dev=    0.00
+  C-cache miss %: max=    0.00 @    0 avg=    0.00 of    15 std-dev=    0.00
+Total tiles processed: 1.30970e+04, on the GPU: 1.30970e+04, ratio: 100.00 %
+[force_eval] theta=0.8  force_eval=44.84 ms  (domain 19.55 + tree 4.02 + gravity 21.02)
+[force_eval] wrote artifacts/compare_force_200k/pkd_gpu_ndev1_nb8_ng0_summary.json
+
+  !! contention during pkdgrav3 run: ['loadavg>=8 (16.6)', 'other-gpus-busy (79%)']
+
+=== pkdgrav3 [cpu] ndev=1 nBucket=8 nGroup=default cores=32 (CUDA_VISIBLE_DEVICES=5) ===
+   26 avg=  86.450 of    31 std-dev=   5.667
+     %   waiting: max=   0.000 @    0 avg=   0.000 of    31 std-dev=   0.000
+     %   syncing: max=  23.050 @   19 avg=  13.550 of    31 std-dev=   5.667
+free memory (GB): min= 896.372 @    0 avg= 896.372 of    31 std-dev=   0.000
+   resident size: max=   6.762 @    0 avg=   6.762 of    31 std-dev=   0.000
+  (cache access statistics are given per active particle)
+  P-cache access: max=     2.4 @   21 avg=     2.0 of    31 std-dev=     0.2
+  C-cache access: max=    10.2 @   16 avg=     9.3 of    31 std-dev=     0.8
+  P-cache miss %: max=    0.00 @    0 avg=    0.00 of    31 std-dev=    0.00
+  C-cache miss %: max=    0.00 @    0 avg=    0.00 of    31 std-dev=    0.00
+Total tiles processed: 1.30750e+04, on the GPU: 0.00000e+00, ratio: 0.00 %
+Reordering decorator...
+Domain Decomposition complete, Wallclock: 0.046825 secs
+
+Tree built, Wallclock: 0.0028231 secs
+
+Calculating Gravity, Step:0.000000 (rung 0), Time:0.000000
+Gravity Calculated, Wallclock: 0.021694 secs, Gflops:396.5, Total Gflop:8.6
+  Gflops: CPU:37.8,0.1 GPU:0.0,0.0  Gflop: CPU:0.819,0.00156 GPU:0,0
+  particle  load: max=    6452 @    0 avg=    6452 of    31 std-dev=       0
+  actives   load: max=    6452 @    0 avg=    6452 of    31 std-dev=       0
+  Gflop     load: max=     0.3 @   15 avg=     0.3 of    31 std-dev=     0.0
+  P-P per active: max=  320.61 @   13 avg=  310.32 of    31 std-dev=    6.62
+  P-C per active: max=  129.39 @   15 avg=  116.15 of    31 std-dev=    5.36
+     % computing: max=  99.606 @   26 avg=  89.204 of    31 std-dev=   5.309
+     %   waiting: max=   0.000 @    0 avg=   0.000 of    31 std-dev=   0.000
+     %   syncing: max=  21.059 @   19 avg=  10.796 of    31 std-dev=   5.309
+free memory (GB): min= 896.359 @    0 avg= 896.359 of    31 std-dev=   0.000
+   resident size: max=   6.762 @    0 avg=   6.762 of    31 std-dev=   0.000
+  (cache access statistics are given per active particle)
+  P-cache access: max=     2.4 @   21 avg=     2.0 of    31 std-dev=     0.2
+  C-cache access: max=    10.2 @   16 avg=     9.3 of    31 std-dev=     0.8
+  P-cache miss %: max=    0.00 @    0 avg=    0.00 of    31 std-dev=    0.00
+  C-cache miss %: max=    0.00 @    0 avg=    0.00 of    31 std-dev=    0.00
+Total tiles processed: 1.30750e+04, on the GPU: 0.00000e+00, ratio: 0.00 %
+[force_eval] theta=0.8  force_eval=71.71 ms  (domain 47.12 + tree 3.03 + gravity 21.56)
+[force_eval] wrote artifacts/compare_force_200k/pkd_cpu_ndev1_nb8_ng0_summary.json
+
+  !! contention during pkdgrav3 run: ['loadavg>=8 (19.3)', 'other-gpus-busy (76%)']
+
+=== pkdgrav3 [gpu] ndev=1 nBucket=16 nGroup=default cores=16 (CUDA_VISIBLE_DEVICES=5) ===
+g=  92.125 of    15 std-dev=   4.483
+     %   waiting: max=   0.000 @    0 avg=   0.000 of    15 std-dev=   0.000
+     %   syncing: max=  14.172 @    8 avg=   7.875 of    15 std-dev=   4.483
+free memory (GB): min= 898.319 @    2 avg= 898.319 of    15 std-dev=   0.000
+   resident size: max=   3.403 @    0 avg=   3.403 of    15 std-dev=   0.000
+  (cache access statistics are given per active particle)
+  P-cache access: max=     2.9 @   13 avg=     2.6 of    15 std-dev=     0.2
+  C-cache access: max=     6.8 @   11 avg=     6.4 of    15 std-dev=     0.2
+  P-cache miss %: max=    0.00 @    0 avg=    0.00 of    15 std-dev=    0.00
+  C-cache miss %: max=    0.00 @    0 avg=    0.00 of    15 std-dev=    0.00
+Total tiles processed: 1.50390e+04, on the GPU: 1.50390e+04, ratio: 100.00 %
+Reordering decorator...
+Domain Decomposition complete, Wallclock: 0.018085 secs
+
+Tree built, Wallclock: 0.0031259 secs
+
+Calculating Gravity, Step:0.000000 (rung 0), Time:0.000000
+Gravity Calculated, Wallclock: 0.023491 secs, Gflops:383.0, Total Gflop:9
+  Gflops: CPU:13.1,0.1 GPU:369.8,0.0  Gflop: CPU:0.307,0.00156 GPU:8.69,0
+  particle  load: max=   13334 @    3 avg=   13333 of    15 std-dev=       0
+  actives   load: max=   13334 @    3 avg=   13333 of    15 std-dev=       0
+  Gflop     load: max=     0.6 @    7 avg=     0.6 of    15 std-dev=     0.0
+  P-P per active: max=  482.86 @   13 avg=  470.72 of    15 std-dev=    8.08
+  P-C per active: max=   91.94 @    7 avg=   86.00 of    15 std-dev=    2.83
+     % computing: max=  99.736 @   10 avg=  86.943 of    15 std-dev=   5.360
+     %   waiting: max=   0.000 @    0 avg=   0.000 of    15 std-dev=   0.000
+     %   syncing: max=  20.597 @    9 avg=  13.057 of    15 std-dev=   5.360
+free memory (GB): min= 898.326 @    0 avg= 898.326 of    15 std-dev=   0.000
+   resident size: max=   3.404 @    0 avg=   3.404 of    15 std-dev=   0.000
+  (cache access statistics are given per active particle)
+  P-cache access: max=     2.9 @   13 avg=     2.6 of    15 std-dev=     0.2
+  C-cache access: max=     6.8 @   11 avg=     6.4 of    15 std-dev=     0.2
+  P-cache miss %: max=    0.00 @    0 avg=    0.00 of    15 std-dev=    0.00
+  C-cache miss %: max=    0.00 @    0 avg=    0.00 of    15 std-dev=    0.00
+Total tiles processed: 1.50390e+04, on the GPU: 1.50390e+04, ratio: 100.00 %
+[force_eval] theta=0.8  force_eval=43.77 ms  (domain 18.56 + tree 2.96 + gravity 21.47)
+[force_eval] wrote artifacts/compare_force_200k/pkd_gpu_ndev1_nb16_ng0_summary.json
+
+  !! contention during pkdgrav3 run: ['loadavg>=8 (19.3)', 'other-gpus-busy (77%)']
+
+=== pkdgrav3 [cpu] ndev=1 nBucket=16 nGroup=default cores=32 (CUDA_VISIBLE_DEVICES=5) ===
+  22 avg=  85.997 of    31 std-dev=   5.984
+     %   waiting: max=   0.000 @    0 avg=   0.000 of    31 std-dev=   0.000
+     %   syncing: max=  23.334 @    2 avg=  14.003 of    31 std-dev=   5.984
+free memory (GB): min= 894.435 @    0 avg= 894.435 of    31 std-dev=   0.000
+   resident size: max=   6.773 @    0 avg=   6.773 of    31 std-dev=   0.000
+  (cache access statistics are given per active particle)
+  P-cache access: max=     4.3 @    4 avg=     3.7 of    31 std-dev=     0.4
+  C-cache access: max=     9.1 @   16 avg=     8.3 of    31 std-dev=     0.7
+  P-cache miss %: max=    0.00 @    0 avg=    0.00 of    31 std-dev=    0.00
+  C-cache miss %: max=    0.00 @    0 avg=    0.00 of    31 std-dev=    0.00
+Total tiles processed: 1.50710e+04, on the GPU: 0.00000e+00, ratio: 0.00 %
+Reordering decorator...
+Domain Decomposition complete, Wallclock: 0.050189 secs
+
+Tree built, Wallclock: 0.0025079 secs
+
+Calculating Gravity, Step:0.000000 (rung 0), Time:0.000000
+Gravity Calculated, Wallclock: 0.026965 secs, Gflops:339.5, Total Gflop:9.16
+  Gflops: CPU:33.0,0.1 GPU:0.0,0.0  Gflop: CPU:0.89,0.00156 GPU:0,0
+  particle  load: max=    6452 @    0 avg=    6452 of    31 std-dev=       0
+  actives   load: max=    6452 @    0 avg=    6452 of    31 std-dev=       0
+  Gflop     load: max=     0.3 @   15 avg=     0.3 of    31 std-dev=     0.0
+  P-P per active: max=  492.33 @   13 avg=  470.57 of    31 std-dev=    9.08
+  P-C per active: max=  101.06 @   15 avg=   88.69 of    31 std-dev=    4.99
+     % computing: max=  99.415 @    9 avg=  76.603 of    31 std-dev=   8.907
+     %   waiting: max=   0.000 @    0 avg=   0.000 of    31 std-dev=   0.000
+     %   syncing: max=  35.929 @   19 avg=  23.397 of    31 std-dev=   8.907
+free memory (GB): min= 894.438 @    0 avg= 894.438 of    31 std-dev=   0.000
+   resident size: max=   6.773 @    0 avg=   6.773 of    31 std-dev=   0.000
+  (cache access statistics are given per active particle)
+  P-cache access: max=     4.3 @    4 avg=     3.7 of    31 std-dev=     0.4
+  C-cache access: max=     9.1 @   16 avg=     8.3 of    31 std-dev=     0.7
+  P-cache miss %: max=    0.00 @    0 avg=    0.00 of    31 std-dev=    0.00
+  C-cache miss %: max=    0.00 @    0 avg=    0.00 of    31 std-dev=    0.00
+Total tiles processed: 1.50710e+04, on the GPU: 0.00000e+00, ratio: 0.00 %
+[force_eval] theta=0.8  force_eval=74.32 ms  (domain 48.24 + tree 2.63 + gravity 22.69)
+[force_eval] wrote artifacts/compare_force_200k/pkd_cpu_ndev1_nb16_ng0_summary.json
+
+  !! contention during pkdgrav3 run: ['loadavg>=8 (22.7)', 'other-gpus-busy (76%)']
+
+=== pkdgrav3 [gpu] ndev=1 nBucket=32 nGroup=default cores=16 (CUDA_VISIBLE_DEVICES=5) ===
+ 90.313 of    15 std-dev=   4.648
+     %   waiting: max=   0.000 @    0 avg=   0.000 of    15 std-dev=   0.000
+     %   syncing: max=  18.497 @    6 avg=   9.687 of    15 std-dev=   4.648
+free memory (GB): min= 896.740 @    0 avg= 896.740 of    15 std-dev=-nan    
+   resident size: max=   3.400 @    0 avg=   3.400 of    15 std-dev=   0.000
+  (cache access statistics are given per active particle)
+  P-cache access: max=     5.5 @   11 avg=     5.2 of    15 std-dev=     0.3
+  C-cache access: max=     6.0 @   11 avg=     5.7 of    15 std-dev=     0.2
+  P-cache miss %: max=    0.00 @    0 avg=    0.00 of    15 std-dev=    0.00
+  C-cache miss %: max=    0.00 @    0 avg=    0.00 of    15 std-dev=    0.00
+Total tiles processed: 1.97730e+04, on the GPU: 1.97730e+04, ratio: 100.00 %
+Reordering decorator...
+Domain Decomposition complete, Wallclock: 0.018991 secs
+
+Tree built, Wallclock: 0.0027909 secs
+
+Calculating Gravity, Step:0.000000 (rung 0), Time:0.000000
+Gravity Calculated, Wallclock: 0.026528 secs, Gflops:406.8, Total Gflop:10.8
+  Gflops: CPU:16.8,0.1 GPU:389.9,0.0  Gflop: CPU:0.446,0.00156 GPU:10.3,0
+  particle  load: max=   13334 @    3 avg=   13333 of    15 std-dev=       0
+  actives   load: max=   13334 @    3 avg=   13333 of    15 std-dev=       0
+  Gflop     load: max=     0.7 @    7 avg=     0.7 of    15 std-dev=     0.0
+  P-P per active: max=  740.23 @    4 avg=  724.59 of    15 std-dev=   13.91
+  P-C per active: max=   66.73 @    7 avg=   61.94 of    15 std-dev=    2.28
+     % computing: max=  99.697 @    1 avg=  86.632 of    15 std-dev=   5.635
+     %   waiting: max=   0.000 @    0 avg=   0.000 of    15 std-dev=   0.000
+     %   syncing: max=  22.077 @    6 avg=  13.368 of    15 std-dev=   5.635
+free memory (GB): min= 896.740 @    0 avg= 896.740 of    15 std-dev=   0.000
+   resident size: max=   3.401 @    0 avg=   3.401 of    15 std-dev=   0.000
+  (cache access statistics are given per active particle)
+  P-cache access: max=     5.5 @   11 avg=     5.2 of    15 std-dev=     0.3
+  C-cache access: max=     6.0 @   11 avg=     5.7 of    15 std-dev=     0.2
+  P-cache miss %: max=    0.00 @    0 avg=    0.00 of    15 std-dev=    0.00
+  C-cache miss %: max=    0.00 @    0 avg=    0.00 of    15 std-dev=    0.00
+Total tiles processed: 1.97730e+04, on the GPU: 1.97730e+04, ratio: 100.00 %
+[force_eval] theta=0.8  force_eval=47.23 ms  (domain 19.47 + tree 2.89 + gravity 24.84)
+[force_eval] wrote artifacts/compare_force_200k/pkd_gpu_ndev1_nb32_ng0_summary.json
+
+  !! contention during pkdgrav3 run: ['loadavg>=8 (22.8)', 'other-gpus-busy (95%)']
+
+=== pkdgrav3 [cpu] ndev=1 nBucket=32 nGroup=default cores=32 (CUDA_VISIBLE_DEVICES=5) ===
+ @    0 avg=  79.184 of    31 std-dev=   7.081
+     %   waiting: max=   0.000 @    0 avg=   0.000 of    31 std-dev=   0.000
+     %   syncing: max=  33.296 @   19 avg=  20.816 of    31 std-dev=   7.081
+free memory (GB): min= 893.159 @    0 avg= 893.159 of    31 std-dev=   0.000
+   resident size: max=   6.756 @    0 avg=   6.756 of    31 std-dev=   0.000
+  (cache access statistics are given per active particle)
+  P-cache access: max=     8.2 @   16 avg=     7.1 of    31 std-dev=     1.0
+  C-cache access: max=     8.0 @   16 avg=     7.4 of    31 std-dev=     0.6
+  P-cache miss %: max=    0.00 @    0 avg=    0.00 of    31 std-dev=    0.00
+  C-cache miss %: max=    0.00 @    0 avg=    0.00 of    31 std-dev=    0.00
+Total tiles processed: 1.97580e+04, on the GPU: 0.00000e+00, ratio: 0.00 %
+Reordering decorator...
+Domain Decomposition complete, Wallclock: 0.047976 secs
+
+Tree built, Wallclock: 0.002147 secs
+
+Calculating Gravity, Step:0.000000 (rung 0), Time:0.000000
+Gravity Calculated, Wallclock: 0.026141 secs, Gflops:418.9, Total Gflop:11
+  Gflops: CPU:43.0,0.1 GPU:0.0,0.0  Gflop: CPU:1.12,0.00156 GPU:0,0
+  particle  load: max=    6452 @    0 avg=    6452 of    31 std-dev=       0
+  actives   load: max=    6452 @    0 avg=    6452 of    31 std-dev=       0
+  Gflop     load: max=     0.4 @   15 avg=     0.4 of    31 std-dev=     0.0
+  P-P per active: max=  751.76 @   20 avg=  723.16 of    31 std-dev=   17.48
+  P-C per active: max=   74.84 @   15 avg=   64.76 of    31 std-dev=    4.13
+     % computing: max=  99.534 @    1 avg=  84.393 of    31 std-dev=   7.546
+     %   waiting: max=   0.000 @    0 avg=   0.000 of    31 std-dev=   0.000
+     %   syncing: max=  28.816 @   19 avg=  15.607 of    31 std-dev=   7.546
+free memory (GB): min= 893.161 @    0 avg= 893.161 of    31 std-dev=-nan    
+   resident size: max=   6.756 @    0 avg=   6.756 of    31 std-dev=   0.000
+  (cache access statistics are given per active particle)
+  P-cache access: max=     8.2 @   16 avg=     7.1 of    31 std-dev=     1.0
+  C-cache access: max=     8.0 @   16 avg=     7.4 of    31 std-dev=     0.6
+  P-cache miss %: max=    0.00 @    0 avg=    0.00 of    31 std-dev=    0.00
+  C-cache miss %: max=    0.00 @    0 avg=    0.00 of    31 std-dev=    0.00
+Total tiles processed: 1.97580e+04, on the GPU: 0.00000e+00, ratio: 0.00 %
+[force_eval] theta=0.8  force_eval=77.45 ms  (domain 48.35 + tree 2.30 + gravity 26.26)
+[force_eval] wrote artifacts/compare_force_200k/pkd_cpu_ndev1_nb32_ng0_summary.json
+
+  !! contention during pkdgrav3 run: ['loadavg>=8 (23.9)', 'other-gpus-busy (76%)']
+
+=== pkdgrav3 [gpu] ndev=1 nBucket=64 nGroup=default cores=16 (CUDA_VISIBLE_DEVICES=5) ===
+vg=  78.740 of    15 std-dev=   7.743
+     %   waiting: max=   0.000 @    0 avg=   0.000 of    15 std-dev=   0.000
+     %   syncing: max=  30.073 @   11 avg=  21.260 of    15 std-dev=   7.743
+free memory (GB): min= 895.851 @    0 avg= 895.851 of    15 std-dev=   0.000
+   resident size: max=   3.408 @    0 avg=   3.408 of    15 std-dev=   0.000
+  (cache access statistics are given per active particle)
+  P-cache access: max=    12.0 @    2 avg=    10.8 of    15 std-dev=     0.8
+  C-cache access: max=     5.3 @   11 avg=     5.0 of    15 std-dev=     0.2
+  P-cache miss %: max=    0.00 @    0 avg=    0.00 of    15 std-dev=    0.00
+  C-cache miss %: max=    0.00 @    0 avg=    0.00 of    15 std-dev=    0.00
+Total tiles processed: 2.54840e+04, on the GPU: 2.54840e+04, ratio: 100.00 %
+Reordering decorator...
+Domain Decomposition complete, Wallclock: 0.019107 secs
+
+Tree built, Wallclock: 0.002502 secs
+
+Calculating Gravity, Step:0.000000 (rung 0), Time:0.000000
+Gravity Calculated, Wallclock: 0.037043 secs, Gflops:380.3, Total Gflop:14.1
+  Gflops: CPU:29.1,0.0 GPU:351.1,0.0  Gflop: CPU:1.08,0.00156 GPU:13,0
+  particle  load: max=   13334 @    3 avg=   13333 of    15 std-dev=       0
+  actives   load: max=   13334 @    3 avg=   13333 of    15 std-dev=       0
+  Gflop     load: max=     1.0 @    7 avg=     0.9 of    15 std-dev=     0.0
+  P-P per active: max= 1107.01 @    9 avg= 1054.73 of    15 std-dev=   36.81
+  P-C per active: max=   46.40 @    7 avg=   42.46 of    15 std-dev=    1.80
+     % computing: max=  99.831 @    3 avg=  79.760 of    15 std-dev=   7.903
+     %   waiting: max=   0.000 @    0 avg=   0.000 of    15 std-dev=   0.000
+     %   syncing: max=  30.289 @    8 avg=  20.240 of    15 std-dev=   7.903
+free memory (GB): min= 895.857 @    0 avg= 895.857 of    15 std-dev=   0.000
+   resident size: max=   3.408 @    0 avg=   3.408 of    15 std-dev=   0.000
+  (cache access statistics are given per active particle)
+  P-cache access: max=    12.0 @    2 avg=    10.8 of    15 std-dev=     0.8
+  C-cache access: max=     5.3 @   11 avg=     5.0 of    15 std-dev=     0.2
+  P-cache miss %: max=    0.00 @    0 avg=    0.00 of    15 std-dev=    0.00
+  C-cache miss %: max=    0.00 @    0 avg=    0.00 of    15 std-dev=    0.00
+Total tiles processed: 2.54840e+04, on the GPU: 2.54840e+04, ratio: 100.00 %
+[force_eval] theta=0.8  force_eval=53.83 ms  (domain 18.44 + tree 2.34 + gravity 31.92)
+[force_eval] wrote artifacts/compare_force_200k/pkd_gpu_ndev1_nb64_ng0_summary.json
+
+  !! contention during pkdgrav3 run: ['loadavg>=8 (22.8)', 'other-gpus-busy (80%)']
+
+=== pkdgrav3 [cpu] ndev=1 nBucket=64 nGroup=default cores=32 (CUDA_VISIBLE_DEVICES=5) ===
+ @    0 avg=  85.038 of    31 std-dev=   7.188
+     %   waiting: max=   0.000 @    0 avg=   0.000 of    31 std-dev=   0.000
+     %   syncing: max=  28.249 @   19 avg=  14.962 of    31 std-dev=   7.188
+free memory (GB): min= 894.084 @    0 avg= 894.084 of    31 std-dev=   0.000
+   resident size: max=   6.837 @    0 avg=   6.837 of    31 std-dev=   0.000
+  (cache access statistics are given per active particle)
+  P-cache access: max=    18.9 @    4 avg=    15.2 of    31 std-dev=     2.5
+  C-cache access: max=     6.9 @    0 avg=     6.4 of    31 std-dev=     0.4
+  P-cache miss %: max=    0.00 @    0 avg=    0.00 of    31 std-dev=    0.00
+  C-cache miss %: max=    0.00 @    0 avg=    0.00 of    31 std-dev=    0.00
+Total tiles processed: 2.56000e+04, on the GPU: 0.00000e+00, ratio: 0.00 %
+Reordering decorator...
+Domain Decomposition complete, Wallclock: 0.0474 secs
+
+Tree built, Wallclock: 0.001852 secs
+
+Calculating Gravity, Step:0.000000 (rung 0), Time:0.000000
+Gravity Calculated, Wallclock: 0.033572 secs, Gflops:428.3, Total Gflop:14.4
+  Gflops: CPU:57.6,0.0 GPU:0.0,0.0  Gflop: CPU:1.93,0.00156 GPU:0,0
+  particle  load: max=    6452 @    0 avg=    6452 of    31 std-dev=       0
+  actives   load: max=    6452 @    0 avg=    6452 of    31 std-dev=       0
+  Gflop     load: max=     0.5 @   25 avg=     0.5 of    31 std-dev=     0.0
+  P-P per active: max= 1149.83 @   17 avg= 1062.16 of    31 std-dev=   57.19
+  P-C per active: max=   53.26 @    0 avg=   44.69 of    31 std-dev=    3.44
+     % computing: max=  99.695 @    0 avg=  85.463 of    31 std-dev=   7.171
+     %   waiting: max=   0.000 @    0 avg=   0.000 of    31 std-dev=   0.000
+     %   syncing: max=  27.595 @   19 avg=  14.537 of    31 std-dev=   7.171
+free memory (GB): min= 894.084 @    0 avg= 894.084 of    31 std-dev=   0.000
+   resident size: max=   6.838 @    0 avg=   6.838 of    31 std-dev=   0.000
+  (cache access statistics are given per active particle)
+  P-cache access: max=    18.9 @    4 avg=    15.2 of    31 std-dev=     2.5
+  C-cache access: max=     6.9 @    0 avg=     6.4 of    31 std-dev=     0.4
+  P-cache miss %: max=    0.00 @    0 avg=    0.00 of    31 std-dev=    0.00
+  C-cache miss %: max=    0.00 @    0 avg=    0.00 of    31 std-dev=    0.00
+Total tiles processed: 2.56000e+04, on the GPU: 0.00000e+00, ratio: 0.00 %
+[force_eval] theta=0.8  force_eval=84.06 ms  (domain 48.29 + tree 2.08 + gravity 33.42)
+[force_eval] wrote artifacts/compare_force_200k/pkd_cpu_ndev1_nb64_ng0_summary.json
+
+  !! contention during pkdgrav3 run: ['loadavg>=8 (23.8)', 'other-gpus-busy (99%)']
+
+computing float64 direct-sum reference (eps=1e-07, targets=all)...
+  epsilon moves the reference by aggL2 6.286e-08 (tolerance 1e-06)
+  pkdgrav3[gpu] ndev=1 nB=8 theta=0.40 (jac-eq 0.267): grav    78.42 ms  aggL2=2.979e-05  P-P 916.6 P-C 614.7  (signflip 2.000e+00)
+  pkdgrav3[gpu] ndev=1 nB=8 theta=0.50 (jac-eq 0.333): grav    48.38 ms  aggL2=5.974e-05  P-P 638.1 P-C 346.9  (signflip 2.000e+00)
+  pkdgrav3[gpu] ndev=1 nB=8 theta=0.60 (jac-eq 0.400): grav    34.13 ms  aggL2=1.244e-04  P-P 456.8 P-C 214.3  (signflip 2.000e+00)
+  pkdgrav3[gpu] ndev=1 nB=8 theta=0.70 (jac-eq 0.467): grav    25.69 ms  aggL2=2.477e-04  P-P 363.6 P-C 146.1  (signflip 2.000e+00)
+  pkdgrav3[gpu] ndev=1 nB=8 theta=0.80 (jac-eq 0.533): grav    21.02 ms  aggL2=4.992e-04  P-P 310.4 P-C 113.3  (signflip 2.000e+00)
+  pkdgrav3[cpu] ndev=1 nB=8 theta=0.40 (jac-eq 0.267): grav    78.55 ms  aggL2=4.711e-05  P-P 922.6 P-C 627.8  (signflip 2.000e+00)
+  pkdgrav3[cpu] ndev=1 nB=8 theta=0.50 (jac-eq 0.333): grav    52.67 ms  aggL2=6.784e-05  P-P 644.0 P-C 356.1  (signflip 2.000e+00)
+  pkdgrav3[cpu] ndev=1 nB=8 theta=0.60 (jac-eq 0.400): grav    37.18 ms  aggL2=1.291e-04  P-P 461.7 P-C 221.5  (signflip 2.000e+00)
+  pkdgrav3[cpu] ndev=1 nB=8 theta=0.70 (jac-eq 0.467): grav    26.64 ms  aggL2=2.500e-04  P-P 364.6 P-C 150.8  (signflip 2.000e+00)
+  pkdgrav3[cpu] ndev=1 nB=8 theta=0.80 (jac-eq 0.533): grav    21.56 ms  aggL2=5.156e-04  P-P 310.3 P-C 116.2  (signflip 2.000e+00)
+  pkdgrav3[gpu] ndev=1 nB=16 theta=0.40 (jac-eq 0.267): grav    92.30 ms  aggL2=8.025e-05  P-P 1475.8 P-C 506.7  (signflip 2.000e+00)
+  pkdgrav3[gpu] ndev=1 nB=16 theta=0.50 (jac-eq 0.333): grav    52.19 ms  aggL2=5.467e-05  P-P 988.1 P-C 284.2  (signflip 2.000e+00)
+  pkdgrav3[gpu] ndev=1 nB=16 theta=0.60 (jac-eq 0.400): grav    34.14 ms  aggL2=1.195e-04  P-P 680.1 P-C 175.6  (signflip 2.000e+00)
+  pkdgrav3[gpu] ndev=1 nB=16 theta=0.70 (jac-eq 0.467): grav    26.28 ms  aggL2=2.340e-04  P-P 540.5 P-C 115.9  (signflip 2.000e+00)
+  pkdgrav3[gpu] ndev=1 nB=16 theta=0.80 (jac-eq 0.533): grav    21.47 ms  aggL2=4.482e-04  P-P 470.7 P-C 86.0  (signflip 2.000e+00)
+  pkdgrav3[cpu] ndev=1 nB=16 theta=0.40 (jac-eq 0.267): grav    86.98 ms  aggL2=4.661e-05  P-P 1484.9 P-C 519.1  (signflip 2.000e+00)
+  pkdgrav3[cpu] ndev=1 nB=16 theta=0.50 (jac-eq 0.333): grav    54.63 ms  aggL2=6.611e-05  P-P 996.9 P-C 292.6  (signflip 2.000e+00)
+  pkdgrav3[cpu] ndev=1 nB=16 theta=0.60 (jac-eq 0.400): grav    37.39 ms  aggL2=1.245e-04  P-P 689.6 P-C 181.7  (signflip 2.000e+00)
+  pkdgrav3[cpu] ndev=1 nB=16 theta=0.70 (jac-eq 0.467): grav    28.00 ms  aggL2=2.385e-04  P-P 544.0 P-C 120.0  (signflip 2.000e+00)
+  pkdgrav3[cpu] ndev=1 nB=16 theta=0.80 (jac-eq 0.533): grav    22.69 ms  aggL2=4.644e-04  P-P 470.6 P-C 88.7  (signflip 2.000e+00)
+  pkdgrav3[gpu] ndev=1 nB=32 theta=0.40 (jac-eq 0.267): grav   120.99 ms  aggL2=3.474e-05  P-P 2413.9 P-C 388.8  (signflip 2.000e+00)
+  pkdgrav3[gpu] ndev=1 nB=32 theta=0.50 (jac-eq 0.333): grav    67.76 ms  aggL2=5.249e-05  P-P 1546.0 P-C 221.8  (signflip 2.000e+00)
+  pkdgrav3[gpu] ndev=1 nB=32 theta=0.60 (jac-eq 0.400): grav    45.76 ms  aggL2=1.215e-04  P-P 1045.6 P-C 137.7  (signflip 2.000e+00)
+  pkdgrav3[gpu] ndev=1 nB=32 theta=0.70 (jac-eq 0.467): grav    32.89 ms  aggL2=2.196e-04  P-P 818.8 P-C 88.4  (signflip 2.000e+00)
+  pkdgrav3[gpu] ndev=1 nB=32 theta=0.80 (jac-eq 0.533): grav    24.84 ms  aggL2=3.967e-04  P-P 724.6 P-C 61.9  (signflip 2.000e+00)
+  pkdgrav3[cpu] ndev=1 nB=32 theta=0.40 (jac-eq 0.267): grav   108.09 ms  aggL2=4.624e-05  P-P 2444.6 P-C 399.8  (signflip 2.000e+00)
+  pkdgrav3[cpu] ndev=1 nB=32 theta=0.50 (jac-eq 0.333): grav    64.09 ms  aggL2=6.471e-05  P-P 1562.2 P-C 229.6  (signflip 2.000e+00)
+  pkdgrav3[cpu] ndev=1 nB=32 theta=0.60 (jac-eq 0.400): grav    43.90 ms  aggL2=1.189e-04  P-P 1060.6 P-C 143.4  (signflip 2.000e+00)
+  pkdgrav3[cpu] ndev=1 nB=32 theta=0.70 (jac-eq 0.467): grav    32.91 ms  aggL2=2.229e-04  P-P 823.1 P-C 92.4  (signflip 2.000e+00)
+  pkdgrav3[cpu] ndev=1 nB=32 theta=0.80 (jac-eq 0.533): grav    26.26 ms  aggL2=4.112e-04  P-P 723.2 P-C 64.8  (signflip 2.000e+00)
+  pkdgrav3[gpu] ndev=1 nB=64 theta=0.40 (jac-eq 0.267): grav   194.74 ms  aggL2=7.580e-05  P-P 3798.2 P-C 267.1  (signflip 2.000e+00)
+  pkdgrav3[gpu] ndev=1 nB=64 theta=0.50 (jac-eq 0.333): grav    98.39 ms  aggL2=5.624e-05  P-P 2367.7 P-C 156.6  (signflip 2.000e+00)
+  pkdgrav3[gpu] ndev=1 nB=64 theta=0.60 (jac-eq 0.400): grav    61.35 ms  aggL2=1.105e-04  P-P 1601.9 P-C 98.2  (signflip 2.000e+00)
+  pkdgrav3[gpu] ndev=1 nB=64 theta=0.70 (jac-eq 0.467): grav    42.40 ms  aggL2=2.116e-04  P-P 1196.3 P-C 63.4  (signflip 2.000e+00)
+  pkdgrav3[gpu] ndev=1 nB=64 theta=0.80 (jac-eq 0.533): grav    31.92 ms  aggL2=3.633e-04  P-P 1054.7 P-C 42.5  (signflip 2.000e+00)
+  pkdgrav3[cpu] ndev=1 nB=64 theta=0.40 (jac-eq 0.267): grav   147.59 ms  aggL2=4.692e-05  P-P 3911.6 P-C 274.8  (signflip 2.000e+00)
+  pkdgrav3[cpu] ndev=1 nB=64 theta=0.50 (jac-eq 0.333): grav    86.62 ms  aggL2=6.616e-05  P-P 2450.7 P-C 161.7  (signflip 2.000e+00)
+  pkdgrav3[cpu] ndev=1 nB=64 theta=0.60 (jac-eq 0.400): grav    56.66 ms  aggL2=1.160e-04  P-P 1647.6 P-C 102.3  (signflip 2.000e+00)
+  pkdgrav3[cpu] ndev=1 nB=64 theta=0.70 (jac-eq 0.467): grav    41.91 ms  aggL2=2.115e-04  P-P 1217.0 P-C 66.5  (signflip 2.000e+00)
+  pkdgrav3[cpu] ndev=1 nB=64 theta=0.80 (jac-eq 0.533): grav    33.42 ms  aggL2=3.681e-04  P-P 1062.2 P-C 44.7  (signflip 2.000e+00)
+
+wrote artifacts/compare_force_plummer200k_pkdgrav3_2026-09-06.json

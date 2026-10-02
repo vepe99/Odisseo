@@ -1,0 +1,574 @@
+{
+  "jzfmm": [
+    {
+      "code": "jzfmm",
+      "n": 200000,
+      "leaf": 32,
+      "p": 5,
+      "theta": 0.8,
+      "ms": 14.616909436881542,
+      "aggL2": 0.00036052955766210855,
+      "p90": 0.000585542926799316,
+      "direct_share": 0.0058918363,
+      "launches": 115.0,
+      "flags": [
+        "loadavg>=8 (15.4)",
+        "other-gpus-busy (79%)"
+      ]
+    },
+    {
+      "code": "jzfmm",
+      "n": 200000,
+      "leaf": 64,
+      "p": 6,
+      "theta": 0.6,
+      "ms": 24.076184257864952,
+      "aggL2": 7.802573099374602e-05,
+      "p90": 0.00012240506409392945,
+      "direct_share": 0.0345124961,
+      "launches": 115.0,
+      "flags": [
+        "loadavg>=8 (13.5)",
+        "other-gpus-busy (77%)"
+      ]
+    },
+    {
+      "code": "jzfmm",
+      "n": 200000,
+      "leaf": 64,
+      "p": 5,
+      "theta": 0.8,
+      "ms": 12.277048081159592,
+      "aggL2": 0.000462879798334702,
+      "p90": 0.0009474655983451244,
+      "direct_share": 0.01164322345,
+      "launches": 114.0,
+      "flags": [
+        "loadavg>=8 (13.8)",
+        "other-gpus-busy (85%)"
+      ]
+    },
+    {
+      "code": "jzfmm",
+      "n": 200000,
+      "leaf": 64,
+      "p": 4,
+      "theta": 1.0,
+      "ms": 11.650205589830875,
+      "aggL2": 0.0017912496936906893,
+      "p90": 0.004420618297374867,
+      "direct_share": 0.0073248695,
+      "launches": 114.0,
+      "flags": [
+        "loadavg>=8 (14.8)",
+        "other-gpus-busy (79%)"
+      ]
+    }
+  ],
+  "jaccpot": [
+    {
+      "code": "jaccpot_com_cells",
+      "n": 200000,
+      "leaf": 64,
+      "p": 4,
+      "theta": 0.6,
+      "ms": 13.962788321077824,
+      "eval_ms": 7.484925910830498,
+      "aggL2": 0.0005868211151888632,
+      "direct_share": 0.01292880465,
+      "far_pairs": 1575266,
+      "launches": 1763.6,
+      "stages": {
+        "nearfield_pallas_leafpair": 4.15,
+        "other": 3.58,
+        "sort": 0.87,
+        "memcpy": 1.19,
+        "xla_fusion_other": 1.58,
+        "m2l_pallas": 0.22,
+        "scatter": 0.34,
+        "reduce": 0.34,
+        "gather": 0.34,
+        "memset": 0.06
+      },
+      "flags": [
+        "loadavg>=8 (20.0)",
+        "other-gpus-busy (85%)"
+      ]
+    },
+    {
+      "code": "jaccpot_com_cells",
+      "n": 200000,
+      "leaf": 64,
+      "p": 5,
+      "theta": 0.6,
+      "ms": 15.32758716493845,
+      "eval_ms": 7.526895962655544,
+      "aggL2": 0.0002494267947395336,
+      "direct_share": 0.01292880465,
+      "far_pairs": 1575266,
+      "launches": 1694.8,
+      "stages": {
+        "nearfield_pallas_leafpair": 4.1,
+        "other": 3.67,
+        "sort": 0.87,
+        "memcpy": 1.09,
+        "m2l_pallas": 0.32,
+        "xla_fusion_other": 1.64,
+        "scatter": 0.37,
+        "reduce": 0.36,
+        "gather": 0.32,
+        "memset": 0.06
+      },
+      "flags": [
+        "loadavg>=8 (13.6)",
+        "other-gpus-busy (75%)"
+      ]
+    },
+    {
+      "code": "jaccpot_com_cells",
+      "n": 200000,
+      "leaf": 64,
+      "p": 6,
+      "theta": 0.6,
+      "ms": 14.45954479277134,
+      "eval_ms": 7.760897278785706,
+      "aggL2": 9.707442428203943e-05,
+      "direct_share": 0.01292880465,
+      "far_pairs": 1575266,
+      "launches": 1696.0,
+      "stages": {
+        "nearfield_pallas_leafpair": 4.1,
+        "other": 3.62,
+        "sort": 0.87,
+        "memcpy": 1.1,
+        "m2l_pallas": 0.45,
+        "xla_fusion_other": 1.73,
+        "scatter": 0.42,
+        "reduce": 0.37,
+        "gather": 0.33,
+        "memset": 0.06
+      },
+      "flags": [
+        "loadavg>=8 (17.6)",
+        "other-gpus-busy (73%)"
+      ]
+    },
+    {
+      "code": "jaccpot_com_cells",
+      "n": 200000,
+      "leaf": 64,
+      "p": 4,
+      "theta": 0.8,
+      "ms": 11.35491281747818,
+      "eval_ms": 3.932509571313858,
+      "aggL2": 0.0022613024604946743,
+      "direct_share": 0.00521143885,
+      "far_pairs": 690536,
+      "launches": 1763.6,
+      "stages": {
+        "nearfield_pallas_leafpair": 1.79,
+        "other": 3.11,
+        "memcpy": 1.13,
+        "sort": 0.84,
+        "xla_fusion_other": 1.53,
+        "scatter": 0.33,
+        "reduce": 0.34,
+        "m2l_pallas": 0.13,
+        "gather": 0.32,
+        "memset": 0.06
+      },
+      "flags": [
+        "loadavg>=8 (18.1)",
+        "other-gpus-busy (73%)"
+      ]
+    },
+    {
+      "code": "jaccpot_com_cells",
+      "n": 200000,
+      "leaf": 64,
+      "p": 5,
+      "theta": 0.8,
+      "ms": 11.776232905685902,
+      "eval_ms": 4.165969789028168,
+      "aggL2": 0.0012691470096074873,
+      "direct_share": 0.00521143885,
+      "far_pairs": 690536,
+      "launches": 1694.8,
+      "stages": {
+        "nearfield_pallas_leafpair": 1.79,
+        "other": 3.22,
+        "memcpy": 1.03,
+        "sort": 0.84,
+        "xla_fusion_other": 1.6,
+        "m2l_pallas": 0.19,
+        "scatter": 0.35,
+        "reduce": 0.37,
+        "gather": 0.31,
+        "memset": 0.06
+      },
+      "flags": [
+        "loadavg>=8 (18.9)",
+        "other-gpus-busy (82%)"
+      ]
+    },
+    {
+      "code": "jaccpot_com_cells",
+      "n": 200000,
+      "leaf": 64,
+      "p": 6,
+      "theta": 0.8,
+      "ms": 11.448370851576328,
+      "eval_ms": 4.14333026856184,
+      "aggL2": 0.0007412118690221958,
+      "direct_share": 0.00521143885,
+      "far_pairs": 690536,
+      "launches": 1696.0,
+      "stages": {
+        "nearfield_pallas_leafpair": 1.81,
+        "other": 3.19,
+        "memcpy": 1.02,
+        "sort": 0.84,
+        "m2l_pallas": 0.26,
+        "xla_fusion_other": 1.71,
+        "scatter": 0.41,
+        "reduce": 0.37,
+        "gather": 0.32,
+        "memset": 0.06
+      },
+      "flags": [
+        "loadavg>=8 (15.4)",
+        "other-gpus-busy (77%)"
+      ]
+    },
+    {
+      "code": "jaccpot_com_cells",
+      "n": 200000,
+      "leaf": 64,
+      "p": 4,
+      "theta": 1.0,
+      "ms": 14.648565836250782,
+      "eval_ms": 3.0063139274716377,
+      "aggL2": 0.010476607979154713,
+      "direct_share": 0.0032230325499999998,
+      "far_pairs": 365922,
+      "launches": 1763.6,
+      "stages": {
+        "other": 3.0,
+        "nearfield_pallas_leafpair": 1.22,
+        "memcpy": 1.13,
+        "sort": 0.83,
+        "xla_fusion_other": 1.54,
+        "scatter": 0.33,
+        "reduce": 0.35,
+        "gather": 0.32,
+        "m2l_pallas": 0.08,
+        "memset": 0.06
+      },
+      "flags": [
+        "loadavg>=8 (18.4)",
+        "other-gpus-busy (72%)"
+      ]
+    },
+    {
+      "code": "jaccpot_com_cells",
+      "n": 200000,
+      "leaf": 64,
+      "p": 5,
+      "theta": 1.0,
+      "ms": 11.159765161573887,
+      "eval_ms": 3.0401255935430527,
+      "aggL2": 0.008992962104895435,
+      "direct_share": 0.0032230325499999998,
+      "far_pairs": 365922,
+      "launches": 1694.8,
+      "stages": {
+        "other": 3.11,
+        "nearfield_pallas_leafpair": 1.22,
+        "memcpy": 1.03,
+        "sort": 0.83,
+        "xla_fusion_other": 1.59,
+        "scatter": 0.35,
+        "reduce": 0.36,
+        "m2l_pallas": 0.13,
+        "gather": 0.3,
+        "memset": 0.06
+      },
+      "flags": [
+        "loadavg>=8 (14.1)",
+        "other-gpus-busy (67%)"
+      ]
+    },
+    {
+      "code": "jaccpot_com_cells",
+      "n": 200000,
+      "leaf": 64,
+      "p": 6,
+      "theta": 1.0,
+      "ms": 12.814895063638687,
+      "eval_ms": 3.2952455803751945,
+      "aggL2": 0.005567366185755651,
+      "direct_share": 0.0032230325499999998,
+      "far_pairs": 365922,
+      "launches": 1696.0,
+      "stages": {
+        "other": 3.08,
+        "nearfield_pallas_leafpair": 1.21,
+        "memcpy": 1.03,
+        "sort": 0.83,
+        "xla_fusion_other": 1.7,
+        "m2l_pallas": 0.18,
+        "scatter": 0.39,
+        "reduce": 0.36,
+        "gather": 0.32,
+        "memset": 0.06
+      },
+      "flags": [
+        "loadavg>=8 (15.3)",
+        "other-gpus-busy (78%)"
+      ]
+    }
+  ],
+  "fronts": {
+    "200000": {
+      "jaccpot_com_cells": [
+        {
+          "code": "jaccpot_com_cells",
+          "n": 200000,
+          "leaf": 64,
+          "p": 6,
+          "theta": 0.6,
+          "ms": 14.45954479277134,
+          "eval_ms": 7.760897278785706,
+          "aggL2": 9.707442428203943e-05,
+          "direct_share": 0.01292880465,
+          "far_pairs": 1575266,
+          "launches": 1696.0,
+          "stages": {
+            "nearfield_pallas_leafpair": 4.1,
+            "other": 3.62,
+            "sort": 0.87,
+            "memcpy": 1.1,
+            "m2l_pallas": 0.45,
+            "xla_fusion_other": 1.73,
+            "scatter": 0.42,
+            "reduce": 0.37,
+            "gather": 0.33,
+            "memset": 0.06
+          },
+          "flags": [
+            "loadavg>=8 (17.6)",
+            "other-gpus-busy (73%)"
+          ]
+        },
+        {
+          "code": "jaccpot_com_cells",
+          "n": 200000,
+          "leaf": 64,
+          "p": 4,
+          "theta": 0.6,
+          "ms": 13.962788321077824,
+          "eval_ms": 7.484925910830498,
+          "aggL2": 0.0005868211151888632,
+          "direct_share": 0.01292880465,
+          "far_pairs": 1575266,
+          "launches": 1763.6,
+          "stages": {
+            "nearfield_pallas_leafpair": 4.15,
+            "other": 3.58,
+            "sort": 0.87,
+            "memcpy": 1.19,
+            "xla_fusion_other": 1.58,
+            "m2l_pallas": 0.22,
+            "scatter": 0.34,
+            "reduce": 0.34,
+            "gather": 0.34,
+            "memset": 0.06
+          },
+          "flags": [
+            "loadavg>=8 (20.0)",
+            "other-gpus-busy (85%)"
+          ]
+        },
+        {
+          "code": "jaccpot_com_cells",
+          "n": 200000,
+          "leaf": 64,
+          "p": 6,
+          "theta": 0.8,
+          "ms": 11.448370851576328,
+          "eval_ms": 4.14333026856184,
+          "aggL2": 0.0007412118690221958,
+          "direct_share": 0.00521143885,
+          "far_pairs": 690536,
+          "launches": 1696.0,
+          "stages": {
+            "nearfield_pallas_leafpair": 1.81,
+            "other": 3.19,
+            "memcpy": 1.02,
+            "sort": 0.84,
+            "m2l_pallas": 0.26,
+            "xla_fusion_other": 1.71,
+            "scatter": 0.41,
+            "reduce": 0.37,
+            "gather": 0.32,
+            "memset": 0.06
+          },
+          "flags": [
+            "loadavg>=8 (15.4)",
+            "other-gpus-busy (77%)"
+          ]
+        },
+        {
+          "code": "jaccpot_com_cells",
+          "n": 200000,
+          "leaf": 64,
+          "p": 4,
+          "theta": 0.8,
+          "ms": 11.35491281747818,
+          "eval_ms": 3.932509571313858,
+          "aggL2": 0.0022613024604946743,
+          "direct_share": 0.00521143885,
+          "far_pairs": 690536,
+          "launches": 1763.6,
+          "stages": {
+            "nearfield_pallas_leafpair": 1.79,
+            "other": 3.11,
+            "memcpy": 1.13,
+            "sort": 0.84,
+            "xla_fusion_other": 1.53,
+            "scatter": 0.33,
+            "reduce": 0.34,
+            "m2l_pallas": 0.13,
+            "gather": 0.32,
+            "memset": 0.06
+          },
+          "flags": [
+            "loadavg>=8 (18.1)",
+            "other-gpus-busy (73%)"
+          ]
+        },
+        {
+          "code": "jaccpot_com_cells",
+          "n": 200000,
+          "leaf": 64,
+          "p": 5,
+          "theta": 1.0,
+          "ms": 11.159765161573887,
+          "eval_ms": 3.0401255935430527,
+          "aggL2": 0.008992962104895435,
+          "direct_share": 0.0032230325499999998,
+          "far_pairs": 365922,
+          "launches": 1694.8,
+          "stages": {
+            "other": 3.11,
+            "nearfield_pallas_leafpair": 1.22,
+            "memcpy": 1.03,
+            "sort": 0.83,
+            "xla_fusion_other": 1.59,
+            "scatter": 0.35,
+            "reduce": 0.36,
+            "m2l_pallas": 0.13,
+            "gather": 0.3,
+            "memset": 0.06
+          },
+          "flags": [
+            "loadavg>=8 (14.1)",
+            "other-gpus-busy (67%)"
+          ]
+        }
+      ],
+      "jzfmm": [
+        {
+          "code": "jzfmm",
+          "n": 200000,
+          "leaf": 64,
+          "p": 6,
+          "theta": 0.6,
+          "ms": 24.076184257864952,
+          "aggL2": 7.802573099374602e-05,
+          "p90": 0.00012240506409392945,
+          "direct_share": 0.0345124961,
+          "launches": 115.0,
+          "flags": [
+            "loadavg>=8 (13.5)",
+            "other-gpus-busy (77%)"
+          ]
+        },
+        {
+          "code": "jzfmm",
+          "n": 200000,
+          "leaf": 32,
+          "p": 5,
+          "theta": 0.8,
+          "ms": 14.616909436881542,
+          "aggL2": 0.00036052955766210855,
+          "p90": 0.000585542926799316,
+          "direct_share": 0.0058918363,
+          "launches": 115.0,
+          "flags": [
+            "loadavg>=8 (15.4)",
+            "other-gpus-busy (79%)"
+          ]
+        },
+        {
+          "code": "jzfmm",
+          "n": 200000,
+          "leaf": 64,
+          "p": 5,
+          "theta": 0.8,
+          "ms": 12.277048081159592,
+          "aggL2": 0.000462879798334702,
+          "p90": 0.0009474655983451244,
+          "direct_share": 0.01164322345,
+          "launches": 114.0,
+          "flags": [
+            "loadavg>=8 (13.8)",
+            "other-gpus-busy (85%)"
+          ]
+        },
+        {
+          "code": "jzfmm",
+          "n": 200000,
+          "leaf": 64,
+          "p": 4,
+          "theta": 1.0,
+          "ms": 11.650205589830875,
+          "aggL2": 0.0017912496936906893,
+          "p90": 0.004420618297374867,
+          "direct_share": 0.0073248695,
+          "launches": 114.0,
+          "flags": [
+            "loadavg>=8 (14.8)",
+            "other-gpus-busy (79%)"
+          ]
+        }
+      ]
+    }
+  },
+  "g0": {
+    "200000": {
+      "time_ms_at_aggL2<=0.0012": {
+        "jaccpot_com_cells": 11.448370851576328,
+        "jzfmm": 12.277048081159592
+      },
+      "time_ms_at_aggL2<=0.00046": {
+        "jaccpot_com_cells": 14.45954479277134,
+        "jzfmm": 14.616909436881542
+      },
+      "jzfmm_default_p5_theta0.8": [
+        {
+          "leaf": 32,
+          "ms": 14.616909436881542,
+          "aggL2": 0.00036052955766210855,
+          "p90": 0.000585542926799316
+        },
+        {
+          "leaf": 64,
+          "ms": 12.277048081159592,
+          "aggL2": 0.000462879798334702,
+          "p90": 0.0009474655983451244
+        }
+      ]
+    }
+  }
+}

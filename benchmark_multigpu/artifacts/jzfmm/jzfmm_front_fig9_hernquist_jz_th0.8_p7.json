@@ -1,0 +1,93 @@
+{
+  "code": "jzfmm",
+  "tag": "fig9_hernquist_jz_th0.8_p7",
+  "n": 200000,
+  "ic": "hernquist",
+  "softening": 1e-07,
+  "G": 1.0,
+  "devices": [
+    7
+  ],
+  "host": "compgpu9",
+  "versions": {
+    "jax": "0.11.1",
+    "jzfmm": null,
+    "jztree": null
+  },
+  "ref_targets": 4096,
+  "repeats": 7,
+  "warmup": 3,
+  "defaults": {
+    "FMMConfig": "FMMConfig(tree=TreeConfig(max_leaf_size=32, coarse_fac=4.0, stop_coarsen=1024, regularization=None, alloc_fac_nodes=1.2, nsamp=1024, mass_centered=False), kernel=PlummerKernel(softening=0.001), p=5, opening=OpeningByAngle(theta=0.8), alloc_fac_ilist=64.0, alloc_fac_comm_nodes=1.5, alloc_fac_comm_particles=1.5, kahan_summation=False, remove_self_interaction=True)"
+  },
+  "rows": [
+    {
+      "leaf": 64,
+      "p": 7,
+      "theta": 0.8,
+      "compile_s_incl_first_call": 1.1629313500598073,
+      "alloc_fac_ilist": 64.0,
+      "cfg": "FMMConfig(tree=TreeConfig(max_leaf_size=64, coarse_fac=4.0, stop_coarsen=1024, regularization=None, alloc_fac_nodes=1.2, nsamp=1024, mass_centered=False), kernel=PlummerKernel(softening=1e-07), p=7, opening=OpeningByAngle(theta=0.8), alloc_fac_ilist=64.0, alloc_fac_comm_nodes=1.5, alloc_fac_comm_particles=1.5, kahan_summation=False, remove_self_interaction=True)",
+      "timing": {
+        "min": 0.024209738709032536,
+        "median": 0.024616670794785023,
+        "iqr": 0.01628950983285904,
+        "max": 0.04129481315612793,
+        "mean": 0.02936674707702228,
+        "std": 0.007376077443914053,
+        "samples": [
+          0.04071466997265816,
+          0.04129481315612793,
+          0.02574656717479229,
+          0.024425160139799118,
+          0.024616670794785023,
+          0.024559609591960907,
+          0.024209738709032536
+        ]
+      },
+      "contention": {
+        "devices": [
+          7
+        ],
+        "n_samples": 2,
+        "duration_s": 1.0631122589111328,
+        "foreign_pids_on_devices": [],
+        "own_util_max": {
+          "7": 0
+        },
+        "other_gpu_util_max": 99,
+        "loadavg1_max": 15.34130859375,
+        "loadavg1_min": 15.34130859375,
+        "cores": 64,
+        "contaminated": false,
+        "flags": [
+          "loadavg>=8 (15.3)",
+          "other-gpus-busy (99%)"
+        ]
+      },
+      "error": {
+        "median": 3.465210803745059e-05,
+        "p90": 0.000351584649471231,
+        "max": 0.09245608668232264,
+        "aggL2": 0.00022307553919403815,
+        "aggL2_signflip": 2.0000103651633743,
+        "n_ref": 4096
+      },
+      "lists": {
+        "num_leaves": 4659,
+        "planes": 2,
+        "size_leaves_alloc": 6251,
+        "near_entries_directed": 243257,
+        "ilist_capacity": 400064,
+        "self_entries": 4659,
+        "occupancy_mean": 42.927666881305,
+        "occupancy_max": 64,
+        "mean_neighbor_leaves_per_leaf": 52.212277312728055,
+        "max_neighbor_leaves_per_leaf": 199,
+        "direct_sources_per_target_mean": 2363.71741,
+        "direct_share_of_N": 0.01181858705,
+        "p2p_pair_evaluations": 472743482.0
+      }
+    }
+  ]
+}

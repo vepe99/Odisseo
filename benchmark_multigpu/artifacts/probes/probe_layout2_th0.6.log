@@ -1,0 +1,10 @@
+theta 0.6: eval_fn(eval state) aggL2 8.435e-04
+           eval_fn(scan state) aggL2 6.172e-01   vs eval-state 6.172e-01
+  eval: walk CSR entries 356082 (mean row 455.3, max 781); payload rows mean 455.3 max 781; target_block_padded rows mean 455.3 max 781
+      compact_far_pairs: sources=(131072,), targets=(131072,), tags=(131072,), far_pair_count=()
+  scan: walk CSR entries 53962 (mean row 69.0, max 128); payload rows mean 69.0 max 128; target_block_padded rows mean 69.0 max 128
+      compact_far_pairs: sources=(131072,), targets=(131072,), tags=(131072,), far_pair_count=()
+diag after eval prepare: {'recent_dual_neighbor_count': 356082, 'recent_dual_far_pair_count': 131072, 'static_radix_far_pair_count': 0}
+diag after scan prepare: {'recent_dual_neighbor_count': 356082, 'recent_dual_far_pair_count': 131072, 'static_radix_far_pair_count': 131072}
+  eval_fn(eval state): 91.79 ms  flags=['other-gpus-busy (67%)']
+  eval_fn(scan state): 20.94 ms  flags=['other-gpus-busy (65%)']

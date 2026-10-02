@@ -1,0 +1,18 @@
+# transient / large / machine-specific outputs (keep .json summaries + .pdf figures)
+__pycache__/
+*.pyc
+artifacts/*.log
+artifacts/*.npz
+artifacts/*.tipsy
+artifacts/bonsai*
+# the nested per-run dirs hold the shared ICs and per-theta force dumps (tens of MB);
+# the top-level *.json summaries are the durable record and stay tracked
+artifacts/**/*.tipsy
+artifacts/**/*.npz
+# profiler traces (1.3 GB) and HLO dumps are regenerable and far too large to track
+artifacts/traces/
+artifacts/grad/*.txt
+# per-run logs: the .json rows are the record. The exception is artifacts/probes/,
+# where the logs ARE the evidence (the pkdgrav3-track probes print, they do not write rows)
+artifacts/**/*.log
+!artifacts/probes/*.log

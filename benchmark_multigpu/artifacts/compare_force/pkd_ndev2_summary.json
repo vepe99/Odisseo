@@ -1,0 +1,144 @@
+{
+  "ic": "/export/home/tbuck/Odisseo-bench-multigpu/benchmark_multigpu/artifacts/compare_force/plummer_n200000_seed0.tipsy",
+  "n_particles": 200000,
+  "sim_time": 0.0,
+  "load_s": 0.5690789008513093,
+  "softening": 1e-07,
+  "n_bucket": 16,
+  "n_group": 0,
+  "gpu": true,
+  "cuda_visible_devices": "6,7",
+  "peak_rss_mib": 3592.9296875,
+  "results": [
+    {
+      "theta": 0.4,
+      "repeats": 5,
+      "warmup": 2,
+      "domain_s": {
+        "min": 0.021506888791918755,
+        "mean": 0.02601903211325407,
+        "std": 0.004680396871067419
+      },
+      "tree_s": {
+        "min": 0.0062293922528624535,
+        "mean": 0.0071197617799043655,
+        "std": 0.0012858261685278665
+      },
+      "gravity_s": {
+        "min": 0.11590002104640007,
+        "mean": 0.15190634317696095,
+        "std": 0.027716531464987305
+      },
+      "force_eval_s": {
+        "min": 0.15332779847085476,
+        "mean": 0.18504513707011938,
+        "std": 0.02977790684769379
+      },
+      "arrays": "/export/home/tbuck/Odisseo-bench-multigpu/benchmark_multigpu/artifacts/compare_force/pkd_ndev2_theta0.4.npz"
+    },
+    {
+      "theta": 0.5,
+      "repeats": 5,
+      "warmup": 2,
+      "domain_s": {
+        "min": 0.02746317721903324,
+        "mean": 0.03578681908547878,
+        "std": 0.009706580276539308
+      },
+      "tree_s": {
+        "min": 0.006100469268858433,
+        "mean": 0.007677545957267285,
+        "std": 0.00150249444430371
+      },
+      "gravity_s": {
+        "min": 0.06824608147144318,
+        "mean": 0.11839228738099336,
+        "std": 0.047098603541958474
+      },
+      "force_eval_s": {
+        "min": 0.10563339851796627,
+        "mean": 0.16185665242373942,
+        "std": 0.05612682419298345
+      },
+      "arrays": "/export/home/tbuck/Odisseo-bench-multigpu/benchmark_multigpu/artifacts/compare_force/pkd_ndev2_theta0.5.npz"
+    },
+    {
+      "theta": 0.6,
+      "repeats": 5,
+      "warmup": 2,
+      "domain_s": {
+        "min": 0.03952824790030718,
+        "mean": 0.16619796250015498,
+        "std": 0.09732590992428398
+      },
+      "tree_s": {
+        "min": 0.007021674886345863,
+        "mean": 0.016054780408740043,
+        "std": 0.007754110020030754
+      },
+      "gravity_s": {
+        "min": 0.07909866608679295,
+        "mean": 0.12688110563904048,
+        "std": 0.027453032060444145
+      },
+      "force_eval_s": {
+        "min": 0.19089734554290771,
+        "mean": 0.30913384854793546,
+        "std": 0.11370059660728223
+      },
+      "arrays": "/export/home/tbuck/Odisseo-bench-multigpu/benchmark_multigpu/artifacts/compare_force/pkd_ndev2_theta0.6.npz"
+    },
+    {
+      "theta": 0.7,
+      "repeats": 5,
+      "warmup": 2,
+      "domain_s": {
+        "min": 0.028466432355344296,
+        "mean": 0.04007330890744924,
+        "std": 0.009876726099211499
+      },
+      "tree_s": {
+        "min": 0.006092141382396221,
+        "mean": 0.006768929958343506,
+        "std": 0.00073610886124479
+      },
+      "gravity_s": {
+        "min": 0.05734510812908411,
+        "mean": 0.06381065361201763,
+        "std": 0.00593250310786812
+      },
+      "force_eval_s": {
+        "min": 0.09235607273876667,
+        "mean": 0.11065289247781038,
+        "std": 0.012636034962062677
+      },
+      "arrays": "/export/home/tbuck/Odisseo-bench-multigpu/benchmark_multigpu/artifacts/compare_force/pkd_ndev2_theta0.7.npz"
+    },
+    {
+      "theta": 0.8,
+      "repeats": 5,
+      "warmup": 2,
+      "domain_s": {
+        "min": 0.030177021399140358,
+        "mean": 0.06452781539410353,
+        "std": 0.039815776411827423
+      },
+      "tree_s": {
+        "min": 0.006200720556080341,
+        "mean": 0.00907092560082674,
+        "std": 0.0036192786593015414
+      },
+      "gravity_s": {
+        "min": 0.04449551273137331,
+        "mean": 0.049855601601302625,
+        "std": 0.004970838744672063
+      },
+      "force_eval_s": {
+        "min": 0.08193965069949627,
+        "mean": 0.12345434259623289,
+        "std": 0.047895817918749015
+      },
+      "arrays": "/export/home/tbuck/Odisseo-bench-multigpu/benchmark_multigpu/artifacts/compare_force/pkd_ndev2_theta0.8.npz"
+    }
+  ]
+}

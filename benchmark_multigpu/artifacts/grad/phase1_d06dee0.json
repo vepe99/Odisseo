@@ -1,0 +1,168 @@
+{
+  "tag": "phase1_d06dee0",
+  "n": 200000,
+  "leaf": 64,
+  "order": 5,
+  "theta": 0.8,
+  "reps": 7,
+  "devices": [
+    2
+  ],
+  "env_overrides": {
+    "JACCPOT_STATIC_STRICT_FUSED_COMPACT_FAR_PAIR_CAP": "2097152",
+    "JACCPOT_LARGE_N_NEIGHBOR_EDGE_PROFILE_FIXED_CAP": "4194304",
+    "JACCPOT_LARGE_N_STATIC_TARGET_BLOCKS_MAX_PER_LEAF": "auto"
+  },
+  "traversal_overrides": {
+    "max_neighbors_per_leaf": 4096,
+    "max_interactions_per_node": 16384
+  },
+  "fast_lane_env": {
+    "JACCPOT_STATIC_STRICT_GPU_MODE": "on",
+    "JACCPOT_STATIC_STRICT_FUSED_MODE": "on",
+    "JACCPOT_LARGE_N_STATIC_TARGET_BLOCKS": "1",
+    "JACCPOT_LARGE_N_TARGET_BLOCK_SIZE": "4",
+    "JACCPOT_LARGE_N_STATIC_TARGET_BLOCKS_MAX_PER_LEAF": "auto",
+    "JACCPOT_LARGE_N_NEIGHBOR_EDGE_PROFILE_FIXED_CAP": "4194304",
+    "JACCPOT_STATIC_STRICT_REQUIRE_EXACT_CAP_PROFILE_MATCH": "0",
+    "JACCPOT_STATIC_STRICT_FUSED_DEVICE_ONLY": "1",
+    "JACCPOT_STATIC_STRICT_FUSED_DISALLOW_HOST_SEGMENT_FALLBACK": "1",
+    "JACCPOT_STATIC_STRICT_FUSED_FLAT_COMPACT_FAR_PAIRS": "1",
+    "JACCPOT_STATIC_STRICT_FUSED_COMPACT_FAR_PAIR_CAP": "2097152",
+    "JACCPOT_LARGE_N_COMPILED_STATE_MODE": "on",
+    "JACCPOT_LARGE_N_RADIX_FAST_PAYLOAD_IN_FUSED": "1",
+    "JACCPOT_LARGE_N_RADIX_FAST_PAYLOAD_MAX_MB": "0",
+    "YGGDRAX_INDEX_PRECISION": "int32",
+    "JACCPOT_INDEX_PRECISION": "int32",
+    "JACCPOT_STATIC_STRICT_FUSED_PROFILE_SET": "200000"
+  },
+  "worktree": "/export/home/tbuck/jaccpot-grad-wt",
+  "leaf_partition": "cells",
+  "leaf_capacity": 16384,
+  "load_at_start": [
+    53.994140625,
+    52.837890625,
+    41.8125
+  ],
+  "pallas_cascades_enabled_outside_grad": true,
+  "git_head": "d06dee0",
+  "prepare_eval_s_incl_compile": 51.02799672540277,
+  "eval_production": {
+    "timing": {
+      "min": 0.004640643484890461,
+      "median": 0.004769332706928253,
+      "iqr": 0.00021434016525745392,
+      "max": 0.004925553686916828,
+      "mean": 0.004777460625129086,
+      "std": 0.0001022765961204697,
+      "samples": [
+        0.00471065379679203,
+        0.004880943335592747,
+        0.004925553686916828,
+        0.004666603170335293,
+        0.004640643484890461,
+        0.004848494194447994,
+        0.004769332706928253
+      ]
+    },
+    "contention": {
+      "devices": [
+        2
+      ],
+      "n_samples": 2,
+      "duration_s": 1.287081003189087,
+      "foreign_pids_on_devices": [],
+      "own_util_max": {
+        "2": 0
+      },
+      "other_gpu_util_max": 100,
+      "loadavg1_max": 44.57470703125,
+      "loadavg1_min": 44.57470703125,
+      "cores": 64,
+      "contaminated": false,
+      "flags": [
+        "loadavg>=8 (44.6)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    "load": [
+      44.57470703125,
+      50.296875,
+      41.51708984375
+    ]
+  },
+  "prepare_state_s": 10.679160133935511,
+  "state_type": "LargeNPreparedState",
+  "far_pairs": 2097152,
+  "far_pairs_active": 690536,
+  "near_csr": {
+    "edges": 372012,
+    "rows": 16384,
+    "row_max": 10950,
+    "symmetric": true,
+    "asymmetric_edges": 0
+  },
+  "tree": {
+    "total_nodes": 32767,
+    "num_internal": 16383,
+    "levels_live": 40,
+    "widest_level": 5430,
+    "single_child_parents": 0
+  },
+  "grad_options": {
+    "nearfield_lane": "bucketed",
+    "cascade_pallas": false,
+    "fused_m2l_pallas": false
+  },
+  "forward_differentiable_eager": {
+    "timing": {
+      "min": 7.701274170540273,
+      "median": 7.948607119731605,
+      "iqr": 0.2572333160787821,
+      "max": 8.140153183601797,
+      "mean": 7.935697132455451,
+      "std": 0.1474876035851736,
+      "samples": [
+        7.701274170540273,
+        7.833607393316925,
+        8.069614467211068,
+        8.044242441654205,
+        8.140153183601797,
+        7.948607119731605,
+        7.812381151132286
+      ]
+    },
+    "contention": {
+      "devices": [
+        2
+      ],
+      "n_samples": 102,
+      "duration_s": 85.9034640789032,
+      "foreign_pids_on_devices": [
+        [
+          2,
+          4076479,
+          "szhang"
+        ]
+      ],
+      "own_util_max": {
+        "2": 61
+      },
+      "other_gpu_util_max": 100,
+      "loadavg1_max": 43.6513671875,
+      "loadavg1_min": 29.5126953125,
+      "cores": 64,
+      "contaminated": true,
+      "flags": [
+        "foreign-process-on-device",
+        "loadavg>=8 (43.7)",
+        "other-gpus-busy (100%)"
+      ]
+    },
+    "load": [
+      29.5126953125,
+      43.68701171875,
+      40.060546875
+    ]
+  }
+}

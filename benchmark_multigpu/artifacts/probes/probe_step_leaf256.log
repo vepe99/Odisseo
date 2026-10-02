@@ -1,0 +1,15 @@
+
+theta 0.6: cold 1-step call 34.16 s (prepare + compile); compile_count=1
+rep  ms/step  refresh  tree+up    dual    walk    m2l    near    eval  unattr   flags=['loadavg>=8 (22.8)', 'other-gpus-busy (76%)']
+  0   1810.2      0.0      0.0     0.0     0.0    0.0     0.0     0.0     0.0
+  1     46.1      0.0      0.0     0.0     0.0    0.0     0.0     0.0     0.0
+  2     45.9      0.0      0.0     0.0     0.0    0.0     0.0     0.0     0.0
+  counters: {'strict_runner_compile_count': 1, 'strict_runner_execute_count': 16, 'strict_fused_fastlane_hits': 2, 'strict_fused_fastlane_attempts': 2, 'strict_fused_fallback_count': 0, 'compiled_profile_refresh_reuse_tier_full': None, 'refresh_dual_planner_compile_count': 0, 'refresh_dual_planner_execute_count': 1, 'recent_dual_neighbor_count': 356082}
+
+theta 1.0: cold 1-step call 17.94 s (prepare + compile); compile_count=1
+rep  ms/step  refresh  tree+up    dual    walk    m2l    near    eval  unattr   flags=['loadavg>=8 (22.8)', 'other-gpus-busy (77%)']
+  0   1906.4      0.0      0.0     0.0     0.0    0.0     0.0     0.0     0.0
+  1     57.2      0.0      0.0     0.0     0.0    0.0     0.0     0.0     0.0
+  2     59.0      0.0      0.0     0.0     0.0    0.0     0.0     0.0     0.0
+  counters: {'strict_runner_compile_count': 1, 'strict_runner_execute_count': 16, 'strict_fused_fastlane_hits': 2, 'strict_fused_fastlane_attempts': 2, 'strict_fused_fallback_count': 0, 'compiled_profile_refresh_reuse_tier_full': None, 'refresh_dual_planner_compile_count': 0, 'refresh_dual_planner_execute_count': 1, 'recent_dual_neighbor_count': 109962}
+wrote /export/home/tbuck/Odisseo-bench-multigpu/benchmark_multigpu/artifacts/probe_step_plummer200000_leaf256.json

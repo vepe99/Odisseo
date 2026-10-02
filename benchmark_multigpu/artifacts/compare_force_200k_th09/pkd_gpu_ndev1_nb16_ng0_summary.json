@@ -1,0 +1,40 @@
+{
+  "ic": "artifacts/compare_force_200k_th09/plummer_n200000_seed0.tipsy",
+  "n_particles": 200000,
+  "sim_time": 0.0,
+  "load_s": 0.5200708666816354,
+  "softening": 1e-07,
+  "n_bucket": 16,
+  "n_group": 0,
+  "gpu": true,
+  "cuda_visible_devices": "4",
+  "peak_rss_mib": 3478.140625,
+  "results": [
+    {
+      "theta": 0.9,
+      "repeats": 2,
+      "warmup": 1,
+      "domain_s": {
+        "min": 0.018827869556844234,
+        "mean": 0.01901130098849535,
+        "std": 0.00018343143165111542
+      },
+      "tree_s": {
+        "min": 0.0033970288932323456,
+        "mean": 0.0034827287308871746,
+        "std": 8.569983765482903e-05
+      },
+      "gravity_s": {
+        "min": 0.018255497328937054,
+        "mean": 0.018321162555366755,
+        "std": 6.566522642970085e-05
+      },
+      "force_eval_s": {
+        "min": 0.040611726231873035,
+        "mean": 0.04081519227474928,
+        "std": 0.0002034660428762436
+      },
+      "arrays": "artifacts/compare_force_200k_th09/pkd_gpu_ndev1_nb16_ng0_theta0.9.npz"
+    }
+  ]
+}

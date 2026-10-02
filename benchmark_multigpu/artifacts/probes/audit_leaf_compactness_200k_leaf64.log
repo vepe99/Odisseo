@@ -1,0 +1,41 @@
+GPU: physical [2] (CUDA_VISIBLE_DEVICES=2)
+
+=== theta 0.6  N 200000  leaf 64  p 4 ===
+/export/home/tbuck/jaccpot-compact-wt/bench/audit_leaf_compactness.py:442: DeprecationWarning: Legacy expanse-style kwargs are deprecated in jaccpot.FastMultipoleMethod. Use preset/basis/advanced config objects instead.
+  s = FastMultipoleMethod(
+  prepare 35.9s: production direct share mean 0.189, rows mean 589.5 max 3124 (L=3125)
+  kd_topo partition + geometry 0.8s
+         variant     L    W medrow maxrow  =L-1 sh_mean  sh_med         D     far         C far/C  fat2  fat4 fatind  med_r  max_r walk s
+    walk overflow (pair queue capacity exceeded; increase max_pair_queue and re...) -> queue 524288, max_int 4096
+  [cross-check] probe rows == production rows: True (production share 0.1890 vs probe 0.1890)
+          morton  3125   64    442   3124     T   0.189   0.142  7.56e+09  992074  1.43e+10  0.47  0.62  0.44   0.65  0.324 488.88    4.3
+    walk overflow (pair queue capacity exceeded; increase max_pair_queue and re...) -> queue 524288, max_int 4096
+           tight  3125   64    357   3124     T   0.156   0.115  6.26e+09  865572  1.21e+10  0.48  0.63  0.46   0.64  0.294 488.88    0.4
+    walk overflow (pair queue capacity exceeded; increase max_pair_queue and re...) -> queue 524288, max_int 4096
+         kd_topo  3125   64    359   3124     T   0.183   0.115  7.32e+09  718416  1.22e+10  0.40  0.85  0.83   0.85  0.228 335.61    0.4
+
+  per-leaf treecode walk (host simulation), dual-mutual share for reference:
+         variant dual_med | tc_mean  tc_med  tc_p90 tc_rows | m2p_mean m2p_med m2p_p90 m2p_max  rows m2p/tgt m2psrc/N far/leaf | tc/m2p  box0
+          morton    0.142 |   0.189   0.142   0.262     442 |    0.087   0.083   0.103   1.000   258   207.6    0.460    317.4 |   1.71  0.00
+           tight    0.115 |   0.156   0.114   0.211     356 |    0.076   0.071   0.091   1.000   222   169.1    0.405    325.5 |   1.60  0.00
+         kd_topo    0.115 |   0.183   0.115   0.255     359 |    0.086   0.088   0.093   0.100   274   148.4    0.228    508.0 |   1.31  0.00
+  gates: {"G_kd_share_ratio": 1.2305655627414382, "G_kd_C_ratio": 1.171290799378904, "G_kd_D_ratio": 1.0322852735700692, "G_kd_pass": false, "G_kd_leaf_shape_not_lever": true, "G_W_far_fraction_kd": 0.39871556925587043, "G_W_schedule_leaf_sweep": false, "kd_row_max_is_L_minus_1": true, "G_tight_alone_D_ratio": 1.208213001914053, "G_tight_pass": false, "K2_share_ratio_treecode_over_m2p_morton": 1.710467571644042, "K2_pass_morton": false, "m2p_arm_share_median_morton": 0.082875, "K2_share_ratio_treecode_over_m2p_tight": 1.6009389671361502, "K2_pass_tight": false, "m2p_arm_share_median_tight": 0.071355, "K2_share_ratio_treecode_over_m2p_kd_topo": 1.3091084720722768, "K2_pass_kd_topo": false, "m2p_arm_share_median_kd_topo": 0.087995, "residual_compact_mutual_expected_share": 0.0256}
+
+=== theta 0.8  N 200000  leaf 64  p 4 ===
+  prepare 13.7s: production direct share mean 0.089, rows mean 278.1 max 3124 (L=3125)
+  kd_topo partition + geometry 0.8s
+         variant     L    W medrow maxrow  =L-1 sh_mean  sh_med         D     far         C far/C  fat2  fat4 fatind  med_r  max_r walk s
+  [cross-check] probe rows == production rows: True (production share 0.0893 vs probe 0.0893)
+          morton  3125   64    196   3124     T   0.089   0.063  3.57e+09  509488  7.02e+09  0.49  0.65  0.50   0.68  0.324 488.88    0.2
+           tight  3125   64    160   3124     T   0.074   0.052  2.97e+09  441396  5.95e+09  0.50  0.66  0.51   0.67  0.294 488.88    0.3
+         kd_topo  3125   64    130   3124     T   0.071   0.042  2.86e+09  555474  6.61e+09  0.57  0.84  0.82   0.84  0.228 335.61    0.3
+
+  per-leaf treecode walk (host simulation), dual-mutual share for reference:
+         variant dual_med | tc_mean  tc_med  tc_p90 tc_rows | m2p_mean m2p_med m2p_p90 m2p_max  rows m2p/tgt m2psrc/N far/leaf | tc/m2p  box0
+          morton    0.063 |   0.089   0.063   0.106     196 |    0.050   0.044   0.060   1.000   138    83.5    0.268    253.8 |   1.42  0.00
+           tight    0.052 |   0.074   0.051   0.088     158 |    0.045   0.039   0.053   1.000   121    61.6    0.219    253.2 |   1.30  0.00
+         kd_topo    0.042 |   0.071   0.042   0.083     130 |    0.035   0.033   0.046   0.062   101    80.4    0.174    461.8 |   1.28  0.00
+  gates: {"G_kd_share_ratio": 1.5038768937134674, "G_kd_C_ratio": 1.0610347856453597, "G_kd_D_ratio": 1.249971271981693, "G_kd_pass": false, "G_kd_leaf_shape_not_lever": true, "G_W_far_fraction_kd": 0.5677890795213664, "G_W_schedule_leaf_sweep": false, "kd_row_max_is_L_minus_1": true, "G_tight_alone_D_ratio": 1.202726249239988, "G_tight_pass": false, "K2_share_ratio_treecode_over_m2p_morton": 1.4173130972456434, "K2_pass_morton": false, "m2p_arm_share_median_morton": 0.044475, "K2_share_ratio_treecode_over_m2p_tight": 1.3033175355450235, "K2_pass_tight": false, "m2p_arm_share_median_tight": 0.039035, "K2_share_ratio_treecode_over_m2p_kd_topo": 1.284357285123334, "K2_pass_kd_topo": false, "m2p_arm_share_median_kd_topo": 0.032635, "residual_compact_mutual_expected_share": 0.0256}
+
+wrote /export/home/tbuck/Odisseo-bench-multigpu/benchmark_multigpu/artifacts/audit_leaf_compactness_plummer200000_leaf64.json
+      /export/home/tbuck/Odisseo-bench-multigpu/benchmark_multigpu/artifacts/audit_leaf_compactness_plummer200000_leaf64.per_leaf.npz

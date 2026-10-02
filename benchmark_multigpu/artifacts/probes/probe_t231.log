@@ -1,0 +1,2 @@
+theta 0.6: direct share of N per target -- leaf 256: 0.583   leaf 64: 0.189   hybrid (MAC@64, tile 256): 0.314   [p2p pair-evals: 256 2.33e+10, 64 7.56e+09, hybrid 1.26e+10]
+theta 0.8: direct share of N per target -- leaf 256: 0.318   leaf 64: 0.089   hybrid (MAC@64, tile 256): 0.160   [p2p pair-evals: 256 1.27e+10, 64 3.57e+09, hybrid 6.39e+09]
