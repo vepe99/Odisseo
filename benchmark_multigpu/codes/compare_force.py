@@ -307,6 +307,34 @@ FAST_LANE_ENV = {
 }
 
 
+#: The two flat-walk list caps. Above ``MEASURED_CAPS_ABOVE`` particles the harness
+#: leaves both UNNAMED on the flat walk, so jaccpot sizes them from the counts its
+#: eager walk measured (``JACCPOT_FLAT_WALK_CAP_HEADROOM`` x count, jaccpot
+#: perf/fused-memory). The fitted rule below scales a 200k fit by N, and N does not
+#: decide the pair counts: at 8e6 on one card it named caps 6-9x the pairs (far
+#: 20.9M of 134M, near 19.2M of 268M), every per-step sort and the near-field
+#: partials paid for the padding, and the 16e6 prepare ran out of memory. Measured
+#: on one A100 (2026-10-03): 8e6 79 -> 72 ms per force, 350 -> 263 ms per step,
+#: peak 22.5 -> 7.1 GiB with caps at 1.5x the counts. At and below 2e5 (the record
+#: configuration) the fitted caps stay, so those rows do not move.
+LIST_CAP_VARS = (
+    "JACCPOT_STATIC_STRICT_FUSED_COMPACT_FAR_PAIR_CAP",
+    "JACCPOT_LARGE_N_NEIGHBOR_EDGE_PROFILE_FIXED_CAP",
+)
+MEASURED_CAPS_ABOVE = 200_000
+
+
+def _flat_walk(extra: dict | None = None) -> bool:
+    flag = (extra or {}).get("JACCPOT_STATIC_STRICT_FUSED_FLAT_WALK",
+                             os.environ.get("JACCPOT_STATIC_STRICT_FUSED_FLAT_WALK", "1"))
+    return flag not in _OFF
+
+
+def measured_caps(n: int, extra: dict | None = None) -> bool:
+    """Whether the flat walk's list caps are left to jaccpot at ``n`` particles."""
+    return _flat_walk(extra) and int(n) > MEASURED_CAPS_ABOVE
+
+
 def apply_fast_lane_env(n: int, *, edge_cap: int | None = None,
                         overrides: dict[str, str] | None = None) -> dict[str, str]:
     """Install the fused fast-lane environment; must run before jaccpot is imported.
@@ -314,13 +342,20 @@ def apply_fast_lane_env(n: int, *, edge_cap: int | None = None,
     ``edge_cap`` sets ``JACCPOT_LARGE_N_NEIGHBOR_EDGE_PROFILE_FIXED_CAP``: the
     200k default (2^21) does not fit N=800k at theta 0.6 / leaf 256 (~2.2M edges),
     and the failure is a hard error, not a silent fallback -- but a sweep that
-    hits it looks like "jaccpot cannot scale".  Default here: ``2^21 * ceil(N / 200k)``.
+    hits it looks like "jaccpot cannot scale".  Default here: ``2^21 * ceil(N / 200k)``,
+    except on the flat walk above ``MEASURED_CAPS_ABOVE``, where neither list cap is
+    named unless ``edge_cap`` or ``overrides`` name it (see ``LIST_CAP_VARS``).
     """
     env = dict(FAST_LANE_ENV)
     env["JACCPOT_STATIC_STRICT_FUSED_PROFILE_SET"] = str(int(n))
+    unnamed = measured_caps(n, overrides) and edge_cap is None
     if edge_cap is None:
         edge_cap = (1 << 21) * max(1, -(-int(n) // 200_000))
     env["JACCPOT_LARGE_N_NEIGHBOR_EDGE_PROFILE_FIXED_CAP"] = str(int(edge_cap))
+    if unnamed:
+        for k in LIST_CAP_VARS:
+            env.pop(k, None)
+            os.environ.pop(k, None)
     if overrides:
         env.update({k: str(v) for k, v in overrides.items()})
     for k, v in env.items():
@@ -398,20 +433,21 @@ def fast_lane_overrides_for_leaf(leaf: int, n: int, extra: dict | None = None) -
     keeps the dual walk's padded one.
 
     The two list caps are the 200k fit scaled by ``ceil(n / 200k)`` and rounded
-    up to a power of two; the pseudo-key ``_traversal_overrides`` is dropped
-    (callers read it from ``FAST_LANE_ENV_BY_LEAF`` directly).
+    up to a power of two -- except on the flat walk above ``MEASURED_CAPS_ABOVE``,
+    where they are left out so jaccpot sizes them from its measured counts. The
+    pseudo-key ``_traversal_overrides`` is dropped (callers read it from
+    ``FAST_LANE_ENV_BY_LEAF`` directly).
     """
     entry = dict(FAST_LANE_ENV_BY_LEAF.get(int(leaf)) or {})
     if not entry:
         return {}
-    flag = (extra or {}).get("JACCPOT_STATIC_STRICT_FUSED_FLAT_WALK",
-                             os.environ.get("JACCPOT_STATIC_STRICT_FUSED_FLAT_WALK", "1"))
-    if flag not in _OFF and "_flat_edge_cap" in entry:
+    if _flat_walk(extra) and "_flat_edge_cap" in entry:
         entry["JACCPOT_LARGE_N_NEIGHBOR_EDGE_PROFILE_FIXED_CAP"] = entry["_flat_edge_cap"]
+    unnamed = measured_caps(n, extra)
     scale = max(1, -(-int(n) // 200_000))
     out: dict[str, str] = {}
     for k, v in entry.items():
-        if k.startswith("_"):
+        if k.startswith("_") or (unnamed and k in LIST_CAP_VARS):
             continue
         if k in ("JACCPOT_STATIC_STRICT_FUSED_COMPACT_FAR_PAIR_CAP",
                  "JACCPOT_LARGE_N_NEIGHBOR_EDGE_PROFILE_FIXED_CAP") and scale > 1:

@@ -2,8 +2,11 @@
 # What N still fits ONE A100 on the sub-10 ms lane (cell leaves, Pallas walk/cascades/M2L, CSR near field)?
 # PURE FMM: --no-accuracy, because the direct-sum reference is an O(block x N) fp64 sum whose buffers are the
 # largest allocation in the run -- it decided the ceiling at N=4e6 (a 30.5 GiB block) and inflated every peak.
-# Caps are left UNNAMED so they auto-grow -- this measures the hardware ceiling, not a cap setting, and the
-# realized occupancies it prints (far pairs, near edges, leaf count) are what tight caps get sized from.
+# The two list caps are UNNAMED above 2e5 (compare_force.apply_fast_lane_env / fast_lane_overrides_for_leaf),
+# so jaccpot sizes them from its measured counts -- this measures the hardware ceiling, not a cap setting.
+# (Until 2026-10-03 this comment said so while the harness NAMED both caps as pow2(200k fit x N/200k): the
+# 1.6e7 rung ran out of memory on a cap 6-9x its pairs, and the "ceiling" was that setting.)
+# The memory limit is 0.9 of the card (jax's default 0.75 leaves a quarter unused); every row records it.
 # One FRESH PROCESS per rung: a ladder inside one process reuses cached state and mislead once before
 # (memory `distributed-per-device-ceiling-lifted`). Peak memory comes from the allocator's own high-water
 # mark, not from grepping the log for OOM, which misses the retries XLA makes before giving up.
@@ -13,6 +16,7 @@ cd $B
 export PYTHONPATH=$B/sitecustom_wt JACCPOT_WORKTREE=/export/home/tbuck/jaccpot-sub10ms-wt YGGDRAX_WORKTREE=/export/home/tbuck/yggdrax-sub10ms-wt
 export XLA_FLAGS="--xla_gpu_enable_command_buffer=FUSION,CUBLAS,CUSTOM_CALL --xla_gpu_graph_min_graph_size=2"
 export XLA_PYTHON_CLIENT_PREALLOCATE=false
+export XLA_PYTHON_CLIENT_MEM_FRACTION=${XLA_PYTHON_CLIENT_MEM_FRACTION:-0.9}
 LEAF=${LEAF:-64}
 PART=${PART:-cells}
 # Rungs run to 2.56e8. One 40 GiB card cannot reach 1e9: the fp32 particle state a KDK step keeps live
@@ -41,7 +45,9 @@ except Exception:
   if [ -n "$line" ]; then
     echo "[nmax] N=$n OK  peak $peak  $line"
   else
-    why=$(grep -hoE "RESOURCE_EXHAUSTED|Out of memory|overflowed: capacity [0-9]+|could not fit|leaf_capacity|RuntimeError.*" artifacts/sub10ms/probes/jaccpot_${tag}.log | head -1 | cut -c1-110)
+    # the FIRST cause in the log: allocator exhaustion, a capacity jaccpot could not
+    # widen (a named cap, the leaf capacity, a saturated scan), or any other error
+    why=$(grep -hoE "RESOURCE_EXHAUSTED[^.]*|Out of memory[^.]*|overflowed: capacity [0-9]+[^.]*|could not fit N=[0-9]+|overflowed TreeConfig.leaf_capacity|capacity saturated inside the compiled[^.]*|(Runtime|Value)Error: .*" artifacts/sub10ms/probes/jaccpot_${tag}.log | head -1 | cut -c1-140)
     echo "[nmax] N=$n FAILED rc=$rc peak $peak  ${why:-see log}"
     break
   fi
