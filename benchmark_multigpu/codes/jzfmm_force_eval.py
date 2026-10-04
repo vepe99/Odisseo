@@ -24,6 +24,14 @@ on one plot:
   same ``direct_sources_per_target / N`` accounting as ``common.budget``.
 * Launch count: kernels per force from a ``jax.profiler`` trace (optional).
 
+Memory (``--memory``, jaccpot fused-memory round 2, Phase 0c): per row the XLA
+allocator's ``memory_stats`` (``peak_bytes_in_use`` is per PROCESS -- run one
+configuration per process for a clean peak), ``memory_analysis`` of the jitted
+FMM, and the process's own ``used_gpu_memory`` sampled from nvidia-smi (jz-fmm's
+FFI kernels could allocate outside XLA; that number includes the CUDA context).
+``--prealloc FRAC`` preallocates that fraction of the card, as jaccpot's
+``bench/fused_memory_budget.py --prealloc`` does, for ceiling ladders.
+
 Runs INSIDE the dedicated jz-fmm venv (``/export/scratch/tbuck/jzfmm-venv``;
 home is quota-bound), never in envs/odisseo or the jaccpot venv::
 
@@ -71,6 +79,60 @@ def _device(allow_busy: bool) -> list[int]:
     return chosen
 
 
+class _ProcessMemorySampler:
+    """This process's ``used_gpu_memory`` from nvidia-smi, max over a background poll."""
+
+    def __init__(self, device: int, interval_s: float = 0.25):
+        import threading
+
+        self.device = device
+        self.interval_s = interval_s
+        self.max_mib = 0
+        self._stop = threading.Event()
+        self._thread = None
+
+    def _poll(self) -> None:
+        import subprocess
+
+        pid = str(os.getpid())
+        while not self._stop.is_set():
+            try:
+                out = subprocess.run(
+                    ["nvidia-smi", "--query-compute-apps=pid,used_gpu_memory",
+                     "--format=csv,noheader,nounits"],
+                    capture_output=True, text=True, timeout=10).stdout
+                for line in out.splitlines():
+                    parts = [x.strip() for x in line.split(",")]
+                    if len(parts) == 2 and parts[0] == pid and parts[1].isdigit():
+                        self.max_mib = max(self.max_mib, int(parts[1]))
+            except Exception:  # noqa: BLE001
+                pass
+            self._stop.wait(self.interval_s)
+
+    def start(self) -> None:
+        import threading
+
+        if self._thread is None:
+            self._thread = threading.Thread(target=self._poll, daemon=True)
+            self._thread.start()
+
+
+def _memory_row(jax, n: int, sampler: _ProcessMemorySampler) -> dict:
+    stats = jax.devices()[0].memory_stats() or {}
+    peak = int(stats.get("peak_bytes_in_use", 0))
+    return dict(
+        peak_bytes=peak,
+        peak_gib=peak / 2**30,
+        peak_bytes_per_particle=peak / max(n, 1),
+        bytes_in_use=int(stats.get("bytes_in_use", 0)),
+        largest_alloc_size=int(stats.get("largest_alloc_size", 0)),
+        bytes_limit=int(stats.get("bytes_limit", 0)),
+        process_max_mib=sampler.max_mib,
+        preallocate=os.environ.get("XLA_PYTHON_CLIENT_PREALLOCATE"),
+        mem_fraction=os.environ.get("XLA_PYTHON_CLIENT_MEM_FRACTION"),
+    )
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("--n", type=int, default=200_000)
@@ -87,10 +149,18 @@ def main() -> int:
                     help="jz-fmm's interaction-list allocation factor; doubled on overflow up to 4x")
     ap.add_argument("--no-trace", action="store_true", help="skip the launch-count trace")
     ap.add_argument("--allow-busy", action="store_true")
+    ap.add_argument("--memory", action="store_true",
+                    help="record memory_stats / memory_analysis / nvidia-smi per row")
+    ap.add_argument("--prealloc", type=float, default=0.0,
+                    help="preallocate this fraction of the card (0 = grow on demand)")
+    ap.add_argument("--no-lists", action="store_true", help="skip the direct-share list pass")
     ap.add_argument("--out", default=None)
     ap.add_argument("--tag", default="")
     args = ap.parse_args()
 
+    if args.prealloc > 0:
+        os.environ["XLA_PYTHON_CLIENT_PREALLOCATE"] = "true"
+        os.environ["XLA_PYTHON_CLIENT_MEM_FRACTION"] = f"{args.prealloc:.3f}"
     os.environ.setdefault("XLA_PYTHON_CLIENT_PREALLOCATE", "false")
     os.environ.setdefault("JAX_ENABLE_X64", "1")
     if "jax" in sys.modules:
@@ -127,8 +197,15 @@ def main() -> int:
         a_ref = np.load(ref_cache)
         src = "cached"
     else:
-        a_ref = direct_accelerations(pos, mass, G=1.0, softening=args.softening,
-                                     block_size=1024, target_indices=ref_idx)
+        # block_size 0 = sized to a fixed budget (a fixed 1024 is 64 GB at 8e6); with
+        # --memory on the CPU, so the GPU peak below is jz-fmm's alone
+        import contextlib
+
+        ctx = (jax.default_device(jax.devices("cpu")[0]) if args.memory
+               else contextlib.nullcontext())
+        with ctx:
+            a_ref = direct_accelerations(pos, mass, G=1.0, softening=args.softening,
+                                         block_size=0, target_indices=ref_idx)
         ref_cache.parent.mkdir(parents=True, exist_ok=True)
         np.save(ref_cache, a_ref)
         src = "computed"
@@ -150,6 +227,11 @@ def main() -> int:
     def write():
         with open(out_path, "w") as fh:
             json.dump(result, fh, indent=2, default=str)
+
+    sampler = _ProcessMemorySampler(devices[0]) if args.memory else None
+    if args.memory and len(args.leaf) * len(args.p) * len(args.theta) > 1:
+        print(f"[jzfmm {tag}] !! --memory with several configurations: peak_bytes_in_use "
+              "is cumulative over the process; run one per process", flush=True)
 
     try:
         from profile_eval import analyse, load_perfetto  # noqa: E402
@@ -173,6 +255,8 @@ def main() -> int:
                     )
                     try:
                         t0 = time.perf_counter()
+                        if sampler is not None:
+                            sampler.start()
                         loc = fast_multipole_method.jit(part, cfg_fmm=cfg, G=1.0)
                         loc.values.block_until_ready()
                         row["compile_s_incl_first_call"] = time.perf_counter() - t0
@@ -206,11 +290,31 @@ def main() -> int:
                 row["timing"] = timing
                 row["contention"] = cont.as_dict()
                 row["error"] = err
+                if sampler is not None:
+                    row["memory"] = _memory_row(jax, n, sampler)
+                    try:
+                        comp = fast_multipole_method.jit.lower(part, cfg_fmm=cfg, G=1.0).compile()
+                        ma = comp.memory_analysis()
+                        row["memory"]["memory_analysis"] = {
+                            k: int(getattr(ma, k)) for k in (
+                                "argument_size_in_bytes", "output_size_in_bytes",
+                                "temp_size_in_bytes", "alias_size_in_bytes",
+                                "generated_code_size_in_bytes") if hasattr(ma, k)}
+                    except Exception as exc:  # noqa: BLE001
+                        row["memory"]["memory_analysis_failed"] = str(exc).splitlines()[0][:300]
+                    m = row["memory"]
+                    print(f"[jzfmm {tag}] {label}: peak {m['peak_gib']:.3f} GiB "
+                          f"({m['peak_bytes_per_particle']:.0f} B/p), nvidia-smi max "
+                          f"{m['process_max_mib']} MiB, temp "
+                          f"{m.get('memory_analysis', {}).get('temp_size_in_bytes', 0) / 2**30:.3f} GiB",
+                          flush=True)
                 if err["aggL2_signflip"] < err["aggL2"]:
                     row["SIGN_CONVENTION_MISMATCH"] = True
 
                 # ---- direct-sum share from the leaf-level interaction list
                 try:
+                    if args.no_lists:
+                        raise RuntimeError("skipped (--no-lists)")
                     partz, th = fast_multipole_method.jit(part, cfg_fmm=cfg, G=1.0, result="partz_tree")
                     _, ilist = _evaluate_node_node_fmm.jit(_as_posmass(partz), th, cfg_fmm=cfg)
                     nleaf = int(th.num(0))
