@@ -1,6 +1,6 @@
 import jax.numpy as jnp
 
-from jaccpot.runtime._fmm_impl import _velocity_verlet_state_update
+from jaccpot.runtime.fmm_state import _velocity_verlet_state_update
 from odisseo.jaccpot_coupling import _large_n_environment_overrides
 from odisseo.option_classes import SimulationConfig
 
@@ -39,11 +39,14 @@ def test_strict_velocity_verlet_uses_endpoint_acceleration():
     assert not jnp.allclose(actual[:, 1], frozen_velocity)
 
 
-def test_canonical_static_radix_auto_cap_is_32():
+def test_canonical_static_radix_cap_is_data_driven():
+    # "auto" since 0177916 (2026-07-08): jaccpot sizes the static target-block cap
+    # to the densest leaf at prepare time; the old fixed 32 always failed on
+    # centrally concentrated ICs.
     overrides = _large_n_environment_overrides(
         _canonical_config(), fmm_preset="large_n_gpu"
     )
-    assert overrides["JACCPOT_LARGE_N_STATIC_TARGET_BLOCKS_MAX_PER_LEAF"] == "32"
+    assert overrides["JACCPOT_LARGE_N_STATIC_TARGET_BLOCKS_MAX_PER_LEAF"] == "auto"
 
 
 def test_explicit_static_radix_cap_is_not_increased():
