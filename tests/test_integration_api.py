@@ -45,7 +45,7 @@ def test_integrate_dispatches_to_fmm_coupler(monkeypatch):
         assert kwargs["leaf_size"] == 24
         assert kwargs["max_order"] == 5
         assert kwargs["fmm_preset"] == "accurate"
-        assert kwargs["fmm_basis"] == "cartesian"
+        assert kwargs["fmm_basis"] == "real"
         assert kwargs["fmm_theta"] == 0.4
         assert kwargs["fmm_runtime_path"] == "auto"
         assert kwargs["fmm_working_dtype"] == state.dtype
@@ -74,7 +74,7 @@ def test_integrate_dispatches_to_fmm_coupler(monkeypatch):
         fmm_leaf_size=24,
         fmm_max_order=5,
         fmm_preset="accurate",
-        fmm_basis="cartesian",
+        fmm_basis="real",
         fmm_theta=0.4,
         fmm_mac_type="bh",
         fmm_farfield_mode="dense",

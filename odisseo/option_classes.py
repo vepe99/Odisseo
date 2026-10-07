@@ -211,9 +211,9 @@ class SimulationConfig(NamedTuple):
 
     # Jaccpot solver tuning knobs exposed to ODISSEO.
     fmm_preset: str = "fast"
-    # Real (Dehnen) harmonics is the production default: the radix large-N fast
-    # lane runs pure-real end to end (no complex<->real conversion). Use
-    # "solidfmm"/"complex" only for cross-checking.
+    # Real (Dehnen) harmonics: the production default and, after jaccpot's
+    # cleanup 2026-10, its only basis. The radix large-N fast lane runs pure-real
+    # end to end. "solidfmm"/"complex" (and "cartesian") are being removed there.
     fmm_basis: str = "real"
     fmm_theta: float = 0.6
     fmm_runtime_path: str = "auto"
