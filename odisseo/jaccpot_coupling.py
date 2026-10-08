@@ -256,6 +256,7 @@ def _build_fmm_solver(
         theta=float(fmm_theta),
         G=float(params.G),
         softening=float(config.softening),
+        softening_kernel=getattr(config, "softening_kernel", None),
         working_dtype=working_dtype,
         use_pallas=use_pallas,
         advanced=FMMAdvancedConfig(
