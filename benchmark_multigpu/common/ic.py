@@ -44,6 +44,31 @@ def plummer_sphere(n: int, *, seed: int = 0, a: float = 1.0, total_mass: float =
     return pos, mass
 
 
+def plummer_clipped(
+    n: int, *, seed: int = 0, a: float = 1.0, total_mass: float = 1.0, rmax: float = 20.0
+):
+    """:func:`plummer_sphere` truncated at ``rmax`` scale radii, without outliers.
+
+    The inverse CDF on ``[0, X(rmax)]``, ``X(r) = r^3 / (r^2 + 1)^1.5``: the same
+    sphere minus the rare far particles that set a per-axis Morton box at large N.
+    Draw for draw what jaccpot's ``bench/fused_memory_budget.py --ic
+    plummer_clipped`` builds (same seed, same order of draws), so both codes see
+    the same particles.
+    """
+    rng = np.random.default_rng(seed)
+    x_max = rmax**3 / (rmax**2 + 1.0) ** 1.5
+    x = rng.uniform(0.0, x_max, size=n)
+    r = a / np.sqrt(x ** (-2.0 / 3.0) - 1.0)
+    mu = rng.uniform(-1.0, 1.0, size=n)
+    phi = rng.uniform(0.0, 2.0 * np.pi, size=n)
+    sin_t = np.sqrt(1.0 - mu * mu)
+    pos = np.stack(
+        [r * sin_t * np.cos(phi), r * sin_t * np.sin(phi), r * mu], axis=1
+    ).astype(np.float32)
+    mass = np.full(n, total_mass / n, np.float32)
+    return pos, mass
+
+
 def hernquist_sphere(n: int, *, seed: int = 0, a: float = 1.0, total_mass: float = 1.0):
     """Hernquist sphere, ``rho = M a / (2 pi r (r + a)^3)``, isotropic positions.
 
@@ -155,6 +180,7 @@ def disk_ic(path: str = DISK_IC_TIPSY, *, subsample: int | None = None, seed: in
 IC_GENERATORS = {
     "uniform": uniform_box,
     "plummer": plummer_sphere,
+    "plummer_clipped": plummer_clipped,
     "hernquist": hernquist_sphere,
     "clusters": separated_clusters,
     "disk": disk_ic,
