@@ -185,7 +185,10 @@ def system():
 
 @pytest.fixture(scope="module")
 def config():
-    return SimulationConfig(N_particles=N_PARTICLES, softening=SOFTENING)
+    # nornax's oracles (MutualDirectSumGravity, the dense energy) are Plummer
+    return SimulationConfig(
+        N_particles=N_PARTICLES, softening=SOFTENING, softening_kernel="plummer"
+    )
 
 
 @pytest.fixture(scope="module")
@@ -801,6 +804,7 @@ def test_an_external_potential_config_is_rejected(system, params):
     cfg = SimulationConfig(
         N_particles=N_PARTICLES,
         softening=SOFTENING,
+        softening_kernel="plummer",
         external_accelerations=(NFW_POTENTIAL,),
     )
     with pytest.raises(ValueError, match="self-gravity only"):
@@ -959,7 +963,12 @@ def test_chunked_potential_energy_matches_the_dense_reference(system):
         state[:, 0, :], mass, G=1.0, softening=SOFTENING
     )
     chunked = chunked_potential_energy(
-        state[:, 0, :], mass, G=1.0, softening=SOFTENING, chunk=37
+        state[:, 0, :],
+        mass,
+        G=1.0,
+        softening=SOFTENING,
+        chunk=37,
+        softening_kernel="plummer",
     )
     assert abs(float(chunked - dense)) <= 1.0e-12 * abs(float(dense))
 
