@@ -73,6 +73,8 @@ from functools import partial
 
 import numpy as np
 
+from odisseo.softening import resolve_softening_kernel, softened_inverse_powers
+
 
 # --------------------------------------------------------------------------- #
 # external potential
@@ -228,7 +230,7 @@ def make_aligner(mesh):
     return jax.jit(fn)
 
 
-def direct_sum_probe(pos_rows, mass_rows, targets, soft, g, chunk=1 << 17):
+def direct_sum_probe(pos_rows, mass_rows, targets, soft, g, chunk=1 << 17, kernel=None):
     """fp64 direct-sum self-gravity for ``targets``, against ALL sources.
 
     Host-side numpy in float64 on purpose. The alternative -- doing it on device --
@@ -247,7 +249,9 @@ def direct_sum_probe(pos_rows, mass_rows, targets, soft, g, chunk=1 << 17):
     targets : ndarray
         Row indices to evaluate.
     soft, g : float
-        Plummer softening and G, matching the solver's.
+        Plummer-equivalent softening and G, matching the solver's.
+    kernel : str or None
+        The pair kernel (``odisseo.softening``), matching the solver's.
 
     Returns
     -------
@@ -263,8 +267,12 @@ def direct_sum_probe(pos_rows, mass_rows, targets, soft, g, chunk=1 << 17):
         sp = pos_rows[s0:s1].astype(np.float64)
         sm = mass_rows[s0:s1].astype(np.float64)
         d = sp[None, :, :] - tp[:, None, :]
-        r2 = np.einsum("ijk,ijk->ij", d, d) + eps2
-        w = sm[None, :] / (r2 * np.sqrt(r2))
+        if resolve_softening_kernel(kernel) == "plummer":
+            r2 = np.einsum("ijk,ijk->ij", d, d) + eps2
+            w = sm[None, :] / (r2 * np.sqrt(r2))
+        else:
+            r2 = np.einsum("ijk,ijk->ij", d, d)
+            w = sm[None, :] * softened_inverse_powers(r2, float(soft), kernel, xp=np)[0]
         # Drop the self term. Softening makes it finite rather than infinite, so it
         # would not show up as a nan -- just a silently wrong reference.
         loc = np.nonzero((targets >= s0) & (targets < s1))[0]
@@ -321,7 +329,17 @@ def main():  # noqa: C901
     ap.add_argument("--leaf", type=int, default=512)
     ap.add_argument("--theta", type=float, default=0.7)
     ap.add_argument("--order", type=int, default=6)
-    ap.add_argument("--softening", type=float, default=None)
+    # The force-error-optimal Plummer-equivalent softening for the 25M disc+bulge
+    # IC (2026-10-08: mass-weighted force error against the smooth model, best
+    # bulge-centre force; the old 0.5 rdisk / sqrt(N / 1e5) rule biased the bulge
+    # centre by ~25 %). "disc-spacing" restores that rule for old runs.
+    ap.add_argument("--softening", default="1.5e-3")
+    ap.add_argument(
+        "--softening-kernel",
+        default=None,
+        choices=("ferrers3", "wendland_c2", "plummer"),
+        help="pair softening kernel; default jaccpot's (ferrers3)",
+    )
     ap.add_argument("--steps", type=int, default=100)
     ap.add_argument("--dt", type=float, default=1e-3)
     ap.add_argument("--m2l-chunk", type=int, default=65536)
@@ -487,7 +505,7 @@ def main():  # noqa: C901
     mass = mass.astype(wdt)
     pos, vel, mass = pos[:n], vel[:n], mass[:n]
 
-    soft = args.softening
+    soft = None if str(args.softening) == "disc-spacing" else float(args.softening)
     if soft is None:
         # mean in-plane spacing of the disc, a conventional choice
         soft = float(0.5 * rdisk / np.sqrt(n / 1e5))
@@ -522,6 +540,7 @@ def main():  # noqa: C901
         theta=args.theta,
         order=args.order,
         softening=soft,
+        softening_kernel=args.softening_kernel,
         G=g,
         m2l_chunk=args.m2l_chunk,
         nearfield_chunk=args.nearfield_chunk,
@@ -668,7 +687,7 @@ def main():  # noqa: C901
         mass_rows = np.asarray(jax.device_get(pstate["M"]))[:n]
         rngp = np.random.default_rng(int(args.probe_seed))
         targets = np.sort(rngp.choice(n, size=int(args.probe), replace=False))
-        a_ref = direct_sum_probe(pos_rows, mass_rows, targets, soft, g)
+        a_ref = direct_sum_probe(pos_rows, mass_rows, targets, soft, g, kernel=args.softening_kernel)
         a_got = np.asarray(jax.device_get(a_self_arr))[:n][targets].astype(np.float64)
         num = np.linalg.norm(a_got - a_ref, axis=1)
         den = np.linalg.norm(a_ref, axis=1)
@@ -708,7 +727,7 @@ def main():  # noqa: C901
             morton_pos_of_row = np.full(n, -1, np.int64)
             morton_pos_of_row[morton_rows] = np.arange(morton_rows.size)
             tm = morton_pos_of_row[targets]; okm = tm >= 0
-            a_ref_m = direct_sum_probe(pos_m, mass_m, tm[okm], soft, g)
+            a_ref_m = direct_sum_probe(pos_m, mass_m, tm[okm], soft, g, kernel=args.softening_kernel)
             # A map check that does not use the map as its own witness. The aligner and
             # scatter_to_input_order both consume gid_o, so they can agree while gid_o is
             # wrong -- and a wrong gid_o also poisons the raw-Morton probe above, whose

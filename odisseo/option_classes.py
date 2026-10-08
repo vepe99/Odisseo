@@ -196,7 +196,13 @@ class SimulationConfig(NamedTuple):
     num_timesteps: int = 1000
     
     softening: float = 1e-10
-    
+
+    # Pair softening kernel (odisseo.softening, mirrored by jaccpot.softening):
+    # "ferrers3" (default; compact, exactly Newtonian past 315/128 * softening),
+    # "wendland_c2" or "plummer". ``softening`` is the Plummer-equivalent length
+    # for every kernel, so switching kernels keeps the force resolution.
+    softening_kernel: str = "ferrers3"
+
     integrator: int = LEAPFROG
 
     diffrax_solver: int = DOPRI5

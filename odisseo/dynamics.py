@@ -15,6 +15,7 @@ from jax.sharding import PartitionSpec as P
 
 import equinox as eqx
 
+from odisseo.softening import resolve_softening_kernel, softened_inverse_powers
 from odisseo.option_classes import SimulationConfig, SimulationParams
 from odisseo.option_classes import DIRECT_ACC, DIRECT_ACC_LAXMAP, DIRECT_ACC_MATRIX, DIRECT_ACC_FOR_LOOP, DIRECT_ACC_SHARDING, NO_SELF_GRAVITY
 
@@ -65,16 +66,20 @@ def single_body_acc(particle_i: jnp.ndarray,
     dtype = r_ij.dtype
     g_const = jnp.asarray(params.G, dtype=dtype)
     softening_sq = jnp.asarray(config.softening, dtype=dtype) ** 2
+    kernel = resolve_softening_kernel(getattr(config, "softening_kernel", None))
 
     def same_position():
         return jnp.zeros((3,), dtype=dtype), jnp.asarray(0.0, dtype=dtype)
 
     def different_position():
         r_mag = jnp.linalg.norm(r_ij)
-        denom = (r_mag**2 + softening_sq) ** (jnp.asarray(1.5, dtype=dtype))
-        acc = -g_const * mass_j * (r_ij / denom)
-        pot = -g_const * mass_j / jnp.sqrt(r_mag**2 + softening_sq)
-        return acc, pot
+        if kernel == "plummer":
+            denom = (r_mag**2 + softening_sq) ** (jnp.asarray(1.5, dtype=dtype))
+            acc = -g_const * mass_j * (r_ij / denom)
+            pot = -g_const * mass_j / jnp.sqrt(r_mag**2 + softening_sq)
+            return acc, pot
+        g, psi = softened_inverse_powers(r_mag**2, config.softening, kernel)
+        return -g_const * mass_j * r_ij * g, -g_const * mass_j * psi
 
     return jax.lax.cond(condtion, same_position, different_position)
     
@@ -187,18 +192,27 @@ def direct_acc_matrix(state: jnp.ndarray,
 
     eye = jax.lax.stop_gradient(jnp.eye(config.N_particles))
 
-    # Compute squared distances with softening plus avoid self interaction
-    r2_safe = jnp.sum(dpos**2, axis=-1) + config.softening**2  # Shape: (N, N)
-
-    # Compute 1/r^3 safely
-    inv_r3 = r2_safe**-1.5 * (1.0 - eye)  # Diagonal is zero
+    kernel = resolve_softening_kernel(getattr(config, "softening_kernel", None))
+    if kernel == "plummer":
+        # Compute squared distances with softening plus avoid self interaction
+        r2_safe = jnp.sum(dpos**2, axis=-1) + config.softening**2  # Shape: (N, N)
+        # Compute 1/r^3 safely
+        inv_r3 = r2_safe**-1.5 * (1.0 - eye)  # Diagonal is zero
+    else:
+        g, psi = softened_inverse_powers(
+            jnp.sum(dpos**2, axis=-1), config.softening, kernel
+        )
+        inv_r3 = g * (1.0 - eye)  # finite at r = 0, so the diagonal is zero
 
     # Compute acceleration
     acc = - params.G * jnp.sum((mass[:, None] * dpos) * inv_r3[:, :, None], axis=1)
 
     if return_potential:
         # Compute potential energy (only sum interactions once)
-        inv_r = r2_safe**-0.5 * (1.0 - eye)  # Diagonal is zero
+        if kernel == "plummer":
+            inv_r = r2_safe**-0.5 * (1.0 - eye)  # Diagonal is zero
+        else:
+            inv_r = psi * (1.0 - eye)
         # mass must be indexed by j (the summed axis), as in the acceleration above.
         pot = -params.G * jnp.sum(mass[None, :] * inv_r, axis=1)
         return acc, pot
@@ -228,19 +242,28 @@ def direct_acc_for_loop(state: jnp.ndarray,
         Array of shape (N,) containing the potential energy of the particles, if return_potential is True.
     """
 
+    kernel = resolve_softening_kernel(getattr(config, "softening_kernel", None))
+
     def compute_acc(carry, pos):
         if return_potential:
             pot = carry
         else:
             acc =  carry
         r = jax.lax.stop_gradient(pos[None, :] - positions)
-        r2 = jnp.sum(r**2, axis=1) + config.softening**2
-        if return_potential:
+        if kernel == "plummer":
+            r2 = jnp.sum(r**2, axis=1) + config.softening**2
             inv_r = jnp.where(r2 == 0., 0., r2**(-1/2))
+            inv_r3 = jnp.where(r2 == 0., 0., r2**(-3/2))
+        else:
+            # the self pair: zero force (r = 0) and, as for Plummer with eps > 0,
+            # the kernel's central -G m / eps in the potential
+            inv_r3, inv_r = softened_inverse_powers(
+                jnp.sum(r**2, axis=1), config.softening, kernel
+            )
+        if return_potential:
             pot = jnp.sum(-params.G * mass * inv_r, keepdims=True)
             return pot, pot
         else:
-            inv_r3 = jnp.where(r2 == 0., 0., r2**(-3/2))
             acc = jnp.sum(-params.G * mass[:, None] * r * inv_r3[:, None], axis=0)
             return acc, acc        
 
@@ -317,12 +340,22 @@ def direct_acc_sharding(state: jnp.ndarray,
                                            out_specs=P('N_particles', None))(pos_sharded,
                                                                              pos_replicated))
     eye = jax.lax.stop_gradient(jnp.eye(N_padded))
-    r2_safe = jnp.sum(dpos**2, axis=-1) + config.softening**2 + eye # Shape: (N_padded, N_padded)
-    inv_r3 = r2_safe**-1.5 * (1.0 - eye)  # Diagonal is zero
+    kernel = resolve_softening_kernel(getattr(config, "softening_kernel", None))
+    if kernel == "plummer":
+        r2_safe = jnp.sum(dpos**2, axis=-1) + config.softening**2 + eye # Shape: (N_padded, N_padded)
+        inv_r3 = r2_safe**-1.5 * (1.0 - eye)  # Diagonal is zero
+    else:
+        g, psi = softened_inverse_powers(
+            jnp.sum(dpos**2, axis=-1) + eye, config.softening, kernel
+        )
+        inv_r3 = g * (1.0 - eye)
     acc = - params.G * jnp.sum((mass[:, None] * dpos) * inv_r3[:, :, None], axis=1)
     acc = jax.device_put(acc[:N], devices[0])
     if return_potential:
-        inv_r = r2_safe**-0.5 * (1.0 - eye)  # Diagonal is zero
+        if kernel == "plummer":
+            inv_r = r2_safe**-0.5 * (1.0 - eye)  # Diagonal is zero
+        else:
+            inv_r = psi * (1.0 - eye)
         # mass must be indexed by j (the summed axis), as in the acceleration above;
         # this is also what zeroes out the zero-mass padding particles.
         pot = - params.G * jnp.sum(mass[None, :] * inv_r, axis=1)

@@ -94,7 +94,10 @@ class MeshOptions:
     order : int
         Multipole expansion order.
     softening : float or None
-        Plummer softening. ``None`` derives ``0.5 * rdisk / sqrt(N / 1e5)``.
+        Plummer-equivalent softening (``odisseo.softening``). ``None`` takes
+        ``config.softening``.
+    softening_kernel : str or None
+        The pair kernel; ``None`` takes ``config.softening_kernel``.
     partitioner : str
         ``"rcb"`` or ``"morton"``.
     m2l_chunk : int
@@ -156,6 +159,7 @@ class MeshOptions:
     theta: float = 0.7
     order: int = 6
     softening: Optional[float] = None
+    softening_kernel: Optional[str] = None
     partitioner: str = "rcb"
     m2l_chunk: int = 65_536
     nearfield_chunk: int = 512
@@ -669,6 +673,11 @@ def integrate_mesh_jaccpot(
         theta=options.theta,
         order=options.order,
         softening=soft,
+        softening_kernel=(
+            options.softening_kernel
+            if options.softening_kernel is not None
+            else getattr(config, "softening_kernel", None)
+        ),
         G=float(getattr(params, "G", 1.0)),
         m2l_chunk=options.m2l_chunk,
         nearfield_chunk=options.nearfield_chunk,

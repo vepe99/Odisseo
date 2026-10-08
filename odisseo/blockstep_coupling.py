@@ -122,6 +122,7 @@ import jax
 import jax.numpy as jnp
 
 from odisseo.option_classes import SimulationConfig, SimulationParams
+from odisseo.softening import resolve_softening_kernel, softened_inverse_powers
 
 __all__ = [
     "BlockStepOptions",
@@ -538,6 +539,7 @@ def build_blockstep_force(
     _reject_external_potentials(config)
     force = BlockStepFMM(
         softening=float(config.softening),
+        softening_kernel=getattr(config, "softening_kernel", None),
         k_max=int(options.k_max),
         theta=float(options.theta),
         max_order=int(options.max_order),
@@ -1132,6 +1134,7 @@ def chunked_potential_energy(
     G: float = 1.0,
     softening: float = 0.0,
     chunk: int = 2048,
+    softening_kernel: Optional[str] = None,
 ) -> jnp.ndarray:
     """Exact pairwise potential energy at ``O(N^2)`` flops but ``O(N*chunk)`` memory.
 
@@ -1139,7 +1142,10 @@ def chunked_potential_energy(
     pair matrix, which is 80 GB at ``N = 1e5``. This scans chunks of targets
     instead, so the energy diagnostic stays available at the sizes this lane is
     for. It is still quadratic in time -- use it at checkpoints, not every step.
+    ``softening_kernel`` is the pair kernel (``odisseo.softening``); ``None``
+    gives the default, and must match the force's for an energy check.
     """
+    kernel = resolve_softening_kernel(softening_kernel)
     positions = jnp.asarray(positions)
     mass = jnp.asarray(mass)
     n = positions.shape[0]
@@ -1156,7 +1162,7 @@ def chunked_potential_energy(
         row_mass = jax.lax.dynamic_slice(mass_p, (start,), (chunk,))
         row_idx = jax.lax.dynamic_slice(idx, (start,), (chunk,))
         dr = pos_p[None, :, :] - rows[:, None, :]
-        r2 = jnp.sum(dr * dr, axis=-1) + eps2
+        r2 = jnp.sum(dr * dr, axis=-1) + (eps2 if kernel == "plummer" else 0.0)
         # Upper triangle only, so each unordered pair is counted once -- and the
         # padded slots are excluded from `live` rather than left to their zero
         # mass. Two padded particles both sit at the origin, so with
@@ -1168,7 +1174,11 @@ def chunked_potential_energy(
             & (row_idx[:, None] < n)
             & (idx[None, :] < n)
         )
-        inv_r = jnp.where(live, jax.lax.rsqrt(jnp.where(live, r2, 1.0)), 0.0)
+        if kernel == "plummer":
+            inv_r = jnp.where(live, jax.lax.rsqrt(jnp.where(live, r2, 1.0)), 0.0)
+        else:
+            psi = softened_inverse_powers(jnp.where(live, r2, 1.0), softening, kernel)[1]
+            inv_r = jnp.where(live, psi, 0.0)
         pair_mass = row_mass[:, None] * mass_p[None, :]
         return acc + jnp.sum(pair_mass * inv_r), None
 
@@ -1180,7 +1190,9 @@ def chunked_potential_energy(
     return -jnp.asarray(G, dtype=dtype) * total
 
 
-def _total_energy(block_state, *, G: float, softening: float, chunk: int):
+def _total_energy(
+    block_state, *, G: float, softening: float, chunk: int, softening_kernel=None
+):
     """Kinetic plus the chunked exact potential."""
     kinetic = 0.5 * jnp.sum(
         block_state.masses * jnp.sum(block_state.velocities**2, axis=-1)
@@ -1191,6 +1203,7 @@ def _total_energy(block_state, *, G: float, softening: float, chunk: int):
         G=G,
         softening=softening,
         chunk=chunk,
+        softening_kernel=softening_kernel,
     )
     return kinetic + potential
 
@@ -1340,13 +1353,22 @@ def integrate_blockstep_jaccpot(
     eps = _rung_eps(options, force)
     G = float(params.G)
     softening = float(config.softening)
+    kernel = getattr(config, "softening_kernel", None)
 
     momenta = [total_linear_momentum(mass, block_state.velocities)]
     p0 = momenta[0]
     drifts = [_momentum_drift(mass, block_state.velocities, p0)]
     hist = [_rung_histogram(block_state.rung, int(options.k_max))]
     energies = (
-        [_total_energy(block_state, G=G, softening=softening, chunk=energy_chunk)]
+        [
+            _total_energy(
+                block_state,
+                G=G,
+                softening=softening,
+                chunk=energy_chunk,
+                softening_kernel=kernel,
+            )
+        ]
         if track_energy
         else None
     )
@@ -1416,7 +1438,11 @@ def integrate_blockstep_jaccpot(
             if energies is not None:
                 energies.append(
                     _total_energy(
-                        block_state, G=G, softening=softening, chunk=energy_chunk
+                        block_state,
+                        G=G,
+                        softening=softening,
+                        chunk=energy_chunk,
+                        softening_kernel=kernel,
                     )
                 )
             if progress is not None:
@@ -1686,10 +1712,15 @@ def integrate_blockstep_jitted(
     if track_energy:
         G = float(params.G)
         softening = float(config.softening)
+        kernel = getattr(config, "softening_kernel", None)
         energies = jnp.stack(
             [
-                _energy_of(positions0, velocities0, mass, G, softening, energy_chunk),
-                _energy_of(positions, velocities, mass, G, softening, energy_chunk),
+                _energy_of(
+                    positions0, velocities0, mass, G, softening, energy_chunk, kernel
+                ),
+                _energy_of(
+                    positions, velocities, mass, G, softening, energy_chunk, kernel
+                ),
             ]
         )
 
@@ -1738,8 +1769,13 @@ def _raise_on_overflow(topology: Any, force: Any) -> None:
     )
 
 
-def _energy_of(positions, velocities, mass, G, softening, chunk):
+def _energy_of(positions, velocities, mass, G, softening, chunk, softening_kernel=None):
     kinetic = 0.5 * jnp.sum(mass * jnp.sum(velocities**2, axis=-1))
     return kinetic + chunked_potential_energy(
-        positions, mass, G=G, softening=softening, chunk=chunk
+        positions,
+        mass,
+        G=G,
+        softening=softening,
+        chunk=chunk,
+        softening_kernel=softening_kernel,
     )
