@@ -33,89 +33,37 @@ def _large_n_environment_overrides(
     *,
     fmm_preset: Optional[str] = None,
 ) -> dict[str, str]:
-    """Return jaccpot large-N env overrides requested by SimulationConfig."""
+    """Return the jaccpot large-N env overrides SimulationConfig sets explicitly.
+
+    Only the fields a user set reach the environment. The automatic block that
+    used to switch jaccpot's fused strict lane on for the large_n_gpu static-radix
+    regime (fused mode, device-only, flat compact far pairs, block size 4, "auto"
+    static target blocks, the 131072 far-pair cap, the profile set) is gone:
+    since jaccpot's 2026-10 cleanup (D2) those are jaccpot's own defaults, and its
+    caps are sized from the particle count. ``fmm_preset`` is kept for the
+    callers' signature.
+    """
     overrides: dict[str, str] = {}
     if not bool(getattr(config, "fmm_large_n_environment_overrides_enabled", True)):
         return overrides
     target_block_size = getattr(config, "fmm_large_n_target_block_size", None)
-
-    static_target_blocks = getattr(config, "fmm_large_n_static_target_blocks", None)
-    auto_static_target_blocks = (
-        static_target_blocks is None
-        and str(getattr(config, "fmm_tree_build_mode", "")).strip().lower()
-        == "static_radix"
-        and str(fmm_preset or getattr(config, "fmm_preset", "")).strip().lower()
-        == "large_n_gpu"
-        and int(getattr(config, "N_particles", 0))
-        >= int(getattr(config, "fmm_large_n_min_particles", 200_000))
-    )
-    if auto_static_target_blocks:
-        static_target_blocks = True
-        if target_block_size is None:
-            target_block_size = 4
-
     if target_block_size is not None:
         overrides["JACCPOT_LARGE_N_TARGET_BLOCK_SIZE"] = str(int(target_block_size))
-
+    static_target_blocks = getattr(config, "fmm_large_n_static_target_blocks", None)
     if static_target_blocks is not None:
         overrides["JACCPOT_LARGE_N_STATIC_TARGET_BLOCKS"] = (
             "1" if bool(static_target_blocks) else "0"
         )
-
     static_target_blocks_cap = getattr(
         config,
         "fmm_large_n_static_target_blocks_max_per_leaf",
         None,
     )
-    if auto_static_target_blocks and static_target_blocks_cap is None:
-        # Data-driven cap: jaccpot auto-sizes the static target-block payload to
-        # the densest leaf at prepare time. A fixed small cap (previously 32)
-        # fails for centrally-concentrated ICs whose inner leaves have very high
-        # near-neighbour counts.
-        static_target_blocks_cap = "auto"
     if static_target_blocks_cap is not None:
         cap_raw = str(static_target_blocks_cap).strip().lower()
         overrides["JACCPOT_LARGE_N_STATIC_TARGET_BLOCKS_MAX_PER_LEAF"] = (
             "auto" if cap_raw == "auto" else str(int(static_target_blocks_cap))
         )
-
-    # Device-only fused fast-lane (WS0 finding, 2026-07-09). Without these flags
-    # the strict fused lane runs a ~10x slower path (the device-only streamed
-    # fast-lane never fires: fastlane_attempts=0). This verified-parity set drops
-    # 200k from ~1224 ms/step to ~119 ms/step with BIT-IDENTICAL energy/Lz
-    # conservation (max|dE/E0| 8.415e-04 both ways). It is the same set that
-    # benchmark_a100/env_fused.sh sources by hand; wiring it here makes the fast
-    # lane the built-in default for the large_n_gpu static-radix regime instead
-    # of a knob that has to be remembered. Anything already set in the process
-    # environment wins (explicit shell override / opt-out), and the whole block
-    # is gated by fmm_large_n_environment_overrides_enabled above.
-    fast_lane_regime = (
-        str(getattr(config, "fmm_tree_build_mode", "")).strip().lower()
-        == "static_radix"
-        and str(fmm_preset or getattr(config, "fmm_preset", "")).strip().lower()
-        == "large_n_gpu"
-        and int(getattr(config, "N_particles", 0))
-        >= int(getattr(config, "fmm_large_n_min_particles", 200_000))
-    )
-    if fast_lane_regime:
-        n_particles = int(getattr(config, "N_particles", 0))
-        fast_lane_overrides = {
-            "JACCPOT_STATIC_STRICT_GPU_MODE": "on",
-            "JACCPOT_STATIC_STRICT_FUSED_MODE": "on",
-            "JACCPOT_STATIC_STRICT_FUSED_DEVICE_ONLY": "1",
-            "JACCPOT_STATIC_STRICT_FUSED_DISALLOW_HOST_SEGMENT_FALLBACK": "1",
-            "JACCPOT_STATIC_STRICT_FUSED_FLAT_COMPACT_FAR_PAIRS": "1",
-            # Sized for ~200k (far_pair_count ~65k << 131072); raise via the
-            # shell for substantially larger N.
-            "JACCPOT_STATIC_STRICT_FUSED_COMPACT_FAR_PAIR_CAP": "131072",
-            "JACCPOT_STATIC_STRICT_FUSED_PROFILE_SET": str(n_particles),
-            "JACCPOT_STATIC_STRICT_REQUIRE_EXACT_CAP_PROFILE_MATCH": "0",
-            "JACCPOT_LARGE_N_COMPILED_STATE_MODE": "on",
-            "JACCPOT_LARGE_N_RADIX_FAST_PAYLOAD_IN_FUSED": "1",
-        }
-        for key, value in fast_lane_overrides.items():
-            if key not in os.environ:
-                overrides.setdefault(key, value)
     return overrides
 
 
@@ -180,12 +128,11 @@ def _build_fmm_solver(
     )
     from yggdrax.interactions import DualTreeTraversalConfig
 
-    # Apply the large-N env overrides (including the device-only fused fast-lane)
-    # before constructing the solver. Several strict-fused knobs -- notably
-    # JACCPOT_STATIC_STRICT_REQUIRE_EXACT_CAP_PROFILE_MATCH and the DEVICE_ONLY
-    # gate -- are read in FastMultipoleMethod.__init__ and captured as instance
-    # state, so the temporary context wrapped around the *run* is too late for
-    # them. setdefault keeps any explicit shell override (or opt-out) winning.
+    # Apply the large-N env overrides the config sets explicitly before
+    # constructing the solver (jaccpot reads some of its knobs in
+    # FastMultipoleMethod.__init__). The fused strict lane itself is jaccpot's
+    # default since its 2026-10 cleanup. setdefault keeps any explicit shell
+    # override winning.
     for _env_key, _env_value in _large_n_environment_overrides(
         config, fmm_preset=fmm_preset
     ).items():
@@ -477,30 +424,6 @@ def _run_active_segment_scan(
     )
 
 
-def _default_fused_neighbor_edge_cap(n_particles: int) -> int:
-    """Generous up-front neighbor-edge fixed cap for the fused static-radix lane.
-
-    The fused lane sizes the near-field neighbor-edge list to a fixed cap. Its
-    N-based bootstrap (~1 edge/particle) underestimates centrally-concentrated
-    ICs — a 200k Agama disk has ~4 edges/particle (dense inner leaves are "near"
-    almost every other leaf). The cap cannot grow inside the device-resident
-    scan (it would break the fixed-shape ``lax.scan`` carry), so it must be set
-    before the initial state is built. The neighbor-edge list is just int edge
-    ids (~4-8 bytes each), so a generous cap is cheap: the default 16 edges/
-    particle (=3.2M / ~26 MB at 200k) covers realistic concentrated disks with
-    margin. Tunable via ``ODISSEO_FMM_NEIGHBOR_EDGE_PER_PARTICLE_CAP``; extreme
-    ICs can also set ``JACCPOT_LARGE_N_NEIGHBOR_EDGE_PROFILE_FIXED_CAP`` directly.
-    """
-    try:
-        per_particle = int(
-            os.environ.get("ODISSEO_FMM_NEIGHBOR_EDGE_PER_PARTICLE_CAP", "16")
-        )
-    except Exception:
-        per_particle = 16
-    per_particle = max(1, per_particle)
-    return int(per_particle) * int(max(1, n_particles)) + 1
-
-
 def integrate_leapfrog_jaccpot_active(
     state: jnp.ndarray,
     mass: jnp.ndarray,
@@ -611,19 +534,6 @@ def integrate_leapfrog_jaccpot_active(
         raise ValueError(
             "strict static-radix production requires refresh_every=1 for "
             "endpoint-correct velocity-Verlet self gravity"
-        )
-    # Size the fused neighbor-edge fixed cap generously up front (before any
-    # prepare caches the env-config), so concentrated ICs fit. It cannot grow
-    # inside the device-resident scan, and the edge list is cheap (int ids), so
-    # over-provisioning is fine. See _default_fused_neighbor_edge_cap.
-    if (
-        strict_production_lane
-        and os.environ.get("ODISSEO_FMM_NEIGHBOR_EDGE_AUTOSIZE", "1").strip().lower()
-        in {"1", "true", "yes", "on"}
-        and "JACCPOT_LARGE_N_NEIGHBOR_EDGE_PROFILE_FIXED_CAP" not in os.environ
-    ):
-        os.environ["JACCPOT_LARGE_N_NEIGHBOR_EDGE_PROFILE_FIXED_CAP"] = str(
-            _default_fused_neighbor_edge_cap(int(state.shape[0]))
         )
     collect_shape_signatures = bool(profile or enforce_static_shape_contract)
     t_total_start = time.perf_counter() if profile else 0.0

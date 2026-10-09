@@ -309,6 +309,12 @@ any prepare caches the env-config) — default 16 edges/particle (3.2M / ~26 MB 
 still set the jaccpot env directly. Result: the 200k Agama disk now runs the
 **fast fused lane fully automatically** (no manual caps).
 
+**Superseded (2026-10).** The autosize and the coupling's whole fused-lane env
+block are gone. jaccpot's cleanup (D2) made the fused strict lane, its near-field
+sizing and count-sized list caps jaccpot's defaults. The autosize had also become
+harmful: `16 * N + 1` is odd, and jaccpot's flat walk (its default since
+2026-09-10) refuses an odd neighbour-edge cap.
+
 ## Next steps (deferred)
 
 0. (done 2026-07-08) The **neighbor-edge** profile cap is now auto-sized up front
