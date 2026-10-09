@@ -196,6 +196,22 @@ def _build_fmm_solver(
     if bool(retain_far_pairs_for_grad):
         farfield_kwargs["retain_far_pairs_for_grad"] = True
 
+    criterion_kwargs: dict[str, Any] = {}
+    if str(fmm_mac_type) == "dehnen_error":
+        adaptive_eps = getattr(config, "fmm_adaptive_eps", None)
+        if adaptive_eps is None:
+            raise ValueError(
+                "fmm_mac_type='dehnen_error' needs config.fmm_adaptive_eps, the "
+                "relative force-accuracy target of Dehnen's eq (16a)"
+            )
+        criterion_kwargs = dict(
+            adaptive_eps=float(adaptive_eps),
+            adaptive_error_model="dehnen_paper",
+            mac_force_scale_mode=str(
+                getattr(config, "fmm_mac_force_scale_mode", "paper_fb")
+            ),
+        )
+
     return FastMultipoleMethod(
         preset=str(fmm_preset),
         basis=str(fmm_basis),
@@ -249,6 +265,7 @@ def _build_fmm_solver(
             ),
             mac_type=str(fmm_mac_type),
         ),
+        **criterion_kwargs,
     )
 
 

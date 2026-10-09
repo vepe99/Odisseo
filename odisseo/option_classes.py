@@ -224,6 +224,14 @@ class SimulationConfig(NamedTuple):
     fmm_theta: float = 0.6
     fmm_runtime_path: str = "auto"
     fmm_mac_type: str = "dehnen"
+    # mac_type="dehnen_error" (Dehnen 2014 eq 16a): a far pair is accepted when its
+    # estimated force error is below fmm_adaptive_eps * min_b f_b (eq 16b's
+    # cancellation-free force scale). Required with dehnen_error; ignored otherwise.
+    # On jaccpot's fused lane the criterion runs inside the walk on every step, with
+    # f_b carried from the previous step's force.
+    fmm_adaptive_eps: Optional[float] = None
+    # How f_b is obtained: "paper_fb" (eq 16b; what the fused lane uses).
+    fmm_mac_force_scale_mode: str = "paper_fb"
     fmm_farfield_mode: str = "auto"
     fmm_m2l_chunk_size: Optional[int] = None
     fmm_nearfield_mode: str = "auto"
