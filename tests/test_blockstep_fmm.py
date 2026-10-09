@@ -991,11 +991,11 @@ def test_blockstep_total_acceleration_builds_its_own_force(system, config, param
 
 
 # --------------------------------------------------------------------------
-# known upstream limitation: the Pallas near field drops the dt_max gradient
+# the dt_max gradient, on both near-field backends
 # --------------------------------------------------------------------------
 
 
-def _pallas_dt_max_gradient(backend, interpret, system, config, params):
+def _dt_max_gradient(backend, interpret, system, config, params):
     """Return (AD, FD) for ``d/d(dt_max)`` of a boundary kick on one backend."""
     state, mass = system
     positions, velocities = state[:, 0, :], state[:, 1, :]
@@ -1019,46 +1019,23 @@ def _pallas_dt_max_gradient(backend, interpret, system, config, params):
     return float(jax.grad(loss)(dt0)), float((loss(dt0 + h) - loss(dt0 - h)) / (2.0 * h))
 
 
-def test_the_dt_max_gradient_is_exact_on_the_pure_jax_backend(system, config, params):
+@pytest.mark.parametrize("backend, interpret", [("jax", False), ("pallas", True)])
+def test_the_dt_max_gradient_is_exact(backend, interpret, system, config, params):
     """``d/d(dt_max)`` must be exact: nornax relies on it being differentiable.
 
     nornax deliberately keeps ``dt_max`` traced by scaling it *into* the boundary
     weight table rather than baking it in, so a loss can be differentiated with
-    respect to the timestep. This pins that the default backend honours it.
+    respect to the timestep.
+
+    The Pallas near field used to drop the near field's share of this gradient
+    (its reverse rule returned a zero ``level_weights`` cotangent; AD/FD 0.0090).
+    A tripwire pinned that defect until jaccpot fixed it; on 2026-10-09 it
+    measured AD/FD = 0.99999999 against jaccpot main, so both backends are held
+    to exactness here, as the tripwire asked.
     """
-    ad, fd = _pallas_dt_max_gradient("jax", False, system, config, params)
-    assert abs(ad - fd) <= 1.0e-6 * abs(fd), f"AD {ad:.6e} vs FD {fd:.6e}"
-
-
-def test_the_pallas_backend_drops_most_of_the_dt_max_gradient(system, config, params):
-    """KNOWN UPSTREAM DEFECT, pinned so it cannot be relied on or silently change.
-
-    ``jaccpot/pallas/nearfield_mutual.py`` returns ``jnp.zeros_like(level_weights)``
-    from its reverse rule, on the stated grounds that the level table is "discrete
-    or frozen". It is neither: ``level_weights[k] == half * dt_max / 2**k`` is a
-    smooth function of ``dt_max``, and the forward force is *linear* in it. So the
-    near field's entire contribution to ``d/d(dt_max)`` is dropped and only the
-    far field's survives -- measured 111x too small at this configuration (ratio
-    0.0090), not merely a missing higher-order term.
-
-    The same reverse rule zeroes ``softening_sq`` and ``g_value``, so
-    ``d/d(softening)`` and ``d/d(G)`` are lost through the near field too.
-
-    This asserts the *discrepancy*, not a tolerance, so the test fails the moment
-    upstream fixes it -- at which point it should be replaced by the exactness
-    assertion above, parametrized over both backends. Fixing it properly means
-    reducing ``f_geometric . Fbar`` per level inside the reverse kernel, which
-    has the tile in registers and could emit a ``(k_max + 1,)`` cotangent.
-    """
-    ad, fd = _pallas_dt_max_gradient("pallas", True, system, config, params)
+    ad, fd = _dt_max_gradient(backend, interpret, system, config, params)
     assert abs(fd) > 1.0e-6, "the finite-difference reference is degenerate here"
-    ratio = ad / fd
-    assert ratio < 0.5, (
-        f"the Pallas dt_max gradient is no longer badly wrong (ratio {ratio:.4f}). "
-        "If upstream fixed the level_weights cotangent, delete this test and "
-        "parametrize test_the_dt_max_gradient_is_exact_on_the_pure_jax_backend "
-        "over both backends instead."
-    )
+    assert abs(ad - fd) <= 1.0e-6 * abs(fd), f"AD {ad:.6e} vs FD {fd:.6e}"
 
 
 def test_one_compiled_program_survives_every_topology_rebuild(system, config, params):
