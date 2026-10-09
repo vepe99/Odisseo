@@ -39,14 +39,15 @@ def test_strict_velocity_verlet_uses_endpoint_acceleration():
     assert not jnp.allclose(actual[:, 1], frozen_velocity)
 
 
-def test_canonical_static_radix_cap_is_data_driven():
-    # "auto" since 0177916 (2026-07-08): jaccpot sizes the static target-block cap
-    # to the densest leaf at prepare time; the old fixed 32 always failed on
-    # centrally concentrated ICs.
+def test_canonical_static_radix_config_sets_no_env():
+    # The coupling set the fused lane's switches and an "auto" static target-block
+    # cap here (since 0177916, 2026-07-08). Since jaccpot's 2026-10 cleanup (D2)
+    # those are jaccpot's defaults, so a config that sets nothing explicitly
+    # leaves the environment alone.
     overrides = _large_n_environment_overrides(
         _canonical_config(), fmm_preset="large_n_gpu"
     )
-    assert overrides["JACCPOT_LARGE_N_STATIC_TARGET_BLOCKS_MAX_PER_LEAF"] == "auto"
+    assert overrides == {}
 
 
 def test_explicit_static_radix_cap_is_not_increased():
