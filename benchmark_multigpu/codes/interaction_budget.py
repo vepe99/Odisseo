@@ -122,7 +122,7 @@ def main():
                 working_dtype=jax.numpy.float32,
                 advanced=FMMAdvancedConfig(
                     tree=TreeConfig(mode="static_radix", leaf_target=leaf),
-                    farfield=FarFieldConfig(mode="auto"),
+                    farfield=FarFieldConfig(),
                     nearfield=NearFieldConfig(mode="auto"),
                     mac_type="dehnen",
                 ),

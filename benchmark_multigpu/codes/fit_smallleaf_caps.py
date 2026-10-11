@@ -171,7 +171,7 @@ def main() -> int:
         working_dtype=jnp.float32,
         advanced=FMMAdvancedConfig(
             tree=TreeConfig(mode="static_radix", leaf_target=args.leaf),
-            farfield=FarFieldConfig(mode="auto"),
+            farfield=FarFieldConfig(),
             nearfield=NearFieldConfig(mode="auto"),
             runtime=runtime_cfg,
             mac_type="dehnen",

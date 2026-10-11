@@ -58,7 +58,7 @@ def run(order, theta, leaf, use_pallas, repeats=5, warmup=2):
         use_pallas=use_pallas,
         advanced=FMMAdvancedConfig(
             tree=TreeConfig(mode="static_radix", leaf_target=leaf),
-            farfield=FarFieldConfig(mode="auto"),
+            farfield=FarFieldConfig(),
             nearfield=NearFieldConfig(mode="auto"),
             mac_type="dehnen",
         ),
@@ -79,7 +79,7 @@ def run(order, theta, leaf, use_pallas, repeats=5, warmup=2):
         ts.append(time.perf_counter() - t0)
     d = dict(s.get_runtime_diagnostics() or {})
     return min(ts) * 1e3, np.asarray(a), {k: d.get(k) for k in DIAG_KEYS} | {
-        "nearfield_mode": s.nearfield_mode, "farfield_mode": s.farfield_mode,
+        "nearfield_mode": s.nearfield_mode,
         "fused": d.get("strict_fused_mode_active"),
     }
 

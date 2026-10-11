@@ -60,7 +60,7 @@ def main():
         preset="large_n_gpu", basis="real", theta=args.theta,
         G=1.0, softening=1e-7, working_dtype=jnp.float32,
         advanced=FMMAdvancedConfig(tree=TreeConfig(mode="static_radix", leaf_target=args.leaf),
-                                   farfield=FarFieldConfig(mode="auto"),
+                                   farfield=FarFieldConfig(),
                                    nearfield=NearFieldConfig(mode="auto"), mac_type="dehnen"),
         fixed_order=args.order)
     prepared, ev = s.strict_fused_prepared_eval_fn(

@@ -15,7 +15,7 @@ def run(N, order, theta, leaf=256):
     s = FastMultipoleMethod(preset="large_n_gpu", basis="real", theta=theta, G=1.0,
         softening=1e-7, working_dtype=jax.numpy.float32,
         advanced=FMMAdvancedConfig(tree=TreeConfig(mode="static_radix", leaf_target=leaf),
-            farfield=FarFieldConfig(mode="auto"), nearfield=NearFieldConfig(mode="auto"), mac_type="dehnen"),
+            farfield=FarFieldConfig(), nearfield=NearFieldConfig(mode="auto"), mac_type="dehnen"),
         fixed_order=order)
     try:
         prep, ev = s.strict_fused_prepared_eval_fn(positions=P, masses=M, leaf_size=leaf, max_order=order, theta=theta)

@@ -33,7 +33,7 @@ state = jnp.stack([jnp.asarray(pos, jnp.float32), jnp.asarray(vel)], axis=1)
 s = FastMultipoleMethod(preset="large_n_gpu", basis="real", theta=args.theta, G=1.0,
     softening=1e-7, working_dtype=jnp.float32,
     advanced=FMMAdvancedConfig(tree=TreeConfig(mode="static_radix", leaf_target=args.leaf),
-        farfield=FarFieldConfig(mode="auto"), nearfield=NearFieldConfig(mode="auto"), mac_type="dehnen"),
+        farfield=FarFieldConfig(), nearfield=NearFieldConfig(mode="auto"), mac_type="dehnen"),
     fixed_order=args.order)
 def run(state, prepared, steps):
     out = s.strict_run_v2(state=state, masses=M, dt=args.dt, num_steps=steps, refresh_every=1,

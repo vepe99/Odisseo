@@ -83,7 +83,7 @@ def main() -> int:
         G=1.0, softening=args.softening, working_dtype=jnp.float32,
         advanced=FMMAdvancedConfig(
             tree=TreeConfig(mode="static_radix", leaf_target=args.leaf),
-            farfield=FarFieldConfig(mode="auto"), nearfield=NearFieldConfig(mode="auto"),
+            farfield=FarFieldConfig(), nearfield=NearFieldConfig(mode="auto"),
             runtime=runtime_cfg, mac_type="dehnen"),
         fixed_order=args.order)
     prepared, _ = solver.strict_fused_prepared_eval_fn(
