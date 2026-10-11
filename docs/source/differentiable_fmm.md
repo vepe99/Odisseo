@@ -181,8 +181,9 @@ Two things to plan around:
 * **Bare `jax.grad` is the supported usage.** jaccpot's inner kernels are already
   jit-compiled. An outer `jax.jit` around the whole integration works at moderate
   N but can hit host-side ops in jaccpot's re-run sweeps at large N.
-* **`fmm_basis="cartesian"` is not differentiable**; `"real"` (the default) and
-  `"complex"` both are.
+* **Only the real basis exists.** `"real"` (the default; `"solidfmm"` is an alias)
+  is differentiable. `"complex"` and `"cartesian"` were removed in jaccpot's
+  2026-10 cleanup and raise at solver construction.
 * The large-N path additionally needs the frozen M2L pair list retained. The plan
   builder requests it for you (`retain_far_pairs_for_grad=True`) — the forward
   lane still discards it to save memory.

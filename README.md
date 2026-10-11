@@ -48,28 +48,17 @@ Use `odisseo.integrate(...)` as the main entrypoint. Backend selection is done v
 
 Key FMM tuning fields in `SimulationConfig`:
 - `fmm_refresh_every`, `fmm_leaf_size`, `fmm_max_order`
-- `fmm_preset`, `fmm_basis`, `fmm_theta`, `fmm_runtime_path`, `fmm_mac_type`
-- `fmm_farfield_mode`, `fmm_nearfield_mode`, `fmm_nearfield_edge_chunk_size`, `fmm_tree_leaf_target`
+- `fmm_preset`, `fmm_basis` (`"real"`, jaccpot's only basis), `fmm_theta`, `fmm_mac_type`
+- `fmm_nearfield_mode`, `fmm_nearfield_edge_chunk_size`, `fmm_tree_leaf_target`
 - `fmm_auto_large_n_profile`, `fmm_large_n_min_particles`, `fmm_large_n_force_fp32`
 
-Large-`N` GPU runs can now auto-switch from `fmm_preset="fast"` to jaccpot's
-radix fast lane (`"large_n_gpu"` preset + `"large_n"` runtime path) when
-`fmm_auto_large_n_profile=True` and particle count exceeds
-`fmm_large_n_min_particles`.
+`fmm_runtime_path` and `fmm_farfield_mode` are accepted and ignored since the
+jaccpot 2026-10 cleanup: the preset alone selects jaccpot's lane, and every
+far-field mode jaccpot still accepts runs the same flat far-pair list.
 
-> **Multi-step accuracy note (device-resident treecode walk).** The optional
-> device-resident treecode far/near builder
-> (`JACCPOT_STATIC_STRICT_FUSED_TREECODE_WALK=1`) must use bounding-**sphere**
-> MAC extents (`JACCPOT_STATIC_STRICT_FUSED_TREECODE_MAC=dual`, the default) for
-> time integration. The cheaper axis-aligned box (`bh`) extents are only
-> statically accurate: the box extent systematically under-bounds the source
-> multipole radius, so the MAC effectively runs at a coarser opening angle than
-> the requested θ and injects a coherent non-conservative force bias that
-> velocity-Verlet accumulates into secular heating, blowing the run up over ~tens
-> of steps. (Geometry is recomputed each step — this is a bound-tightness issue,
-> not stale geometry.) Use `bh` only for single-shot force evaluations. See
-> [`docs/STATIC_RADIX_FUSED_STATUS.md`](docs/STATIC_RADIX_FUSED_STATUS.md) and
-> jaccpot's `docs/treecode_mac_stability.md`.
+Large-`N` GPU runs can auto-switch from `fmm_preset="fast"` to jaccpot's radix
+fast lane (the `"large_n_gpu"` preset) when `fmm_auto_large_n_profile=True` and
+the particle count reaches `fmm_large_n_min_particles`.
 
 Example:
 

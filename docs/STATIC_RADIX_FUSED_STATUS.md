@@ -59,8 +59,8 @@ Odisseo drives it from the strict lane in `jaccpot_coupling.py`.
 - **Correctness fixes landed & regression-guarded**:
   - fresh compact far-pair rebuild is the default with active-count masking of
     padded slots (`yggdrax.CompactTaggedFarPairs.far_pair_count`), fixing stale
-    far-pair reuse that corrupted forces under particle drift (unsafe reuse is
-    now opt-in);
+    far-pair reuse that corrupted forces under particle drift (the unsafe reuse
+    was removed in jaccpot's 2026-10 cleanup, X6);
   - velocity-Verlet endpoint correction (one endpoint FMM eval per step, was
     reusing a single acceleration at both endpoints);
   - NFW potential finite-at-`r→0` small-radius series (`odisseo/potentials.py`).
@@ -78,47 +78,13 @@ Odisseo drives it from the strict lane in `jaccpot_coupling.py`.
   all-finite. ~0.78 s/step with `--profile-breakdown` diagnostics on (slower,
   weaker GPU; not comparable to the 0.31 s reference figure).
 
-## Treecode device-resident walk — MAC choice & multi-step stability (2026-07-14)
+## Treecode device-resident walk — removed (2026-10)
 
-The opt-in device-resident per-leaf **treecode walk**
-(`JACCPOT_STATIC_STRICT_FUSED_TREECODE_WALK=1`) replaces the host-iterated yggdrax
-dual-tree walk (kills its launch storm) and is the intended high-performance far/near
-builder. Its acceptance criterion (MAC) can use two per-node extent recipes, selected by
-`JACCPOT_STATIC_STRICT_FUSED_TREECODE_MAC`:
-
-Note the fast lane recomputes **all node geometry every step** — particles are
-re-Morton-sorted (fresh leaf membership) and node centers/bounding-sphere radii/box
-extents/multipoles/interaction lists are rebuilt from the current positions; only the
-tree *shape* (node index-ranges, leaf count, buffer capacities) is frozen (to avoid
-recompilation). So the choice below is a bound-*tightness* issue, not stale geometry.
-
-- **`bh`** — axis-aligned box `max_extent` (half-width). Cheaper (accepts fewer
-  far/M2L pairs → faster) and *statically* as accurate as the sphere (t=0 force parity
-  vs the dual walk ~0.03 %). **But dynamically UNSTABLE**: the box `max_extent`
-  systematically *under-bounds* the true source multipole radius (the bounding sphere
-  circumscribes the box, ≈√3× larger isotropic, more when anisotropic). Feeding the
-  smaller extent makes the MAC accept far pairs at smaller `d` than the sphere would →
-  **`bh` effectively runs at a coarser opening angle than the requested θ**, systematically
-  under-resolving the far field. Instantaneously tiny (~0.03 %), but it is a *coherent,
-  non-gradient* force bias, and velocity-Verlet does not conserve energy under a
-  non-conservative force → it **accumulates into secular heating** and blows up
-  (200k/order-4/real: max|v| 7 → 20 → 142 → >10³ over 300 steps; total energy diverges).
-  Not an overflow effect (huge caps don't fix it).
-- **`dual`** (**DEFAULT since 2026-07-14**) — reproduce the configured dual-tree MAC
-  extents (dehnen bounding-**sphere** radius for the large-N preset). This is the correct
-  multipole-radius bound, keeps every accepted pair inside the θ budget, and gives
-  **accuracy-profile parity** with the validated dual walk. Stable: over 300 steps
-  `max|v|` 7.34, `dKE/KE0` 5.6e-2, `|dLz/Lz0|` 1.9e-3 — matching the dual-walk baseline
-  (7.33 / 5.6e-2 / 2.2e-3) in both the complex and real (Dehnen) bases.
-
-**Cost of the fix:** dehnen accepts deeper → more M2L pairs → ~16 % slower per step
-(200k/order-4/real, A100: ~58 ms/step `dual` vs ~50 ms/step `bh`), still launch-storm-free.
-
-**Guidance:** use the default `dual` for any multi-step integration; `bh` is safe only
-for single-shot/static force evaluations. Full write-up:
-`jaccpot/docs/treecode_mac_stability.md`; code in
-`jaccpot/runtime/_interaction_cache.py` (`_build_treecode_artifacts_strict_streamed`,
-`_treecode_mac_extents`) and `jaccpot/experimental/treecode_walk.py` (`_mac_ok`).
+The opt-in per-leaf treecode walk (`JACCPOT_STATIC_STRICT_FUSED_TREECODE_WALK=1`,
+with its `..._TREECODE_MAC` extents switch) was removed in jaccpot's 2026-10
+cleanup (X1): its box MAC was dynamically unstable and the flat-emission walk
+replaced it. Setting the switch now raises. The stability analysis is in jaccpot's
+`docs/treecode_mac_stability.md`.
 
 ## Deferred test debt (pre-existing; tracked, not blocking)
 
@@ -128,10 +94,11 @@ work and are cleanup follow-ups:
 - **jaccpot (14)**: 9 stale policy assertions in `tests/unit/test_solver_api.py`
   and `test_large_n_fast_path_policy.py` (defaults evolved: `target_owned_block_size`
   8→32, gpu-preset caps, `process_block` 256); 5 in `tests/integration/test_fmm.py`
-  — 2 small-N strict `prepare_state` tests that must set
-  `JACCPOT_STATIC_STRICT_REQUIRE_EXACT_CAP_PROFILE_MATCH=0` (the strict fail-fast is
-  the intended contract; see the sibling `test_strict_fused_moved_endpoint_matches_fresh_prepare`),
-  1 cache-key spy, 2 for the deliberately-abandoned adaptive/class_major preset.
+  — 2 small-N strict `prepare_state` tests (strict cap-profile fail-fast), 1
+  cache-key spy, 2 for the deliberately-abandoned adaptive/class_major preset.
+  Historical: jaccpot's 2026-10 cleanup removed the strict cap-profile file with
+  its exact-match switch and adaptive sizing (X4) and the class-major far field
+  (X3).
 - **Odisseo (3)**: environmental under jax 0.9.0 — `test_initial_condition.py`
   (jaxtyping), `test_integrators.py` (diffrax `saveat`); files untouched by this work.
 
@@ -256,10 +223,11 @@ forces) plus the small far-field. Benchmark:
 on a shared/contended GPU is meaningless and produced the earlier noisy baselines).
 
 **Odisseo production wiring:** `odisseo/jaccpot_coupling.py::_build_fmm_solver`
-threads `use_pallas` into the solver from `ODISSEO_FMM_USE_PALLAS` (default off;
-set `1`/`true` to enable on Ampere+). The solver still auto-falls back to pure
-JAX on unsupported hardware. Verified: the flag propagates to
-`solver._impl.use_pallas`.
+threads `use_pallas` into the solver: `ODISSEO_FMM_USE_PALLAS` if set, else
+`SimulationConfig.fmm_use_pallas`, else `None`, which lets jaccpot auto-detect
+(Pallas on Ampere sm_80+, pure JAX on sm_75/CPU; the default since 2026-07-18).
+The solver still falls back to pure JAX on unsupported hardware. Verified: the
+flag propagates to `solver._impl.use_pallas`.
 
 ## Fused lane on concentrated galaxy ICs — static-block cap auto-size (2026-07-08)
 
@@ -281,8 +249,11 @@ Fixes:
   and caches the resolved cap so the traced strict refresh reuses the same fixed
   shape (zero-recompile). At leaf=256 the cap auto-sizes 32→256 (~0.8 GB payload).
   Unit test: `jaccpot/tests/unit/test_static_target_blocks_cap.py`.
-- **Odisseo** (`jaccpot_coupling.py`): the coupling defaults the static-block cap
-  to `auto`; and — the second half of the fix — wraps the `strict_run_v2` call in
+- **Odisseo** (`jaccpot_coupling.py`): the coupling defaulted the static-block cap
+  to `auto` (since jaccpot's 2026-10 cleanup `auto` is jaccpot's own default, and
+  the coupling sets the cap only when
+  `fmm_large_n_static_target_blocks_max_per_leaf` is given); and — the second half
+  of the fix — wraps the `strict_run_v2` call in
   `_temporary_large_n_environment` so the large-N env (notably `TARGET_BLOCK_SIZE`)
   stays active while the device-resident scan is **traced/compiled**, not just
   during the eager prepare. Without this the traced refresh re-resolved
@@ -317,14 +288,15 @@ harmful: `16 * N + 1` is odd, and jaccpot's flat walk (its default since
 
 ## Next steps (deferred)
 
-0. (done 2026-07-08) The **neighbor-edge** profile cap is now auto-sized up front
-   for concentrated ICs (generous `edges/particle` default; see above). A future
-   refinement could measure the exact count via jaccpot's own traversal instead
-   of a generous heuristic, but the heuristic is cheap and covers realistic disks.
+0. (done 2026-07-08; superseded 2026-10, see above) The **neighbor-edge** profile
+   cap was auto-sized up front by the coupling. jaccpot now sizes its list caps
+   from the counts its own walk measures.
 1. `use_pallas` is wired into the Odisseo coupling (`ODISSEO_FMM_USE_PALLAS`);
    the full fused *eval* is re-baselined above (3.9x). An end-to-end 10-step
-   `strict_run_v2` A/B (via `tools/walltime_ab_compare.py`, `--variant-env
-   JACCPOT_STATIC_STRICT_FUSED_MODE=on --variant-env ODISSEO_FMM_USE_PALLAS=1`)
+   `strict_run_v2` A/B (via `tools/walltime_ab_compare.py`,
+   `--variant-env ODISSEO_FMM_USE_PALLAS=1`; it also set
+   `JACCPOT_STATIC_STRICT_FUSED_MODE=on` then, a value jaccpot ignores since its
+   2026-10 cleanup)
    ran clean (final state all-finite, physical). It is compile/IO-dominated at
    10 steps (whole-process wall only ~1.08x), so it is *not* a per-step
    throughput measure — the isolated self-force eval (3.9x) is. A longer-horizon
