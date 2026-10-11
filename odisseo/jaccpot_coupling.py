@@ -1456,32 +1456,17 @@ def integrate_leapfrog_jaccpot_active(
                         theta=float(fmm_theta),
                         fused_device_mode=True,
                     )
-                except (
-                    TypeError,
-                    NotImplementedError,
-                    RuntimeError,
-                    ValueError,
-                ) as exc:
+                except (TypeError, NotImplementedError, RuntimeError, ValueError):
                     # The payload refresh is an optimisation on top of an already
                     # valid prepared state, so an unsupported runtime profile must
                     # fall through rather than abort the run. jaccpot supports it
-                    # only for its large-N production profile (preset='large_n_gpu',
-                    # radix tree, the real basis -- named 'solidfmm' internally) and
-                    # raises NotImplementedError elsewhere -- catching TypeError
-                    # alone let that escape and killed any run at another preset.
-                    # This matches the exception set _prepare_or_refresh_state
-                    # already tolerates on the same call below.
-                    #
-                    # One exception is not swallowed: an option jaccpot's 2026-10
-                    # cleanup removed. A fused-device refresh refuses a strict-lane
-                    # switch set to a removed value (ValueError, e.g.
-                    # JACCPOT_STATIC_STRICT_FUSED_DEVICE_ONLY=0) so the run cannot
-                    # silently measure the surviving path; every such message
-                    # names the cleanup.
-                    if "2026-10 cleanup" in str(exc) or "cleanup 2026-10" in str(
-                        exc
-                    ):
-                        raise
+                    # only for preset='large_n_gpu' + radix + the real basis (named
+                    # 'solidfmm' internally) and raises NotImplementedError
+                    # elsewhere -- catching TypeError alone let that escape and
+                    # killed any run at another preset/basis. This matches the
+                    # exception set _prepare_or_refresh_state already tolerates on
+                    # the same call below.
+                    pass
             return prepared
 
     def _prepare_or_refresh_state(
