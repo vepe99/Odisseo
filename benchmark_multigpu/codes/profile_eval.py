@@ -146,7 +146,7 @@ def main():
         theta=args.theta, G=1.0, softening=args.softening, working_dtype=jax.numpy.float32,
         advanced=FMMAdvancedConfig(
             tree=TreeConfig(mode="static_radix", leaf_target=args.leaf),
-            farfield=FarFieldConfig(mode="auto"), nearfield=NearFieldConfig(mode="auto"),
+            farfield=FarFieldConfig(), nearfield=NearFieldConfig(mode="auto"),
             mac_type="dehnen"),
         fixed_order=args.order)
     prepared, ev = s.strict_fused_prepared_eval_fn(

@@ -21,7 +21,7 @@ M = jnp.asarray(mass, jnp.float32); P = jnp.asarray(pos, jnp.float32)
 s = FastMultipoleMethod(preset="large_n_gpu", basis="real", theta=THETA, G=1.0,
     softening=1e-7, working_dtype=jnp.float32,
     advanced=FMMAdvancedConfig(tree=TreeConfig(mode="static_radix", leaf_target=LEAF),
-        farfield=FarFieldConfig(mode="auto"), nearfield=NearFieldConfig(mode="auto"), mac_type="dehnen"),
+        farfield=FarFieldConfig(), nearfield=NearFieldConfig(mode="auto"), mac_type="dehnen"),
     fixed_order=ORDER)
 prep_eval, ev = s.strict_fused_prepared_eval_fn(positions=P, masses=M, leaf_size=LEAF, max_order=ORDER, theta=THETA)
 a_eval = np.asarray(jax.block_until_ready(ev(prep_eval)))
