@@ -53,7 +53,7 @@ DIAG_KEYS = (
 
 def run(order, theta, leaf, use_pallas, repeats=5, warmup=2):
     s = FastMultipoleMethod(
-        preset="large_n_gpu", runtime_path="large_n", basis="real",
+        preset="large_n_gpu", basis="real",
         theta=theta, G=1.0, softening=1e-7, working_dtype=jax.numpy.float32,
         use_pallas=use_pallas,
         advanced=FMMAdvancedConfig(

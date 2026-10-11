@@ -27,7 +27,12 @@ def _resolve_fmm_runtime_profile(
     state: jnp.ndarray,
     config: SimulationConfig,
 ) -> tuple[str, str, jnp.dtype]:
-    """Resolve preset/runtime-path/dtype for jaccpot FMM execution."""
+    """Resolve preset/runtime-path/dtype for jaccpot FMM execution.
+
+    The runtime path is resolved for Odisseo's own records only: it is accepted
+    and ignored since the jaccpot 2026-10 cleanup (X4), where the preset alone
+    selects the lane, and ``_build_fmm_solver`` no longer passes it on.
+    """
     preset = str(config.fmm_preset).strip().lower()
     runtime_path = str(config.fmm_runtime_path).strip().lower()
     effective_dtype = jnp.dtype(state.dtype)

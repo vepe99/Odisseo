@@ -217,11 +217,14 @@ class SimulationConfig(NamedTuple):
 
     # Jaccpot solver tuning knobs exposed to ODISSEO.
     fmm_preset: str = "fast"
-    # Real (Dehnen) harmonics: the production default and, after jaccpot's
-    # cleanup 2026-10, its only basis. The radix large-N fast lane runs pure-real
-    # end to end. "solidfmm"/"complex" (and "cartesian") are being removed there.
+    # Real (Dehnen) harmonics: jaccpot's only basis since its 2026-10 cleanup.
+    # "solidfmm" is an alias for it (bit-identical forces); "complex" (C) and
+    # "cartesian" (K) were removed there and raise at solver construction.
     fmm_basis: str = "real"
     fmm_theta: float = 0.6
+    # Accepted and ignored since the jaccpot 2026-10 cleanup (X4): the
+    # "large_n_gpu" preset alone selects jaccpot's large-N lane, so this is no
+    # longer passed to jaccpot. Odisseo still resolves and records it.
     fmm_runtime_path: str = "auto"
     fmm_mac_type: str = "dehnen"
     # mac_type="dehnen_error" (Dehnen 2014 eq 16a): a far pair is accepted when its
@@ -232,6 +235,9 @@ class SimulationConfig(NamedTuple):
     fmm_adaptive_eps: Optional[float] = None
     # How f_b is obtained: "paper_fb" (eq 16b; what the fused lane uses).
     fmm_mac_force_scale_mode: str = "paper_fb"
+    # Accepted and ignored since the jaccpot 2026-10 cleanup (X3): every far-field
+    # mode jaccpot still accepts runs the same flat far-pair list, so this is no
+    # longer passed to jaccpot.
     fmm_farfield_mode: str = "auto"
     fmm_m2l_chunk_size: Optional[int] = None
     fmm_nearfield_mode: str = "auto"

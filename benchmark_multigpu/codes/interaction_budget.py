@@ -117,7 +117,7 @@ def main():
     for leaf, order, theta in ((l, p, t) for l in args.leafs for p in args.orders for t in args.thetas):
         if True:
             s = FastMultipoleMethod(
-                preset="large_n_gpu", runtime_path="large_n", basis="real",
+                preset="large_n_gpu", basis="real",
                 theta=theta, G=1.0, softening=args.softening,
                 working_dtype=jax.numpy.float32,
                 advanced=FMMAdvancedConfig(

@@ -113,7 +113,6 @@ def main():
                     cfg = DistributedFMMConfig(
                         order=order,
                         theta=theta,
-                        theta_cross=theta,
                         leaf_size=args.leaf_size,
                         softening=args.softening,
                         G=args.G,

@@ -142,7 +142,7 @@ def main():
     P = jax.numpy.asarray(pos, jax.numpy.float32)
     M = jax.numpy.asarray(mass, jax.numpy.float32)
     s = FastMultipoleMethod(
-        preset="large_n_gpu", runtime_path="large_n", basis="real",
+        preset="large_n_gpu", basis="real",
         theta=args.theta, G=1.0, softening=args.softening, working_dtype=jax.numpy.float32,
         advanced=FMMAdvancedConfig(
             tree=TreeConfig(mode="static_radix", leaf_target=args.leaf),

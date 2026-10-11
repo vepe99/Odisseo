@@ -18,43 +18,22 @@ import time
 from pathlib import Path
 from typing import Any
 
+# The fixed policy pins only what still changes a run. Everything else this
+# block used to set is jaccpot's default or is read nowhere since its 2026-10
+# cleanup (docs/cleanup_2026-10.md); `JACCPOT_LOCAL_EVAL_DIRECT_LEAF_FLATTEN=1`
+# raises since X5.
 DEFAULT_FIXED_POLICY_ENV: dict[str, str] = {
-    "JACCPOT_STATIC_RUNTIME_FIXED_SIZING": "1",
-    "JACCPOT_STATIC_STRICT_FUSED_COMPILED_SEGMENT_LOOP": "1",
-    "JACCPOT_STATIC_STRICT_FUSED_JIT_REFRESH_EVAL": "1",
-    "JACCPOT_STATIC_STRICT_FUSED_DEVICE_ONLY": "1",
-    "JACCPOT_STATIC_STRICT_FUSED_DISALLOW_HOST_SEGMENT_FALLBACK": "1",
-    "JACCPOT_STATIC_STRICT_FUSED_FLAT_COMPACT_FAR_PAIRS": "1",
     "JACCPOT_STATIC_STRICT_FUSED_COMPACT_FAR_PAIR_CAP": "131072",
-    "YGGDRAX_STATIC_RADIX_REUSE_NODE_RANGES": "1",
-    "JACCPOT_LOCAL_EVAL_DIRECT_LEAF_FLATTEN": "1",
-    "JACCPOT_LARGE_N_RADIX_FAST_OCCUPANCY_SORT": "1",
-    "JACCPOT_LARGE_N_RADIX_FAST_SKIP_EMPTY_TILES": "1",
-    "JACCPOT_LARGE_N_RADIX_FAST_COMPONENTWISE_PAIRS": "1",
-    "JACCPOT_LARGE_N_TARGET_LEAF_BATCH_SIZE": "16",
-    "JACCPOT_LARGE_N_TARGET_BLOCK_TILE_SIZE": "4",
 }
 DEFAULT_FUSED_PROFILE_SET = "100000,200000,400000"
 
+#: Recorded in the summary for provenance: the knobs jaccpot / yggdrax still read.
 STATIC_RADIX_ENV_KEYS: tuple[str, ...] = (
     "CUDA_VISIBLE_DEVICES",
-    "JACCPOT_STATIC_STRICT_GPU_MODE",
-    "JACCPOT_STATIC_STRICT_REQUIRE_EXACT_CAP_PROFILE_MATCH",
-    "JACCPOT_LARGE_N_COMPILED_STATE_MODE",
-    "JACCPOT_STATIC_STRICT_FUSED_COMPACT_PACK",
-    "JACCPOT_STATIC_STRICT_FUSED_MODE",
     "JACCPOT_STATIC_STRICT_FUSED_PROFILE_SET",
-    "JACCPOT_STATIC_RUNTIME_FIXED_SIZING",
-    "JACCPOT_STATIC_STRICT_FUSED_DISALLOW_HOST_SEGMENT_FALLBACK",
-    "JACCPOT_STATIC_STRICT_FUSED_COMPILED_SEGMENT_LOOP",
-    "JACCPOT_STATIC_STRICT_FUSED_JIT_REFRESH_EVAL",
-    "JACCPOT_STATIC_STRICT_FUSED_DEVICE_ONLY",
     "JACCPOT_STATIC_STRICT_FUSED_FLAT_COMPACT_FAR_PAIRS",
     "JACCPOT_STATIC_STRICT_FUSED_COMPACT_FAR_PAIR_CAP",
     "YGGDRAX_STATIC_RADIX_REUSE_NODE_RANGES",
-    "JACCPOT_LOCAL_EVAL_DIRECT_LEAF_FLATTEN",
-    "JACCPOT_LOCAL_EVAL_DTYPE_PRESERVE",
-    "JACCPOT_LOCAL_EVAL_ORDER4_UNROLLED",
     "JACCPOT_LARGE_N_RADIX_FAST_OCCUPANCY_SORT",
     "JACCPOT_LARGE_N_RADIX_FAST_SKIP_EMPTY_TILES",
     "JACCPOT_LARGE_N_RADIX_FAST_COMPONENTWISE_PAIRS",
@@ -64,9 +43,6 @@ STATIC_RADIX_ENV_KEYS: tuple[str, ...] = (
     "JACCPOT_STRICT_REFRESH_DETAIL_DIAG_MODE",
     "JACCPOT_LARGE_N_EVAL_DIAG_MODE",
     "JACCPOT_LARGE_N_NEARFIELD_DIAG_MODE",
-    "JACCPOT_STATIC_RADIX_REUSE_STRUCTURES",
-    "JACCPOT_STATIC_RADIX_UPWARD_BATCHED",
-    "JACCPOT_STATIC_RADIX_DOWNWARD_BATCHED",
     "JACCPOT_LARGE_N_OVERFLOW_PROFILE_FIXED_CAP",
     "JACCPOT_LARGE_N_NEIGHBOR_EDGE_PROFILE_FIXED_CAP",
     "ODISSEO_STRICT_DISABLE_EXTERNAL_FOR_TIMING",
@@ -211,7 +187,6 @@ def _profile_digest(profile: dict[str, Any]) -> dict[str, Any]:
         "runtime_strict_fused_compile_count",
         "runtime_strict_fused_execute_count",
         "runtime_strict_fused_device_refresh_route_count",
-        "runtime_strict_fused_planner_bypassed_count",
         "runtime_strict_velocity_verlet_acceleration_carry_active",
         "runtime_strict_self_force_bootstrap_evaluations",
         "runtime_strict_self_force_initial_full_fmm_evaluations",
@@ -261,14 +236,9 @@ def _profile_digest(profile: dict[str, Any]) -> dict[str, Any]:
         "runtime_strict_refresh_diag_upward_active",
         "runtime_strict_refresh_diag_downward_active",
         "runtime_strict_refresh_diag_eval_active",
-        "runtime_static_radix_reuse_structures",
-        "runtime_static_radix_upward_batched",
-        "runtime_static_radix_downward_batched",
         "runtime_static_radix_tree_leaf_count",
         "runtime_static_radix_tree_node_count",
         "runtime_static_radix_far_pair_count",
-        "runtime_static_radix_compact_pair_reuse_hits",
-        "runtime_static_radix_compact_pair_reuse_misses",
         "runtime_static_radix_m2l_chunk_count",
         "runtime_static_radix_l2l_edge_count",
         "strict_timing_mode",
@@ -281,7 +251,6 @@ def _profile_digest(profile: dict[str, Any]) -> dict[str, Any]:
         "perf_measured_run_seconds",
         "perf_measured_median_seconds",
         "perf_measured_median_step_seconds",
-        "runtime_large_n_overflow_profile_reprofiles",
         "runtime_large_n_neighbor_edges_profile_reprofiles",
     )
     return {key: profile.get(key) for key in keys if key in profile}
@@ -511,22 +480,16 @@ def main() -> None:
             autocvd_timeout_seconds=args.autocvd_timeout_seconds,
         )
 
+    # The fused strict lane is jaccpot's default since its 2026-10 cleanup (D2);
+    # GPU_MODE, FUSED_MODE=on, REQUIRE_EXACT_CAP_PROFILE_MATCH,
+    # LARGE_N_COMPILED_STATE_MODE and FUSED_COMPACT_PACK are read nowhere.
     base_env = os.environ.copy()
-    base_env.update(
-        {
-            "JACCPOT_STATIC_STRICT_GPU_MODE": "on",
-            "JACCPOT_STATIC_STRICT_REQUIRE_EXACT_CAP_PROFILE_MATCH": "0",
-            "JACCPOT_LARGE_N_COMPILED_STATE_MODE": "on",
-            "JACCPOT_STATIC_STRICT_FUSED_COMPACT_PACK": "0",
-        }
-    )
     if selected_cuda is not None:
         base_env["CUDA_VISIBLE_DEVICES"] = str(selected_cuda)
 
     if bool(args.fixed_policy):
         _status("Applying fixed-policy runtime env for baseline/variant")
         base_env.update(DEFAULT_FIXED_POLICY_ENV)
-        base_env["JACCPOT_STATIC_STRICT_FUSED_MODE"] = "on"
         base_env["JACCPOT_STATIC_STRICT_FUSED_PROFILE_SET"] = DEFAULT_FUSED_PROFILE_SET
         if args.fixed_neighbor_cap is None:
             raise ValueError(
@@ -550,8 +513,9 @@ def main() -> None:
             raise ValueError(f"Invalid --baseline-env: {item}")
         k, v = item.split("=", 1)
         baseline_env[k] = v
-    if bool(args.fixed_policy):
-        var_env["JACCPOT_STATIC_STRICT_FUSED_MODE"] = "off"
+    # --fixed-policy used to put the variant on the non-fused strict loop
+    # (FUSED_MODE=off). jaccpot removed that loop (X6) and the value raises, so
+    # the variant now differs from the baseline only by --variant-env.
     for item in args.variant_env:
         if "=" not in item:
             raise ValueError(f"Invalid --variant-env: {item}")

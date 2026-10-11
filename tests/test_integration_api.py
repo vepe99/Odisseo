@@ -50,8 +50,8 @@ def test_integrate_dispatches_to_fmm_coupler(monkeypatch):
         assert kwargs["fmm_runtime_path"] == "auto"
         assert kwargs["fmm_working_dtype"] == state.dtype
         assert kwargs["fmm_mac_type"] == "bh"
-        assert kwargs["fmm_farfield_mode"] == "dense"
-        assert kwargs["fmm_nearfield_mode"] == "pairwise"
+        assert kwargs["fmm_farfield_mode"] == "pair_grouped"
+        assert kwargs["fmm_nearfield_mode"] == "bucketed"
         assert kwargs["fmm_nearfield_edge_chunk_size"] == 96
         assert kwargs["fmm_tree_leaf_target"] == 20
         assert kwargs["enforce_static_shape_contract"] is True
@@ -77,8 +77,10 @@ def test_integrate_dispatches_to_fmm_coupler(monkeypatch):
         fmm_basis="real",
         fmm_theta=0.4,
         fmm_mac_type="bh",
-        fmm_farfield_mode="dense",
-        fmm_nearfield_mode="pairwise",
+        # Values jaccpot accepts that differ from the defaults, so the plumbing
+        # check still means something ("dense"/"pairwise" are not jaccpot modes).
+        fmm_farfield_mode="pair_grouped",
+        fmm_nearfield_mode="bucketed",
         fmm_nearfield_edge_chunk_size=96,
         fmm_tree_leaf_target=20,
         fmm_enforce_static_shape_contract=True,

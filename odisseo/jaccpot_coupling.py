@@ -118,6 +118,17 @@ def _build_fmm_solver(
     fmm_upward_leaf_batch_size: Optional[int],
     retain_far_pairs_for_grad: bool = False,
 ):
+    """Construct the jaccpot solver for one Odisseo FMM configuration.
+
+    ``fmm_runtime_path`` and ``fmm_farfield_mode`` are accepted and ignored since
+    jaccpot's 2026-10 cleanup (its ``docs/cleanup_2026-10.md``). ``runtime_path``
+    stopped choosing the lane in X4: the ``large_n_gpu`` preset alone opens the
+    large-N lane. The far-field modes jaccpot still accepts (``"auto"`` and
+    ``"pair_grouped"``) both run the flat far-pair list, and ``"class_major"`` went
+    with the grouped far field in X3. Neither is passed on, so jaccpot runs its
+    defaults, which is what Odisseo's defaults (``"auto"`` for both) asked for.
+    """
+    del fmm_runtime_path, fmm_farfield_mode  # accepted and ignored, see above
     from jaccpot import (
         FarFieldConfig,
         FastMultipoleMethod,
@@ -188,7 +199,6 @@ def _build_fmm_solver(
     # keeping the forward production lane byte-for-byte as it was, and keeping
     # this call compatible with a jaccpot that has no such field.
     farfield_kwargs: dict[str, Any] = dict(
-        mode=str(fmm_farfield_mode),
         m2l_chunk_size=(
             None if fmm_m2l_chunk_size is None else int(fmm_m2l_chunk_size)
         ),
@@ -215,7 +225,6 @@ def _build_fmm_solver(
     return FastMultipoleMethod(
         preset=str(fmm_preset),
         basis=str(fmm_basis),
-        runtime_path=str(fmm_runtime_path),
         theta=float(fmm_theta),
         G=float(params.G),
         softening=float(config.softening),
@@ -537,14 +546,14 @@ def integrate_leapfrog_jaccpot_active(
             "ODISSEO_STRICT_DISABLE_EXTERNAL_FOR_TIMING and "
             "ODISSEO_STRICT_EXTERNAL_ONLY_FOR_TIMING are mutually exclusive."
         )
-    strict_mode_env = (
-        str(os.environ.get("JACCPOT_STATIC_STRICT_GPU_MODE", "auto")).strip().lower()
-    )
-    strict_mode_requested = strict_mode_env in {"on", "auto"}
+    # The same gate as jaccpot's own strict lane: the large-N production profile
+    # on a static-radix tree (jaccpot `fmm_prepare.py`, `strict_mode_active`; the
+    # profile's radix tree type and real basis always hold for a solver Odisseo
+    # builds). JACCPOT_STATIC_STRICT_GPU_MODE is no longer read: jaccpot ignores
+    # it since its 2026-10 cleanup (X6), so deciding on it here could only
+    # disagree with jaccpot. fmm_runtime_path is not consulted either (X4).
     strict_production_lane = bool(
-        strict_mode_requested
-        and str(fmm_preset).strip().lower() == "large_n_gpu"
-        and str(fmm_runtime_path).strip().lower() in {"large_n", "auto"}
+        str(fmm_preset).strip().lower() == "large_n_gpu"
         and str(fmm_tree_build_mode).strip().lower() == "static_radix"
     )
     if strict_production_lane and int(refresh_every) != 1:
@@ -608,9 +617,7 @@ def integrate_leapfrog_jaccpot_active(
         "refresh_dual_split_leaf_neighbors_seconds",
         "refresh_dual_split_combined_seconds",
         "refresh_dual_raw_combined_seconds",
-        "refresh_dual_split_dense_buffers_seconds",
         "refresh_dual_far_pair_plan_seconds",
-        "refresh_dual_m2l_autotune_seconds",
         "refresh_dual_select_interactions_seconds",
         "refresh_dual_downward_compute_seconds",
         "refresh_dual_m2l_compute_seconds",
@@ -855,21 +862,6 @@ def integrate_leapfrog_jaccpot_active(
                 "strict_refresh_detail_diag_mode": str(
                     runtime_diag.get("strict_refresh_detail_diag_mode", "full")
                 ),
-                "static_radix_reuse_structures": bool(
-                    runtime_diag.get("static_radix_reuse_structures", False)
-                ),
-                "static_radix_upward_batched": bool(
-                    runtime_diag.get("static_radix_upward_batched", False)
-                ),
-                "static_radix_downward_batched": bool(
-                    runtime_diag.get("static_radix_downward_batched", False)
-                ),
-                "static_radix_compact_pair_reuse_hits": int(
-                    runtime_diag.get("static_radix_compact_pair_reuse_hits", 0)
-                ),
-                "static_radix_compact_pair_reuse_misses": int(
-                    runtime_diag.get("static_radix_compact_pair_reuse_misses", 0)
-                ),
                 "static_radix_tree_leaf_count": int(
                     runtime_diag.get("static_radix_tree_leaf_count", 0)
                 ),
@@ -951,8 +943,6 @@ def integrate_leapfrog_jaccpot_active(
                 "runtime_refresh_prepare_calls": int(
                     runtime_diag.get("refresh_prepare_calls", 0)
                 ),
-                "runtime_max_leaf_size": int(runtime_diag.get("max_leaf_size", 0)),
-                "runtime_max_leaves": int(runtime_diag.get("max_leaves", 0)),
                 "runtime_refresh_prepare_reuse_tier_full": int(
                     runtime_diag.get("refresh_prepare_reuse_tier_full", 0)
                 ),
@@ -998,9 +988,6 @@ def integrate_leapfrog_jaccpot_active(
                 "runtime_large_n_overflow_profile_cap": int(
                     runtime_diag.get("large_n_overflow_profile_cap", 0)
                 ),
-                "runtime_large_n_overflow_profile_reprofiles": int(
-                    runtime_diag.get("large_n_overflow_profile_reprofiles", 0)
-                ),
                 "runtime_large_n_neighbor_edges_profile_cap": int(
                     runtime_diag.get("large_n_neighbor_edges_profile_cap", 0)
                 ),
@@ -1012,27 +999,6 @@ def integrate_leapfrog_jaccpot_active(
                 ),
                 "runtime_interaction_cache_misses": int(
                     runtime_diag.get("interaction_cache_misses", 0)
-                ),
-                "runtime_refresh_dual_planner_cache_hits": int(
-                    runtime_diag.get("refresh_dual_planner_cache_hits", 0)
-                ),
-                "runtime_refresh_dual_planner_cache_misses": int(
-                    runtime_diag.get("refresh_dual_planner_cache_misses", 0)
-                ),
-                "runtime_refresh_dual_planner_compile_count": int(
-                    runtime_diag.get("refresh_dual_planner_compile_count", 0)
-                ),
-                "runtime_refresh_dual_planner_execute_count": int(
-                    runtime_diag.get("refresh_dual_planner_execute_count", 0)
-                ),
-                "runtime_refresh_dual_planner_steady_timing_bypass_count": int(
-                    runtime_diag.get(
-                        "refresh_dual_planner_steady_timing_bypass_count",
-                        0,
-                    )
-                ),
-                "runtime_refresh_dual_planner_compiled_route_count": int(
-                    runtime_diag.get("refresh_dual_planner_compiled_route_count", 0)
                 ),
                 "runtime_refresh_strict_mode_active_count": int(
                     runtime_diag.get("refresh_strict_mode_active_count", 0)
@@ -1090,9 +1056,6 @@ def integrate_leapfrog_jaccpot_active(
                 ),
                 "runtime_strict_fused_device_refresh_route_count": int(
                     runtime_diag.get("strict_fused_device_refresh_route_count", 0)
-                ),
-                "runtime_strict_fused_planner_bypassed_count": int(
-                    runtime_diag.get("strict_fused_planner_bypassed_count", 0)
                 ),
                 "runtime_strict_velocity_verlet_acceleration_carry_active": bool(
                     runtime_diag.get(
@@ -1188,21 +1151,6 @@ def integrate_leapfrog_jaccpot_active(
                 "runtime_strict_refresh_detail_diag_mode": str(
                     runtime_diag.get("strict_refresh_detail_diag_mode", "full")
                 ),
-                "runtime_static_radix_reuse_structures": bool(
-                    runtime_diag.get("static_radix_reuse_structures", False)
-                ),
-                "runtime_static_radix_upward_batched": bool(
-                    runtime_diag.get("static_radix_upward_batched", False)
-                ),
-                "runtime_static_radix_downward_batched": bool(
-                    runtime_diag.get("static_radix_downward_batched", False)
-                ),
-                "runtime_static_radix_compact_pair_reuse_hits": int(
-                    runtime_diag.get("static_radix_compact_pair_reuse_hits", 0)
-                ),
-                "runtime_static_radix_compact_pair_reuse_misses": int(
-                    runtime_diag.get("static_radix_compact_pair_reuse_misses", 0)
-                ),
                 "runtime_static_radix_tree_leaf_count": int(
                     runtime_diag.get("static_radix_tree_leaf_count", 0)
                 ),
@@ -1242,15 +1190,6 @@ def integrate_leapfrog_jaccpot_active(
                         runtime_diag.get("strict_fused_fastlane_block_counts", {})
                     ).items()
                 },
-                "runtime_strict_profiled_max_pair_queue": int(
-                    runtime_diag.get("strict_profiled_max_pair_queue", 0)
-                ),
-                "runtime_strict_profiled_pair_process_block": int(
-                    runtime_diag.get("strict_profiled_pair_process_block", 0)
-                ),
-                "runtime_strict_profiled_context_key": str(
-                    runtime_diag.get("strict_profiled_context_key", "")
-                ),
                 "runtime_refresh_total_seconds": float(
                     runtime_diag.get("refresh_total_seconds", 0.0)
                 ),
@@ -1364,9 +1303,6 @@ def integrate_leapfrog_jaccpot_active(
                 ),
                 "runtime_refresh_dual_far_pair_plan_seconds": float(
                     runtime_diag.get("refresh_dual_far_pair_plan_seconds", 0.0)
-                ),
-                "runtime_refresh_dual_m2l_autotune_seconds": float(
-                    runtime_diag.get("refresh_dual_m2l_autotune_seconds", 0.0)
                 ),
                 "runtime_refresh_dual_select_interactions_seconds": float(
                     runtime_diag.get(
@@ -1524,11 +1460,12 @@ def integrate_leapfrog_jaccpot_active(
                     # The payload refresh is an optimisation on top of an already
                     # valid prepared state, so an unsupported runtime profile must
                     # fall through rather than abort the run. jaccpot supports it
-                    # only for preset='large_n_gpu' + radix + solidfmm and raises
-                    # NotImplementedError elsewhere -- catching TypeError alone let
-                    # that escape and killed any run at another preset/basis. This
-                    # matches the exception set _prepare_or_refresh_state already
-                    # tolerates on the same call below.
+                    # only for preset='large_n_gpu' + radix + the real basis (named
+                    # 'solidfmm' internally) and raises NotImplementedError
+                    # elsewhere -- catching TypeError alone let that escape and
+                    # killed any run at another preset/basis. This matches the
+                    # exception set _prepare_or_refresh_state already tolerates on
+                    # the same call below.
                     pass
             return prepared
 

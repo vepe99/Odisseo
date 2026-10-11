@@ -53,7 +53,7 @@ def _time_point(n, ndev, args):
         pos, mass = IC_GENERATORS[args.ic](n, seed=0)
 
     cfg = DistributedFMMConfig(
-        order=args.order, theta=args.theta, theta_cross=args.theta,
+        order=args.order, theta=args.theta,
         leaf_size=args.leaf_size, softening=args.softening,
         max_interactions_per_node=512, max_neighbors_per_leaf=256,
         max_pair_queue=1 << 18,

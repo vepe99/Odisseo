@@ -77,7 +77,7 @@ def main():
     results = []
     for theta in args.thetas:
         s = FastMultipoleMethod(
-            preset="large_n_gpu", runtime_path="large_n", basis="real", theta=theta,
+            preset="large_n_gpu", basis="real", theta=theta,
             G=1.0, softening=1e-7, working_dtype=jnp.float32,
             advanced=FMMAdvancedConfig(tree=TreeConfig(mode="static_radix", leaf_target=args.leaf),
                                        farfield=FarFieldConfig(mode="auto"),

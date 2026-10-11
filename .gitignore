@@ -16,3 +16,8 @@ odisseo.egg-info/
 notebooks/scalability/runs/
 notebooks/scalability/reports/
 notebooks/scalability/ic_cache/
+
+# Python bytecode and setuptools build output
+__pycache__/
+*.py[cod]
+/build/

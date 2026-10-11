@@ -72,15 +72,10 @@ def main() -> None:
     sig_r = [float(x) for x in str(args.sigma_r_grid).split(",") if x.strip()]
     sig_z = [float(x) for x in str(args.sigma_z_grid_kms).split(",") if x.strip()]
 
+    # The strict-lane env block that used to be set here (GPU_MODE, the cap-profile
+    # file and its exact-match switch) is read nowhere since jaccpot's 2026-10
+    # cleanup (X4 removed the cap-profile file, X6 made GPU_MODE inert).
     env = os.environ.copy()
-    env.update(
-        {
-            "JACCPOT_STATIC_STRICT_GPU_MODE": "on",
-            "JACCPOT_STATIC_STRICT_CAP_PROFILE_PATH": "/tmp/jaccpot_static_strict_caps.json",
-            "JACCPOT_STATIC_STRICT_CAP_RECORD": "0",
-            "JACCPOT_STATIC_STRICT_REQUIRE_EXACT_CAP_PROFILE_MATCH": "1",
-        }
-    )
 
     rows: list[dict[str, float | str]] = []
     for sr in sig_r:
