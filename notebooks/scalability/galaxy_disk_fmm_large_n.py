@@ -246,8 +246,9 @@ def parse_args() -> argparse.Namespace:
         "--fmm-runtime-path",
         type=str,
         default="large_n",
-        choices=("auto", "legacy", "large_n"),
-        help="jaccpot runtime path selection.",
+        choices=("auto", "large_n"),
+        help="Accepted and ignored: jaccpot's lane follows --fmm-preset since its "
+        "2026-10 cleanup (X4). Kept for existing command lines.",
     )
     parser.add_argument(
         "--fmm-theta",
@@ -265,10 +266,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--fmm-basis",
         type=str,
-        default="solidfmm",
-        choices=("solidfmm", "complex", "real"),
-        help="FMM expansion basis: solidfmm/complex spherical harmonics, or real "
-        "(Dehnen) harmonics. 'real' routes M2L/L2L/L2P through the real-basis path.",
+        default="real",
+        choices=("real", "solidfmm"),
+        help="FMM expansion basis: real (Dehnen) spherical harmonics, jaccpot's only "
+        "basis since its 2026-10 cleanup; 'solidfmm' is an alias for it. The complex "
+        "(C) and Cartesian (K) bases were removed and raise.",
     )
     parser.add_argument(
         "--fmm-leaf-size",
@@ -286,8 +288,9 @@ def parse_args() -> argparse.Namespace:
         "--fmm-tree-build-mode",
         type=str,
         default="static_radix",
-        choices=("lbvh", "fixed_depth", "static_radix", "adaptive"),
-        help="jaccpot tree build mode.",
+        choices=("lbvh", "static_radix", "adaptive"),
+        help="jaccpot tree build mode ('fixed_depth' was removed in jaccpot's "
+        "2026-10 cleanup, X4).",
     )
     parser.add_argument(
         "--fmm-max-order",
@@ -456,7 +459,9 @@ def parse_args() -> argparse.Namespace:
         "--max-overflow-reprofiles",
         type=int,
         default=None,
-        help="Optional regression gate for large-N overflow profile reprofiles.",
+        help="Accepted and ignored: jaccpot no longer reports overflow-profile "
+        "reprofiles (its 2026-10 cleanup, X4, removed adaptive sizing), so this "
+        "gate could never fire. Kept for existing command lines.",
     )
     parser.add_argument(
         "--max-neighbor-edge-reprofiles",
@@ -1605,11 +1610,8 @@ def _check_timing_gates(args: argparse.Namespace, timing_stats: dict) -> None:
             "runtime_compiled_profile_transitions",
             "Compiled-profile transition regression",
         ),
-        (
-            args.max_overflow_reprofiles,
-            "runtime_large_n_overflow_profile_reprofiles",
-            "Overflow profile reprofile regression",
-        ),
+        # No overflow-reprofile gate: jaccpot stopped reporting the counter (X4),
+        # so --max-overflow-reprofiles is accepted and ignored.
         (
             args.max_neighbor_edge_reprofiles,
             "runtime_large_n_neighbor_edges_profile_reprofiles",
@@ -1987,15 +1989,6 @@ def main() -> None:
         "downward_artifacts_only",
     }:
         strict_refresh_detail_diag_mode = "full"
-    static_radix_reuse_structures = str(
-        os.environ.get("JACCPOT_STATIC_RADIX_REUSE_STRUCTURES", "0")
-    ).strip().lower() in {"1", "true", "yes", "on"}
-    static_radix_upward_batched = str(
-        os.environ.get("JACCPOT_STATIC_RADIX_UPWARD_BATCHED", "0")
-    ).strip().lower() in {"1", "true", "yes", "on"}
-    static_radix_downward_batched = str(
-        os.environ.get("JACCPOT_STATIC_RADIX_DOWNWARD_BATCHED", "0")
-    ).strip().lower() in {"1", "true", "yes", "on"}
     if strict_refresh_diag_mode == "integrator_only":
         strict_refresh_diag_flags = (False, False, False, False)
     elif strict_refresh_diag_mode == "eval_only":
@@ -2051,15 +2044,6 @@ def main() -> None:
             "strict_refresh_detail_diag_mode": str(strict_refresh_detail_diag_mode),
             "runtime_strict_refresh_detail_diag_mode": str(
                 strict_refresh_detail_diag_mode
-            ),
-            "runtime_static_radix_reuse_structures": bool(
-                static_radix_reuse_structures
-            ),
-            "runtime_static_radix_upward_batched": bool(
-                static_radix_upward_batched
-            ),
-            "runtime_static_radix_downward_batched": bool(
-                static_radix_downward_batched
             ),
             "fmm_integration_timestep_mode": (
                 "fixed" if bool(config.fixed_timestep) else "adaptive_diffrax"

@@ -266,13 +266,17 @@ def _peak_bytes(ndev):
     return peak
 
 
-#: The device-only fused fast lane, exactly as ``benchmark_a100/env_fused.sh`` and
-#: ``odisseo/jaccpot_coupling.py::_large_n_environment_overrides`` set it.  Without
-#: these jaccpot runs a ~10x slower path (``fastlane_attempts=0``) and a comparison
-#: would understate it by more than an order of magnitude -- measured here at
-#: N=20k: 2.5 s/call on the plain ``compute_accelerations`` entry point.
-#: Several of them are read in ``FastMultipoleMethod.__init__`` and captured as
-#: instance state, so they MUST be in the environment before the solver is built.
+#: The fused fast lane's environment.  Since jaccpot's 2026-10 cleanup the
+#: device-only fused strict lane is jaccpot's own default (D2), so only the knobs
+#: that still change a run are pinned here: the static target-block cap, the two
+#: list caps, the payload budget and the index precision.  The rest of the old
+#: block (``GPU_MODE``, ``FUSED_MODE=on``, ``DEVICE_ONLY``,
+#: ``DISALLOW_HOST_SEGMENT_FALLBACK``, ``REQUIRE_EXACT_CAP_PROFILE_MATCH``,
+#: ``COMPILED_STATE_MODE``, and ``STATIC_TARGET_BLOCKS=1``, ``TARGET_BLOCK_SIZE=4``,
+#: ``FLAT_COMPACT_FAR_PAIRS=1``, ``PAYLOAD_IN_FUSED=1``) was read nowhere or equal
+#: to jaccpot's default (cleanup X4/X6).  Several of these are read in
+#: ``FastMultipoleMethod.__init__`` and captured as instance state, so they MUST be
+#: in the environment before the solver is built.
 #:
 #: ``RADIX_FAST_PAYLOAD_MAX_MB=0`` is this harness's addition (2026-09-06).  With
 #: jaccpot's default of 1024 the lane materialises a per-particle source payload
@@ -284,19 +288,9 @@ def _peak_bytes(ndev):
 #: neighbour lists: leaf 512 -> 59 ms, leaf 1024 -> 87 ms at theta 1.0, same
 #: forces.  Every jaccpot row records which kernel layout it got.
 FAST_LANE_ENV = {
-    "JACCPOT_STATIC_STRICT_GPU_MODE": "on",
-    "JACCPOT_STATIC_STRICT_FUSED_MODE": "on",
-    "JACCPOT_LARGE_N_STATIC_TARGET_BLOCKS": "1",
-    "JACCPOT_LARGE_N_TARGET_BLOCK_SIZE": "4",
     "JACCPOT_LARGE_N_STATIC_TARGET_BLOCKS_MAX_PER_LEAF": "64",
     "JACCPOT_LARGE_N_NEIGHBOR_EDGE_PROFILE_FIXED_CAP": "2097152",
-    "JACCPOT_STATIC_STRICT_REQUIRE_EXACT_CAP_PROFILE_MATCH": "0",
-    "JACCPOT_STATIC_STRICT_FUSED_DEVICE_ONLY": "1",
-    "JACCPOT_STATIC_STRICT_FUSED_DISALLOW_HOST_SEGMENT_FALLBACK": "1",
-    "JACCPOT_STATIC_STRICT_FUSED_FLAT_COMPACT_FAR_PAIRS": "1",
     "JACCPOT_STATIC_STRICT_FUSED_COMPACT_FAR_PAIR_CAP": "131072",
-    "JACCPOT_LARGE_N_COMPILED_STATE_MODE": "on",
-    "JACCPOT_LARGE_N_RADIX_FAST_PAYLOAD_IN_FUSED": "1",
     "JACCPOT_LARGE_N_RADIX_FAST_PAYLOAD_MAX_MB": "0",
     # int32 indices for the fused single-GPU lane (plan "tree walk" 0.2): halves every
     # queue byte of the traced walk. Both are read at IMPORT; yggdrax falls back to the
@@ -530,7 +524,6 @@ def run_jaccpot_single_gpu(args, pos, mass, a_ref, ref_idx, softening, devices):
             for theta in args.jac_thetas:
                 solver = FastMultipoleMethod(
                     preset="large_n_gpu",
-                    runtime_path="large_n",
                     basis="real",
                     theta=theta,
                     G=args.G,

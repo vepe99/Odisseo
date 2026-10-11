@@ -81,7 +81,7 @@ def main():
         mesh = make_mesh(ndev)
         pos, mass = _make_ic(args.ic, args.n, ndev, seed=0)
         cfg = DistributedFMMConfig(
-            order=args.order, theta=args.theta, theta_cross=args.theta,
+            order=args.order, theta=args.theta,
             leaf_size=args.leaf_size, softening=args.softening,
             max_interactions_per_node=512, max_neighbors_per_leaf=256,
             max_pair_queue=1 << 18,

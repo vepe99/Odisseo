@@ -60,7 +60,7 @@ def main():
     rt = RuntimePolicyConfig(traversal_config=TraversalOverrides(**{k: int(v) for k, v in trav.items()})) if trav else RuntimePolicyConfig()
 
     def make():
-        return FastMultipoleMethod(preset="large_n_gpu", runtime_path="large_n", basis="real", theta=args.theta,
+        return FastMultipoleMethod(preset="large_n_gpu", basis="real", theta=args.theta,
             G=1.0, softening=1e-7, working_dtype=jnp.float32,
             advanced=FMMAdvancedConfig(tree=TreeConfig(mode="static_radix", leaf_target=args.leaf),
                 farfield=FarFieldConfig(mode="auto"), nearfield=NearFieldConfig(mode="auto"), runtime=rt, mac_type="dehnen"),

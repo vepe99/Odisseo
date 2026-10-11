@@ -164,7 +164,6 @@ def main() -> int:
         )
     solver = FastMultipoleMethod(
         preset="large_n_gpu",
-        runtime_path="large_n",
         basis="real",
         theta=args.theta,
         G=1.0,

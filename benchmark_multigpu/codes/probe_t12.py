@@ -34,7 +34,7 @@ for theta in THETAS:
     base_acc = None
     for name, env in SETTINGS:
         for k, v in env.items(): os.environ[k] = v
-        s = FastMultipoleMethod(preset="large_n_gpu", runtime_path="large_n", basis="real", theta=theta, G=1.0,
+        s = FastMultipoleMethod(preset="large_n_gpu", basis="real", theta=theta, G=1.0,
             softening=1e-7, working_dtype=jnp.float32,
             advanced=FMMAdvancedConfig(tree=TreeConfig(mode="static_radix", leaf_target=LEAF),
                 farfield=FarFieldConfig(mode="auto"), nearfield=NearFieldConfig(mode="auto"), mac_type="dehnen"),

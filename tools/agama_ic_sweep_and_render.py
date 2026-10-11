@@ -36,7 +36,9 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--render-stride", type=int, default=5)
     p.add_argument("--render-resolution", type=int, default=400)
     p.add_argument("--reference-snapshots", type=str, default="")
-    p.add_argument("--strict-exact-cap-match", action="store_true")
+    # Accepted and ignored: jaccpot's strict cap-profile file and its exact-match
+    # switch were removed in its 2026-10 cleanup (X4).
+    p.add_argument("--strict-exact-cap-match", action="store_true", help="Ignored.")
     return p.parse_args()
 
 
@@ -244,16 +246,13 @@ def main() -> None:
     env.update(
         {
             "JAX_ENABLE_X64": "1",
-            # Engage the fused device-resident lane for --mode render (the render
-            # path now runs on the fused scan + jax.debug.callback).
-            "JACCPOT_STATIC_STRICT_GPU_MODE": "on",
-            "JACCPOT_STATIC_STRICT_FUSED_MODE": "on",
+            # The fused device-resident lane (which --mode render runs on, via
+            # jax.debug.callback) is jaccpot's default since its 2026-10 cleanup;
+            # GPU_MODE, FUSED_MODE=on and REQUIRE_EXACT_CAP_PROFILE_MATCH are read
+            # nowhere. The profile set and the two caps still apply.
             "JACCPOT_STATIC_STRICT_FUSED_PROFILE_SET": str(int(args.n_particles)),
             "JACCPOT_LARGE_N_STATIC_TARGET_BLOCKS_MAX_PER_LEAF": "64",
             "JACCPOT_LARGE_N_NEIGHBOR_EDGE_PROFILE_FIXED_CAP": "2097152",
-            "JACCPOT_STATIC_STRICT_REQUIRE_EXACT_CAP_PROFILE_MATCH": (
-                "1" if args.strict_exact_cap_match else "0"
-            ),
         }
     )
 

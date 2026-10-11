@@ -36,7 +36,6 @@ run $DEV  p1p2a_leaf64_th0.6_r2   --leaf 64  --theta 0.6 --modes refresh,nearfie
 run $DEV  p1p2a_leaf256_th0.6_r2  --leaf 256 --theta 0.6 --modes refresh,nearfield,detail
 run $BASE base_leaf32_th0.6       --leaf 32  --theta 0.6 --modes refresh --no-trace
 run $DEV  p1p2a_leaf32_th0.6      --leaf 32  --theta 0.6 --modes refresh --no-trace
-run $DEV  p1p2adb_leaf32_th0.6    --leaf 32  --theta 0.6 --modes refresh --no-trace --env JACCPOT_M2L_DEGREE_BATCHED=1
 run $DEV  p1p2a_c16384_leaf64_th0.6 --leaf 64 --theta 0.6 --modes refresh --m2l-chunk 16384
 run $DEV  p1p2a_c65536_leaf64_th0.6 --leaf 64 --theta 0.6 --modes refresh --m2l-chunk 65536
 echo "[q2] $(date +%m-%d\ %H:%M:%S) ucurve start"

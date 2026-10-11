@@ -30,7 +30,7 @@ pos, mass = IC_GENERATORS["plummer"](args.n, seed=0)
 M = jnp.asarray(mass, jnp.float32)
 vel = np.random.default_rng(7).normal(0.0, args.vel_sigma, (args.n, 3)).astype(np.float32)
 state = jnp.stack([jnp.asarray(pos, jnp.float32), jnp.asarray(vel)], axis=1)
-s = FastMultipoleMethod(preset="large_n_gpu", runtime_path="large_n", basis="real", theta=args.theta, G=1.0,
+s = FastMultipoleMethod(preset="large_n_gpu", basis="real", theta=args.theta, G=1.0,
     softening=1e-7, working_dtype=jnp.float32,
     advanced=FMMAdvancedConfig(tree=TreeConfig(mode="static_radix", leaf_target=args.leaf),
         farfield=FarFieldConfig(mode="auto"), nearfield=NearFieldConfig(mode="auto"), mac_type="dehnen"),
