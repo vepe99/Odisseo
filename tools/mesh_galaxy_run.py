@@ -233,10 +233,12 @@ def make_aligner(mesh):
 def direct_sum_probe(pos_rows, mass_rows, targets, soft, g, chunk=1 << 17, kernel=None):
     """fp64 direct-sum self-gravity for ``targets``, against ALL sources.
 
-    Host-side numpy in float64 on purpose. The alternative -- doing it on device --
-    would need ``jax_enable_x64``, which is a PROCESS-WIDE switch: turning it on to
-    measure the lane would also change the lane being measured. A minute of numpy is
-    cheaper than that confound.
+    Host-side numpy in float64, which keeps the probe's float64 copies off cards that
+    are ~31 GB full. (This used to say that a device version would need
+    ``jax_enable_x64`` and so change the lane. x64 was in fact always on in this
+    program -- importing jaccpot pulled in yggdrax, which switched it on -- and
+    ``main`` now enables it explicitly, since jaccpot requires it. It does not make
+    the lane float64: the lane's arrays carry an explicit float32 dtype.)
 
     The sum is over every source including those on other devices, and excludes the
     target's own row, matching what the evaluator computes.
@@ -471,6 +473,10 @@ def main():  # noqa: C901
     from jax.sharding import NamedSharding
     from jax.sharding import PartitionSpec as P
 
+    # jaccpot needs 64-bit types and no longer gets them from importing yggdrax.
+    # Enabled here, where the jaccpot import used to switch it on, so no array
+    # changes dtype.
+    jax.config.update("jax_enable_x64", True)
     from jaccpot.distributed.fmm import (
         DistributedFMMConfig,
         make_force_evaluator,
@@ -809,10 +815,12 @@ def main():  # noqa: C901
         significant figures were reporting dL/L 1.1e-07 against 2.6e-06, a 23x
         "difference" that was entirely reduction order.
 
-        float64 on the host rather than `jnp.float64` on device, because x64 is a
-        PROCESS-WIDE switch: enabling it to fix a diagnostic would also let python
-        floats promote the lane's float32 arrays, and at ~31 GB of 40 GB per card that
-        is not a safe thing to do by accident.
+        float64 on the host rather than `jnp.float64` on device: at ~31 GB of 40 GB
+        per card there is no room for float64 copies. (This used to say that x64 was
+        off and that enabling it would let python floats promote the lane's float32
+        arrays. x64 was always on here -- see ``main`` -- and python floats are weakly
+        typed, so they do not promote a float32 array; an array created WITHOUT a
+        dtype is what becomes float64 under x64.)
 
         Costs one 252 MB device_get per array. The loop already blocks on X every
         step, so nothing is pipelined away, and at `--diag-every 10` it is ~1 s per

@@ -208,7 +208,9 @@ N-body system over all GPUs of one node with jaccpot's distributed FMM: the part
 split into spatial domains (RCB), each device builds its own tree and imports a *halo* of
 boundary particles from its neighbours, and a KDK leapfrog steps the whole system in one
 `shard_map` program. It has carried 25 million particles on 8×A100 (see
-`benchmark_a100/bulge_rollout/` for the exact setup and record).
+`benchmark_a100/bulge_rollout/` for the exact setup and record). Like every jaccpot
+lane it needs `jax.config.update("jax_enable_x64", True)` at the top of the script;
+the lane's own arrays stay float32 unless you ask for float64.
 
 **Requirement: jax >= 0.9.1, verified as >= 0.10.2, in a venv without
 `--system-site-packages`.** On older JAX the collective that moves the halo

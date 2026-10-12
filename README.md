@@ -46,6 +46,17 @@ Use `odisseo.integrate(...)` as the main entrypoint. Backend selection is done v
 - direct schemes (`DIRECT_ACC`, `DIRECT_ACC_LAXMAP`, `DIRECT_ACC_MATRIX`, ...)
 - `FMM_ACC` for the Jaccpot-FMM coupler workflow
 
+**The jaccpot lanes (`FMM_ACC`, the block-step lane, the mesh lane, the differentiable
+FMM) require `jax_enable_x64=True`.** Put `jax.config.update("jax_enable_x64", True)`
+(or `JAX_ENABLE_X64=1`) at the top of your script, before creating any arrays;
+jaccpot raises a `RuntimeError` naming the flag otherwise. Its trees use 63-bit
+Morton codes, which JAX would otherwise cut to 32 bits without an error (see
+jaccpot's README). Until 2026-10 the flag was switched on as a side effect of the
+first FMM call, which imported jaccpot and yggdrax; nothing switches it on for you
+any more. x64 does not make a run float64: the dtype of your state and masses
+decides that, and arrays created without a `dtype` become float64 under x64, so pass
+`dtype=jnp.float32` for a float32 run.
+
 Key FMM tuning fields in `SimulationConfig`:
 - `fmm_refresh_every`, `fmm_leaf_size`, `fmm_max_order`
 - `fmm_preset`, `fmm_basis` (`"real"`, jaccpot's only basis), `fmm_theta`, `fmm_mac_type`

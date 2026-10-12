@@ -37,6 +37,7 @@ from common.timing import block, timed_call
 # ---------------------------------------------------------------- yggdrax ----
 def bench_yggdrax_build(pos, mass, leaf_size, repeats, warmup):
     import jax
+    jax.config.update("jax_enable_x64", True)
     from yggdrax import Tree
 
     def build(x, m):
@@ -56,6 +57,7 @@ def bench_yggdrax_build(pos, mass, leaf_size, repeats, warmup):
 def bench_yggdrax_traverse(pos, mass, leaf_size, theta, repeats, warmup):
     import jax
     import jax.numpy as jnp
+    jax.config.update("jax_enable_x64", True)
     from yggdrax import (
         Tree,
         build_interactions_and_neighbors,

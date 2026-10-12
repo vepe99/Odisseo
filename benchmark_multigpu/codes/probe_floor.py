@@ -29,6 +29,8 @@ apply_fast_lane_env(N)
 from common.ic import IC_GENERATORS  # noqa: E402
 
 import jax  # noqa: E402
+
+jax.config.update("jax_enable_x64", True)  # jaccpot needs it (its README)
 from jaccpot import (  # noqa: E402
     FarFieldConfig,
     FastMultipoleMethod,

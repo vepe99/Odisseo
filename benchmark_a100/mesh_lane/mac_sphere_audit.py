@@ -28,6 +28,7 @@ def main():
     a = ap.parse_args()
 
     import jax, jax.numpy as jnp
+    jax.config.update("jax_enable_x64", True)
     from jaccpot.distributed.fmm import partition_for_devices
     from yggdrax.tree import Tree
     from yggdrax.geometry import compute_tree_geometry

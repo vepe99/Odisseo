@@ -57,9 +57,10 @@ def main():
     ap.add_argument("--out", default=None)
     args = ap.parse_args()
 
-    import jax  # noqa: F401
+    import jax
     import jax.numpy as jnp
 
+    jax.config.update("jax_enable_x64", True)
     from jaccpot.distributed import (
         DistributedFMMConfig,
         make_force_evaluator,
