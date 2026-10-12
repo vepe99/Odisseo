@@ -290,7 +290,7 @@ def main() -> int:
                 tree=TreeConfig(mode="static_radix", leaf_target=args.leaf,
                                 leaf_partition=args.leaf_partition, leaf_capacity=leaf_capacity,
                                 cell_min_level=cell_min_level),
-                farfield=FarFieldConfig(mode="auto", **({"m2l_chunk_size": int(args.m2l_chunk)} if args.m2l_chunk else {})),
+                farfield=FarFieldConfig(**({"m2l_chunk_size": int(args.m2l_chunk)} if args.m2l_chunk else {})),
                 nearfield=NearFieldConfig(mode="auto"),
                 runtime=runtime_cfg, mac_type="dehnen"),
             fixed_order=args.order)
