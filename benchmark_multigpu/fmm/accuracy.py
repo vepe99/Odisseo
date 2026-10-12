@@ -79,6 +79,7 @@ def main():
 
     # jax imports deferred until after arg parse (so --help is instant)
     import jax
+    jax.config.update("jax_enable_x64", True)
     from jaccpot.distributed import DistributedFMMConfig, distributed_fmm_accelerations
     from yggdrax.distributed import device_count, make_mesh
 

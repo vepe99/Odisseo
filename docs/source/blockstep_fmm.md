@@ -71,6 +71,9 @@ Two consequences, both acted on here:
 One entry point, and the fast lane by default:
 
 ```python
+import jax
+jax.config.update("jax_enable_x64", True)   # the jaccpot lanes require it
+
 from odisseo import construct_initial_state
 from odisseo.blockstep_coupling import BlockStepOptions, integrate_blockstep_jaccpot
 from odisseo.option_classes import SimulationConfig, SimulationParams

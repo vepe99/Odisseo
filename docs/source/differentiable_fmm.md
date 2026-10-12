@@ -34,6 +34,7 @@ this lane when a tracer reaches the forward FMM path.
 
 ```python
 import jax, jax.numpy as jnp
+jax.config.update("jax_enable_x64", True)   # the jaccpot lanes require it
 from odisseo.differentiable import (
     prepare_differentiable_fmm,
     integrate_leapfrog_differentiable,
