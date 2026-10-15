@@ -210,22 +210,13 @@ class BlockStepOptions:
         field is 59% of a traversal at the default leaf size and 95% at leaf 256.
         Leave this on ``"jax"`` until it is resolved.
 
-        .. warning::
-
-           ``"pallas"`` **silently loses gradients** with respect to ``dt_max``,
-           ``softening`` and ``G``. Its reverse rule returns
-           ``jnp.zeros_like(level_weights)`` (and likewise for ``softening_sq``
-           and ``g_value``) on the grounds that the level table is "discrete or
-           frozen" -- but ``level_weights[k] == half * dt_max / 2**k`` is a
-           smooth function of ``dt_max`` and the force is *linear* in it, so the
-           whole near-field term is dropped. Measured here: ``d/d(dt_max)`` comes
-           out **111x too small** (only the far field, which stays pure JAX,
-           contributes), while the ``"jax"`` backend matches finite differences
-           exactly. Forward results are unaffected.
-
-           ``test_the_pallas_backend_drops_most_of_the_dt_max_gradient`` pins
-           this so it cannot be relied on or silently change. Use
-           ``backend="jax"`` for any gradient with respect to those three.
+        Gradients with respect to ``dt_max``, ``softening`` and ``G`` are exact
+        on both backends. ``"pallas"`` used to drop the near field's share of
+        them -- its reverse rule returned zero cotangents for the level-weight
+        table, ``softening_sq`` and ``g_value``, which put ``d/d(dt_max)`` 111x
+        too small -- until jaccpot's reverse kernel started emitting all three
+        (jaccpot 690c2d9). ``test_the_dt_max_gradient_is_exact`` holds both
+        backends to finite differences.
     near_chunk_size:
         Leaf pairs per near-field scan step; ``None`` derives it from jaccpot's
         pair-tensor memory budget.

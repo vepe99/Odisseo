@@ -759,19 +759,12 @@ work.
 * **Gradients are fixed-topology.** `jax.grad` through a rollout works with the
   tree rebuilt per base step and `stop_gradient`-ed, the same treatment nornax
   gives its rung schedule.
-* **`backend="pallas"` silently loses `d/d(dt_max)`, `d/d(softening)` and
-  `d/d(G)`.** Its reverse rule returns `jnp.zeros_like(level_weights)` (and the
-  same for `softening_sq` / `g_value`), on the stated grounds that the level
-  table is "discrete or frozen". It is neither: `level_weights[k] ==
-  half * dt_max / 2**k` is smooth in `dt_max` and the force is *linear* in it, so
-  the near field's entire contribution is dropped. Measured: `d/d(dt_max)` comes
-  out **111× too small** on the Pallas backend (only the far field, which stays
-  pure JAX, contributes), against an exact match on `backend="jax"`. Forward
-  results are unaffected, and
-  `test_the_pallas_backend_drops_most_of_the_dt_max_gradient` pins the
-  discrepancy so it fails the moment upstream fixes it. Fixing it properly means
-  reducing `f_geometric · Fbar` per level inside the reverse kernel, which
-  already holds the tile in registers.
+* **`backend="pallas"` gradients are exact now.** Its reverse rule used to
+  return zero cotangents for the level-weight table, `softening_sq` and
+  `g_value`, which dropped the near field's share of `d/d(dt_max)` (measured
+  111× too small), `d/d(softening)` and `d/d(G)`. jaccpot's reverse kernel emits
+  all three since jaccpot 690c2d9, and `test_the_dt_max_gradient_is_exact` holds
+  both backends to finite differences.
 * **The jitted lane takes no host-lane options.** `rebuild_every`,
   `reassign_rungs`, `checkpoint`, `checkpoint_substeps` and
   `scan_base_steps=False` raise there (see Quick start); use
