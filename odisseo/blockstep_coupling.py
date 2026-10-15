@@ -70,7 +70,10 @@ inside it. ``rebuild_every`` sets how many base steps share one tree, and the
 default of 1 refreshes at nornax's own cadence. Those base steps are walked with
 ``block_kdk_base_step``; setting ``scan_base_steps=True`` hands each interval to
 ``block_kdk_rollout`` instead -- the same trajectory in one ``lax.scan``, not the
-default for the compile reason below.
+default for the compile reason below. All of that is the host lane
+(``topology_backend="host"``); :func:`integrate_blockstep_jitted` rebuilds the
+tree on device inside its own scan, and raises on the host-lane options it
+cannot honour.
 
 Fusion is not optional in practice
 ----------------------------------
@@ -231,7 +234,8 @@ class BlockStepOptions:
         slow for real use, and how the CPU test suite exercises that lane.
     rebuild_every:
         Base steps sharing one frozen tree. ``1`` (default) rebuilds at nornax's
-        own rung-reassignment cadence.
+        own rung-reassignment cadence. Host lane only: the jitted lane rebuilds
+        every base step and raises on any other value.
     scan_base_steps:
         Whether to hand a rebuild interval to ``block_kdk_rollout`` (a
         ``lax.scan`` over base steps) or step it eagerly with
@@ -248,6 +252,9 @@ class BlockStepOptions:
         measured 2.08 GB against 2.67 GB peak for the same rollout, and ``N``
         barely moves either number -- it is compile/executable memory, not data.
         Scan when trace size is what binds; otherwise step eagerly.
+
+        Host lane only. The jitted lane always scans its base steps, so it
+        raises on ``False`` rather than ignore it.
     traced_boundary_weights:
         Whether to let nornax walk the ``2**k_max + 1`` sub-step boundaries with
         a ``lax.scan`` over a traced weight table, instead of unrolling them.
@@ -286,15 +293,18 @@ class BlockStepOptions:
     checkpoint:
         Passed to ``block_kdk_rollout``: wrap each base step in
         ``jax.checkpoint`` so reverse mode recomputes rather than retains it.
-        Only meaningful on the scanned path.
+        Only meaningful on the host lane's scanned path; the jitted lane raises
+        on ``True``.
     checkpoint_substeps:
         Also remat each *boundary's* kick, bounding backward memory to one
-        boundary's pair tensors. Needed for deep ``k_max`` gradients.
+        boundary's pair tensors. Needed for deep ``k_max`` gradients. Host lane
+        only; the jitted lane raises on ``True``.
     reassign_rungs:
         Recompute rungs at each base-step boundary (production behaviour). Set
         ``False`` to freeze the schedule for the whole run, which makes the map
         globally smooth in the continuous state -- the setting a
-        finite-difference gradient check needs.
+        finite-difference gradient check needs. Host lane only: the jitted lane
+        reassigns at every base step and raises on ``False``.
     static_shapes:
         Pad jaccpot's pair lists and level schedule to fixed capacities so a
         prepared state's shapes stop depending on the particle distribution.
@@ -1489,6 +1499,34 @@ def integrate_blockstep_jaccpot(
 # --------------------------------------------------------------------------
 
 
+# BlockStepOptions fields only the host lane reads, each with the values that
+# describe what the jitted lane does anyway and what it does instead. Any other
+# value would be ignored there, so :func:`integrate_blockstep_jitted` raises on it.
+_HOST_LANE_ONLY_OPTIONS = {
+    "rebuild_every": ((1,), "it rebuilds the topology inside every base step"),
+    "reassign_rungs": ((True,), "it reassigns the rungs at every base step"),
+    "checkpoint": ((False,), "it wraps no base step in jax.checkpoint"),
+    "checkpoint_substeps": ((False,), "it wraps no boundary kick in jax.checkpoint"),
+    "scan_base_steps": ((None, True), "it always scans its base steps"),
+}
+
+
+def _reject_host_lane_only_options(options: BlockStepOptions) -> None:
+    """Raise on a host-lane-only option the jitted lane would silently ignore."""
+    ignored = [
+        f"{name}={getattr(options, name)!r} ({instead})"
+        for name, (matched, instead) in _HOST_LANE_ONLY_OPTIONS.items()
+        if getattr(options, name) not in matched
+    ]
+    if ignored:
+        raise ValueError(
+            "the jitted block-step lane (topology_backend resolves to 'device') "
+            f"would ignore {'; '.join(ignored)}. Only the host lane honours these "
+            "options: pass topology_backend='host' to integrate_blockstep_jaccpot "
+            "to use them, or leave them at their defaults."
+        )
+
+
 def integrate_blockstep_jitted(
     state: jnp.ndarray,
     mass: jnp.ndarray,
@@ -1533,6 +1571,16 @@ def integrate_blockstep_jitted(
 
     Requires ``options.topology_backend == "device"``.
 
+    The scan rebuilds the topology and reassigns the rungs at every base step and
+    checkpoints nothing, so ``rebuild_every``, ``reassign_rungs``,
+    ``checkpoint``, ``checkpoint_substeps`` and ``scan_base_steps=False`` cannot
+    be honoured here. Those are host-lane options, and a value other than the one
+    describing this lane raises ``ValueError`` rather than being ignored.
+    ``traced_boundary_weights`` and ``jit_force`` are not read either: the
+    boundaries are always a ``lax.scan`` inside the one compiled rollout, which
+    carries the topology and so compiles once. They are not checked, because
+    their defaults already differ from what this lane does.
+
     Notes
     -----
     Diagnostics that are cheap come out of the scan per base step (momentum, the
@@ -1569,6 +1617,7 @@ def integrate_blockstep_jitted(
             "the host traversal cannot be traced, so it cannot live inside the "
             "scan. Use integrate_blockstep_jaccpot for the host lane."
         )
+    _reject_host_lane_only_options(options)
     if int(n_base) < 1:
         raise ValueError(f"n_base must be >= 1; got {n_base!r}")
 

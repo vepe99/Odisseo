@@ -232,12 +232,23 @@ def main() -> int:
     ap.add_argument("--leaf-size", type=int, default=64)
     ap.add_argument("--softening", type=float, default=1.0e-3)
     ap.add_argument("--backend", choices=("jax", "pallas"), default="jax")
-    ap.add_argument("--rebuild-every", type=int, default=1)
+    ap.add_argument(
+        "--rebuild-every",
+        type=int,
+        default=1,
+        help=(
+            "base steps per tree build (host lane only; the jitted lane rebuilds "
+            "every base step and raises on anything but 1)"
+        ),
+    )
     ap.add_argument(
         "--scan-base-steps",
         choices=("auto", "on", "off"),
         default="auto",
-        help="drive base steps with block_kdk_rollout (lax.scan) or eagerly",
+        help=(
+            "drive base steps with block_kdk_rollout (lax.scan) or eagerly (host "
+            "lane only; the jitted lane always scans and raises on 'off')"
+        ),
     )
     ap.add_argument(
         "--traced-boundary-weights",
