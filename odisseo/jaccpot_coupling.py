@@ -284,11 +284,17 @@ def _scatter_masked_vectors(
     values: jnp.ndarray,
     mask: jnp.ndarray,
 ) -> jnp.ndarray:
-    """Scatter updates for masked rows while leaving others unchanged."""
-    safe_idx = jnp.where(mask, indices, 0)
-    gathered = base[safe_idx]
-    updates = jnp.where(mask[:, None], values, gathered)
-    return base.at[safe_idx].set(updates)
+    """Scatter updates for masked rows while leaving others unchanged.
+
+    Masked-out rows are aimed past the end of ``base`` and dropped. Aiming them
+    at row 0 with row 0's old value, as this used to, made two writes to row 0
+    whenever particle 0 was active in a padded row, and a scatter keeps only one
+    of them: the old value won on CPU (last writer) whenever padding followed
+    particle 0, and in most cases on GPU, so particle 0 silently skipped its
+    update.
+    """
+    out_of_bounds = jnp.where(mask, indices, base.shape[0])
+    return base.at[out_of_bounds].set(values, mode="drop")
 
 
 def _prepared_state_shape_signature(

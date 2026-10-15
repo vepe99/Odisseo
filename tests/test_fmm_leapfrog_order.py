@@ -202,3 +202,48 @@ def test_history_run_with_real_fmm_is_second_order():
     assert errors[0] / errors[1] > 3.5, f"errors {errors}"
     expected = _segmented_kdk(state, mass, 8, 1)
     np.testing.assert_allclose(final, np.asarray(expected), rtol=0, atol=1e-12)
+
+
+# --------------------------------------------------------------------------
+# padded active-index schedules
+# --------------------------------------------------------------------------
+
+
+def test_masked_scatter_keeps_the_update_of_an_active_particle_zero():
+    # Masked-out rows used to be aimed at row 0 carrying row 0's old value, so a
+    # row with particle 0 active and padding after it wrote row 0 twice, and the
+    # scatter kept the old value (last writer on CPU; most cases on GPU).
+    from odisseo.jaccpot_coupling import _scatter_masked_vectors
+
+    base = jnp.zeros((4, 3))
+    indices = jnp.asarray([0, 2, 0, 0], dtype=jnp.int32)
+    mask = jnp.asarray([True, True, False, False])
+    values = jnp.asarray([[1.0] * 3, [2.0] * 3, [9.0] * 3, [9.0] * 3])
+    out = np.asarray(_scatter_masked_vectors(base, indices, values, mask))
+    np.testing.assert_array_equal(out[:, 0], [1.0, 0.0, 2.0, 0.0])
+
+
+def test_padding_an_active_schedule_changes_nothing(direct_sum_solver):
+    # Every particle active, plus two masked-out padding slots per row.
+    state, mass = _initial_state()
+    num_steps = 4
+    params = SimulationParams(G=1.0, t_end=T_END)
+    rows = jnp.tile(jnp.arange(N), (num_steps, 1))
+    padded = jnp.concatenate([rows, jnp.zeros((num_steps, 2), jnp.int32)], axis=1)
+    mask = jnp.concatenate(
+        [jnp.ones((num_steps, N), bool), jnp.zeros((num_steps, 2), bool)], axis=1
+    )
+    common = dict(num_steps=num_steps, refresh_every=1, leaf_size=16)
+    unpadded = integrate_leapfrog_jaccpot_active(
+        state, mass, _config(), params, active_indices_schedule=rows, **common
+    )
+    got = integrate_leapfrog_jaccpot_active(
+        state,
+        mass,
+        _config(),
+        params,
+        active_indices_schedule=padded,
+        active_mask_schedule=mask,
+        **common,
+    )
+    np.testing.assert_array_equal(np.asarray(got), np.asarray(unpadded))
