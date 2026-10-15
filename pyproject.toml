@@ -59,3 +59,8 @@ docs = [
 packages = [
     "odisseo",
 ]
+
+[tool.pytest.ini_options]
+markers = [
+    "slow: minutes of CPU each (host-lane block-step rollouts, differentiable-FMM gradients); the CPU CI deselects them with -m 'not slow'",
+]

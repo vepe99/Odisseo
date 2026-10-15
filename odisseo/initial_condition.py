@@ -206,7 +206,7 @@ def ic_two_body(mass1: Union[float, jnp.ndarray],
 @partial(jax.jit, static_argnames=['num_samples'])
 @jaxtyped(typechecker=typechecker)
 def sample_position_on_sphere(key: PRNGKeyArray,
-                              r_p: float,
+                              r_p: Union[float, jnp.ndarray],
                               num_samples: int = 1):
     """
     Sample uniform positions on a sphere of radius r_p.
@@ -238,7 +238,7 @@ def sample_position_on_sphere(key: PRNGKeyArray,
 @partial(jax.jit, static_argnames=['num_samples'])
 @jaxtyped(typechecker=typechecker)
 def sample_position_on_circle(key: PRNGKeyArray,
-                             r_p: float,
+                             r_p: Union[float, jnp.ndarray],
                              num_samples: int =1):
     """
     Sample uniform positions on a sphere of radius r_p.

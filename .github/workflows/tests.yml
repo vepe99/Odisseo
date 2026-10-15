@@ -1,0 +1,65 @@
+name: tests
+
+# The CPU test suite. No GPU job: the Pallas kernels need an Ampere card, and the
+# tests that use them run in interpret mode on CPU.
+on:
+  push:
+    branches: [main, jaccpot-integration]
+  pull_request:
+    branches: [main, jaccpot-integration]
+  workflow_dispatch:
+
+# A newer push to the same pull request supersedes the run in flight.
+concurrency:
+  group: tests-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  cpu-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      JAX_PLATFORMS: cpu
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          # jaccpot requires >= 3.12.
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: pyproject.toml
+
+      - name: Install Odisseo with jaccpot, yggdrax and nornax
+        # One resolver run, so jaccpot's JAX window (>=0.11.2,<0.12) holds for
+        # every package: a separate bare `pip install git+...` of yggdrax or
+        # nornax resolves JAX unconstrained. The three track their main
+        # branches, unpinned, so a change upstream that breaks Odisseo shows up
+        # here rather than at the next manual run.
+        run: |
+          python -m pip install --upgrade pip
+          pip install \
+            "jax>=0.11.2,<0.12" "jaxlib>=0.11.2,<0.12" \
+            "yggdrax @ git+https://github.com/TobiBu/yggdrax.git@main" \
+            "nornax @ git+https://github.com/TobiBu/nornax.git@main" \
+            "jaccpot @ git+https://github.com/TobiBu/jaccpot.git@main" \
+            pytest pytest-xdist \
+            -e .
+          pip list | grep -E "^(jax|jaxlib|jaccpot|yggdrax|nornax|diffrax|equinox) "
+
+      - name: Tests (one CPU device)
+        # `-m "not slow"` drops the tests marked slow (the marker is registered
+        # in pyproject.toml): the host-lane block-step rollouts and the
+        # differentiable-FMM gradient checks, minutes of CPU each and together
+        # 88% of the suite's CPU time. Run them locally with `pytest -m slow`.
+        #
+        # tests/test_mesh_lane.py needs two devices, and the device count is
+        # fixed when the backend starts, so it runs in the next step.
+        run: pytest tests -n 4 -m "not slow" --ignore=tests/test_mesh_lane.py -rs
+
+      - name: Mesh lane (two forced CPU devices)
+        env:
+          XLA_FLAGS: --xla_force_host_platform_device_count=2
+        run: pytest tests/test_mesh_lane.py -n 0 -rs

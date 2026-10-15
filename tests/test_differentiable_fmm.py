@@ -223,6 +223,7 @@ def test_differentiable_lane_forward_matches_direct_sum_lane(initial_conditions,
 # --------------------------------------------------------------------------
 
 
+@pytest.mark.slow
 @pytest.mark.parametrize(
     "name, x0, replace",
     [
@@ -280,6 +281,7 @@ def test_external_parameter_gradient_matches_direct_sum_lane(initial_conditions,
     assert rel < 1e-3, f"FMM {grad_fmm:.8e} vs direct-sum {grad_direct:.8e}"
 
 
+@pytest.mark.slow
 def test_mass_gradient_matches_finite_differences(initial_conditions, plan):
     """Masses enter the dynamics ONLY through self-gravity.
 
@@ -300,6 +302,7 @@ def test_mass_gradient_matches_finite_differences(initial_conditions, plan):
     assert abs(grad_ad - grad_fd) / abs(grad_fd) < 1e-5
 
 
+@pytest.mark.slow
 def test_position_gradient_matches_finite_differences(initial_conditions, plan):
     """Probes d a_self / d x through the frozen topology, component by component."""
     state, mass = initial_conditions
@@ -318,6 +321,7 @@ def test_position_gradient_matches_finite_differences(initial_conditions, plan):
     assert abs(grad_ad - grad_fd) / abs(grad_fd) < 1e-5
 
 
+@pytest.mark.slow
 def test_frozen_self_gravity_changes_the_parameter_gradient(initial_conditions, plan):
     """The self-gravity *response* term contributes to d loss / d Mvir.
 
@@ -372,6 +376,7 @@ def test_frozen_self_gravity_changes_the_parameter_gradient(initial_conditions, 
     )
 
 
+@pytest.mark.slow
 def test_gradients_w_r_t_initial_state_and_masses(initial_conditions, plan):
     state, mass = initial_conditions
 
@@ -389,6 +394,7 @@ def test_gradients_w_r_t_initial_state_and_masses(initial_conditions, plan):
     assert float(jnp.linalg.norm(grad_mass)) > 0.0
 
 
+@pytest.mark.slow
 def test_history_gradient_flows_through_intermediate_states(initial_conditions, plan):
     """A snapshot-based loss (as in stream fitting) must differentiate too."""
     state, mass = initial_conditions
@@ -415,6 +421,7 @@ def test_history_gradient_flows_through_intermediate_states(initial_conditions, 
 # --------------------------------------------------------------------------
 
 
+@pytest.mark.slow
 def test_integrate_routes_to_the_differentiable_lane(initial_conditions, plan):
     state, mass = initial_conditions
     params = make_params()

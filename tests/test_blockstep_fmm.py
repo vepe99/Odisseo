@@ -336,6 +336,7 @@ def test_boundary_walk_default_is_unrolled_and_is_overridable(config, params):
     assert supports_traced_level_weights(probed) is True
 
 
+@pytest.mark.slow
 def test_scanned_and_unrolled_boundary_walks_agree(system, config, params):
     """Same trajectory either way: the boundary walk is a compile-cost choice.
 
@@ -447,6 +448,7 @@ def test_a_per_level_only_model_is_rejected_by_the_guard(prepared):
 # --------------------------------------------------------------------------
 
 
+@pytest.mark.slow
 def test_momentum_is_conserved_across_a_block_step_rollout(system, config, params):
     """``sum_i m_i v_i`` constant to round-off over a multi-rung rollout.
 
@@ -562,6 +564,7 @@ def test_the_shared_timestep_lane_is_not_more_momentum_conserving(
 # --------------------------------------------------------------------------
 
 
+@pytest.mark.slow
 def test_energy_drift_is_bounded_and_oscillates(system, config, params):
     """Leapfrog is symplectic: the energy error oscillates, it does not accumulate.
 
@@ -603,6 +606,7 @@ def test_energy_drift_is_bounded_and_oscillates(system, config, params):
     )
 
 
+@pytest.mark.slow
 def test_a_deeper_rung_ladder_reduces_the_energy_error(system, config, params):
     """The individual timesteps must actually buy accuracy, not just run.
 
@@ -826,6 +830,7 @@ def test_options_reject_an_impossible_rebuild_cadence():
 # --------------------------------------------------------------------------
 
 
+@pytest.mark.slow
 def test_scanned_and_eager_base_step_drivers_agree(system, config, params):
     """``block_kdk_rollout`` (scanned) and ``block_kdk_base_step`` (eager) agree.
 
@@ -857,6 +862,7 @@ def test_scanned_and_eager_base_step_drivers_agree(system, config, params):
     assert rel < 1.0e-12, f"scanned and eager drivers diverged at {rel:.3e}"
 
 
+@pytest.mark.slow
 def test_the_tree_is_rebuilt_once_per_rebuild_interval(system, config, params):
     """Topology lifetime: one host tree build per interval, not per sub-step.
 
@@ -892,6 +898,7 @@ def test_the_tree_is_rebuilt_once_per_rebuild_interval(system, config, params):
 # --------------------------------------------------------------------------
 
 
+@pytest.mark.slow
 def test_rollout_gradient_matches_finite_differences(system, config, params):
     """``d(summary)/d(IC)`` through a fixed-topology, frozen-rung rollout.
 
@@ -1038,6 +1045,7 @@ def test_the_dt_max_gradient_is_exact(backend, interpret, system, config, params
     assert abs(ad - fd) <= 1.0e-6 * abs(fd), f"AD {ad:.6e} vs FD {fd:.6e}"
 
 
+@pytest.mark.slow
 def test_one_compiled_program_survives_every_topology_rebuild(system, config, params):
     """The Phase-1 payoff, asserted end to end from ODISSEO.
 
@@ -1336,6 +1344,7 @@ def test_an_unknown_topology_backend_is_rejected():
         bc.resolve_topology_backend(_options(topology_backend="gpu"))
 
 
+@pytest.mark.slow
 @device_lane
 def test_the_host_entry_point_dispatches_to_the_jitted_lane(system, config, params):
     """``integrate_blockstep_jaccpot`` is the front door for BOTH lanes.
@@ -1487,6 +1496,7 @@ def test_the_jitted_lane_accepts_the_defaults_and_what_it_does_anyway():
 # --------------------------------------------------------------------------
 
 
+@pytest.mark.slow
 def test_integrate_reaches_the_blockstep_lane(system, config, params):
     """``integrate()`` must route FMM_ACC + fmm_blockstep here, not elsewhere.
 
