@@ -284,11 +284,17 @@ def _scatter_masked_vectors(
     values: jnp.ndarray,
     mask: jnp.ndarray,
 ) -> jnp.ndarray:
-    """Scatter updates for masked rows while leaving others unchanged."""
-    safe_idx = jnp.where(mask, indices, 0)
-    gathered = base[safe_idx]
-    updates = jnp.where(mask[:, None], values, gathered)
-    return base.at[safe_idx].set(updates)
+    """Scatter updates for masked rows while leaving others unchanged.
+
+    Masked-out rows are aimed past the end of ``base`` and dropped. Aiming them
+    at row 0 with row 0's old value, as this used to, made two writes to row 0
+    whenever particle 0 was active in a padded row, and a scatter keeps only one
+    of them: the old value won on CPU (last writer) whenever padding followed
+    particle 0, and in most cases on GPU, so particle 0 silently skipped its
+    update.
+    """
+    out_of_bounds = jnp.where(mask, indices, base.shape[0])
+    return base.at[out_of_bounds].set(values, mode="drop")
 
 
 def _prepared_state_shape_signature(
@@ -342,6 +348,27 @@ def _leapfrog_step_full_const_self(
 
     vel_new = state_curr[:, 1] + 0.5 * (acc_1 + acc_2) * dt_arr
     return state_pos.at[:, 1].set(vel_new)
+
+
+@jax.jit
+def _close_segment_with_endpoint_self(
+    state_end: jnp.ndarray,
+    acc_self_frozen: jnp.ndarray,
+    acc_self_end: jnp.ndarray,
+    dt_arr: jnp.ndarray,
+) -> jnp.ndarray:
+    """Give a segment's last closing half-kick the self-field at its end.
+
+    The segment scans apply the self-acceleration frozen at the segment start in
+    both half-kicks of every step. The closing half-kick of the segment's last
+    step must use the self-acceleration at the segment's END positions instead:
+    with one step per segment that is velocity Verlet, the strict lane's scheme,
+    and without it the self-gravity is integrated to first order only
+    (``v_{n+1} = v_n + dt a(x_n)``). The positions do not depend on that
+    half-kick, so the swap is a velocity shift of ``dt/2 (a_end - a_frozen)``.
+    """
+    vel_new = state_end[:, 1] + 0.5 * (acc_self_end - acc_self_frozen) * dt_arr
+    return state_end.at[:, 1].set(vel_new)
 
 
 @partial(jax.jit, static_argnames=("steps", "add_external", "config", "params"))
@@ -413,6 +440,30 @@ def _leapfrog_step_active_const_self(
     vel_active_new = vel[safe_idx] + 0.5 * (acc_1 + acc_2) * dt_arr
     vel_new = _scatter_masked_vectors(vel, safe_idx, vel_active_new, active_mask)
     return state_pos.at[:, 1].set(vel_new)
+
+
+@jax.jit
+def _close_active_segment_with_endpoint_self(
+    state_end: jnp.ndarray,
+    acc_self_frozen: jnp.ndarray,
+    acc_self_end: jnp.ndarray,
+    active_indices: jnp.ndarray,
+    active_mask: jnp.ndarray,
+    dt_arr: jnp.ndarray,
+) -> jnp.ndarray:
+    """Masked :func:`_close_segment_with_endpoint_self` for an active segment.
+
+    Only the particles active in the segment's last step took that step's
+    closing half-kick, so only their velocities move.
+    """
+    safe_idx = jnp.where(active_mask, active_indices, 0)
+    vel = state_end[:, 1]
+    vel_active_new = (
+        vel[safe_idx]
+        + 0.5 * (acc_self_end[safe_idx] - acc_self_frozen[safe_idx]) * dt_arr
+    )
+    vel_new = _scatter_masked_vectors(vel, safe_idx, vel_active_new, active_mask)
+    return state_end.at[:, 1].set(vel_new)
 
 
 @partial(jax.jit, static_argnames=("add_external", "config", "params"))
@@ -505,8 +556,14 @@ def integrate_leapfrog_jaccpot_active(
     - Source tree is refreshed every ``refresh_every`` steps.
     - ``active_indices_schedule`` + ``active_mask_schedule`` enables a scan/JIT
       path for active subsets with fixed-size index rows.
-    - Between refreshes, self-gravity is evaluated with fixed sources, then
-      state updates are vectorized in JAX.
+    - Steps are kick-drift-kick. The refresh at the end of each segment of
+      ``refresh_every`` steps gives the self-acceleration at the segment's end
+      positions, which closes the segment's last half-kick and opens the next
+      segment. ``refresh_every=1`` is therefore velocity Verlet (second order),
+      the strict lane's scheme. Inside a longer segment both half-kicks use the
+      self-acceleration frozen at the segment start, an approximation the
+      caller opts into; the external field is always evaluated at the current
+      positions.
     """
     if int(num_steps) <= 0:
         raise ValueError("num_steps must be positive")
@@ -1882,6 +1939,36 @@ def integrate_leapfrog_jaccpot_active(
         acc_out = _eval_prepared(prepared_out, active_indices=None)
         return prepared_out, acc_out
 
+    def _refresh_and_eval_full_recorded(
+        state_in: jnp.ndarray,
+        prev_prepared_state: Any | None,
+    ) -> tuple[Any, jnp.ndarray]:
+        """Prepare at ``state_in`` and evaluate the full self-acceleration there.
+
+        The segment loops' refresh: records the shape signature and, when
+        profiling, the prepare and evaluate timings.
+        """
+        nonlocal prepare_seconds, prepare_calls, evaluate_seconds, evaluate_calls
+        if profile:
+            prepared_out, elapsed_prepare, stage_delta = _profiled_prepare_call(
+                state_in,
+                prev_prepared_state,
+            )
+            prepare_seconds += elapsed_prepare
+            _record_profiled_prepare_elapsed(elapsed_prepare, stage_delta)
+            prepare_calls += 1
+            t0 = time.perf_counter()
+        else:
+            prepared_out = _prepare_or_refresh_state(state_in, prev_prepared_state)
+        _record_shape_signature(prepared_out)
+        acc_out = _eval_prepared(prepared_out, active_indices=None)
+        if profile:
+            if profile_sync:
+                _ = jax.block_until_ready(acc_out)
+            evaluate_seconds += time.perf_counter() - t0
+            evaluate_calls += 1
+        return prepared_out, acc_out
+
     def _run_nonprofile_full_segmented_loop(
         state_in: jnp.ndarray,
         *,
@@ -1889,68 +1976,40 @@ def integrate_leapfrog_jaccpot_active(
         refresh_every_i: int,
         remat_enabled: bool,
     ) -> jnp.ndarray:
-        """Run the non-profile full-particle segmented loop with minimal branching."""
+        """Run the non-profile full-particle segmented loop with minimal branching.
+
+        The refresh after each segment evaluates the self-acceleration at its end
+        positions; it closes that segment's last half-kick and is the frozen
+        field of the next segment, so there is one refresh per segment plus the
+        initial one.
+        """
         full_segments = num_steps_i // refresh_every_i
         tail_segment = num_steps_i % refresh_every_i
-        prepared_state = None
+        segment_lengths = [refresh_every_i] * full_segments
+        if tail_segment > 0:
+            segment_lengths.append(tail_segment)
+        prepared_state, acc_self_full = _prepare_refresh_and_eval_full(state_in, None)
         state_out = state_in
 
-        if remat_enabled:
-            for _ in range(full_segments):
-                prepared_state, acc_self_full = _prepare_refresh_and_eval_full(
-                    state_out, prepared_state
-                )
-                state_out, _ = _run_full_segment_scan(
-                    state_out,
-                    acc_self_full,
-                    dt_arr,
-                    steps=refresh_every_i,
-                    add_external=add_external,
-                    config=config,
-                    params=params,
-                )
+        for seg_len in segment_lengths:
+            state_out, _ = _run_full_segment_scan(
+                state_out,
+                acc_self_full,
+                dt_arr,
+                steps=seg_len,
+                add_external=add_external,
+                config=config,
+                params=params,
+            )
+            if remat_enabled:
                 state_out = jnp.asarray(state_out, dtype=state_out.dtype)
-            if tail_segment > 0:
-                prepared_state, acc_self_full = _prepare_refresh_and_eval_full(
-                    state_out, prepared_state
-                )
-                state_out, _ = _run_full_segment_scan(
-                    state_out,
-                    acc_self_full,
-                    dt_arr,
-                    steps=tail_segment,
-                    add_external=add_external,
-                    config=config,
-                    params=params,
-                )
-                state_out = jnp.asarray(state_out, dtype=state_out.dtype)
-        else:
-            for _ in range(full_segments):
-                prepared_state, acc_self_full = _prepare_refresh_and_eval_full(
-                    state_out, prepared_state
-                )
-                state_out, _ = _run_full_segment_scan(
-                    state_out,
-                    acc_self_full,
-                    dt_arr,
-                    steps=refresh_every_i,
-                    add_external=add_external,
-                    config=config,
-                    params=params,
-                )
-            if tail_segment > 0:
-                prepared_state, acc_self_full = _prepare_refresh_and_eval_full(
-                    state_out, prepared_state
-                )
-                state_out, _ = _run_full_segment_scan(
-                    state_out,
-                    acc_self_full,
-                    dt_arr,
-                    steps=tail_segment,
-                    add_external=add_external,
-                    config=config,
-                    params=params,
-                )
+            prepared_state, acc_self_end = _prepare_refresh_and_eval_full(
+                state_out, prepared_state
+            )
+            state_out = _close_segment_with_endpoint_self(
+                state_out, acc_self_full, acc_self_end, dt_arr
+            )
+            acc_self_full = acc_self_end
         return state_out
 
     history = []
@@ -2207,26 +2266,10 @@ def integrate_leapfrog_jaccpot_active(
             )
 
         step = 0
-        prepared_state = None
+        prepared_state, acc_self_full = _refresh_and_eval_full_recorded(
+            state_curr, None
+        )
         while step < int(num_steps):
-            if profile:
-                prepared_state, elapsed_prepare, stage_delta = _profiled_prepare_call(
-                    state_curr,
-                    prepared_state,
-                )
-                prepare_seconds += elapsed_prepare
-                _record_profiled_prepare_elapsed(elapsed_prepare, stage_delta)
-                prepare_calls += 1
-                t0 = time.perf_counter()
-            else:
-                prepared_state = _prepare_or_refresh_state(state_curr, prepared_state)
-            _record_shape_signature(prepared_state)
-            acc_self_full = _eval_prepared(prepared_state, active_indices=None)
-            if profile:
-                if profile_sync:
-                    _ = jax.block_until_ready(acc_self_full)
-                evaluate_seconds += time.perf_counter() - t0
-                evaluate_calls += 1
             seg_len = min(int(refresh_every), int(num_steps) - step)
             idx_seg = active_indices_schedule[step : step + seg_len]
             mask_seg = active_mask_schedule[step : step + seg_len]
@@ -2252,8 +2295,22 @@ def integrate_leapfrog_jaccpot_active(
                     _ = jax.block_until_ready(state_curr)
                 update_seconds += time.perf_counter() - t0
                 update_calls += 1
+            # The refresh at the segment's end positions closes its last
+            # half-kick and is the frozen field of the next segment.
+            prepared_state, acc_self_end = _refresh_and_eval_full_recorded(
+                state_curr, prepared_state
+            )
+            state_curr = _close_active_segment_with_endpoint_self(
+                state_curr,
+                acc_self_full,
+                acc_self_end,
+                idx_seg[-1],
+                mask_seg[-1],
+                dt_arr,
+            )
+            acc_self_full = acc_self_end
             if return_history:
-                history.append(seg_hist)
+                history.append(seg_hist.at[-1].set(state_curr))
             step += int(seg_len)
 
         if return_history:
@@ -2277,26 +2334,10 @@ def integrate_leapfrog_jaccpot_active(
             return _finalize(state_curr)
 
         step = 0
-        prepared_state = None
+        prepared_state, acc_self_full = _refresh_and_eval_full_recorded(
+            state_curr, None
+        )
         while step < int(num_steps):
-            if profile:
-                prepared_state, elapsed_prepare, stage_delta = _profiled_prepare_call(
-                    state_curr,
-                    prepared_state,
-                )
-                prepare_seconds += elapsed_prepare
-                _record_profiled_prepare_elapsed(elapsed_prepare, stage_delta)
-                prepare_calls += 1
-                t0 = time.perf_counter()
-            else:
-                prepared_state = _prepare_or_refresh_state(state_curr, prepared_state)
-            _record_shape_signature(prepared_state)
-            acc_self_full = _eval_prepared(prepared_state, active_indices=None)
-            if profile:
-                if profile_sync:
-                    _ = jax.block_until_ready(acc_self_full)
-                evaluate_seconds += time.perf_counter() - t0
-                evaluate_calls += 1
             seg_len = min(int(refresh_every), int(num_steps) - step)
             if profile:
                 t0 = time.perf_counter()
@@ -2319,8 +2360,17 @@ def integrate_leapfrog_jaccpot_active(
                     _ = jax.block_until_ready(state_curr)
                 update_seconds += time.perf_counter() - t0
                 update_calls += 1
+            # The refresh at the segment's end positions closes its last
+            # half-kick and is the frozen field of the next segment.
+            prepared_state, acc_self_end = _refresh_and_eval_full_recorded(
+                state_curr, prepared_state
+            )
+            state_curr = _close_segment_with_endpoint_self(
+                state_curr, acc_self_full, acc_self_end, dt_arr
+            )
+            acc_self_full = acc_self_end
             if return_history:
-                history.append(seg_hist)
+                history.append(seg_hist.at[-1].set(state_curr))
             step += int(seg_len)
 
         if return_history:
@@ -2328,9 +2378,16 @@ def integrate_leapfrog_jaccpot_active(
         return _finalize(state_curr)
 
     # General fallback path for active-index callbacks and/or post-position refresh.
+    # A step's closing half-kick needs the self-field at the drifted positions, so
+    # the tree is refreshed there after every drift with
+    # refresh_after_position_update, and otherwise after the last step of each
+    # refresh segment (every step for refresh_every=1: velocity Verlet). Such a
+    # refresh is already at the next step's positions, so the segment-start
+    # prepare is skipped after one.
     prepared_state = None
+    prepared_at_current = False
     for step in range(int(num_steps)):
-        if step % int(refresh_every) == 0:
+        if step % int(refresh_every) == 0 and not prepared_at_current:
             if profile:
                 prepared_state, elapsed_prepare, stage_delta = _profiled_prepare_call(
                     state_curr,
@@ -2430,7 +2487,12 @@ def integrate_leapfrog_jaccpot_active(
             )
             state_pos = state_curr.at[active_idx, 0].set(pos_new_active)
 
-        if bool(refresh_after_position_update):
+        refresh_after_drift = (
+            bool(refresh_after_position_update)
+            or (step + 1) % int(refresh_every) == 0
+            or step + 1 == int(num_steps)
+        )
+        if refresh_after_drift:
             if profile:
                 prepared_state, elapsed_prepare, stage_delta = _profiled_prepare_call(
                     state_pos,
@@ -2523,6 +2585,7 @@ def integrate_leapfrog_jaccpot_active(
                 _ = jax.block_until_ready(state_curr)
             update_seconds += time.perf_counter() - t0
             update_calls += 1
+        prepared_at_current = refresh_after_drift
 
         if return_history:
             history.append(state_curr)
