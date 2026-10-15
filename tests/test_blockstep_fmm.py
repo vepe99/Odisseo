@@ -1425,6 +1425,63 @@ def test_host_only_kwargs_are_rejected_on_the_device_lane(system, config, params
             )
 
 
+# One non-default value per host-lane-only option. The jitted lane rebuilds and
+# reassigns rungs at every base step, scans its base steps and checkpoints
+# nothing, so each of these used to be accepted and silently dropped.
+HOST_LANE_ONLY_OPTIONS = [
+    {"rebuild_every": 2},
+    {"reassign_rungs": False},
+    {"checkpoint": True},
+    {"checkpoint_substeps": True},
+    {"scan_base_steps": False},
+]
+
+
+@device_lane
+@pytest.mark.parametrize(
+    "option", HOST_LANE_ONLY_OPTIONS, ids=lambda option: next(iter(option))
+)
+def test_the_jitted_lane_rejects_host_lane_options_it_would_ignore(
+    system, config, params, option
+):
+    """Dropping one silently runs a different simulation than the one asked for.
+
+    ``rebuild_every=8`` or ``reassign_rungs=False`` change the scheme, and nothing
+    in the jitted lane's result would say they were not applied.
+    """
+    state, mass = system
+    (name,) = option
+    options = BlockStepOptions(
+        dt_max=DT_MAX, k_max=K_MAX, theta=THETA, max_order=MAX_ORDER,
+        leaf_size=LEAF_SIZE, topology_backend="device", **option,
+    )
+    with pytest.raises(ValueError, match=f"would ignore {name}="):
+        integrate_blockstep_jitted(
+            state, mass, config, params, options=options, n_base=1,
+            track_energy=False,
+        )
+    # The front door dispatches to the same lane, so it must raise too.
+    with pytest.raises(ValueError, match="topology_backend='host'"):
+        integrate_blockstep_jaccpot(
+            state, mass, config, params, options=options, n_base=1,
+            track_energy=False,
+        )
+
+
+def test_the_jitted_lane_accepts_the_defaults_and_what_it_does_anyway():
+    """Only values the jitted lane would ignore raise; its own behaviour does not.
+
+    ``scan_base_steps=True`` asks for scanned base steps, which is what the jitted
+    lane always does, and ``rebuild_every=1`` for a rebuild every base step.
+    """
+    from odisseo.blockstep_coupling import _reject_host_lane_only_options
+
+    _reject_host_lane_only_options(_options(topology_backend="device"))
+    _reject_host_lane_only_options(
+        _options(topology_backend="device", scan_base_steps=True, rebuild_every=1)
+    )
+
+
 # --------------------------------------------------------------------------
 # the unified integrate() API reaches this lane
 # --------------------------------------------------------------------------

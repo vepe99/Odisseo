@@ -132,6 +132,22 @@ that takes `block_state`, `record_every` and `progress` -- those exist because i
 re-enters the host once per base step, which is precisely what the jitted lane
 removes, so passing them with a device backend raises rather than being ignored.
 
+The same holds for five `BlockStepOptions` fields. The jitted lane rebuilds the
+topology and reassigns the rungs inside every base step of one `lax.scan`, and
+checkpoints nothing, so it raises a `ValueError` on any of these rather than
+silently ignore it:
+
+| option | the jitted lane does | raises on |
+|---|---|---|
+| `rebuild_every` | rebuilds every base step | anything but `1` |
+| `reassign_rungs` | reassigns every base step | `False` |
+| `checkpoint` | no `jax.checkpoint` per base step | `True` |
+| `checkpoint_substeps` | no `jax.checkpoint` per boundary kick | `True` |
+| `scan_base_steps` | always scans its base steps | `False` |
+
+Their defaults describe the jitted lane, so a default configuration runs on
+either lane.
+
 ### Leaf size, and why it decides which optimisation matters
 
 `leaf_size` defaults to **64**, which is measured rather than conventional. A full
@@ -252,7 +268,9 @@ and the driver walks them with `block_kdk_base_step`. Setting
 `scan_base_steps=True` hands each interval to `block_kdk_rollout` instead — the
 same trajectory, in one `lax.scan`; it is not the default for the reason in §3
 below, and `test_scanned_and_eager_base_step_drivers_agree` pins that the two
-agree.
+agree. Both knobs belong to the host lane: the jitted lane (§3e) rebuilds the tree
+on device inside its own scan and raises on them (see the table under Quick
+start).
 
 `test_the_tree_is_rebuilt_once_per_rebuild_interval` pins the count, because
 getting it wrong is the difference between an O(N) run and one that rebuilds a
@@ -541,6 +559,15 @@ other on the **rung histogram**, which must match exactly — same `assign_rungs
 same schedule — while allowing the trajectories to differ at FMM tolerance,
 because the trees differ.
 
+Because the scan body rebuilds the topology and reassigns the rungs at every base
+step, the host lane's `rebuild_every`, `reassign_rungs`, `checkpoint`,
+`checkpoint_substeps` and `scan_base_steps=False` have nothing to act on here.
+They used to be accepted and dropped; a non-default value now raises a
+`ValueError` that names the option and points at `topology_backend="host"`.
+`traced_boundary_weights` and `jit_force` are not read either — the boundaries
+are always a `lax.scan` inside the one compiled rollout — but their defaults
+already differ from what this lane does, so they are not checked.
+
 > **Read the timings carefully.** `seconds_per_base_step` on the jitted lane
 > divides the whole measured rollout by `n_base`, so by default it includes the
 > one-time compile; on the host lane it *excludes* the host tree build, which is
@@ -732,16 +759,13 @@ work.
 * **Gradients are fixed-topology.** `jax.grad` through a rollout works with the
   tree rebuilt per base step and `stop_gradient`-ed, the same treatment nornax
   gives its rung schedule.
-* **`backend="pallas"` silently loses `d/d(dt_max)`, `d/d(softening)` and
-  `d/d(G)`.** Its reverse rule returns `jnp.zeros_like(level_weights)` (and the
-  same for `softening_sq` / `g_value`), on the stated grounds that the level
-  table is "discrete or frozen". It is neither: `level_weights[k] ==
-  half * dt_max / 2**k` is smooth in `dt_max` and the force is *linear* in it, so
-  the near field's entire contribution is dropped. Measured: `d/d(dt_max)` comes
-  out **111× too small** on the Pallas backend (only the far field, which stays
-  pure JAX, contributes), against an exact match on `backend="jax"`. Forward
-  results are unaffected, and
-  `test_the_pallas_backend_drops_most_of_the_dt_max_gradient` pins the
-  discrepancy so it fails the moment upstream fixes it. Fixing it properly means
-  reducing `f_geometric · Fbar` per level inside the reverse kernel, which
-  already holds the tile in registers.
+* **`backend="pallas"` gradients are exact now.** Its reverse rule used to
+  return zero cotangents for the level-weight table, `softening_sq` and
+  `g_value`, which dropped the near field's share of `d/d(dt_max)` (measured
+  111× too small), `d/d(softening)` and `d/d(G)`. jaccpot's reverse kernel emits
+  all three since jaccpot 690c2d9, and `test_the_dt_max_gradient_is_exact` holds
+  both backends to finite differences.
+* **The jitted lane takes no host-lane options.** `rebuild_every`,
+  `reassign_rungs`, `checkpoint`, `checkpoint_substeps` and
+  `scan_base_steps=False` raise there (see Quick start); use
+  `topology_backend="host"` for them.
