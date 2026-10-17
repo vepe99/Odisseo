@@ -389,6 +389,9 @@ def test_history_runs_return_every_kth_state_with_the_diagnostics(fused_lane):
         return_lane=True,
     )
     assert lane == "fmm_runner"
+    # the kept runner keeps no snapshot (nor the collector) for the next call
+    ((_, runner),) = rc._CACHE.values()
+    assert runner.callbacks == () and runner.step_callback is None
     assert isinstance(snaps.states, np.ndarray) and snaps.states.shape == (3, N, 2, 3)
     np.testing.assert_array_equal(snaps.times, [0.0, 2 * DT, 4 * DT])
     assert np.array_equal(snaps.states[0], np.asarray(state))

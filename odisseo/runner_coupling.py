@@ -241,7 +241,10 @@ def runner_unsupported(
     if not bool(config.fixed_timestep):
         return "fixed_timestep=False (adaptive diffrax steps)"
     if int(config.fmm_refresh_every) != 1:
-        return f"fmm_refresh_every={int(config.fmm_refresh_every)} (the runner refreshes every step)"
+        return (
+            f"fmm_refresh_every={int(config.fmm_refresh_every)} (the runner "
+            "refreshes every step)"
+        )
     if bool(config.fmm_refresh_after_position_update):
         return "fmm_refresh_after_position_update=True"
     if scheduled:
@@ -649,13 +652,6 @@ def integrate_runner_jaccpot(
     solver, runner = _solver_and_runner(
         config, params, settings, int(state_arr.shape[0]), external
     )
-    runner.segment = segment
-    runner.callbacks = ((collector,) if collector is not None else ()) + tuple(
-        callbacks
-    )
-    runner.step_callback = step_callback
-    runner.step_callback_stride = int(step_callback_stride)
-
     # the runner traces dt, G and eps^2 (SegmentConfig.traced_params); dehnen_error
     # takes the solver's own G and softening only
     force_params = (
@@ -668,15 +664,27 @@ def integrate_runner_jaccpot(
         if external
         else None
     )
-    with _temporary_large_n_environment(config):
-        run = runner.run(
-            state_arr,
-            mass_arr,
-            dt=float(params.t_end) / float(num_steps),
-            num_steps=num_steps,
-            force_params=force_params,
-            external_params=external_params,
-        )
+    # this call's segment plan and callbacks on the kept runner; the callbacks are
+    # dropped afterwards, so the kept runner holds no snapshot between calls
+    runner.segment = segment
+    runner.callbacks = ((collector,) if collector is not None else ()) + tuple(
+        callbacks
+    )
+    runner.step_callback = step_callback
+    runner.step_callback_stride = int(step_callback_stride)
+    try:
+        with _temporary_large_n_environment(config):
+            run = runner.run(
+                state_arr,
+                mass_arr,
+                dt=float(params.t_end) / float(num_steps),
+                num_steps=num_steps,
+                force_params=force_params,
+                external_params=external_params,
+            )
+    finally:
+        runner.callbacks = ()
+        runner.step_callback = None
     snapshots = None
     if collector is not None:
         if len(collector.steps) != int(config.num_snapshots) and num_steps >= int(
