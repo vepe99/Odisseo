@@ -83,7 +83,9 @@ field's identity. The runner lane therefore
 Another `dt`, `G` or set of potential parameters builds no solver and adds no
 program to jaccpot's cache (`tests/test_runner_lane.py`). What runs per call is
 jaccpot's eager caps-only prepare at the initial state, the start force and the
-segments. A run of `num_timesteps` not a multiple of the 50-step segments
+segments. jaccpot's plan only grows: when a segment's lists outgrow their
+capacities, jaccpot re-plans and re-runs it, and the next run from an initial
+state compiles once for the grown plan; runs after that compile nothing. A run of `num_timesteps` not a multiple of the 50-step segments
 compiles one more scan for its last segment (jaccpot warns), once per length.
 
 Start the process with XLA's fusion autotuner off, as for any production run
