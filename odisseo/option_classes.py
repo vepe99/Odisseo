@@ -215,7 +215,10 @@ class SimulationConfig(NamedTuple):
     fmm_max_order: int = 4
     fmm_refresh_after_position_update: bool = False
 
-    # Jaccpot solver tuning knobs exposed to ODISSEO.
+    # Jaccpot solver tuning knobs exposed to ODISSEO. "galaxy" runs jaccpot's
+    # ProductionRunner (the fused single-GPU lane, odisseo.runner_coupling), and so
+    # does "fast" on a GPU at fmm_large_n_min_particles or more (the auto profile
+    # below); "large_n_gpu" keeps the coupler's own loop on that lane.
     fmm_preset: str = "fast"
     # Real (Dehnen) harmonics: jaccpot's only basis since its 2026-10 cleanup.
     # "solidfmm" is an alias for it (bit-identical forces); "complex" (C) and
@@ -343,3 +346,13 @@ class SimulationConfig(NamedTuple):
     # importing it here would be circular. No default, for the same reason
     # blockstep_options has none: MeshOptions has no default dt.
     mesh_options: Optional[Any] = None
+    # --- production runner lane (fmm_preset="galaxy" or the auto profile) ------
+    # A `jaccpot.production.GalaxySettings`: the numerical settings of the runner
+    # lane (leaf size, expansion order, opening angle, cell level floor, leaf
+    # capacity, MAC, precision). None is jaccpot's GALAXY_SETTINGS. That lane does
+    # NOT read fmm_leaf_size, fmm_max_order, fmm_theta or the other coupler knobs
+    # (every field here has a default, so "set by the caller" is not observable);
+    # this field is how to change them. softening, softening_kernel and params.G
+    # are read as on every lane. Typed loosely so this module does not import
+    # jaccpot; appended at the END, like the fields above.
+    fmm_galaxy_settings: Optional[Any] = None

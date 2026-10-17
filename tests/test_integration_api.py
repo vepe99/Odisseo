@@ -95,6 +95,9 @@ def test_integrate_dispatches_to_fmm_coupler(monkeypatch):
 
 
 def test_integrate_auto_selects_large_n_gpu_profile(monkeypatch):
+    # The auto profile picks jaccpot's runner lane where the runner runs the call
+    # (tests/test_runner_lane.py); for one it does not -- here an active-particle
+    # schedule -- it keeps the coupler on the large_n_gpu profile, as before.
     from odisseo import integration_api as api
 
     calls = {"fmm": 0}
@@ -124,9 +127,17 @@ def test_integrate_auto_selects_large_n_gpu_profile(monkeypatch):
     )
     params = SimulationParams(G=1.0, t_end=1.0)
 
-    out = api.integrate(state, mass, cfg, params)
+    out, lane = api.integrate(
+        state,
+        mass,
+        cfg,
+        params,
+        active_indices_schedule=jnp.zeros((3, 6), dtype=jnp.int32),
+        return_lane=True,
+    )
     assert out.shape == state.shape
     assert calls["fmm"] == 1
+    assert lane == "fmm_forward"
 
 
 def test_integrate_fmm_requires_fixed_timestep():

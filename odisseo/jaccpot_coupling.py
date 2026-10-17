@@ -90,6 +90,25 @@ def _temporary_large_n_environment(
                 os.environ[key] = value
 
 
+def _resolve_use_pallas(config: SimulationConfig) -> Optional[bool]:
+    """The ``use_pallas`` a jaccpot solver for ``config`` is built with.
+
+    Fused Pallas near-field/M2L kernels (Ampere+/sm_80+ GPUs). Resolution order:
+
+    1. the ``ODISSEO_FMM_USE_PALLAS`` env var (explicit override), else
+    2. ``config.fmm_use_pallas`` (True/False), else
+    3. ``None``: jaccpot auto-detects, ON for Ampere sm_80+, pure-JAX on
+       sm_75/CPU. jaccpot also falls back automatically on unsupported hardware
+       via its ``pallas_*_supported()`` guards.
+    """
+    pallas_env = os.environ.get("ODISSEO_FMM_USE_PALLAS")
+    if pallas_env is not None and pallas_env.strip() != "":
+        return pallas_env.strip().lower() in {"1", "true", "yes", "on"}
+    if config.fmm_use_pallas is not None:
+        return bool(config.fmm_use_pallas)
+    return None  # jaccpot auto-detects Ampere
+
+
 def _build_fmm_solver(
     *,
     working_dtype,
@@ -149,24 +168,7 @@ def _build_fmm_solver(
     ).items():
         os.environ.setdefault(_env_key, _env_value)
 
-    # Fused Pallas near-field/M2L kernels (Ampere+/sm_80+ GPUs). Resolution order:
-    #   1. ODISSEO_FMM_USE_PALLAS env var (explicit override), else
-    #   2. config.fmm_use_pallas (True/False), else
-    #   3. None -> jaccpot auto-detects: ON for Ampere sm_80+, pure-JAX on
-    #      sm_75/CPU. jaccpot also falls back automatically on unsupported
-    #      hardware via its `pallas_*_supported()` guards.
-    _pallas_env = os.environ.get("ODISSEO_FMM_USE_PALLAS")
-    if _pallas_env is not None and _pallas_env.strip() != "":
-        use_pallas: Optional[bool] = _pallas_env.strip().lower() in {
-            "1",
-            "true",
-            "yes",
-            "on",
-        }
-    elif config.fmm_use_pallas is not None:
-        use_pallas = bool(config.fmm_use_pallas)
-    else:
-        use_pallas = None  # jaccpot auto-detects Ampere
+    use_pallas = _resolve_use_pallas(config)
 
     traversal_config = None
     if (
