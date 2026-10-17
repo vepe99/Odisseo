@@ -163,3 +163,52 @@ def test_integrate_fmm_requires_fixed_timestep():
     out = api.integrate(state, mass, cfg, params)
     assert out.shape == state.shape
     assert calls["adaptive"] == 1
+
+
+def _history(first, last, n=4):
+    """A fake history: the state after step s filled with s, s = first .. last."""
+    return jnp.stack(
+        [
+            jnp.full((n, 2, 3), float(s), dtype=jnp.float32)
+            for s in range(first, last + 1)
+        ]
+    )
+
+
+def test_fmm_snapshots_are_every_kth_state_from_the_initial_one(monkeypatch):
+    # The fixed-step FMM lanes package their history as the direct lane does: the
+    # state after k * K steps (K = num_timesteps // num_snapshots), the initial
+    # state first, at times k * K * dt. The coupler's history starts after step 1,
+    # and its snapshots used to be steps 1, 1 + K, ... labelled linspace(0, t_end).
+    from odisseo import differentiable
+    from odisseo import integration_api as api
+
+    def fake_coupler(*args, **kwargs):
+        assert kwargs["return_history"] is True
+        return _history(1, kwargs["num_steps"])
+
+    def fake_differentiable(state, mass, config, params, **kwargs):
+        assert kwargs["return_history"] is True
+        return _history(0, int(config.num_timesteps))
+
+    monkeypatch.setattr(api, "integrate_leapfrog_jaccpot_active", fake_coupler)
+    monkeypatch.setattr(
+        differentiable, "integrate_leapfrog_differentiable", fake_differentiable
+    )
+    state = jnp.zeros((4, 2, 3), dtype=jnp.float32)
+    mass = jnp.ones((4,), dtype=jnp.float32)
+    params = SimulationParams(G=1.0, t_end=0.6)
+    for flags in ({}, {"fmm_differentiable": True}):
+        cfg = SimulationConfig(
+            N_particles=4,
+            acceleration_scheme=FMM_ACC,
+            fixed_timestep=True,
+            num_timesteps=6,
+            return_snapshots=True,
+            num_snapshots=3,
+            **flags,
+        )
+        out = api.integrate(state, mass, cfg, params)
+        assert out.states.shape == (3, 4, 2, 3)
+        assert [float(s) for s in out.states[:, 0, 0, 0]] == [0.0, 2.0, 4.0]
+        assert jnp.allclose(out.times, jnp.asarray([0.0, 0.2, 0.4]))

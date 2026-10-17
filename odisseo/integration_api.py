@@ -390,6 +390,16 @@ def integrate(
     else:
         states_or_final = integrate_diffrax_jaccpot_active(**common_kwargs)
 
+    if bool(config.return_snapshots) and bool(config.fixed_timestep):
+        # the coupler's history is the state after each step, without the initial
+        return _tagged(
+            _fixed_step_snapshots(
+                states_or_final,
+                config,
+                params,
+                initial=primitive_state,
+            )
+        )
     if bool(config.return_snapshots):
         states = jnp.asarray(states_or_final)
         target_snaps = int(config.num_snapshots)
@@ -406,6 +416,57 @@ def integrate(
         )
 
     return _tagged(states_or_final)
+
+
+def _fixed_step_snapshots(
+    history: jnp.ndarray,
+    config: SimulationConfig,
+    params: SimulationParams,
+    *,
+    initial: Optional[jnp.ndarray] = None,
+) -> SnapshotData:
+    """Package a fixed-step history as every FMM lane and the direct lane do.
+
+    Snapshot ``k`` is the state after ``k * K`` steps, ``K = num_timesteps //
+    num_snapshots``, for ``k = 0 .. num_snapshots - 1``: the initial state first,
+    the final one not among them, at times ``k * K * dt``. That is the direct lane
+    (``time_integration``) when ``num_snapshots`` divides ``num_timesteps``, and the
+    runner lane (:mod:`odisseo.runner_coupling`). Until 2026-10 the coupler's
+    snapshots were the states after steps ``1, 1 + K, ...`` -- one step late, the
+    initial state missing -- and both FMM lanes labelled them ``linspace(0, t_end,
+    num_snapshots)``, ``t_end`` on a state ``K`` steps short of it.
+
+    Parameters
+    ----------
+    history:
+        ``[steps(+1), N, 2, 3]`` -- the state after every step, preceded by the
+        initial state unless ``initial`` is given.
+    config:
+        ``num_timesteps`` and ``num_snapshots``.
+    params:
+        ``t_end``: ``dt = t_end / num_timesteps``.
+    initial:
+        The initial state, when ``history`` does not start with it.
+
+    Returns
+    -------
+    SnapshotData
+        ``times`` and ``states``.
+    """
+    states = jnp.asarray(history)
+    if initial is not None:
+        states = jnp.concatenate(
+            [jnp.asarray(initial, dtype=states.dtype)[None], states], axis=0
+        )
+    target_snaps = int(config.num_snapshots)
+    if target_snaps <= 0:
+        raise ValueError("num_snapshots must be positive")
+    num_steps = int(config.num_timesteps)
+    stride = max(1, num_steps // target_snaps)
+    snap_states = states[::stride][:target_snaps]
+    dt = params.t_end / num_steps
+    times = jnp.arange(snap_states.shape[0]) * (stride * dt)
+    return SnapshotData(times=times, states=snap_states)
 
 
 def _integrate_fmm_mesh(primitive_state, mass, config, params):
@@ -633,6 +694,9 @@ def _integrate_fmm_differentiable(
 
     if not return_history:
         return out
+    if bool(config.fixed_timestep):
+        # this lane's history starts with the initial state
+        return _fixed_step_snapshots(out, config, params)
 
     states = jnp.asarray(out)
     target_snaps = int(config.num_snapshots)
