@@ -15,6 +15,7 @@ units.md
 parallelism.md
 differentiable_fmm.md
 blockstep_fmm.md
+production_fmm.md
 ```
 
 `odisseo` differentiable direct Nbody written in `JAX`.
