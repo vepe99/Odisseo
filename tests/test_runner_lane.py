@@ -10,11 +10,16 @@ coupler's ``"large_n_gpu"`` loop before -- runs jaccpot's ``ProductionRunner``
 * the settings: ``GalaxySettings`` by default, ``fmm_galaxy_settings`` when given,
   ``fmm_mac_type="dehnen_error"`` honoured, other MACs refused; the solver built
   from ``GALAXY_SETTINGS`` is ``preset="galaxy"``'s;
+* without a MAC of its own the lane runs the preset's -- Dehnen's eq (16a) at 1e-4
+  since jaccpot's 2026-10-21 preset change, the geometric MAC before -- bitwise
+  jaccpot's runner on ``preset="galaxy"``, and under ``dehnen_error`` another G
+  builds another solver;
 * options the runner does not run are refused on an explicit ``"galaxy"``;
 * THIN CLIENT: ``integrate()`` computes what ``ProductionRunner`` called directly
   computes, bit for bit (an NFW halo, its parameters traced);
 * a second call with another ``dt``, ``G`` and halo builds no solver and adds no
-  program to jaccpot's compile cache;
+  program to jaccpot's compile cache (on the geometric MAC, pinned: under
+  ``dehnen_error`` G is the solver's);
 * history runs: the state every ``num_timesteps // num_snapshots`` steps from the
   initial one, bitwise the plain runs of those lengths, with the energy and the
   angular momentum;
@@ -25,7 +30,7 @@ The fused lane's prepare runs on a GPU backend only, so the integrating tests re
 ``jax.default_backend()`` as ``"gpu"`` -- jaccpot's own CPU tests of the lane do the
 same (its pure-JAX near field, no Pallas). N = 512 in four blobs, total mass 1, at a
 small-N operating point (leaf 16, p4, theta 0.6, no cell level floor), like jaccpot's
-runner tests.
+runner tests, on the geometric MAC unless a test says otherwise.
 """
 
 from __future__ import annotations
@@ -57,7 +62,28 @@ N = 512
 SOFTENING = 1e-2
 #: a power of two, so t_end / num_timesteps is exact for every run length below
 DT = 2.0**-10
-SMALL_N = GalaxySettings(leaf_size=16, max_order=4, theta=0.6, cell_min_level=None)
+#: the small-N operating point on the geometric MAC, explicitly: jaccpot's preset MAC
+#: is ``dehnen_error`` since 2026-10-21, which takes the solver's G only (a new G
+#: compiles) and needs the CSR near field
+SMALL_N = GalaxySettings(
+    leaf_size=16,
+    max_order=4,
+    theta=0.6,
+    cell_min_level=None,
+    mac_type="dehnen",
+    adaptive_eps=None,
+)
+#: the same operating point with the preset's own MAC
+SMALL_N_PRESET_MAC = dataclasses.replace(
+    GALAXY_SETTINGS, leaf_size=16, max_order=4, theta=0.6, cell_min_level=None
+)
+#: the CSR near field in Pallas interpret mode: dehnen_error's force scale needs it
+#: (jaccpot's runner tests switch the same)
+_CSR_ON_CPU = {
+    "JACCPOT_NEARFIELD_PALLAS_INTERPRET": "1",
+    "JACCPOT_NEARFIELD_LEAFPAIR_CSR": "1",
+    "JACCPOT_LARGE_N_RADIX_FAST_PAYLOAD_MAX_MB": "0",
+}
 
 
 def _system():
@@ -328,9 +354,12 @@ def test_the_runner_lane_needs_a_gpu_backend(monkeypatch):
 # --------------------------------------------------------------------------
 
 
-def _jaccpot_runner_reference(state, masses, steps, params):
+def _jaccpot_runner_reference(
+    state, masses, steps, params, *, preset_mac=False, use_pallas=False
+):
     """``ProductionRunner`` called directly: a solver from jaccpot's API, the halo as
-    a closure over Odisseo's potential, its parameters as float32 arrays."""
+    a closure over Odisseo's potential, its parameters as float32 arrays. The
+    geometric MAC (``SMALL_N``'s), or with ``preset_mac`` the preset's own."""
     from jaccpot import (
         FastMultipoleMethod,
         ForceParams,
@@ -346,13 +375,15 @@ def _jaccpot_runner_reference(state, masses, steps, params):
         theta=0.6,
         G=1.0,
         softening=SOFTENING,
-        use_pallas=False,
+        use_pallas=use_pallas,
         advanced=dataclasses.replace(
             base,
             tree=dataclasses.replace(base.tree, leaf_target=16, cell_min_level=None),
             runtime=dataclasses.replace(base.runtime, fixed_order=4),
+            mac_type=base.mac_type if preset_mac else "dehnen",
         ),
     )
+    criterion = solver._impl.mac_type == "dehnen_error"
     halo_config = SimulationConfig(external_accelerations=(NFW_POTENTIAL,))
 
     def halo(state_in, p):
@@ -360,7 +391,7 @@ def _jaccpot_runner_reference(state, masses, steps, params):
 
     runner = ProductionRunner(
         solver,
-        settings=GalaxySettings(leaf_size=16, max_order=4),
+        settings=SMALL_N_PRESET_MAC if preset_mac else SMALL_N,
         segment=SegmentConfig(steps=50, diagnostics_every=0),
         external_acceleration_fn=halo,
     )
@@ -370,7 +401,8 @@ def _jaccpot_runner_reference(state, masses, steps, params):
         masses,
         dt=DT,
         num_steps=steps,
-        force_params=ForceParams(G=1.0, eps2=SOFTENING**2),
+        # dehnen_error takes the solver's own G and softening only
+        force_params=None if criterion else ForceParams(G=1.0, eps2=SOFTENING**2),
         external_params=p32,
     )
     return np.asarray(res.state)
@@ -405,6 +437,43 @@ def test_integrate_is_the_jaccpot_runner_and_a_second_call_compiles_nothing(fuse
     assert not np.array_equal(np.asarray(second), first)  # the values took effect
     # and the first values again: the first call's state
     assert np.array_equal(np.asarray(integrate(state, masses, cfg, _params())), first)
+
+
+def test_the_default_mac_is_the_presets_and_runs_as_jaccpots_runner(
+    fused_lane, monkeypatch
+):
+    """Without a MAC of its own (``fmm_mac_type="dehnen"``, Odisseo's default, keeps
+    the settings') the lane runs jaccpot's preset MAC -- ``dehnen_error`` at
+    ``adaptive_eps`` 1e-4 since jaccpot's 2026-10-21 preset change, the geometric
+    MAC before -- and computes what jaccpot's runner on ``preset="galaxy"`` with
+    that MAC computes, bit for bit. Under ``dehnen_error`` G is the solver's, so a
+    call with another G builds another solver; on the geometric MAC the kept one
+    serves it."""
+    for key, val in _CSR_ON_CPU.items():
+        monkeypatch.setenv(key, val)
+    state_np, masses_np = _system()
+    state = jnp.asarray(state_np, jnp.float32)
+    masses = jnp.asarray(masses_np, jnp.float32)
+    cfg = _config(fmm_use_pallas=True, fmm_galaxy_settings=SMALL_N_PRESET_MAC)
+
+    out = integrate(state, masses, cfg, _params())
+    ((solver, _),) = rc._CACHE.values()
+    impl = solver._impl
+    criterion = GALAXY_SETTINGS.mac_type == "dehnen_error"
+    assert impl.mac_type == GALAXY_SETTINGS.mac_type
+    assert impl._flat_walk_criterion_active() == criterion
+    if criterion:
+        assert impl.adaptive_eps == GALAXY_SETTINGS.adaptive_eps
+    ref = _jaccpot_runner_reference(
+        state, masses, 6, _params(), preset_mac=True, use_pallas=True
+    )
+    assert np.array_equal(np.asarray(out), ref)
+
+    # the kept solver a call with another G would run on (looked up, not run)
+    settings = rc.galaxy_settings(cfg, state.dtype)
+    solver_2, _ = rc._solver_and_runner(cfg, _params(G=1.1), settings, N, True)
+    assert (solver_2 is solver) == (not criterion)
+    rc.clear_runner_cache()
 
 
 def test_history_runs_return_every_kth_state_with_the_diagnostics(fused_lane):
