@@ -263,6 +263,41 @@ def test_galaxy_settings_build_the_galaxy_preset():
     assert err._flat_walk_criterion_active()
 
 
+#: The ``GalaxySettings`` fields ``galaxy_settings`` / ``build_galaxy_solver`` map
+#: (``carry`` is the runner's; ``cubic_bounds`` arrives with jaccpot's S3b).
+MAPPED_SETTINGS = {
+    "leaf_size",
+    "max_order",
+    "theta",
+    "cell_min_level",
+    "leaf_capacity",
+    "leaf_headroom",
+    "cubic_bounds",
+    "softening_kernel",
+    "mac_type",
+    "adaptive_eps",
+    "carry",
+    "precision",
+}
+
+
+def test_the_builder_knows_every_galaxy_setting():
+    """A field jaccpot adds to ``GalaxySettings`` reaches the preset through
+    ``_galaxy_advanced``; ``build_galaxy_solver`` keeps the preset's value, so a
+    caller's ``fmm_galaxy_settings`` would be ignored for it until it is mapped."""
+    fields = {f.name for f in dataclasses.fields(GalaxySettings)}
+    assert fields <= MAPPED_SETTINGS, sorted(fields - MAPPED_SETTINGS)
+
+
+def test_the_cubic_box_setting_reaches_the_engine():
+    if not hasattr(GALAXY_SETTINGS, "cubic_bounds"):
+        pytest.skip("this jaccpot has no GalaxySettings.cubic_bounds (S3b)")
+    for cubic in (True, False):
+        settings = dataclasses.replace(GALAXY_SETTINGS, cubic_bounds=cubic)
+        solver = rc.build_galaxy_solver(settings, G=1.0, softening=1e-3)
+        assert solver.advanced.tree.cubic_bounds is cubic
+
+
 def test_an_explicit_galaxy_preset_refuses_what_the_runner_does_not_run(fused_lane):
     state, masses = _system()
     state = jnp.asarray(state, jnp.float32)

@@ -332,9 +332,12 @@ def build_galaxy_solver(
     """``FastMultipoleMethod(preset="galaxy")`` with ``settings``.
 
     The preset's own advanced configuration with the settings' leaf size, cell level
-    floor (``None``: none), leaf capacity and headroom, expansion order and MAC put
-    in, so ``GALAXY_SETTINGS`` builds exactly the preset (the same engine state;
-    ``tests/test_runner_lane.py``).
+    floor (``None``: none), leaf capacity and headroom, Morton box shape (where the
+    jaccpot has ``GalaxySettings.cubic_bounds``), expansion order and MAC put in, so
+    ``GALAXY_SETTINGS`` builds exactly the preset (the same engine state), and
+    whatever else the preset sets -- a field this builder does not map -- comes with
+    it. ``tests/test_runner_lane.py`` pins both, and fails when ``GalaxySettings``
+    gains a field this builder does not know.
 
     Parameters
     ----------
@@ -368,6 +371,9 @@ def build_galaxy_solver(
             float(settings.leaf_headroom) if settings.leaf_capacity == "auto" else None
         ),
     )
+    if hasattr(settings, "cubic_bounds"):
+        # S3b: the preset's cubic Morton box, TreeConfig.cubic_bounds
+        tree = dataclasses.replace(tree, cubic_bounds=bool(settings.cubic_bounds))
     advanced = dataclasses.replace(
         base,
         tree=tree,

@@ -47,6 +47,11 @@ The runner lane reads:
 | `fmm_use_pallas` / `ODISSEO_FMM_USE_PALLAS`, the `fmm_large_n_*` environment knobs | as on the coupler |
 | `external_accelerations` and the potentials' fields | the external field |
 
+The solver is `preset="galaxy"`'s own configuration with the settings' leaf size,
+cell level floor, leaf capacity, Morton box (`GalaxySettings.cubic_bounds`, from
+jaccpot's S3b on), order and MAC put in, so whatever else the preset sets comes
+with it; `GALAXY_SETTINGS` builds exactly the preset.
+
 It does **not** read `fmm_leaf_size`, `fmm_max_order`, `fmm_theta`, the tree,
 near-field, traversal or static-shape knobs: every `SimulationConfig` field has a
 default, so a value "set by the caller" cannot be told from the default.
