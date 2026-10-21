@@ -218,8 +218,14 @@ def integrate(
       ``"fast"`` on a GPU with at least ``fmm_large_n_min_particles`` particles --
       routes to jaccpot's ``ProductionRunner`` (lane ``"fmm_runner"``,
       :mod:`odisseo.runner_coupling`): jaccpot's galaxy settings (leaf 64, p6,
-      theta 0.8, or ``config.fmm_galaxy_settings``), not ``fmm_leaf_size`` /
-      ``fmm_max_order`` / ``fmm_theta``. ``fmm_preset="large_n_gpu"`` keeps the
+      the preset's MAC, or ``config.fmm_galaxy_settings``), not ``fmm_leaf_size`` /
+      ``fmm_max_order`` / ``fmm_theta``. The preset's MAC is Dehnen's eq (16a) at
+      ``adaptive_eps`` 1e-4 since jaccpot's 2026-10-21 preset change (the geometric
+      MAC at theta 0.8 before): under it G and the softening are the solver's, so a
+      call with another ``params.G`` or ``softening`` compiles again (``dt`` and the
+      potentials' parameters stay traced); ``fmm_galaxy_settings=GalaxySettings(
+      mac_type="dehnen", adaptive_eps=None)`` is the geometric MAC
+      (``docs/source/production_fmm.md``). ``fmm_preset="large_n_gpu"`` keeps the
       coupler's own loop. History runs return the state every
       ``num_timesteps // num_snapshots`` steps from the initial one, as host
       arrays, with the runner's energy and angular momentum; call

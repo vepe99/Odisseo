@@ -21,7 +21,9 @@ value. Here:
 * the solver and its runner are kept between calls (:data:`_CACHE`, the most recent
   configuration only; :func:`clear_runner_cache` drops it);
 * ``dt = t_end / num_timesteps``, ``params.G`` and the softening squared are traced
-  (``SegmentConfig.traced_params``), so other values compile nothing;
+  (``SegmentConfig.traced_params``), so other values compile nothing -- under
+  ``dehnen_error``, the preset's MAC (THE SETTINGS), ``dt`` only: G and the softening
+  are the solver's;
 * the external field is ONE pair of module-level functions,
   :func:`external_acceleration` and :func:`external_potential`, taking an
   :class:`ExternalFieldParams`: Odisseo's whole ``SimulationParams`` as traced leaves
@@ -36,10 +38,14 @@ every kernel) and its kernel ``config.softening_kernel``; the masses are passed 
 they are.
 
 THE SETTINGS. The numerical configuration is jaccpot's ``GalaxySettings`` -- leaf 64,
-p6, theta 0.8, cell level floor 8, automatic leaf capacity, the geometric Dehnen
-MAC, fp32 -- or ``config.fmm_galaxy_settings``. This lane does not read
-``fmm_leaf_size``, ``fmm_max_order``, ``fmm_theta`` or any other coupler knob; it
-does honour ``fmm_mac_type="dehnen_error"`` with ``fmm_adaptive_eps`` (and
+p6, cell level floor 8, automatic leaf capacity, the preset's MAC, fp32 -- or
+``config.fmm_galaxy_settings``. The preset's MAC is Dehnen's eq (16a) at
+``adaptive_eps`` 1e-4 since jaccpot's 2026-10-21 preset change (the geometric Dehnen
+MAC at theta 0.8 before); under it G and the softening are the solver's, so another
+value builds another solver and compiles, and ``GalaxySettings(mac_type="dehnen",
+adaptive_eps=None)`` as ``fmm_galaxy_settings`` is the geometric MAC. This lane does
+not read ``fmm_leaf_size``, ``fmm_max_order``, ``fmm_theta`` or any other coupler
+knob; it does honour ``fmm_mac_type="dehnen_error"`` with ``fmm_adaptive_eps`` (and
 ``fmm_mac_force_scale_mode``), and ``fmm_large_n_force_fp32=False`` with a float64
 state selects the fp64 force (:func:`galaxy_settings`).
 """
@@ -258,8 +264,11 @@ def galaxy_settings(config: SimulationConfig, state_dtype: Any) -> Any:
     ``config.fmm_galaxy_settings``, or jaccpot's ``GALAXY_SETTINGS``; then
 
     * ``fmm_mac_type="dehnen_error"`` selects that MAC with ``fmm_adaptive_eps``
-      (``"dehnen"``, Odisseo's default, keeps the settings' MAC; any other MAC is
-      refused: the fused lane runs these two);
+      (``"dehnen"``, Odisseo's default, keeps the settings' MAC -- jaccpot's
+      ``GALAXY_SETTINGS``: ``dehnen_error`` at 1e-4 since its 2026-10-21 preset
+      change --, so the geometric MAC is ``fmm_galaxy_settings=GalaxySettings(
+      mac_type="dehnen", adaptive_eps=None)``; any other MAC is refused: the fused
+      lane runs these two);
     * without ``fmm_galaxy_settings``, ``fmm_large_n_force_fp32=False`` with a float64
       state selects the fp64 force (what that flag selected on the coupler's
       large-N lane);

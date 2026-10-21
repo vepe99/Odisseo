@@ -349,7 +349,9 @@ class SimulationConfig(NamedTuple):
     # --- production runner lane (fmm_preset="galaxy" or the auto profile) ------
     # A `jaccpot.production.GalaxySettings`: the numerical settings of the runner
     # lane (leaf size, expansion order, opening angle, cell level floor, leaf
-    # capacity, MAC, precision). None is jaccpot's GALAXY_SETTINGS. That lane does
+    # capacity, MAC, precision). None is jaccpot's GALAXY_SETTINGS (Dehnen's eq 16a
+    # MAC at 1e-4 since jaccpot's 2026-10-21 preset change; the geometric MAC is
+    # GalaxySettings(mac_type="dehnen", adaptive_eps=None)). That lane does
     # NOT read fmm_leaf_size, fmm_max_order, fmm_theta or the other coupler knobs
     # (every field here has a default, so "set by the caller" is not observable);
     # this field is how to change them. softening, softening_kernel and params.G

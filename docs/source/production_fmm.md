@@ -30,9 +30,30 @@ the threshold, nothing changes.
 
 **So the default changed:** `SimulationConfig()` with `FMM_ACC` on a GPU at
 200,000 particles or more now runs jaccpot's galaxy settings -- leaf 64,
-expansion order 6, opening angle 0.8, cell level floor 8, automatic leaf
-capacity, the geometric Dehnen MAC, an fp32 force -- not `fmm_leaf_size=16`,
-`fmm_max_order=4`, `fmm_theta=0.6`.
+expansion order 6, cell level floor 8, automatic leaf capacity, the preset's MAC,
+an fp32 force -- not `fmm_leaf_size=16`, `fmm_max_order=4`, `fmm_theta=0.6`.
+
+**The MAC is the preset's.** Since jaccpot's 2026-10-21 preset change
+(`GalaxySettings(mac_type="dehnen_error", adaptive_eps=1e-4)`) that is Dehnen's
+eq (16a) at a relative force-accuracy target of 1e-4; before, the geometric
+Dehnen MAC at opening angle 0.8. jaccpot measured, on one A100, 1.12x the
+geometric step at 25M disc + bulge for 2.8x lower rel-L2 (1.49e-4 against
+4.18e-4), and about 22 B/particle more at 1e8 (jaccpot `docs/production.md`,
+"The MAC"). Under it `G` and the softening are the solver's: a call with another
+`params.G` or `softening` builds a new solver and compiles (below); the opening
+angle decides no pair. The geometric MAC back:
+
+```python
+from jaccpot.production import GalaxySettings
+
+config = config._replace(
+    fmm_galaxy_settings=GalaxySettings(mac_type="dehnen", adaptive_eps=None)
+)
+```
+
+`fmm_mac_type="dehnen"` (Odisseo's default) keeps the settings' MAC, so it
+cannot ask for the geometric one; `fmm_mac_type="dehnen_error"` with
+`fmm_adaptive_eps` sets the target.
 
 ## Settings
 
@@ -62,7 +83,9 @@ from jaccpot.production import GalaxySettings
 
 config = config._replace(
     fmm_preset="galaxy",
-    fmm_galaxy_settings=GalaxySettings(theta=0.6, max_order=8),
+    fmm_galaxy_settings=GalaxySettings(adaptive_eps=1e-5, max_order=8),
+    # or the geometric MAC at a tighter angle:
+    # GalaxySettings(mac_type="dehnen", adaptive_eps=None, theta=0.6, max_order=8)
 )
 ```
 
@@ -79,14 +102,17 @@ field's identity. The runner lane therefore
   the runner also holds its last handle's accelerations, 12 B per particle in
   fp32, 24 with an external field);
 - passes `dt = t_end / num_timesteps`, `params.G` and the softening squared as
-  traced arguments (not under `dehnen_error`, which takes the solver's own G);
+  traced arguments -- under `dehnen_error`, the preset's MAC, `dt` only: G and
+  the softening are the solver's, so they are part of the kept solver's key and
+  another value builds a new solver, which compiles;
 - evaluates the external field through ONE pair of module-level functions,
   `external_acceleration` / `external_potential`, taking an
   `ExternalFieldParams`: the whole `SimulationParams` as traced leaves and the
   static configuration fields the potentials read as pytree metadata.
 
-Another `dt`, `G` or set of potential parameters builds no solver and adds no
-program to jaccpot's cache (`tests/test_runner_lane.py`). What runs per call is
+Another `dt` or set of potential parameters builds no solver and adds no
+program to jaccpot's cache, and with the geometric MAC neither does another `G`
+(`tests/test_runner_lane.py`). What runs per call is
 jaccpot's eager caps-only prepare at the initial state, the start force and the
 segments. jaccpot's plan only grows: when a segment's lists outgrow their
 capacities, jaccpot re-plans and re-runs it, and the next run from an initial
