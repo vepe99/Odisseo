@@ -64,11 +64,52 @@ INTEGRATION_LANES = (
     "fmm_mesh",
     "fmm_blockstep",
     "fmm_differentiable",
+    "fmm_runner",
     "fmm_forward",
 )
 
 
-def resolve_lane(config: SimulationConfig) -> str:
+def _runner_selected(
+    config: SimulationConfig,
+    *,
+    num_particles: Optional[int],
+    backend: Optional[str],
+    scheduled: bool,
+) -> bool:
+    """Whether an ``FMM_ACC`` forward run goes to the runner lane.
+
+    ``fmm_preset="galaxy"`` asks for it (options it does not support then raise
+    there, rather than run another lane). The automatic large-N profile -- preset
+    ``"fast"`` on a GPU with at least ``fmm_large_n_min_particles`` particles, which
+    picked ``"large_n_gpu"`` on the coupler before -- picks it when the runner
+    supports the run, and keeps the coupler's ``"large_n_gpu"`` loop otherwise.
+    """
+    from odisseo.runner_coupling import runner_unsupported
+
+    preset = str(config.fmm_preset).strip().lower()
+    if preset == "galaxy":
+        return True
+    n = int(config.N_particles) if num_particles is None else int(num_particles)
+    on_gpu = (
+        str(jax.default_backend() if backend is None else backend).strip().lower()
+        == "gpu"
+    )
+    auto_large_n = (
+        bool(config.fmm_auto_large_n_profile)
+        and preset == "fast"
+        and on_gpu
+        and n >= max(1, int(config.fmm_large_n_min_particles))
+    )
+    return auto_large_n and runner_unsupported(config, scheduled=scheduled) is None
+
+
+def resolve_lane(
+    config: SimulationConfig,
+    *,
+    num_particles: Optional[int] = None,
+    backend: Optional[str] = None,
+    scheduled: bool = False,
+) -> str:
     """Name the lane :func:`integrate` will dispatch this config to.
 
     :func:`integrate` returns a plain state on every lane, deliberately, so the
@@ -81,10 +122,24 @@ def resolve_lane(config: SimulationConfig) -> str:
     Pure and cheap -- it reads flags and integrates nothing, so it is also the way
     to check what a config would do before committing to a long run.
 
+    ``"fmm_runner"`` is jaccpot's ``ProductionRunner`` (:mod:`odisseo.runner_coupling`):
+    ``fmm_preset="galaxy"``, or the automatic large-N profile (preset ``"fast"`` on a
+    GPU at ``fmm_large_n_min_particles`` or more) for a run the runner does; that
+    choice depends on the particle count, the backend and the active-particle
+    schedule, which :func:`integrate` passes here.
+
     Parameters
     ----------
     config:
         The configuration to resolve.
+    num_particles:
+        The particle count; ``None`` reads ``config.N_particles``.
+    backend:
+        ``jax.default_backend()`` when ``None``.
+    scheduled:
+        Whether the call carries an active-particle schedule
+        (``active_indices_fn``, ``active_indices_schedule`` or
+        ``active_mask_schedule``).
 
     Returns
     -------
@@ -109,6 +164,13 @@ def resolve_lane(config: SimulationConfig) -> str:
             return "fmm_blockstep"
         if bool(getattr(config, "fmm_differentiable", False)):
             return "fmm_differentiable"
+        if _runner_selected(
+            config,
+            num_particles=num_particles,
+            backend=backend,
+            scheduled=scheduled,
+        ):
+            return "fmm_runner"
         return "fmm_forward"
     raise ValueError(
         f"unknown acceleration_scheme {int(config.acceleration_scheme)}"
@@ -152,6 +214,22 @@ def integrate(
       (momentum and energy drift, rung histograms, timings) are dropped -- call
       ``integrate_blockstep_jaccpot`` directly if you need them.
       ``fmm_blockstep`` takes precedence over ``fmm_differentiable``.
+    - ``FMM_ACC`` with ``config.fmm_preset="galaxy"`` -- and, by default, preset
+      ``"fast"`` on a GPU with at least ``fmm_large_n_min_particles`` particles --
+      routes to jaccpot's ``ProductionRunner`` (lane ``"fmm_runner"``,
+      :mod:`odisseo.runner_coupling`): jaccpot's galaxy settings (leaf 64, p6,
+      the preset's MAC, or ``config.fmm_galaxy_settings``), not ``fmm_leaf_size`` /
+      ``fmm_max_order`` / ``fmm_theta``. The preset's MAC is Dehnen's eq (16a) at
+      ``adaptive_eps`` 1e-4 since jaccpot's 2026-10-21 preset change (the geometric
+      MAC at theta 0.8 before): under it G and the softening are the solver's, so a
+      call with another ``params.G`` or ``softening`` compiles again (``dt`` and the
+      potentials' parameters stay traced); ``fmm_galaxy_settings=GalaxySettings(
+      mac_type="dehnen", adaptive_eps=None)`` is the geometric MAC
+      (``docs/source/production_fmm.md``). ``fmm_preset="large_n_gpu"`` keeps the
+      coupler's own loop. History runs return the state every
+      ``num_timesteps // num_snapshots`` steps from the initial one, as host
+      arrays, with the runner's energy and angular momentum; call
+      ``integrate_runner_jaccpot`` for the diagnostics of a plain run.
 
     Parameters
     ----------
@@ -176,7 +254,16 @@ def integrate(
         concrete ``primitive_state``/``mass`` and repeats the tree build on every
         gradient evaluation.
     """
-    lane = resolve_lane(config)
+    scheduled = (
+        active_indices_fn is not None
+        or active_indices_schedule is not None
+        or active_mask_schedule is not None
+    )
+    lane = resolve_lane(
+        config,
+        num_particles=int(jnp.shape(primitive_state)[0]),
+        scheduled=scheduled,
+    )
 
     def _tagged(value):
         return (value, lane) if return_lane else value
@@ -206,8 +293,19 @@ def integrate(
             )
         )
 
-    # lane == "fmm_forward" -- resolve_lane raises on anything else.
     _reject_traced_forward_fmm_inputs(primitive_state, mass, params)
+
+    if lane == "fmm_runner":
+        from odisseo.runner_coupling import integrate_runner_jaccpot
+
+        out = integrate_runner_jaccpot(
+            primitive_state, mass, config, params, scheduled=scheduled
+        )
+        return _tagged(
+            out.snapshots if bool(config.return_snapshots) else out.state
+        )
+
+    # lane == "fmm_forward" -- resolve_lane raises on anything else.
 
     fmm_preset, fmm_runtime_path, fmm_working_dtype = _resolve_fmm_runtime_profile(
         primitive_state,
@@ -298,6 +396,16 @@ def integrate(
     else:
         states_or_final = integrate_diffrax_jaccpot_active(**common_kwargs)
 
+    if bool(config.return_snapshots) and bool(config.fixed_timestep):
+        # the coupler's history is the state after each step, without the initial
+        return _tagged(
+            _fixed_step_snapshots(
+                states_or_final,
+                config,
+                params,
+                initial=primitive_state,
+            )
+        )
     if bool(config.return_snapshots):
         states = jnp.asarray(states_or_final)
         target_snaps = int(config.num_snapshots)
@@ -314,6 +422,57 @@ def integrate(
         )
 
     return _tagged(states_or_final)
+
+
+def _fixed_step_snapshots(
+    history: jnp.ndarray,
+    config: SimulationConfig,
+    params: SimulationParams,
+    *,
+    initial: Optional[jnp.ndarray] = None,
+) -> SnapshotData:
+    """Package a fixed-step history as every FMM lane and the direct lane do.
+
+    Snapshot ``k`` is the state after ``k * K`` steps, ``K = num_timesteps //
+    num_snapshots``, for ``k = 0 .. num_snapshots - 1``: the initial state first,
+    the final one not among them, at times ``k * K * dt``. That is the direct lane
+    (``time_integration``) when ``num_snapshots`` divides ``num_timesteps``, and the
+    runner lane (:mod:`odisseo.runner_coupling`). Until 2026-10 the coupler's
+    snapshots were the states after steps ``1, 1 + K, ...`` -- one step late, the
+    initial state missing -- and both FMM lanes labelled them ``linspace(0, t_end,
+    num_snapshots)``, ``t_end`` on a state ``K`` steps short of it.
+
+    Parameters
+    ----------
+    history:
+        ``[steps(+1), N, 2, 3]`` -- the state after every step, preceded by the
+        initial state unless ``initial`` is given.
+    config:
+        ``num_timesteps`` and ``num_snapshots``.
+    params:
+        ``t_end``: ``dt = t_end / num_timesteps``.
+    initial:
+        The initial state, when ``history`` does not start with it.
+
+    Returns
+    -------
+    SnapshotData
+        ``times`` and ``states``.
+    """
+    states = jnp.asarray(history)
+    if initial is not None:
+        states = jnp.concatenate(
+            [jnp.asarray(initial, dtype=states.dtype)[None], states], axis=0
+        )
+    target_snaps = int(config.num_snapshots)
+    if target_snaps <= 0:
+        raise ValueError("num_snapshots must be positive")
+    num_steps = int(config.num_timesteps)
+    stride = max(1, num_steps // target_snaps)
+    snap_states = states[::stride][:target_snaps]
+    dt = params.t_end / num_steps
+    times = jnp.arange(snap_states.shape[0]) * (stride * dt)
+    return SnapshotData(times=times, states=snap_states)
 
 
 def _integrate_fmm_mesh(primitive_state, mass, config, params):
@@ -541,6 +700,9 @@ def _integrate_fmm_differentiable(
 
     if not return_history:
         return out
+    if bool(config.fixed_timestep):
+        # this lane's history starts with the initial state
+        return _fixed_step_snapshots(out, config, params)
 
     states = jnp.asarray(out)
     target_snaps = int(config.num_snapshots)

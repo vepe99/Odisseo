@@ -1,3 +1,16 @@
+import os
+
+# XLA:CPU's LLVM loop vectorizer can stall a compile for many minutes on jax 0.11.2
+# (a recursion in `llvm::vputils::onlyFirstLaneUsed`): jaccpot's fused lane, which
+# tests/test_runner_lane.py runs on CPU, takes 45+ min to compile with it. jaccpot's
+# own conftest turns it off for the same reason. It must be in XLA_FLAGS before the
+# backend starts, so it goes before anything creates an array.
+if "xla_backend_extra_options" not in os.environ.get("XLA_FLAGS", ""):
+    os.environ["XLA_FLAGS"] = (
+        os.environ.get("XLA_FLAGS", "")
+        + " --xla_backend_extra_options=-vectorize-loops=false"
+    ).strip()
+
 import jax
 import jax.numpy as jnp
 import pytest
