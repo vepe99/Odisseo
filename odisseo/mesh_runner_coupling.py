@@ -54,7 +54,9 @@ caches the segment, start, potential and repartition programs on the solver's
 engine (on an injected force: the force), keyed by the force's plan, the mesh, the
 shard capacity, the external field's identity and the parameters' structure. What
 runs per call is the decomposition, the per-device caps-only prepares at the new
-initial state, the start force and the segments.
+initial state, the start force and the segments; the decomposition and the prepares
+compile some small programs again on every fresh run (46 at 1e6 on two A100s,
+2026-10-23: not the segments).
 
 THE OLDER MESH LANE. :mod:`odisseo.mesh_coupling` (lane ``"fmm_mesh"``, a
 ``MeshOptions`` as ``config.mesh_options``) runs jaccpot's earlier distributed force
