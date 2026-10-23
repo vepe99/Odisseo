@@ -486,9 +486,11 @@ def _solver_and_runner(
 
 
 class RunnerResult(NamedTuple):
-    """What :func:`integrate_runner_jaccpot` returns."""
+    """What :func:`integrate_runner_jaccpot` returns (and the multi-GPU lane's
+    :func:`~odisseo.mesh_runner_coupling.integrate_mesh_runner_jaccpot`)."""
 
-    #: ``[N, 2, 3]`` final state (device).
+    #: ``[N, 2, 3]`` final state (device; on the multi-GPU lane a host NumPy array,
+    #: gathered by id).
     state: Any
     #: With ``config.return_snapshots``: the snapshots (host arrays), else ``None``.
     snapshots: Optional[SnapshotData]
@@ -532,8 +534,9 @@ class _SnapshotCollector:
     def snapshots(self, run: Any) -> SnapshotData:
         """The collected states as Odisseo's ``SnapshotData``.
 
-        Step 0's energy is the runner's baseline (its step-0 edge has none: the
-        energy needs the first segment's provider).
+        Step 0's energy is the runner's baseline when its step-0 edge has none: on
+        one card the energy needs the first segment's provider (the multi-GPU
+        mode's step-0 edge carries its own).
         """
         energy = list(self.energy)
         if energy and energy[0] is None and run.baselines is not None:
@@ -551,6 +554,100 @@ class _SnapshotCollector:
             runtime=float(run.wall_s),
             num_iterations=int(run.step),
         )
+
+
+def _segment_plan(
+    config: SimulationConfig, segment: Optional[Any], num_steps: int
+) -> tuple:
+    """A call's segment plan and snapshot collector (both runner lanes).
+
+    With ``config.return_snapshots``: segments of ``K = num_timesteps //
+    num_snapshots`` steps with every diagnostic at every edge (or ``segment``, whose
+    length must divide ``K``) and a :class:`_SnapshotCollector`; otherwise
+    ``segment``, or :data:`RUNNER_SEGMENT_STEPS` steps without diagnostics, and no
+    collector.
+
+    Parameters
+    ----------
+    config : SimulationConfig
+        ``return_snapshots`` and ``num_snapshots``.
+    segment : Optional[SegmentConfig]
+        The caller's, or ``None``.
+    num_steps : int
+        The run's steps.
+
+    Returns
+    -------
+    tuple
+        ``(SegmentConfig, Optional[_SnapshotCollector])``.
+
+    Raises
+    ------
+    ValueError
+        For a non-positive ``num_snapshots``, or a ``segment`` whose length does not
+        divide the snapshot interval.
+    """
+    from jaccpot import SegmentConfig
+
+    if not bool(config.return_snapshots):
+        if segment is None:
+            segment = SegmentConfig(steps=RUNNER_SEGMENT_STEPS, diagnostics_every=0)
+        return segment, None
+    count = int(config.num_snapshots)
+    if count <= 0:
+        raise ValueError("num_snapshots must be positive")
+    interval = max(1, num_steps // count)
+    if segment is None:
+        segment = SegmentConfig(
+            steps=interval, diagnostics_every=1, diagnostics_every_energy=1
+        )
+    elif interval % int(segment.steps):
+        raise ValueError(
+            f"segment.steps={segment.steps} must divide the snapshot interval "
+            f"num_timesteps // num_snapshots = {interval}"
+        )
+    return segment, _SnapshotCollector(interval, count, num_steps)
+
+
+def _collected_snapshots(
+    collector: Optional[_SnapshotCollector],
+    config: SimulationConfig,
+    num_steps: int,
+    run: Any,
+) -> Optional[SnapshotData]:
+    """The collector's ``SnapshotData``, checked complete; ``None`` without one.
+
+    Parameters
+    ----------
+    collector : Optional[_SnapshotCollector]
+        :func:`_segment_plan`'s.
+    config : SimulationConfig
+        ``num_snapshots``.
+    num_steps : int
+        The run's steps.
+    run : RunResult
+        jaccpot's result (the step-0 energy baseline, the wall time).
+
+    Returns
+    -------
+    Optional[SnapshotData]
+        The snapshots.
+
+    Raises
+    ------
+    RuntimeError
+        If an edge the snapshots need was not seen.
+    """
+    if collector is None:
+        return None
+    if len(collector.steps) != int(config.num_snapshots) and num_steps >= int(
+        config.num_snapshots
+    ):
+        raise RuntimeError(
+            f"collected snapshots at steps {collector.steps}, expected "
+            f"{int(config.num_snapshots)} every {collector.every} steps"
+        )
+    return collector.snapshots(run)
 
 
 def integrate_runner_jaccpot(
@@ -621,7 +718,7 @@ def integrate_runner_jaccpot(
         For a non-positive ``num_timesteps`` / ``num_snapshots``, or a ``segment``
         whose length does not divide the snapshot interval.
     """
-    from jaccpot import ForceParams, SegmentConfig
+    from jaccpot import ForceParams
 
     from odisseo.jaccpot_coupling import _temporary_large_n_environment
 
@@ -645,24 +742,7 @@ def integrate_runner_jaccpot(
     settings = galaxy_settings(config, state_arr.dtype)
     external = len(config.external_accelerations) > 0
 
-    collector = None
-    if bool(config.return_snapshots):
-        count = int(config.num_snapshots)
-        if count <= 0:
-            raise ValueError("num_snapshots must be positive")
-        interval = max(1, num_steps // count)
-        if segment is None:
-            segment = SegmentConfig(
-                steps=interval, diagnostics_every=1, diagnostics_every_energy=1
-            )
-        elif interval % int(segment.steps):
-            raise ValueError(
-                f"segment.steps={segment.steps} must divide the snapshot interval "
-                f"num_timesteps // num_snapshots = {interval}"
-            )
-        collector = _SnapshotCollector(interval, count, num_steps)
-    elif segment is None:
-        segment = SegmentConfig(steps=RUNNER_SEGMENT_STEPS, diagnostics_every=0)
+    segment, collector = _segment_plan(config, segment, num_steps)
 
     solver, runner = _solver_and_runner(
         config, params, settings, int(state_arr.shape[0]), external
@@ -700,14 +780,5 @@ def integrate_runner_jaccpot(
     finally:
         runner.callbacks = ()
         runner.step_callback = None
-    snapshots = None
-    if collector is not None:
-        if len(collector.steps) != int(config.num_snapshots) and num_steps >= int(
-            config.num_snapshots
-        ):
-            raise RuntimeError(
-                f"collected snapshots at steps {collector.steps}, expected "
-                f"{int(config.num_snapshots)} every {collector.every} steps"
-            )
-        snapshots = collector.snapshots(run)
+    snapshots = _collected_snapshots(collector, config, num_steps, run)
     return RunnerResult(state=run.state, snapshots=snapshots, run=run)
