@@ -11,7 +11,9 @@ runner does (:func:`runner_unsupported`). jaccpot's
 capacity re-plans at segment starts, and diagnostics at the segment edges. What the
 fused lane costs there is what it costs in jaccpot's own harness
 (``bench/fused_memory_budget.py``): this module builds the solver, maps Odisseo's
-configuration onto it and packages the result, nothing else.
+configuration onto it and packages the result, nothing else. With
+``config.fmm_mesh=True`` the same runner runs across the GPUs of a node
+(:mod:`odisseo.mesh_runner_coupling`, lane ``"fmm_mesh_runner"``).
 
 WHY A SECOND CALL IS CHEAP. jaccpot caches its compiled programs on the solver, keyed
 by the external field's identity, so a fresh solver per call (what the coupler does)
