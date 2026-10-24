@@ -11,7 +11,8 @@ costs in jaccpot's harness (`bench/fused_memory_budget.py`).
 ## Which runs go there
 
 `resolve_lane()` names the lane `"fmm_runner"` for an `FMM_ACC` run (not
-`fmm_mesh`, `fmm_blockstep` or `fmm_differentiable`, which keep precedence) when
+`fmm_mesh` -- the same runner across GPUs, [below](#across-the-gpus-of-a-node) --,
+`fmm_blockstep` or `fmm_differentiable`, which keep precedence) when
 
 - `config.fmm_preset == "galaxy"`, or
 - the automatic large-N profile applies: preset `"fast"` (the default),
@@ -154,3 +155,72 @@ out.state          # final state
 out.run.edges      # every edge: step, time, retries, wall time, diagnostics
 out.run.baselines  # step 0's momentum, angular momentum, energy
 ```
+
+## Across the GPUs of a node
+
+With `fmm_mesh=True` the same runner runs in its multi-GPU mode (jaccpot
+`docs/production.md`, "Multi-GPU mode"; lane `"fmm_mesh_runner"`,
+`odisseo.mesh_runner_coupling`): one process drives every card of a 1-D mesh, the
+particles are decomposed into Morton domains, each segment is one
+`jit(shard_map(scan))` program on the fused multi-GPU lane, the domains are
+re-balanced between segments, and a segment that outgrows a capacity on any card is
+re-planned and re-run on all of them. `resolve_lane()` picks it for
+
+- `fmm_mesh=True` with `fmm_preset="galaxy"`, or
+- `fmm_mesh=True` with a `MeshRunnerOptions` as `config.mesh_options`;
+
+a `MeshOptions` there keeps the older mesh lane (`"fmm_mesh"`,
+`odisseo.mesh_coupling`), whatever the preset (`docs/source/parallelism.md`).
+
+```python
+from odisseo.mesh_runner_coupling import MeshRunnerOptions
+
+config = config._replace(
+    fmm_preset="galaxy",
+    fmm_mesh=True,
+    mesh_options=MeshRunnerOptions(ndev=2),  # None: every visible device
+)
+final = integrate(state, mass, config, params)  # a host NumPy array, input order
+```
+
+Everything this page says about the settings, the external field, the units,
+snapshots and the kept solver holds there, with these differences:
+
+| | one card (`"fmm_runner"`) | the mesh (`"fmm_mesh_runner"`) |
+|---|---|---|
+| `params.G`, `softening` | traced (geometric MAC) or the solver's (`dehnen_error`) | the solver's: another value builds another solver and compiles; `dt` and the potentials' parameters stay traced |
+| the external field | `[N, 2, 3]` | each device's `(cap, 2, 3)` rows, padding rows masked out: every Odisseo potential is per particle and works unchanged |
+| the final state | a device array | a host NumPy array in input order (gathered by id once, at the end) |
+| snapshots | copied to the host at the edges | gathered by id to the host at the edges |
+| `total_energy` | the fused lane's potential | the mesh potential, step 0 included; **NaN until jaccpot's fused mesh force has one** (S11 session 2, track E): the run warns once, the edges' diagnostics say why (`energy_unavailable`) |
+| `step_callback` | passed through | refused (the mesh scan streams nothing) |
+| a second call | compiles nothing | no new segment, start or repartition program (jaccpot caches them on the solver's engine, keyed by the plan), but each fresh run's decomposition and per-device prepares compile small programs again (46 at 1e6 on two A100s) |
+
+`MeshRunnerOptions` holds only what the mesh adds: `ndev` (the first `ndev` of
+`jax.devices()`; which cards a process sees is `CUDA_VISIBLE_DEVICES`, i.e.
+`autocvd`), `repartition_every` (1: before every segment after the first, jaccpot's
+default; 0: never), `cap_headroom` (rows per device over an even split; `None`:
+jaccpot's 1.15) and `force` (`None`: the fused force; jaccpot's `DirectMeshForce`
+is a partition-independent direct sum for small-N references, which also runs on
+CPU devices). The fused force prepares on a GPU only, so without an injected force
+a CPU backend is refused, as on one card. Gradients, block steps, active-particle
+schedules and the options the single-card runner refuses are refused too.
+
+For the edges' diagnostics and the mesh plan (shard capacity, live counts per
+device, repartitions, cross-domain capacities, retries), restart files and jaccpot's
+callbacks, call the lane directly:
+
+```python
+from jaccpot.production import DiagnosticsLog
+from odisseo.mesh_runner_coupling import integrate_mesh_runner_jaccpot
+
+out = integrate_mesh_runner_jaccpot(
+    state, mass, config, params, callbacks=(DiagnosticsLog("run/diag.jsonl"),)
+)
+out.state                        # [N, 2, 3] on the host, input order
+out.run.edges[-1].plan["mesh"]   # ndev, cap, live counts
+```
+
+Launch it as one process with the cards visible and `XLA_FLAGS` set before jax
+starts (`docs/source/parallelism.md`, "One large simulation across the GPUs of a
+node").

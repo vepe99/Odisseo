@@ -216,7 +216,8 @@ class SimulationConfig(NamedTuple):
     fmm_refresh_after_position_update: bool = False
 
     # Jaccpot solver tuning knobs exposed to ODISSEO. "galaxy" runs jaccpot's
-    # ProductionRunner (the fused single-GPU lane, odisseo.runner_coupling), and so
+    # ProductionRunner (the fused single-GPU lane, odisseo.runner_coupling; with
+    # fmm_mesh=True its multi-GPU mode, odisseo.mesh_runner_coupling), and so
     # does "fast" on a GPU at fmm_large_n_min_particles or more (the auto profile
     # below); "large_n_gpu" keeps the coupler's own loop on that lane.
     fmm_preset: str = "fast"
@@ -336,15 +337,23 @@ class SimulationConfig(NamedTuple):
     # rung 0, collapsing the block scheme to a shared timestep without any
     # symptom. Better to ask than to guess that.
     blockstep_options: Optional[Any] = None
-    # --- multi-GPU mesh lane -------------------------------------------------
-    # Routes FMM_ACC through odisseo.mesh_coupling, the way `fmm_blockstep` above
-    # routes it through odisseo.blockstep_coupling. Appended at the END on purpose:
-    # a NamedTuple's field order is its constructor signature, so inserting above
-    # would silently rebind every positional caller.
+    # --- multi-GPU mesh lanes -------------------------------------------------
+    # Routes FMM_ACC across the devices of one process, the way `fmm_blockstep`
+    # above routes it through odisseo.blockstep_coupling. With fmm_preset="galaxy"
+    # (or a `MeshRunnerOptions` below) it is jaccpot's ProductionRunner in its
+    # multi-GPU mode (odisseo.mesh_runner_coupling, lane "fmm_mesh_runner": the
+    # runner lane's settings, field and snapshots on every card); with a
+    # `MeshOptions` it is the older mesh lane (odisseo.mesh_coupling, lane
+    # "fmm_mesh"), unchanged. Appended at the END on purpose: a NamedTuple's field
+    # order is its constructor signature, so inserting above would silently rebind
+    # every positional caller.
     fmm_mesh: bool = False
-    # A `MeshOptions`, REQUIRED when fmm_mesh is True. Typed loosely because
-    # importing it here would be circular. No default, for the same reason
-    # blockstep_options has none: MeshOptions has no default dt.
+    # The mesh lane's options. A `MeshOptions` selects the older lane and is
+    # REQUIRED there (no default, for the same reason blockstep_options has none:
+    # MeshOptions has no default dt). A `odisseo.mesh_runner_coupling.
+    # MeshRunnerOptions` -- devices, repartition cadence, shard headroom -- selects
+    # the runner's multi-GPU mode, where None is its defaults (every visible
+    # device). Typed loosely because importing them here would be circular.
     mesh_options: Optional[Any] = None
     # --- production runner lane (fmm_preset="galaxy" or the auto profile) ------
     # A `jaccpot.production.GalaxySettings`: the numerical settings of the runner
