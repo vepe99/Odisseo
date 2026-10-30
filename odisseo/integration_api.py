@@ -62,6 +62,7 @@ def _resolve_fmm_runtime_profile(
 INTEGRATION_LANES = (
     "direct",
     "fmm_mesh",
+    "fmm_mesh_runner",
     "fmm_blockstep",
     "fmm_differentiable",
     "fmm_runner",
@@ -103,6 +104,27 @@ def _runner_selected(
     return auto_large_n and runner_unsupported(config, scheduled=scheduled) is None
 
 
+def _mesh_runner_selected(config: SimulationConfig) -> bool:
+    """Whether an ``fmm_mesh`` run goes to the runner's multi-GPU mode.
+
+    A ``MeshOptions`` as ``config.mesh_options`` keeps the older mesh lane
+    (:mod:`odisseo.mesh_coupling`), whatever the preset, exactly as before. Otherwise
+    the production settings ask for the runner, as on one card: ``fmm_preset=
+    "galaxy"``, or a ``MeshRunnerOptions`` (:mod:`odisseo.mesh_runner_coupling`);
+    options it does not support then raise there, rather than run another lane.
+    """
+    from odisseo.mesh_coupling import MeshOptions
+    from odisseo.mesh_runner_coupling import MeshRunnerOptions
+
+    options = getattr(config, "mesh_options", None)
+    if isinstance(options, MeshOptions):
+        return False
+    return (
+        isinstance(options, MeshRunnerOptions)
+        or str(config.fmm_preset).strip().lower() == "galaxy"
+    )
+
+
 def resolve_lane(
     config: SimulationConfig,
     *,
@@ -127,6 +149,12 @@ def resolve_lane(
     GPU at ``fmm_large_n_min_particles`` or more) for a run the runner does; that
     choice depends on the particle count, the backend and the active-particle
     schedule, which :func:`integrate` passes here.
+
+    With ``fmm_mesh=True``: ``"fmm_mesh_runner"`` -- the same runner in its
+    multi-GPU mode (:mod:`odisseo.mesh_runner_coupling`) -- for ``fmm_preset=
+    "galaxy"`` or a ``MeshRunnerOptions`` as ``mesh_options``; ``"fmm_mesh"``, the
+    older mesh lane (:mod:`odisseo.mesh_coupling`), for a ``MeshOptions`` and
+    otherwise.
 
     Parameters
     ----------
@@ -159,6 +187,8 @@ def resolve_lane(
     if int(config.acceleration_scheme) == int(FMM_ACC):
         # fmm_blockstep takes precedence over fmm_differentiable.
         if bool(getattr(config, "fmm_mesh", False)):
+            if _mesh_runner_selected(config):
+                return "fmm_mesh_runner"
             return "fmm_mesh"
         if bool(getattr(config, "fmm_blockstep", False)):
             return "fmm_blockstep"
@@ -230,6 +260,15 @@ def integrate(
       ``num_timesteps // num_snapshots`` steps from the initial one, as host
       arrays, with the runner's energy and angular momentum; call
       ``integrate_runner_jaccpot`` for the diagnostics of a plain run.
+    - ``FMM_ACC`` with ``config.fmm_mesh=True`` and ``fmm_preset="galaxy"`` (or a
+      ``MeshRunnerOptions`` as ``config.mesh_options``) routes to the same runner in
+      its multi-GPU mode (lane ``"fmm_mesh_runner"``,
+      :mod:`odisseo.mesh_runner_coupling`): one process drives every card of the
+      mesh (``MeshRunnerOptions.ndev``; ``None``: every visible device), the same
+      settings, field and snapshots as ``"fmm_runner"``; ``params.G`` and the
+      softening are the solver's, and the final state is a host NumPy array in
+      input order. A ``MeshOptions`` keeps the older mesh lane (``"fmm_mesh"``,
+      :mod:`odisseo.mesh_coupling`) unchanged (``docs/source/parallelism.md``).
 
     Parameters
     ----------
@@ -299,6 +338,16 @@ def integrate(
         from odisseo.runner_coupling import integrate_runner_jaccpot
 
         out = integrate_runner_jaccpot(
+            primitive_state, mass, config, params, scheduled=scheduled
+        )
+        return _tagged(
+            out.snapshots if bool(config.return_snapshots) else out.state
+        )
+
+    if lane == "fmm_mesh_runner":
+        from odisseo.mesh_runner_coupling import integrate_mesh_runner_jaccpot
+
+        out = integrate_mesh_runner_jaccpot(
             primitive_state, mass, config, params, scheduled=scheduled
         )
         return _tagged(

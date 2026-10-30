@@ -201,13 +201,83 @@ Below a benchmark of this sharding scheme. It can be appreciated that for very l
 This benchmark was run on NVIDIA A100 with 40GB of memory.
 <img src="../../notebooks/scalability/gpu_scaling_combined.png" alt="Scalability" width="100%">
 
-## One large simulation across the GPUs of a node: the jaccpot mesh lane
+## One large simulation across the GPUs of a node
 
-`odisseo.mesh_coupling.integrate_mesh_jaccpot` (options in `MeshOptions`) runs a single
+Two FMM lanes split ONE system over the GPUs of a node: jaccpot's production runner in
+its multi-GPU mode (lane `"fmm_mesh_runner"`, the one to use) and the older jaccpot mesh
+lane (`"fmm_mesh"`, below). Both are `config.fmm_mesh=True`; the options object picks
+between them.
+
+### jaccpot's production runner across the cards
+
+`fmm_mesh=True` with `fmm_preset="galaxy"` runs the single-GPU production lane's runner
+(`docs/source/production_fmm.md`) on every card of a 1-D mesh: the same galaxy settings
+(leaf 64, p6, Dehnen's eq (16a) MAC at 1e-4), external field, units and snapshots;
+Morton domains re-balanced between segments; each segment one compiled program on the
+fused multi-GPU lane; a segment that outgrows a capacity on any card re-planned and
+re-run on all of them. The run is one process that sees every card it uses:
+
+```bash
+eval $(autocvd -q -l -n 2 -e -t 120)     # two least-used cards; or set CUDA_VISIBLE_DEVICES
+export XLA_PYTHON_CLIENT_PREALLOCATE=false
+export XLA_FLAGS="--xla_gpu_experimental_enable_fusion_autotuner=false \
+--xla_gpu_unsupported_use_ragged_all_to_all_one_shot_kernel=false \
+--xla_gpu_allow_ragged_all_to_all_nccl_send_recv_fallback=true \
+--xla_gpu_experimental_ragged_all_to_all_use_barrier_with_nccl=false"
+python run.py
+```
+
+XLA reads `XLA_FLAGS` once, when jax starts, so they go in the environment (or at the
+top of the script, before `import jax`). The first flag is every production run's; the
+other three are `jaccpot.distributed.fused.RAGGED_EXCHANGE_XLA_FLAGS`, XLA's NCCL
+send/recv path for the cross-domain exchange (without them the exchange is several times
+slower across PCIe, and on jax 0.11 it delivers nothing and the next call deadlocks);
+jaccpot warns when they are missing. After an `autocvd` timeout check that
+`jax.devices()` are GPUs: the timeout leaves `CUDA_VISIBLE_DEVICES` empty and the run
+lands on the CPU. In `run.py`:
+
+```python
+from odisseo.mesh_runner_coupling import MeshRunnerOptions
+
+config = config._replace(acceleration_scheme=FMM_ACC, fmm_preset="galaxy", fmm_mesh=True,
+                         mesh_options=MeshRunnerOptions(ndev=2))  # None: every device
+final = integrate(state, mass, config, params)   # host NumPy array, input order
+```
+
+`MeshRunnerOptions` has the mesh-only knobs: `ndev`, `repartition_every`,
+`cap_headroom` and `force` (`docs/source/production_fmm.md`, "Across the GPUs of a
+node", with what differs from one card: G and the softening are the solver's, the
+final state is a host array, the energy is NaN until jaccpot's fused mesh force has a
+potential). The mesh mode is NOT deterministic run to run on GPUs yet (two straight
+runs differ at round-off in the cross-domain field; jaccpot `docs/production.md`), so
+compare GPU runs with a tolerance and an A-vs-A control, never bitwise.
+
+**Checked on two A100s** (2026-10-23, jaccpot's multi-GPU mode from its S11 session 2
+branch; cards shared with other users' jobs, so the times are not results). A Plummer
+sphere (G = M = a = 1, truncated at r = 10), N = 1,048,576 in float32, an NFW halo
+(`Mvir=10, r_s=5`), softening 1e-3 (`ferrers3`), dt 5e-3, 16 steps, the galaxy preset:
+
+| | |
+|---|---|
+| `integrate()` with 4 snapshots | lane `"fmm_mesh_runner"`; snapshots at steps 0, 4, 8, 12, the first one the initial state bit for bit; `total_energy` NaN (`energy_unavailable`: the fused mesh force has no potential yet); `|L - L0| / |L0|` at most 1.4e-6 (one card: 5.6e-6) |
+| flags | each fresh run's first segment retried once (cross-domain capacities grown), the kept run's flags clean; the same with jaccpot's runner called directly on these particles |
+| final state against the single-card `"fmm_runner"` lane | 4,751,613 of 6,291,456 elements differ; positions max 1.9e-6 (rel-L2 6.6e-8); velocity difference / velocity change 9.0e-5 |
+| control: the mesh lane twice (A-vs-A) | 171,131 of 6,291,456 differ; positions max 2.4e-7; velocity difference / change 1.8e-7 (one card twice: 0 differ) |
+| self-gravity rel-L2 against an fp64 direct sum (512 particles, final state) | mesh 1.800e-4, one card 1.749e-4 |
+| the older `"fmm_mesh"` lane (`MeshOptions` defaults: leaf 512, theta 0.7, p6, the geometric MAC) | velocity difference / change 4.3e-4 against both the single card and the mesh runner |
+| a second call (other arrays, same configuration) | the kept solver and runner, no new segment program; the per-device prepares and the decomposition compile 46 small programs per fresh run |
+
+### The older jaccpot mesh lane
+
+`fmm_mesh=True` with a `MeshOptions` as `config.mesh_options` -- or a direct call of
+`odisseo.mesh_coupling.integrate_mesh_jaccpot` (options in `MeshOptions`) -- runs a single
 N-body system over all GPUs of one node with jaccpot's distributed FMM: the particles are
 split into spatial domains (RCB), each device builds its own tree and imports a *halo* of
-boundary particles from its neighbours, and a KDK leapfrog steps the whole system in one
-`shard_map` program. It has carried 25 million particles on 8×A100 (see
+boundary particles from its neighbours, and a KDK leapfrog steps the whole system: drift,
+the force (one `shard_map` program) and kick, three dispatches per step, with no potential
+(so no total energy) and its own leaf size, order, opening angle and `dt` in `MeshOptions`.
+It is unchanged and stays reachable while its users need it. It has carried 25 million
+particles on 8×A100 (see
 `benchmark_a100/bulge_rollout/` for the exact setup and record). Like every jaccpot
 lane it needs `jax.config.update("jax_enable_x64", True)` at the top of the script;
 the lane's own arrays stay float32 unless you ask for float64.

@@ -45,6 +45,7 @@ import pytest
 from odisseo import integration_api as api
 from odisseo import runner_coupling as rc
 from odisseo.integration_api import integrate, resolve_lane
+from odisseo.mesh_coupling import MeshOptions
 from odisseo.option_classes import (
     DIRECT_ACC,
     FMM_ACC,
@@ -181,7 +182,13 @@ def fused_lane(monkeypatch):
             "fmm_differentiable",
         ),
         (dict(fmm_preset="galaxy", fmm_blockstep=True), dict(), "fmm_blockstep"),
-        (dict(fmm_preset="galaxy", fmm_mesh=True), dict(), "fmm_mesh"),
+        # fmm_mesh: the runner's multi-GPU mode, a MeshOptions the older mesh lane
+        (dict(fmm_preset="galaxy", fmm_mesh=True), dict(), "fmm_mesh_runner"),
+        (
+            dict(fmm_preset="galaxy", fmm_mesh=True, mesh_options=MeshOptions(dt=1e-3)),
+            dict(),
+            "fmm_mesh",
+        ),
         (dict(fmm_preset="galaxy", acceleration_scheme=DIRECT_ACC), dict(), "direct"),
     ],
 )
