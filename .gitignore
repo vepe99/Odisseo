@@ -11,3 +11,17 @@ odisseo.egg-info/
 
 #pickle data
 *.pkl
+
+#uv env
+.venv/
+
+# python bytecode
+__pycache__/
+*.py[cod]
+
+# build artifacts
+/build/
+/dist/
+
+# editor settings
+.vscode/

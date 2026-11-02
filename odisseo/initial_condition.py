@@ -194,8 +194,8 @@ def ic_two_body(mass1: Union[float, jnp.ndarray],
             elliptical_orbit,
             )
 
-    v1 = -params.G*mass2/Mtot * vrel
-    v2 = params.G*mass1/Mtot * vrel
+    v1 = - mass2/Mtot * vrel
+    v2 = mass1/Mtot * vrel
 
     pos  = jnp.array([[0.,0.,0.],[rp,0.,0.]])
     vel  = jnp.array([[0.,v1,0.],[0.,v2,0.]])
@@ -206,7 +206,7 @@ def ic_two_body(mass1: Union[float, jnp.ndarray],
 @partial(jax.jit, static_argnames=['num_samples'])
 @jaxtyped(typechecker=typechecker)
 def sample_position_on_sphere(key: PRNGKeyArray,
-                              r_p: float,
+                              r_p: Union[float, jnp.ndarray],
                               num_samples: int = 1):
     """
     Sample uniform positions on a sphere of radius r_p.
@@ -238,7 +238,7 @@ def sample_position_on_sphere(key: PRNGKeyArray,
 @partial(jax.jit, static_argnames=['num_samples'])
 @jaxtyped(typechecker=typechecker)
 def sample_position_on_circle(key: PRNGKeyArray,
-                             r_p: float,
+                             r_p: Union[float, jnp.ndarray],
                              num_samples: int =1):
     """
     Sample uniform positions on a sphere of radius r_p.

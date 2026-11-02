@@ -11,13 +11,25 @@
 
 ## Installation
 
-`odisseo` can be installed via by cloning the repo and then via `pip`
+`odisseo` is installed with [`uv`](https://docs.astral.sh/uv/), which sets up the
+virtual environment in `.venv`:
 
 ```bash
 git clone https://github.com/vepe99/Odisseo.git
 cd Odisseo
-pip install .
+uv sync
 ```
+
+This installs the CPU build of `JAX`. On a machine with NVIDIA GPUs, sync the
+extra matching the CUDA major version of the driver (Linux only):
+
+```bash
+uv sync --extra cuda12
+uv sync --extra cuda13
+```
+
+Commands then run inside that environment with `uv run`, for example
+`uv run python script.py` or `uv run --with jupyter jupyter lab`.
 
 
 ## Notebooks for Getting Started
