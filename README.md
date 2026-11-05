@@ -60,8 +60,9 @@ decides that, and arrays created without a `dtype` become float64 under x64, so 
 `dtype=jnp.float32` for a float32 run.
 
 Key FMM fields in `SimulationConfig` for the runner lane (`docs/source/production_fmm.md`):
-- `fmm_leaf_size`, `fmm_max_order`, `fmm_theta`, `fmm_mac_type` (`"dehnen"` or
-  `"dehnen_error"` with `fmm_adaptive_eps`): its settings at small `N` / on a CPU
+- `fmm_leaf_size`, `fmm_max_order`, `fmm_mac_type="dehnen_error"` with
+  `fmm_adaptive_eps`: its settings at small `N` / on a CPU (the default
+  `fmm_mac_type="dehnen"` keeps jaccpot's preset MAC, eq (16a) at 1e-4)
 - `fmm_preset="galaxy"`, or `fmm_auto_large_n_profile` with `fmm_large_n_min_particles`
   on a GPU: jaccpot's galaxy settings (leaf 64, p6, eq (16a) MAC); `fmm_galaxy_settings`
   (a `jaccpot.production.GalaxySettings`) sets them explicitly

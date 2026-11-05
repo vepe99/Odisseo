@@ -1,13 +1,14 @@
 """The ``fmm_runner`` lane: ``integrate()`` as a thin client of jaccpot's runner.
 
-``fmm_preset="galaxy"`` -- and the automatic large-N profile, which picked the
-coupler's ``"large_n_gpu"`` loop before -- runs jaccpot's ``ProductionRunner``
+Every fixed-step ``FMM_ACC`` run (since the 2026-11 switch; before, ``fmm_preset=
+"galaxy"`` and the automatic large-N profile) runs jaccpot's ``ProductionRunner``
 (:mod:`odisseo.runner_coupling`). Pinned here:
 
-* dispatch: which configs reach the lane, and which keep the coupler (``resolve_lane``
+* dispatch: every fixed-step config reaches the lane (``resolve_lane``
   is the single source of truth, so it is checked directly and through
   ``integrate(..., return_lane=True)``);
-* the settings: ``GalaxySettings`` by default, ``fmm_galaxy_settings`` when given,
+* the settings: the two profiles (the config's own knobs, jaccpot's galaxy settings),
+  the ignored-knob warning; ``GalaxySettings`` by default, ``fmm_galaxy_settings`` when given,
   ``fmm_mac_type="dehnen_error"`` honoured, other MACs refused; the solver built
   from ``GALAXY_SETTINGS`` is ``preset="galaxy"``'s;
 * without a MAC of its own the lane runs the preset's -- Dehnen's eq (16a) at 1e-4
@@ -24,7 +25,7 @@ coupler's ``"large_n_gpu"`` loop before -- runs jaccpot's ``ProductionRunner``
   initial one, bitwise the plain runs of those lengths, with the energy and the
   angular momentum;
 * (slow) the physics: at a tight opening angle the lane follows Odisseo's fp64
-  direct-sum lane, as the coupler's CPU lane does.
+  direct-sum lane, through galaxy settings and through the config's own knobs.
 
 The fused lane's prepare runs on a GPU backend only, so the integrating tests report
 ``jax.default_backend()`` as ``"gpu"`` -- jaccpot's own CPU tests of the lane do the
@@ -253,8 +254,10 @@ def test_runner_profile(overrides, kw, profile):
 
 def test_the_config_profile_maps_the_coupler_knobs():
     """A config that sets nothing runs Odisseo's small-N defaults on the runner:
-    leaf 16, p4, theta 0.6, the geometric MAC, no cell level floor, at the state's
-    precision -- what the removed coupler loop read."""
+    leaf 16, p4, theta 0.6, no cell level floor, at the state's precision -- what
+    the removed coupler loop read -- with jaccpot's preset MAC (``fmm_mac_type=
+    "dehnen"``, the default, keeps it, as under the galaxy profile: the fused
+    lane's geometric MAC at theta 0.6 is ~36x less accurate than the coupler's)."""
     f32, f64 = jnp.float32, jnp.float64
     cfg = SimulationConfig(acceleration_scheme=FMM_ACC)
     default = rc.config_settings(cfg, f32)
@@ -263,8 +266,8 @@ def test_the_config_profile_maps_the_coupler_knobs():
         max_order=4,
         theta=0.6,
         cell_min_level=None,
-        mac_type="dehnen",
-        adaptive_eps=None,
+        mac_type=GALAXY_SETTINGS.mac_type,
+        adaptive_eps=GALAXY_SETTINGS.adaptive_eps,
         precision="fp32",
     )
     assert rc.config_settings(cfg, f64).precision == "fp64"
@@ -460,10 +463,14 @@ def test_the_runner_lane_runs_on_a_cpu_backend(monkeypatch):
     rc.clear_runner_cache()
     monkeypatch.setattr(jax, "default_backend", lambda: "gpu")
     settings = rc.config_settings(cfg, state.dtype)
+    error_mac = settings.mac_type == "dehnen_error"
+    if error_mac:  # the CSR near field in interpret mode, as the CPU route sets it
+        for key, val in _CSR_ON_CPU.items():
+            monkeypatch.setenv(key, val)
     ref = integrate(
         state,
         masses,
-        cfg._replace(fmm_galaxy_settings=settings, fmm_use_pallas=False),
+        cfg._replace(fmm_galaxy_settings=settings, fmm_use_pallas=error_mac),
         params,
     )
     rc.clear_runner_cache()
@@ -646,12 +653,14 @@ def test_history_runs_return_every_kth_state_with_the_diagnostics(fused_lane):
 
 
 @pytest.mark.slow
-def test_the_runner_lane_follows_the_direct_lane_as_the_coupler_does(monkeypatch):
+def test_the_runner_lane_follows_the_direct_lane(monkeypatch):
     """At p8, theta 0.3 the fused lane's self-gravity is at the fp32 floor of the
     fp64 direct sum (rel-L2 5.4e-7 in this draw), so 6 steps with the halo stay with
     Odisseo's fp64 direct lane (same velocity Verlet, same kernel, same G and
-    softening) as closely as the coupler's CPU lane (preset "fast") does at the same
-    order and angle: the units and the kernel reach jaccpot as on the coupler."""
+    softening), as the removed coupler loop did at the same order and angle: the
+    units and the kernel reach jaccpot. Both through explicit galaxy settings and
+    through the config's own knobs (profile "config": p8, eq (16a) at 1e-7), on the
+    CPU route."""
     state_np, masses_np = _system()
     params = _params()
     direct = np.asarray(
@@ -664,14 +673,22 @@ def test_the_runner_lane_follows_the_direct_lane_as_the_coupler_does(monkeypatch
     )
     s32 = jnp.asarray(state_np, jnp.float32)
     m32 = jnp.asarray(masses_np, jnp.float32)
-    coupler, lane = integrate(
+    from_config, lane = integrate(
         s32,
         m32,
-        _config(fmm_preset="fast", fmm_leaf_size=16, fmm_max_order=8, fmm_theta=0.3),
+        _config(
+            fmm_preset="fast",
+            fmm_galaxy_settings=None,
+            fmm_leaf_size=16,
+            fmm_max_order=8,
+            fmm_mac_type="dehnen_error",
+            fmm_adaptive_eps=1e-7,
+        ),
         params,
         return_lane=True,
     )
-    assert lane == "fmm_forward"
+    assert lane == "fmm_runner"
+    rc.clear_runner_cache()
     monkeypatch.setattr(jax, "default_backend", lambda: "gpu")
     runner, lane = integrate(
         s32,
@@ -683,6 +700,7 @@ def test_the_runner_lane_follows_the_direct_lane_as_the_coupler_does(monkeypatch
         return_lane=True,
     )
     assert lane == "fmm_runner"
+    rc.clear_runner_cache()
 
     change = np.linalg.norm(direct[:, 1] - state_np[:, 1])
 
@@ -696,5 +714,5 @@ def test_the_runner_lane_follows_the_direct_lane_as_the_coupler_does(monkeypatch
 
     assert dv_error(runner) < 1e-4
     assert x_error(runner) < 1e-6
-    assert dv_error(coupler) < 1e-4
-    assert x_error(coupler) < 1e-6
+    assert dv_error(from_config) < 1e-4
+    assert x_error(from_config) < 1e-6

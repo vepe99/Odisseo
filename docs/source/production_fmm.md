@@ -39,7 +39,7 @@ thread meanwhile. A stopgap until jaccpot takes a CPU switch for the fused lane.
 | profile | when | settings |
 |---|---|---|
 | `"galaxy"` | `fmm_galaxy_settings` given; `fmm_preset="galaxy"`; or the automatic large-N profile: preset `"fast"` (the default), `fmm_auto_large_n_profile=True` (the default), a GPU backend and at least `fmm_large_n_min_particles` (200,000) particles | jaccpot's `GALAXY_SETTINGS` -- leaf 64, p6, cell level floor 8, automatic leaf capacity, the preset's MAC, fp32 -- or `fmm_galaxy_settings` (`galaxy_settings()`) |
-| `"config"` | every other run (a config that sets nothing, on a CPU or below 200,000 particles; `fmm_preset="large_n_gpu"`, `"fast"` with the auto profile off, ...) | the config's own FMM knobs (`config_settings()`): `leaf_size=fmm_leaf_size` (16), `max_order=fmm_fixed_order or fmm_max_order` (4), `theta=fmm_theta` (0.6), the geometric Dehnen MAC (`fmm_mac_type="dehnen"`) or eq (16a) (`"dehnen_error"` + `fmm_adaptive_eps`), no cell level floor, jaccpot's automatic leaf capacity and cubic Morton box, the state's precision (fp32 for `"large_n_gpu"` with `fmm_large_n_force_fp32`, as on the coupler) |
+| `"config"` | every other run (a config that sets nothing, on a CPU or below 200,000 particles; `fmm_preset="large_n_gpu"`, `"fast"` with the auto profile off, ...) | the config's own FMM knobs (`config_settings()`): `leaf_size=fmm_leaf_size` (16), `max_order=fmm_fixed_order or fmm_max_order` (4), `theta=fmm_theta` (0.6), no cell level floor, jaccpot's automatic leaf capacity and cubic Morton box, the state's precision (fp32 for `"large_n_gpu"` with `fmm_large_n_force_fp32`, as on the coupler); the MAC: `fmm_mac_type="dehnen"` (the default) keeps jaccpot's preset MAC, eq (16a) at 1e-4, as under `"galaxy"`; `"dehnen_error"` with `fmm_adaptive_eps` sets the target |
 
 The coupler's engine knobs have no runner counterpart and are **not read**:
 `fmm_basis`, `fmm_farfield_mode`, `fmm_m2l_chunk_size`, `fmm_nearfield_mode`,
@@ -54,6 +54,19 @@ set (`runner_coupling.warn_ignored_knobs`), naming the settings that run. They
 tune the removed loop's engine and memory, not the physics, and the adaptive lane
 still reads them, so they warn rather than raise. Any MAC other than `"dehnen"` /
 `"dehnen_error"` raises: the fused lane runs these two.
+
+**Why `"dehnen"` is not the geometric MAC under `"config"`.** The fused lane's
+geometric Dehnen MAC is not the coupler's at the same opening angle: at leaf 16, p4,
+theta 0.6 its force rel-L2 against the fp64 direct sum was 4.3e-3 on the FMM
+notebook's N = 512 cube (fp64 force: the same 4.3e-3, so truncation) and 3.8e-3 on
+four blobs, where the coupler had 1.2e-4 and 9.2e-5; theta 0.4 gave 3.2e-4, p6 at
+0.6 1.7e-3. Eq (16a) at 1e-4 at leaf 16, p4: 4.3e-5. In the cube's collapse the
+geometric MAC at leaf 64 (and 256) overflowed a fixed capacity
+(`JACCPOT_STATIC_STRICT_FUSED_COMPACT_FAR_PAIR_CAP`, never re-planned), eq (16a) at
+leaf 16 and 64 ran through (2026-11-06, CPU). The geometric MAC stays reachable
+through `fmm_galaxy_settings=GalaxySettings(mac_type="dehnen", adaptive_eps=None,
+...)`. Under eq (16a) G and the softening are the solver's (another value
+compiles) and `theta` decides no pair.
 
 **The MAC is the preset's.** Since jaccpot's 2026-10-21 preset change
 (`GalaxySettings(mac_type="dehnen_error", adaptive_eps=1e-4)`) that is Dehnen's
@@ -290,7 +303,7 @@ What the 2026-11 switch (multi-node plan, wave 3) changed for a fixed-step
 
 | before | now |
 |---|---|
-| a config that sets nothing, on a CPU or below 200,000 particles: Odisseo's own leapfrog loop over jaccpot's coupler (`fmm_forward`), at `fmm_leaf_size` 16, `fmm_max_order` 4, `fmm_theta` 0.6 | the runner (`fmm_runner`) at the same leaf size, order, opening angle and MAC (profile `"config"`): no cell level floor, jaccpot's automatic leaf capacity and cubic Morton box, the fused lane's force; numbers move ([below](#what-moved)) |
+| a config that sets nothing, on a CPU or below 200,000 particles: Odisseo's own leapfrog loop over jaccpot's coupler (`fmm_forward`), at `fmm_leaf_size` 16, `fmm_max_order` 4, `fmm_theta` 0.6, the geometric MAC | the runner (`fmm_runner`) at the same leaf size and order (profile `"config"`) with jaccpot's preset MAC (eq (16a) at 1e-4): no cell level floor, jaccpot's automatic leaf capacity and cubic Morton box, the fused lane's force; numbers move ([below](#what-moved)) |
 | `fmm_preset="large_n_gpu"`: the coupler's loop on the large-N lane | the runner, profile `"config"`, fp32 force as before |
 | `fmm_preset="galaxy"`, or the auto large-N profile on a GPU | unchanged: the runner at jaccpot's galaxy settings |
 | the coupler's engine knobs (tree, near field, traversal, static shapes) | not read; warned once (above) |

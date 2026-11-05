@@ -361,8 +361,7 @@ def runner_profile(
       more particles; the runner's settings there before the 2026-11 switch too).
     * ``"config"``: ``SimulationConfig``'s own FMM knobs (:func:`config_settings`)
       -- every other run, so a config that sets nothing runs at Odisseo's small-N
-      defaults (leaf 16, p4, theta 0.6, the geometric MAC), as the removed
-      coupler loop did.
+      defaults (leaf 16, p4) with jaccpot's preset MAC (eq (16a) at 1e-4).
 
     Parameters
     ----------
@@ -401,9 +400,17 @@ def config_settings(config: SimulationConfig, state_dtype: Any) -> Any:
 
     * ``leaf_size`` = ``fmm_leaf_size``; ``max_order`` = ``fmm_fixed_order`` when
       set, else ``fmm_max_order``; ``theta`` = ``fmm_theta``;
-    * the MAC: ``fmm_mac_type="dehnen"`` (Odisseo's default) the geometric Dehnen
-      MAC at ``theta``, ``"dehnen_error"`` Dehnen's eq (16a) at
-      ``fmm_adaptive_eps``; the fused lane runs no other MAC (refused);
+    * the MAC: ``fmm_mac_type="dehnen"`` (Odisseo's default, which cannot be told
+      from "not set") keeps jaccpot's preset MAC (``GALAXY_SETTINGS``: Dehnen's eq
+      (16a) at ``adaptive_eps`` 1e-4), as under the ``"galaxy"`` profile;
+      ``"dehnen_error"`` is eq (16a) at ``fmm_adaptive_eps``; the fused lane runs
+      no other MAC (refused). The fused lane's GEOMETRIC Dehnen MAC is not the
+      coupler's at the same angle: at leaf 16, p4, theta 0.6 its force rel-L2 was
+      4.3e-3 on the FMM notebook's N = 512 cube (the coupler's 1.2e-4; eq (16a) at
+      1e-4: 4.3e-5), and at leaf 64 it overflowed a fixed capacity in that cube's
+      collapse, where eq (16a) ran (2026-11-06, CPU). It stays reachable through
+      ``fmm_galaxy_settings=GalaxySettings(mac_type="dehnen", adaptive_eps=None,
+      ...)``. Under eq (16a) ``theta`` decides no pair;
     * the precision: the state's (an fp64 state an fp64 force), except
       ``fmm_preset="large_n_gpu"`` with ``fmm_large_n_force_fp32`` (the default),
       which ran fp32 on the coupler too;
@@ -431,7 +438,7 @@ def config_settings(config: SimulationConfig, state_dtype: Any) -> Any:
     ValueError
         For a MAC the fused lane does not run, or ``dehnen_error`` without an eps.
     """
-    from jaccpot.production import GalaxySettings
+    from jaccpot.production import GALAXY_SETTINGS, GalaxySettings
 
     mac = str(config.fmm_mac_type).strip().lower()
     if mac == "dehnen_error":
@@ -444,7 +451,9 @@ def config_settings(config: SimulationConfig, state_dtype: Any) -> Any:
             mac_type="dehnen_error", adaptive_eps=float(config.fmm_adaptive_eps)
         )
     elif mac == "dehnen":
-        mac_fields = dict(mac_type="dehnen", adaptive_eps=None)
+        mac_fields = dict(
+            mac_type=GALAXY_SETTINGS.mac_type, adaptive_eps=GALAXY_SETTINGS.adaptive_eps
+        )
     else:
         raise ValueError(
             f"the runner lane runs the Dehnen MAC ('dehnen' or 'dehnen_error'); got "

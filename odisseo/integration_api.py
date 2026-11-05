@@ -248,7 +248,8 @@ def integrate(
       ``fmm_preset="galaxy"`` and for the automatic large-N profile (preset
       ``"fast"`` on a GPU with at least ``fmm_large_n_min_particles`` particles);
       otherwise the config's own ``fmm_leaf_size``, ``fmm_max_order``,
-      ``fmm_theta`` and MAC, with no cell level floor, at the state's precision.
+      ``fmm_theta`` (``fmm_mac_type="dehnen"``, the default, keeps the preset's
+      MAC), with no cell level floor, at the state's precision.
       The coupler's engine knobs are not read (warned once). The preset's MAC is
       Dehnen's eq (16a) at ``adaptive_eps`` 1e-4 since jaccpot's 2026-10-21 preset
       change: under it G and the softening are the solver's, so a call with

@@ -67,7 +67,11 @@ def test_integrate_dispatches_fixed_steps_to_the_runner(monkeypatch):
     assert out.shape == state.shape
     (settings,) = calls
     assert (settings.leaf_size, settings.max_order, settings.theta) == (24, 5, 0.4)
-    assert (settings.mac_type, settings.cell_min_level) == ("dehnen", None)
+    # Odisseo's default fmm_mac_type keeps jaccpot's preset MAC
+    from jaccpot.production import GALAXY_SETTINGS
+
+    assert settings.mac_type == GALAXY_SETTINGS.mac_type
+    assert settings.cell_min_level is None
 
 
 def test_integrate_dispatches_adaptive_steps_to_the_coupler(monkeypatch):
