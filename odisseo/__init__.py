@@ -36,17 +36,18 @@ def construct_initial_state(position, velocity):
 
     
 
+# One FMM force evaluation through jaccpot's coupler. Fixed-step FMM runs go
+# through integrate() to jaccpot's ProductionRunner (odisseo.runner_coupling);
+# Odisseo's own FMM leapfrog loop was removed in 2026-11.
 from odisseo.jaccpot_coupling import (
-    build_jitted_leapfrog_jaccpot_active,
     build_jitted_jaccpot_acceleration,
     evaluate_acceleration_jaccpot,
-    integrate_leapfrog_jaccpot_active,
 )
 
 from odisseo.integration_api import integrate
 
 # Momentum-conserving individual timesteps (Nornax block-step KDK + Jaccpot's
-# mutual FMM). A separate lane from the shared-timestep coupler above, not a
+# mutual FMM). A separate lane from the shared-timestep runner, not a
 # replacement for it. Nornax and jaccpot are imported lazily inside the module,
 # so this costs nothing when the lane is unused.
 # See docs/source/blockstep_fmm.md.

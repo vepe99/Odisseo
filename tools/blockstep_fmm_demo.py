@@ -520,13 +520,14 @@ def main() -> int:
     # the shared-timestep baseline, over the SAME physical time
     # --------------------------------------------------------------------
     if not args.no_shared:
-        from odisseo.jaccpot_coupling import (
-            evaluate_acceleration_jaccpot,
-            integrate_leapfrog_jaccpot_active,
-        )
+        from jaccpot.production import GalaxySettings
+
+        from odisseo.jaccpot_coupling import evaluate_acceleration_jaccpot
+        from odisseo.option_classes import FMM_ACC
+        from odisseo.runner_coupling import integrate_runner_jaccpot
 
         print()
-        print("=== shared-timestep lane (target-centric FMM, dt = dt_min) ===")
+        print("=== shared-timestep lane (jaccpot's runner, dt = dt_min) ===")
         n_steps = int(args.n_base) * options.n_sub
         shared_kwargs = dict(
             leaf_size=int(args.leaf_size),
@@ -535,20 +536,27 @@ def main() -> int:
             fmm_theta=float(args.theta),
             fmm_tree_leaf_target=int(args.leaf_size),
         )
-        timing: dict = {}
-        t0 = time.perf_counter()
-        shared_state = integrate_leapfrog_jaccpot_active(
-            state,
-            mass,
-            config,
-            params,
-            num_steps=n_steps,
-            dt=options.dt_min,
-            refresh_every=1,
-            timing_stats=timing,
-            **shared_kwargs,
+        # the shared-timestep lane is jaccpot's ProductionRunner since 2026-11
+        # (Odisseo's own FMM leapfrog loop was removed), at this run's leaf size,
+        # order and opening angle on the geometric MAC
+        shared_config = config._replace(
+            acceleration_scheme=FMM_ACC,
+            num_timesteps=n_steps,
+            fmm_galaxy_settings=GalaxySettings(
+                leaf_size=int(args.leaf_size),
+                max_order=int(args.order),
+                theta=float(args.theta),
+                cell_min_level=None,
+                mac_type="dehnen",
+                adaptive_eps=None,
+            ),
         )
-        shared_state = jax.block_until_ready(shared_state)
+        shared_params = params._replace(t_end=float(n_steps * options.dt_min))
+        t0 = time.perf_counter()
+        shared_out = integrate_runner_jaccpot(
+            state, mass, shared_config, shared_params
+        )
+        shared_state = jax.block_until_ready(shared_out.state)
         shared_wall = time.perf_counter() - t0
 
         p0 = total_linear_momentum(mass, velocities)
@@ -571,15 +579,11 @@ def main() -> int:
             if e0:
                 print(f"  energy drift    : {(e1 - e0) / abs(e0):+.4e}")
         print(f"  total wall      : {shared_wall:.2f} s")
-        for key in ("prepare_seconds_total", "evaluate_seconds_total"):
-            if key in timing:
-                print(f"  {key:<15} : {timing[key]}")
         # The tree-build count is the individual-timestep advantage, stated
         # plainly: the block step rebuilds once per dt_max, a shared step at
         # dt_min rebuilds once per sub-step.
-        shared_builds = timing.get("prepare_calls", n_steps)
         print(
-            f"  tree builds     : {shared_builds} shared vs "
+            f"  tree builds     : {n_steps} shared vs "
             f"{result.n_base} block, for the same physical time"
         )
         # Both totals include their first-call compile, so this is the honest

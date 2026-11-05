@@ -203,16 +203,17 @@ This benchmark was run on NVIDIA A100 with 40GB of memory.
 
 ## One large simulation across the GPUs of a node
 
-Two FMM lanes split ONE system over the GPUs of a node: jaccpot's production runner in
-its multi-GPU mode (lane `"fmm_mesh_runner"`, the one to use) and the older jaccpot mesh
-lane (`"fmm_mesh"`, below). Both are `config.fmm_mesh=True`; the options object picks
-between them.
+jaccpot's production runner in its multi-GPU mode (lane `"fmm_mesh_runner"`) splits ONE
+system over the GPUs of a node: `config.fmm_mesh=True`, with a `MeshRunnerOptions` (or
+`None`, the defaults) as `config.mesh_options`. The older jaccpot mesh lane (`"fmm_mesh"`)
+was removed in 2026-11 (below).
 
 ### jaccpot's production runner across the cards
 
-`fmm_mesh=True` with `fmm_preset="galaxy"` runs the single-GPU production lane's runner
-(`docs/source/production_fmm.md`) on every card of a 1-D mesh: the same galaxy settings
-(leaf 64, p6, Dehnen's eq (16a) MAC at 1e-4), external field, units and snapshots;
+`fmm_mesh=True` runs the single-GPU production lane's runner
+(`docs/source/production_fmm.md`) on every card of a 1-D mesh: the same settings
+(with `fmm_preset="galaxy"` the galaxy settings: leaf 64, p6, Dehnen's eq (16a) MAC
+at 1e-4), external field, units and snapshots;
 Morton domains re-balanced between segments; each segment one compiled program on the
 fused multi-GPU lane; a segment that outgrows a capacity on any card re-planned and
 re-run on all of them. The run is one process that sees every card it uses:
@@ -264,43 +265,19 @@ sphere (G = M = a = 1, truncated at r = 10), N = 1,048,576 in float32, an NFW ha
 | final state against the single-card `"fmm_runner"` lane | 4,751,613 of 6,291,456 elements differ; positions max 1.9e-6 (rel-L2 6.6e-8); velocity difference / velocity change 9.0e-5 |
 | control: the mesh lane twice (A-vs-A) | 171,131 of 6,291,456 differ; positions max 2.4e-7; velocity difference / change 1.8e-7 (one card twice: 0 differ) |
 | self-gravity rel-L2 against an fp64 direct sum (512 particles, final state) | mesh 1.800e-4, one card 1.749e-4 |
-| the older `"fmm_mesh"` lane (`MeshOptions` defaults: leaf 512, theta 0.7, p6, the geometric MAC) | velocity difference / change 4.3e-4 against both the single card and the mesh runner |
+| the older `"fmm_mesh"` lane (`MeshOptions` defaults: leaf 512, theta 0.7, p6, the geometric MAC; removed 2026-11) | velocity difference / change 4.3e-4 against both the single card and the mesh runner |
 | a second call (other arrays, same configuration) | the kept solver and runner, no new segment program; the per-device prepares and the decomposition compile 46 small programs per fresh run |
 
-### The older jaccpot mesh lane
+### The older jaccpot mesh lane (removed)
 
-`fmm_mesh=True` with a `MeshOptions` as `config.mesh_options` -- or a direct call of
-`odisseo.mesh_coupling.integrate_mesh_jaccpot` (options in `MeshOptions`) -- runs a single
-N-body system over all GPUs of one node with jaccpot's distributed FMM: the particles are
-split into spatial domains (RCB), each device builds its own tree and imports a *halo* of
-boundary particles from its neighbours, and a KDK leapfrog steps the whole system: drift,
-the force (one `shard_map` program) and kick, three dispatches per step, with no potential
-(so no total energy) and its own leaf size, order, opening angle and `dt` in `MeshOptions`.
-It is unchanged and stays reachable while its users need it, but its KDK is
-**deprecated** (multi-node plan I1: nornax owns the schemes, jaccpot's runner the
-run): a call warns `DeprecationWarning` naming the replacement, the runner's
-multi-GPU mode above (`MeshRunnerOptions`, lane `"fmm_mesh_runner"`). It has carried 25 million
-particles on 8×A100 (see
-`benchmark_a100/bulge_rollout/` for the exact setup and record). Like every jaccpot
-lane it needs `jax.config.update("jax_enable_x64", True)` at the top of the script;
-the lane's own arrays stay float32 unless you ask for float64.
-
-**Requirement: jax >= 0.9.1, verified as >= 0.10.2, in a venv without
-`--system-site-packages`.** On older JAX the collective that moves the halo
-(`jax.lax.ragged_all_to_all`) silently returns its fill value once its buffers move, and
-the donating leapfrog moves them every step: the cross-domain near field disappears —
-about a 45 % force error — while angular momentum, energy, centre of mass and every
-overflow flag look healthy. Every mesh-lane run before 2026-09-04 had this. Check the
-plugin that actually loaded, not `pip list`:
-
-```python
-import jax_plugins.xla_cuda12 as p; print(p.__file__)   # must be inside your venv
-```
-
-If the JAX cannot be changed, `MeshOptions(halo_exchange="buf")` (or
-`tools/mesh_galaxy_run.py --halo-exchange buf`) selects the all_gather exchange: identical
-forces, no measurable cost at 4 devices. And keep a moving-position probe on
-(`--probe-every N`: an fp64 direct sum for a few hundred random particles): it is the only
-instrument that sees this class of defect, because a run-it-twice reproducibility check
-reuses the same buffers and passes. Details: `benchmark_a100/bulge_rollout/findings.md`,
-section 14.
+The older mesh lane -- `fmm_mesh=True` with a `MeshOptions`, or
+`odisseo.mesh_coupling.integrate_mesh_jaccpot`: jaccpot's earlier distributed force
+(RCB domains, a halo exchange) stepped by Odisseo's own KDK, three dispatches per
+step, no potential -- was **removed** in 2026-11 (multi-node plan, wave 3), with
+`odisseo.mesh_coupling`, after its deprecation in I1 (nornax owns the schemes,
+jaccpot's runner the run). Its replacement is the runner's multi-GPU mode above
+(`MeshRunnerOptions`, lane `"fmm_mesh_runner"`). Its 25-million-particle record on
+8×A100 and its lessons (the `ragged_all_to_all` halo corruption below jax 0.9.1,
+found by a moving-position fp64 probe) stay in `benchmark_a100/bulge_rollout/`
+(`findings.md`, section 14); `tools/mesh_galaxy_run.py` is that record's
+self-contained driver and does not import Odisseo's removed lane.

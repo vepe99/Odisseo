@@ -215,11 +215,14 @@ class SimulationConfig(NamedTuple):
     fmm_max_order: int = 4
     fmm_refresh_after_position_update: bool = False
 
-    # Jaccpot solver tuning knobs exposed to ODISSEO. "galaxy" runs jaccpot's
-    # ProductionRunner (the fused single-GPU lane, odisseo.runner_coupling; with
-    # fmm_mesh=True its multi-GPU mode, odisseo.mesh_runner_coupling), and so
-    # does "fast" on a GPU at fmm_large_n_min_particles or more (the auto profile
-    # below); "large_n_gpu" keeps the coupler's own loop on that lane.
+    # Jaccpot solver tuning knobs exposed to ODISSEO. Every fixed-step FMM_ACC run
+    # is jaccpot's ProductionRunner since 2026-11 (odisseo.runner_coupling; with
+    # fmm_mesh=True its multi-GPU mode). The preset picks its settings
+    # (runner_coupling.runner_profile): "galaxy" -- and "fast" on a GPU at
+    # fmm_large_n_min_particles or more (the auto profile below) -- jaccpot's
+    # galaxy settings; anything else the knobs fmm_leaf_size / fmm_max_order /
+    # fmm_theta / fmm_mac_type ("large_n_gpu": an fp32 force). The other coupler
+    # knobs here are read by the adaptive lane (fixed_timestep=False) only.
     fmm_preset: str = "fast"
     # Real (Dehnen) harmonics: jaccpot's only basis since its 2026-10 cleanup.
     # "solidfmm" is an alias for it (bit-identical forces); "complex" (C) and
@@ -339,31 +342,27 @@ class SimulationConfig(NamedTuple):
     blockstep_options: Optional[Any] = None
     # --- multi-GPU mesh lanes -------------------------------------------------
     # Routes FMM_ACC across the devices of one process, the way `fmm_blockstep`
-    # above routes it through odisseo.blockstep_coupling. With fmm_preset="galaxy"
-    # (or a `MeshRunnerOptions` below) it is jaccpot's ProductionRunner in its
-    # multi-GPU mode (odisseo.mesh_runner_coupling, lane "fmm_mesh_runner": the
-    # runner lane's settings, field and snapshots on every card); with a
-    # `MeshOptions` it is the older mesh lane (odisseo.mesh_coupling, lane
-    # "fmm_mesh"), unchanged. Appended at the END on purpose: a NamedTuple's field
+    # above routes it through odisseo.blockstep_coupling: jaccpot's
+    # ProductionRunner in its multi-GPU mode (odisseo.mesh_runner_coupling, lane
+    # "fmm_mesh_runner": the runner lane's settings, field and snapshots on every
+    # card). The older mesh lane (odisseo.mesh_coupling, "fmm_mesh") was removed
+    # in 2026-11. Appended at the END on purpose: a NamedTuple's field
     # order is its constructor signature, so inserting above would silently rebind
     # every positional caller.
     fmm_mesh: bool = False
-    # The mesh lane's options. A `MeshOptions` selects the older lane and is
-    # REQUIRED there (no default, for the same reason blockstep_options has none:
-    # MeshOptions has no default dt). A `odisseo.mesh_runner_coupling.
-    # MeshRunnerOptions` -- devices, repartition cadence, shard headroom -- selects
-    # the runner's multi-GPU mode, where None is its defaults (every visible
-    # device). Typed loosely because importing them here would be circular.
+    # The mesh lane's options: a `odisseo.mesh_runner_coupling.MeshRunnerOptions`
+    # -- devices, repartition cadence, shard headroom --, or None, its defaults
+    # (every visible device). Typed loosely because importing it here would be
+    # circular.
     mesh_options: Optional[Any] = None
-    # --- production runner lane (fmm_preset="galaxy" or the auto profile) ------
+    # --- production runner lane's settings ------------------------------------
     # A `jaccpot.production.GalaxySettings`: the numerical settings of the runner
     # lane (leaf size, expansion order, opening angle, cell level floor, leaf
-    # capacity, MAC, precision). None is jaccpot's GALAXY_SETTINGS (Dehnen's eq 16a
-    # MAC at 1e-4 since jaccpot's 2026-10-21 preset change; the geometric MAC is
-    # GalaxySettings(mac_type="dehnen", adaptive_eps=None)). That lane does
-    # NOT read fmm_leaf_size, fmm_max_order, fmm_theta or the other coupler knobs
-    # (every field here has a default, so "set by the caller" is not observable);
-    # this field is how to change them. softening, softening_kernel and params.G
+    # capacity, MAC, precision), whatever the preset. None: jaccpot's
+    # GALAXY_SETTINGS under the "galaxy" profile (Dehnen's eq 16a MAC at 1e-4 since
+    # jaccpot's 2026-10-21 preset change; the geometric MAC is
+    # GalaxySettings(mac_type="dehnen", adaptive_eps=None)), the knobs above under
+    # the "config" profile (runner_coupling.runner_profile). softening, softening_kernel and params.G
     # are read as on every lane. Typed loosely so this module does not import
     # jaccpot; appended at the END, like the fields above.
     fmm_galaxy_settings: Optional[Any] = None
@@ -373,8 +372,8 @@ class SimulationConfig(NamedTuple):
     # "nornax_kdk": nornax.schemes.LeapfrogKDK, the same KDK written by nornax
     # (bitwise to the built-in). Or any object satisfying jaccpot's
     # jaccpot.scheme.SplitStepScheme protocol (hashable: it is part of this
-    # config). Setting it routes a fixed-step FMM_ACC run to the runner lane
-    # ("fmm_runner") as fmm_preset="galaxy" does; the multi-GPU runner lane takes
-    # one in I2 and refuses it until then, and the block-step, differentiable and
-    # older mesh lanes have their own steps and refuse it. Appended at the END.
+    # config). It is handed to the runner lane ("fmm_runner", every fixed-step
+    # FMM_ACC run); the multi-GPU runner lane takes one in I2 and refuses it until
+    # then, and the block-step, differentiable and adaptive lanes have their own
+    # steps and refuse it. Appended at the END.
     fmm_scheme: Optional[Any] = None

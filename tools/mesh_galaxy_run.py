@@ -209,7 +209,7 @@ def make_aligner(mesh):
     global id among the ids its own device owns. It is an OPERAND rather than a
     closed-over constant so that a repartition -- which changes which device owns
     which id, and therefore every rank -- can swap it without retracing the
-    aligner. Matches ``odisseo.mesh_coupling.make_aligner``.
+    aligner. Matched ``odisseo.mesh_coupling.make_aligner`` (removed 2026-11).
     """
     import jax
     import jax.numpy as jnp

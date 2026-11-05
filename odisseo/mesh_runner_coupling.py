@@ -1,10 +1,8 @@
 """Odisseo on jaccpot's production runner across GPUs: the multi-GPU lane as a thin client.
 
 :func:`odisseo.integration_api.integrate` sends an ``FMM_ACC`` run with
-``config.fmm_mesh=True`` here (lane ``"fmm_mesh_runner"``) when
-``config.fmm_preset == "galaxy"`` or ``config.mesh_options`` is a
-:class:`MeshRunnerOptions` -- and not when it is a
-:class:`~odisseo.mesh_coupling.MeshOptions`, which keeps the older mesh lane (below).
+``config.fmm_mesh=True`` here (lane ``"fmm_mesh_runner"``), with
+``config.mesh_options`` a :class:`MeshRunnerOptions` or ``None`` (the defaults).
 jaccpot's :class:`~jaccpot.production.ProductionRunner` in its multi-GPU mode
 (``ProductionRunner(..., mesh=MeshRunConfig(...))``, jaccpot ``docs/production.md``,
 "Multi-GPU mode") then owns the run: one process drives every card of a 1-D mesh, the
@@ -58,11 +56,9 @@ initial state, the start force and the segments; the decomposition and the prepa
 compile some small programs again on every fresh run (46 at 1e6 on two A100s,
 2026-10-23: not the segments).
 
-THE OLDER MESH LANE. :mod:`odisseo.mesh_coupling` (lane ``"fmm_mesh"``, a
-``MeshOptions`` as ``config.mesh_options``) runs jaccpot's earlier distributed force
-(``jaccpot.distributed.fmm``: RCB domains, a halo exchange, three dispatches per step
--- drift, force, kick --, no potential) with its own leaf size, order, opening angle
-and ``dt``. It is unchanged and stays reachable while its users need it.
+THE OLDER MESH LANE (``odisseo.mesh_coupling``, lane ``"fmm_mesh"``, its
+``MeshOptions``: jaccpot's earlier distributed force stepped by Odisseo's own KDK)
+was removed in 2026-11 (multi-node plan, wave 3); this lane replaces it.
 """
 
 from __future__ import annotations
@@ -170,8 +166,8 @@ def mesh_runner_options(config: SimulationConfig) -> MeshRunnerOptions:
     Raises
     ------
     TypeError
-        For anything else (a ``MeshOptions`` selects the older mesh lane, so it
-        never gets here through ``integrate``).
+        For anything else (the older mesh lane's ``MeshOptions`` was removed in
+        2026-11 with that lane).
     """
     options = getattr(config, "mesh_options", None)
     if options is None:
@@ -180,8 +176,8 @@ def mesh_runner_options(config: SimulationConfig) -> MeshRunnerOptions:
         raise TypeError(
             "the multi-GPU runner lane takes config.mesh_options = a "
             "MeshRunnerOptions or None; got "
-            f"{type(options).__name__} (a MeshOptions selects the older mesh lane, "
-            "odisseo.mesh_coupling)"
+            f"{type(options).__name__} (the older mesh lane and its MeshOptions "
+            "were removed in 2026-11; MeshRunnerOptions is the replacement)"
         )
     return options
 
@@ -398,8 +394,7 @@ def integrate_mesh_runner_jaccpot(
     reason = mesh_runner_unsupported(config, scheduled=scheduled)
     if reason is not None:
         raise NotImplementedError(
-            f"the multi-GPU runner lane (fmm_mesh=True, fmm_preset='galaxy') does "
-            f"not run {reason}."
+            f"the multi-GPU runner lane (fmm_mesh=True) does not run {reason}."
         )
     if step_callback is not None:
         raise NotImplementedError(

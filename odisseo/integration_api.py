@@ -1,17 +1,11 @@
 from __future__ import annotations
 
-import warnings
 from typing import Callable, Optional
 
 import jax
 import jax.numpy as jnp
 
-from odisseo.jaccpot_coupling import (
-    FMM_LEAPFROG_DEPRECATION,
-    _fmm_leapfrog_warned_by_caller,
-    integrate_diffrax_jaccpot_active,
-    integrate_leapfrog_jaccpot_active,
-)
+from odisseo.jaccpot_coupling import integrate_diffrax_jaccpot_active
 from odisseo.option_classes import (
     DIRECT_ACC,
     DIRECT_ACC_FOR_LOOP,
@@ -64,7 +58,6 @@ def _resolve_fmm_runtime_profile(
 #: The lane names :func:`resolve_lane` can return, in dispatch-precedence order.
 INTEGRATION_LANES = (
     "direct",
-    "fmm_mesh",
     "fmm_mesh_runner",
     "fmm_blockstep",
     "fmm_differentiable",
@@ -73,25 +66,24 @@ INTEGRATION_LANES = (
 )
 
 
-def _mesh_runner_selected(config: SimulationConfig) -> bool:
-    """Whether an ``fmm_mesh`` run goes to the runner's multi-GPU mode.
+def _check_mesh_options(config: SimulationConfig) -> None:
+    """Refuse a ``config.mesh_options`` that is not the runner's (``fmm_mesh=True``).
 
-    A ``MeshOptions`` as ``config.mesh_options`` keeps the older mesh lane
-    (:mod:`odisseo.mesh_coupling`), whatever the preset, exactly as before. Otherwise
-    the production settings ask for the runner, as on one card: ``fmm_preset=
-    "galaxy"``, or a ``MeshRunnerOptions`` (:mod:`odisseo.mesh_runner_coupling`);
-    options it does not support then raise there, rather than run another lane.
+    The older mesh lane (``"fmm_mesh"``, ``odisseo.mesh_coupling``, its
+    ``MeshOptions``) was removed in 2026-11; its replacement is the runner's
+    multi-GPU mode, ``MeshRunnerOptions`` (or ``None``, its defaults).
     """
-    from odisseo.mesh_coupling import MeshOptions
     from odisseo.mesh_runner_coupling import MeshRunnerOptions
 
     options = getattr(config, "mesh_options", None)
-    if isinstance(options, MeshOptions):
-        return False
-    return (
-        isinstance(options, MeshRunnerOptions)
-        or str(config.fmm_preset).strip().lower() == "galaxy"
-    )
+    if options is not None and not isinstance(options, MeshRunnerOptions):
+        raise TypeError(
+            "config.mesh_options must be an odisseo.mesh_runner_coupling."
+            f"MeshRunnerOptions or None; got {type(options).__name__}. The older "
+            "mesh lane ('fmm_mesh', odisseo.mesh_coupling.MeshOptions) was removed "
+            "in 2026-11: lane 'fmm_mesh_runner' (MeshRunnerOptions) replaces it "
+            "(docs/source/parallelism.md)."
+        )
 
 
 def resolve_lane(
@@ -122,10 +114,10 @@ def resolve_lane(
     (``fixed_timestep=False``, diffrax steps).
 
     With ``fmm_mesh=True``: ``"fmm_mesh_runner"`` -- the same runner in its
-    multi-GPU mode (:mod:`odisseo.mesh_runner_coupling`) -- for ``fmm_preset=
-    "galaxy"`` or a ``MeshRunnerOptions`` as ``mesh_options``; ``"fmm_mesh"``, the
-    older mesh lane (:mod:`odisseo.mesh_coupling`), for a ``MeshOptions`` and
-    otherwise.
+    multi-GPU mode (:mod:`odisseo.mesh_runner_coupling`), with a
+    ``MeshRunnerOptions`` or ``None`` as ``mesh_options``. The older mesh lane
+    (``"fmm_mesh"``) was removed in 2026-11; anything else as ``mesh_options``
+    raises a ``TypeError`` naming the replacement.
 
     Parameters
     ----------
@@ -150,11 +142,14 @@ def resolve_lane(
     ------
     ValueError
         For an unknown ``acceleration_scheme``; a ``config.fmm_scheme`` on a lane
-        with its own step (block steps, the differentiable lane, the older mesh
-        lane, the adaptive lane); or a fixed-step run the runner does not do
+        with its own step (block steps, the differentiable lane, the adaptive
+        lane); or a fixed-step run the runner does not do
         (``fmm_refresh_every != 1``, ``fmm_refresh_after_position_update``, an
         active-particle schedule), whose loop was removed: the message names what
         still runs it.
+    TypeError
+        For a ``mesh_options`` that is not a ``MeshRunnerOptions`` with
+        ``fmm_mesh=True`` (the removed older mesh lane's ``MeshOptions``).
     """
     del num_particles, backend  # no lane depends on them since the 2026-11 switch
     direct_schemes = {
@@ -172,10 +167,9 @@ def resolve_lane(
         scheme = getattr(config, "fmm_scheme", None)
         own_step = None
         if bool(getattr(config, "fmm_mesh", False)):
-            if _mesh_runner_selected(config):
-                return "fmm_mesh_runner"
-            own_step = "fmm_mesh"
-        elif bool(getattr(config, "fmm_blockstep", False)):
+            _check_mesh_options(config)
+            return "fmm_mesh_runner"
+        if bool(getattr(config, "fmm_blockstep", False)):
             own_step = "fmm_blockstep"
         elif bool(getattr(config, "fmm_differentiable", False)):
             own_step = "fmm_differentiable"
@@ -267,27 +261,27 @@ def integrate(
       ``integrate_runner_jaccpot`` for the diagnostics of a plain run. A
       fixed-step run it does not do (``fmm_refresh_every != 1``,
       ``fmm_refresh_after_position_update``, an active-particle schedule) raises.
-    - ``FMM_ACC`` with ``config.fmm_mesh=True`` and ``fmm_preset="galaxy"`` (or a
-      ``MeshRunnerOptions`` as ``config.mesh_options``) routes to the same runner in
+    - ``FMM_ACC`` with ``config.fmm_mesh=True`` (``config.mesh_options`` a
+      ``MeshRunnerOptions`` or ``None``) routes to the same runner in
       its multi-GPU mode (lane ``"fmm_mesh_runner"``,
       :mod:`odisseo.mesh_runner_coupling`): one process drives every card of the
       mesh (``MeshRunnerOptions.ndev``; ``None``: every visible device), the same
       settings, field and snapshots as ``"fmm_runner"``; ``params.G`` and the
       softening are the solver's, and the final state is a host NumPy array in
-      input order. A ``MeshOptions`` keeps the older mesh lane (``"fmm_mesh"``,
-      :mod:`odisseo.mesh_coupling`) unchanged (``docs/source/parallelism.md``).
+      input order (``docs/source/parallelism.md``).
     - ``config.fmm_scheme`` (multi-node plan I1: nornax owns the integration
       schemes) is handed to ``"fmm_runner"``, with the scheme in jaccpot's runner: ``"nornax_kdk"`` is
       ``nornax.schemes.LeapfrogKDK``, bitwise to the runner's built-in KDK (``None``,
       the default). The lanes with their own step (``fmm_blockstep``,
-      ``fmm_differentiable``, the older ``"fmm_mesh"``) refuse it, and so does
+      ``fmm_differentiable``, the adaptive ``"fmm_forward"``) refuse it, and so does
       ``"fmm_mesh_runner"`` until I2.
 
-    Deprecated (``DeprecationWarning``): ``integrate_leapfrog_jaccpot_active``
-    (which ``integrate`` no longer reaches) in favour of ``"fmm_runner"``; the
-    older mesh lane's KDK (``"fmm_mesh"``, ``MeshOptions``) in favour of
-    ``"fmm_mesh_runner"`` (``docs/source/production_fmm.md``, "Integration
-    schemes").
+    Removed in 2026-11 (multi-node plan, wave 3; deprecated in I1): Odisseo's own
+    FMM leapfrog loop (``integrate_leapfrog_jaccpot_active``,
+    ``build_jitted_leapfrog_jaccpot_active``, lane ``"fmm_forward"`` with fixed
+    steps), replaced by ``"fmm_runner"``; the older mesh lane (``"fmm_mesh"``,
+    ``odisseo.mesh_coupling``), replaced by ``"fmm_mesh_runner"``
+    (``docs/source/production_fmm.md``, "Migration").
 
     Parameters
     ----------
@@ -328,19 +322,6 @@ def integrate(
 
     if lane == "direct":
         return _tagged(time_integration(primitive_state, mass, config, params))
-
-    if lane == "fmm_mesh":
-        from odisseo.mesh_coupling import MESH_KDK_DEPRECATION
-
-        # on the caller's line, once (the lane's own warning is silenced below)
-        warnings.warn(MESH_KDK_DEPRECATION, DeprecationWarning, stacklevel=2)
-        with warnings.catch_warnings():
-            warnings.filterwarnings(
-                "ignore",
-                message=r"The older mesh lane's own KDK",
-                category=DeprecationWarning,
-            )
-            return _tagged(_integrate_fmm_mesh(primitive_state, mass, config, params))
 
     if lane == "fmm_blockstep":
         return _tagged(
@@ -383,7 +364,7 @@ def integrate(
             out.snapshots if bool(config.return_snapshots) else out.state
         )
 
-    # lane == "fmm_forward" -- resolve_lane raises on anything else.
+    # lane == "fmm_forward" (adaptive steps) -- resolve_lane raises on anything else.
 
     fmm_preset, fmm_runtime_path, fmm_working_dtype = _resolve_fmm_runtime_profile(
         primitive_state,
@@ -469,25 +450,9 @@ def integrate(
         return_history=bool(config.return_snapshots),
     )
 
-    if bool(config.fixed_timestep):
-        # Odisseo's own FMM leapfrog loop (multi-node plan I1): deprecated, warned
-        # on the caller's line, once; the runner lane replaces it
-        warnings.warn(FMM_LEAPFROG_DEPRECATION, DeprecationWarning, stacklevel=2)
-        with _fmm_leapfrog_warned_by_caller():
-            states_or_final = integrate_leapfrog_jaccpot_active(**common_kwargs)
-    else:
-        states_or_final = integrate_diffrax_jaccpot_active(**common_kwargs)
+    # lane == "fmm_forward": the adaptive coupler lane (fixed_timestep=False)
+    states_or_final = integrate_diffrax_jaccpot_active(**common_kwargs)
 
-    if bool(config.return_snapshots) and bool(config.fixed_timestep):
-        # the coupler's history is the state after each step, without the initial
-        return _tagged(
-            _fixed_step_snapshots(
-                states_or_final,
-                config,
-                params,
-                initial=primitive_state,
-            )
-        )
     if bool(config.return_snapshots):
         states = jnp.asarray(states_or_final)
         target_snaps = int(config.num_snapshots)
@@ -510,8 +475,6 @@ def _fixed_step_snapshots(
     history: jnp.ndarray,
     config: SimulationConfig,
     params: SimulationParams,
-    *,
-    initial: Optional[jnp.ndarray] = None,
 ) -> SnapshotData:
     """Package a fixed-step history as every FMM lane and the direct lane do.
 
@@ -519,16 +482,13 @@ def _fixed_step_snapshots(
     num_snapshots``, for ``k = 0 .. num_snapshots - 1``: the initial state first,
     the final one not among them, at times ``k * K * dt``. That is the direct lane
     (``time_integration``) when ``num_snapshots`` divides ``num_timesteps``, and the
-    runner lane (:mod:`odisseo.runner_coupling`). Until 2026-10 the coupler's
-    snapshots were the states after steps ``1, 1 + K, ...`` -- one step late, the
-    initial state missing -- and both FMM lanes labelled them ``linspace(0, t_end,
-    num_snapshots)``, ``t_end`` on a state ``K`` steps short of it.
+    runner lane (:mod:`odisseo.runner_coupling`).
 
     Parameters
     ----------
     history:
-        ``[steps(+1), N, 2, 3]`` -- the state after every step, preceded by the
-        initial state unless ``initial`` is given.
+        ``[steps + 1, N, 2, 3]`` -- the initial state, then the state after every
+        step.
     config:
         ``num_timesteps`` and ``num_snapshots``.
     params:
@@ -542,10 +502,6 @@ def _fixed_step_snapshots(
         ``times`` and ``states``.
     """
     states = jnp.asarray(history)
-    if initial is not None:
-        states = jnp.concatenate(
-            [jnp.asarray(initial, dtype=states.dtype)[None], states], axis=0
-        )
     target_snaps = int(config.num_snapshots)
     if target_snaps <= 0:
         raise ValueError("num_snapshots must be positive")
@@ -555,71 +511,6 @@ def _fixed_step_snapshots(
     dt = params.t_end / num_steps
     times = jnp.arange(snap_states.shape[0]) * (stride * dt)
     return SnapshotData(times=times, states=snap_states)
-
-
-def _integrate_fmm_mesh(primitive_state, mass, config, params):
-    """Run the multi-GPU mesh lane and return a plain final state.
-
-    Returns the same shape as every other :func:`integrate` lane rather than the
-    richer ``MeshResult``, so a caller does not have to branch on the config to know
-    what it was handed. The dropped diagnostics -- per-step timings, the first
-    force's per-device pair counts and overflow flags, the conserved quantities --
-    are not recoverable from the state, so anything that needs them should call
-    ``mesh_coupling.integrate_mesh_jaccpot`` directly.
-
-    Parameters
-    ----------
-    primitive_state:
-        ``(N, 2, 3)`` positions and velocities.
-    mass:
-        ``(N,)`` particle masses.
-    config:
-        Must carry ``fmm_mesh=True`` and a ``mesh_options``.
-    params:
-        Simulation parameters; ``params.G`` is used.
-
-    Returns
-    -------
-    The final ``(N, 2, 3)`` state.
-    """
-    from odisseo.mesh_coupling import MeshOptions, integrate_mesh_jaccpot
-
-    options = getattr(config, "mesh_options", None)
-    if options is None:
-        raise ValueError(
-            "config.fmm_mesh=True needs config.mesh_options set; there is no "
-            "default, because MeshOptions has no default dt and this lane runs a "
-            "FIXED-step KDK -- a guessed dt would be silently wrong rather than "
-            "loudly wrong. Size it from the dynamical time at the smallest scale "
-            "you care to resolve."
-        )
-    if not isinstance(options, MeshOptions):
-        raise TypeError(
-            "config.mesh_options must be a MeshOptions or None; got "
-            f"{type(options).__name__}"
-        )
-    if bool(getattr(config, "fmm_differentiable", False)):
-        raise NotImplementedError(
-            "the mesh lane has no gradient path. `make_force_evaluator` does accept "
-            "differentiable=True, but the rollout has no adjoint and the halo "
-            "exchange needs jax >= 0.9.1 for its reverse pass. Use "
-            "fmm_differentiable on a single device, or drop it here."
-        )
-    if bool(getattr(config, "fmm_blockstep", False)):
-        raise NotImplementedError(
-            "the mesh lane is a fixed-step KDK and has no rung machinery; "
-            "fmm_mesh and fmm_blockstep cannot both be set. DistributedBlockStepFMM "
-            "exists but is a separate lane on jaccpot's mutual path."
-        )
-
-    n_steps = int(config.num_timesteps)
-    if n_steps < 1:
-        raise ValueError(
-            f"config.num_timesteps must be >= 1 for the mesh lane; got {n_steps!r}"
-        )
-    return integrate_mesh_jaccpot(
-        primitive_state, mass, config, params, options=options, n_steps=n_steps
-    ).state
 
 
 def _integrate_fmm_blockstep(primitive_state, mass, config, params):

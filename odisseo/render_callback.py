@@ -10,9 +10,8 @@ Usage (host side):
 
     sink = FrameSink()
     cb = make_density_step_callback(sink, bounds_min, bounds_max, res=256, stride=20)
-    integrate_leapfrog_jaccpot_active(..., return_history=False,
-                                      step_callback=cb, step_callback_stride=20)
-    jax.block_until_ready(final_state)   # flush pending debug callbacks
+    out = integrate_runner_jaccpot(..., step_callback=cb, step_callback_stride=20)
+    jax.block_until_ready(out.state)     # flush pending debug callbacks
     sink.encode("movie.gif", fps=30)
 
 Only ``num_steps // stride`` small grids are transferred (e.g. 100 x 256x256xf32

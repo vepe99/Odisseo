@@ -92,26 +92,22 @@ runner a scheme:
 
 It selects nothing since the 2026-11 switch (every fixed-step run is the
 runner's) and changes no setting. The lanes with their own step --
-`fmm_blockstep`, `fmm_differentiable`, the adaptive `"fmm_forward"`, the older
-`"fmm_mesh"` -- refuse it, and so does `"fmm_mesh_runner"` until the plan's I2
+`fmm_blockstep`, `fmm_differentiable`, the adaptive `"fmm_forward"` -- refuse it, and so does `"fmm_mesh_runner"` until the plan's I2
 gives the multi-GPU runner the same seam. The scheme is part of the kept
 runner's key: switching it builds a new runner and compiles.
 
-**Deprecated** (`DeprecationWarning`, once, on the caller's line; nothing is
-removed yet):
+**Removed** in 2026-11 (multi-node plan, wave 3; deprecated in I1):
 
 - Odisseo's own FMM leapfrog loop: `integrate_leapfrog_jaccpot_active`,
   `build_jitted_leapfrog_jaccpot_active`, and lane `"fmm_forward"` with
-  `fixed_timestep=True` -- replaced by `"fmm_runner"` (`fmm_preset="galaxy"`,
-  optionally `fmm_scheme="nornax_kdk"`);
-- the older mesh lane's KDK (`"fmm_mesh"`, `MeshOptions`,
-  `mesh_coupling.integrate_mesh_jaccpot`) -- replaced by `"fmm_mesh_runner"`
-  (`docs/source/parallelism.md`).
+  `fixed_timestep=True` -- replaced by `"fmm_runner"` (above; optionally
+  `fmm_scheme="nornax_kdk"`);
+- the older mesh lane (`"fmm_mesh"`, `MeshOptions`, `odisseo.mesh_coupling`) --
+  replaced by `"fmm_mesh_runner"` (`docs/source/parallelism.md`).
 
-`integrate()` no longer reaches the deprecated loop. The adaptive diffrax FMM
-path (`fixed_timestep=False`), the block-step lane (nornax's block KDK already)
-and the differentiable lane are not leapfrog loops the runner replaces and are
-not deprecated.
+The adaptive diffrax FMM path (`fixed_timestep=False`), the block-step lane
+(nornax's block KDK already) and the differentiable lane are not leapfrog loops
+the runner replaces and stay.
 
 ## Settings
 
@@ -219,13 +215,12 @@ With `fmm_mesh=True` the same runner runs in its multi-GPU mode (jaccpot
 particles are decomposed into Morton domains, each segment is one
 `jit(shard_map(scan))` program on the fused multi-GPU lane, the domains are
 re-balanced between segments, and a segment that outgrows a capacity on any card is
-re-planned and re-run on all of them. `resolve_lane()` picks it for
-
-- `fmm_mesh=True` with `fmm_preset="galaxy"`, or
-- `fmm_mesh=True` with a `MeshRunnerOptions` as `config.mesh_options`;
-
-a `MeshOptions` there keeps the older mesh lane (`"fmm_mesh"`,
-`odisseo.mesh_coupling`), whatever the preset (`docs/source/parallelism.md`).
+re-planned and re-run on all of them. `resolve_lane()` picks it for every
+`fmm_mesh=True` run, with a `MeshRunnerOptions` (or `None`, its defaults) as
+`config.mesh_options`; anything else there raises a `TypeError` naming it (the
+older mesh lane and its `MeshOptions` were removed in 2026-11;
+`docs/source/parallelism.md`). Its settings are the single-card lane's
+(`runner_settings`, the same two profiles).
 
 ```python
 from odisseo.mesh_runner_coupling import MeshRunnerOptions
@@ -291,6 +286,8 @@ What the 2026-11 switch (multi-node plan, wave 3) changed for a fixed-step
 | `fmm_preset="large_n_gpu"`: the coupler's loop on the large-N lane | the runner, profile `"config"`, fp32 force as before |
 | `fmm_preset="galaxy"`, or the auto large-N profile on a GPU | unchanged: the runner at jaccpot's galaxy settings |
 | the coupler's engine knobs (tree, near field, traversal, static shapes) | not read; warned once (above) |
+| `fmm_mesh=True` with a `MeshOptions` (the older mesh lane) | removed: a `TypeError`; `MeshRunnerOptions` (lane `"fmm_mesh_runner"`) |
+| `integrate_leapfrog_jaccpot_active`, `build_jitted_leapfrog_jaccpot_active`, `mesh_coupling.integrate_mesh_jaccpot` | removed: `integrate()` (or `runner_coupling.integrate_runner_jaccpot` / `mesh_runner_coupling.integrate_mesh_runner_jaccpot` for the diagnostics, restart files and callbacks) |
 | `fmm_refresh_every > 1`, `fmm_refresh_after_position_update=True`, an active-particle schedule | a `ValueError` naming what still runs them (`fmm_blockstep=True` for individual timesteps, `fixed_timestep=False` for the adaptive lane) |
 | a MAC other than `"dehnen"` / `"dehnen_error"` | a `ValueError` (the adaptive lane keeps the others) |
 | CPU backend: the runner refused it | the fused lane's CPU route (above) |

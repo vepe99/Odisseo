@@ -44,7 +44,9 @@ pip install .
 Use `odisseo.integrate(...)` as the main entrypoint. Backend selection is done via `SimulationConfig.acceleration_scheme`:
 
 - direct schemes (`DIRECT_ACC`, `DIRECT_ACC_LAXMAP`, `DIRECT_ACC_MATRIX`, ...)
-- `FMM_ACC` for the Jaccpot-FMM coupler workflow
+- `FMM_ACC` for jaccpot's FMM: fixed-step runs on jaccpot's `ProductionRunner` (lane
+  `fmm_runner`, any `N`, CPU or GPU), adaptive steps (`fixed_timestep=False`) on the
+  coupler; plus the block-step, multi-GPU and differentiable lanes
 
 **The jaccpot lanes (`FMM_ACC`, the block-step lane, the mesh lane, the differentiable
 FMM) require `jax_enable_x64=True`.** Put `jax.config.update("jax_enable_x64", True)`
@@ -57,19 +59,19 @@ any more. x64 does not make a run float64: the dtype of your state and masses
 decides that, and arrays created without a `dtype` become float64 under x64, so pass
 `dtype=jnp.float32` for a float32 run.
 
-Key FMM tuning fields in `SimulationConfig`:
-- `fmm_refresh_every`, `fmm_leaf_size`, `fmm_max_order`
-- `fmm_preset`, `fmm_basis` (`"real"`, jaccpot's only basis), `fmm_theta`, `fmm_mac_type`
-- `fmm_nearfield_mode`, `fmm_nearfield_edge_chunk_size`, `fmm_tree_leaf_target`
-- `fmm_auto_large_n_profile`, `fmm_large_n_min_particles`, `fmm_large_n_force_fp32`
+Key FMM fields in `SimulationConfig` for the runner lane (`docs/source/production_fmm.md`):
+- `fmm_leaf_size`, `fmm_max_order`, `fmm_theta`, `fmm_mac_type` (`"dehnen"` or
+  `"dehnen_error"` with `fmm_adaptive_eps`): its settings at small `N` / on a CPU
+- `fmm_preset="galaxy"`, or `fmm_auto_large_n_profile` with `fmm_large_n_min_particles`
+  on a GPU: jaccpot's galaxy settings (leaf 64, p6, eq (16a) MAC); `fmm_galaxy_settings`
+  (a `jaccpot.production.GalaxySettings`) sets them explicitly
+- `fmm_scheme` (`"nornax_kdk"`): nornax's integration scheme in the runner
 
-`fmm_runtime_path` and `fmm_farfield_mode` are accepted and ignored since the
-jaccpot 2026-10 cleanup: the preset alone selects jaccpot's lane, and every
-far-field mode jaccpot still accepts runs the same flat far-pair list.
-
-Large-`N` GPU runs can auto-switch from `fmm_preset="fast"` to jaccpot's radix
-fast lane (the `"large_n_gpu"` preset) when `fmm_auto_large_n_profile=True` and
-the particle count reaches `fmm_large_n_min_particles`.
+The coupler's engine knobs (`fmm_nearfield_mode`, `fmm_tree_leaf_target`, ...) are read
+by the adaptive lane only; the runner warns once when one is set. Odisseo's own FMM
+leapfrog loop (`integrate_leapfrog_jaccpot_active`) and the older mesh lane were removed
+in 2026-11; `fmm_refresh_every` other than 1 and active-particle schedules have no
+fixed-step lane any more (use `fmm_blockstep=True` for individual timesteps).
 
 Example:
 
@@ -82,13 +84,12 @@ cfg = SimulationConfig(
     acceleration_scheme=FMM_ACC,
     num_timesteps=200,
     fixed_timestep=True,
-    fmm_refresh_every=4,
 )
 params = SimulationParams(G=1.0, t_end=1.0)
-state_out = integrate(state0, masses, cfg, params)
+state_out = integrate(state0, masses, cfg, params)   # lane "fmm_runner"
 ```
 
-Galaxy-disk large-`N` example (auto-selects jaccpot radix fast lane on GPU):
+Galaxy-disk large-`N` example (jaccpot's runner at the galaxy settings on a GPU):
 
 ```bash
 python notebooks/scalability/galaxy_disk_fmm_large_n.py --n-particles 200000 --num-steps 200

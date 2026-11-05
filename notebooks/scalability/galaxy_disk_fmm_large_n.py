@@ -23,8 +23,8 @@ from odisseo.jaccpot_coupling import (
     _large_n_environment_overrides,
     _temporary_large_n_environment,
     integrate_diffrax_jaccpot_active,
-    integrate_leapfrog_jaccpot_active,
 )
+from odisseo.runner_coupling import integrate_runner_jaccpot
 from odisseo.render_callback import (
     FrameSink,
     PositionSink,
@@ -990,6 +990,41 @@ def _resolve_fmm_profile(config: SimulationConfig) -> tuple[str, str, jnp.dtype]
     )
 
 
+def _runner_fixed_step(
+    state0: jnp.ndarray,
+    mass: jnp.ndarray,
+    config: SimulationConfig,
+    params: SimulationParams,
+    *,
+    history: bool = False,
+    timing_stats: dict | None = None,
+    step_callback=None,
+    step_callback_stride: int = 1,
+) -> jnp.ndarray:
+    """A fixed-step run on jaccpot's runner (Odisseo's own FMM loop was removed in
+    2026-11): the final state, or with ``history`` the state after every step
+    (``[num_timesteps, N, 2, 3]``, the initial state not included, as the removed
+    loop returned it). ``timing_stats`` gets the runner's wall time and counters."""
+    steps = int(config.num_timesteps)
+    run_config = config._replace(return_snapshots=bool(history), num_snapshots=steps)
+    out = integrate_runner_jaccpot(
+        state0,
+        mass,
+        run_config,
+        params,
+        step_callback=step_callback,
+        step_callback_stride=int(step_callback_stride),
+    )
+    if timing_stats is not None:
+        timing_stats["runner_wall_seconds"] = float(out.run.wall_s)
+        timing_stats["runner_segments"] = int(out.run.segment)
+        timing_stats["runner_steps"] = int(out.run.step)
+    if not history:
+        return out.state
+    states = np.asarray(out.snapshots.states)
+    return jnp.asarray(np.concatenate([states[1:], np.asarray(out.state)[None]], 0))
+
+
 def _run_perf_mode_once(
     state0: jnp.ndarray,
     mass: jnp.ndarray,
@@ -1006,51 +1041,7 @@ def _run_perf_mode_once(
     if bool(profile_breakdown):
         if bool(config.fixed_timestep):
             final_state = jax.block_until_ready(
-                integrate_leapfrog_jaccpot_active(
-                    state0,
-                    mass,
-                    config,
-                    params,
-                    num_steps=int(config.num_timesteps),
-                    refresh_every=int(config.fmm_refresh_every),
-                    leaf_size=int(config.fmm_leaf_size),
-                    max_order=int(config.fmm_max_order),
-                    fmm_preset=fmm_preset,
-                    fmm_runtime_path=fmm_runtime_path,
-                    fmm_working_dtype=fmm_dtype,
-                    fmm_basis=str(config.fmm_basis),
-                    fmm_theta=float(config.fmm_theta),
-                    fmm_mac_type=str(config.fmm_mac_type),
-                    fmm_farfield_mode=str(config.fmm_farfield_mode),
-                    fmm_m2l_chunk_size=config.fmm_m2l_chunk_size,
-                    fmm_nearfield_mode=str(config.fmm_nearfield_mode),
-                    fmm_nearfield_edge_chunk_size=int(config.fmm_nearfield_edge_chunk_size),
-                    fmm_tree_build_mode=str(config.fmm_tree_build_mode),
-                    fmm_tree_leaf_target=int(config.fmm_tree_leaf_target),
-                    fmm_fixed_order=config.fmm_fixed_order,
-                    fmm_jit_tree=config.fmm_jit_tree,
-                    fmm_jit_traversal=config.fmm_jit_traversal,
-                    fmm_max_pair_queue=config.fmm_max_pair_queue,
-                    fmm_pair_process_block=config.fmm_pair_process_block,
-                    fmm_max_interactions_per_node=config.fmm_max_interactions_per_node,
-                    fmm_max_neighbors_per_leaf=config.fmm_max_neighbors_per_leaf,
-                    fmm_prepare_stage_memory_split_enabled=(
-                        config.fmm_prepare_stage_memory_split_enabled
-                    ),
-                    enforce_static_shape_contract=bool(
-                        config.fmm_enforce_static_shape_contract
-                    ),
-                    static_shape_warmup_prepares=int(
-                        config.fmm_static_shape_warmup_prepares
-                    ),
-                    rematerialize_between_refresh=bool(
-                        config.fmm_rematerialize_between_refresh
-                    ),
-                    return_history=False,
-                    perf_warmup_runs=int(warmup_runs),
-                    perf_measure_runs=int(measure_runs),
-                    timing_stats=timing_stats,
-                )
+                _runner_fixed_step(state0, mass, config, params, timing_stats=timing_stats)
             )
         else:
             final_state = jax.block_until_ready(
@@ -1154,7 +1145,6 @@ def _run_render_mode(
     ``stride`` steps (fire-and-forget), so the GPU is not stalled. Frames are
     encoded to a movie after ``block_until_ready`` flushes the callbacks.
     """
-    fmm_preset, fmm_runtime_path, fmm_dtype = _resolve_fmm_profile(config)
     axes = _PROJECTION_AXES.get(str(projection).lower(), (0, 1))
     pos0 = state0[:, 0, :]
     bmin = np.asarray(jax.device_get(jnp.min(pos0, axis=0)), dtype=np.float64)
@@ -1180,41 +1170,11 @@ def _run_render_mode(
 
     t0 = time.perf_counter()
     final_state = jax.block_until_ready(
-        integrate_leapfrog_jaccpot_active(
+        _runner_fixed_step(
             state0,
             mass,
             config,
             params,
-            num_steps=int(config.num_timesteps),
-            refresh_every=int(config.fmm_refresh_every),
-            leaf_size=int(config.fmm_leaf_size),
-            max_order=int(config.fmm_max_order),
-            fmm_preset=fmm_preset,
-            fmm_runtime_path=fmm_runtime_path,
-            fmm_working_dtype=fmm_dtype,
-            fmm_basis=str(config.fmm_basis),
-            fmm_theta=float(config.fmm_theta),
-            fmm_mac_type=str(config.fmm_mac_type),
-            fmm_farfield_mode=str(config.fmm_farfield_mode),
-            fmm_m2l_chunk_size=config.fmm_m2l_chunk_size,
-            fmm_nearfield_mode=str(config.fmm_nearfield_mode),
-            fmm_nearfield_edge_chunk_size=int(config.fmm_nearfield_edge_chunk_size),
-            fmm_tree_build_mode=str(config.fmm_tree_build_mode),
-            fmm_tree_leaf_target=int(config.fmm_tree_leaf_target),
-            fmm_fixed_order=config.fmm_fixed_order,
-            fmm_jit_tree=config.fmm_jit_tree,
-            fmm_jit_traversal=config.fmm_jit_traversal,
-            fmm_max_pair_queue=config.fmm_max_pair_queue,
-            fmm_pair_process_block=config.fmm_pair_process_block,
-            fmm_max_interactions_per_node=config.fmm_max_interactions_per_node,
-            fmm_max_neighbors_per_leaf=config.fmm_max_neighbors_per_leaf,
-            fmm_prepare_stage_memory_split_enabled=(
-                config.fmm_prepare_stage_memory_split_enabled
-            ),
-            rematerialize_between_refresh=bool(
-                config.fmm_rematerialize_between_refresh
-            ),
-            return_history=False,
             step_callback=step_cb,
             step_callback_stride=int(stride),
         )
@@ -1284,48 +1244,8 @@ def _run_perf_mode_with_history(
 
     if bool(config.fixed_timestep):
         history = jax.block_until_ready(
-            integrate_leapfrog_jaccpot_active(
-                state0,
-                mass,
-                config,
-                params,
-                num_steps=int(config.num_timesteps),
-                refresh_every=int(config.fmm_refresh_every),
-                leaf_size=int(config.fmm_leaf_size),
-                max_order=int(config.fmm_max_order),
-                fmm_preset=fmm_preset,
-                fmm_runtime_path=fmm_runtime_path,
-                fmm_working_dtype=fmm_dtype,
-                fmm_basis=str(config.fmm_basis),
-                fmm_theta=float(config.fmm_theta),
-                fmm_mac_type=str(config.fmm_mac_type),
-                fmm_farfield_mode=str(config.fmm_farfield_mode),
-                fmm_m2l_chunk_size=config.fmm_m2l_chunk_size,
-                fmm_nearfield_mode=str(config.fmm_nearfield_mode),
-                fmm_nearfield_edge_chunk_size=int(config.fmm_nearfield_edge_chunk_size),
-                fmm_tree_build_mode=str(config.fmm_tree_build_mode),
-                fmm_tree_leaf_target=int(config.fmm_tree_leaf_target),
-                fmm_fixed_order=config.fmm_fixed_order,
-                fmm_jit_tree=config.fmm_jit_tree,
-                fmm_jit_traversal=config.fmm_jit_traversal,
-                fmm_max_pair_queue=config.fmm_max_pair_queue,
-                fmm_pair_process_block=config.fmm_pair_process_block,
-                fmm_max_interactions_per_node=config.fmm_max_interactions_per_node,
-                fmm_max_neighbors_per_leaf=config.fmm_max_neighbors_per_leaf,
-                fmm_prepare_stage_memory_split_enabled=(
-                    config.fmm_prepare_stage_memory_split_enabled
-                ),
-                enforce_static_shape_contract=bool(
-                    config.fmm_enforce_static_shape_contract
-                ),
-                static_shape_warmup_prepares=int(
-                    config.fmm_static_shape_warmup_prepares
-                ),
-                rematerialize_between_refresh=bool(
-                    config.fmm_rematerialize_between_refresh
-                ),
-                return_history=True,
-                timing_stats=timing_stats,
+            _runner_fixed_step(
+                state0, mass, config, params, history=True, timing_stats=timing_stats
             )
         )
     else:

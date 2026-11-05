@@ -11,8 +11,8 @@ The multi-node accuracy plan's U1: nornax owns the integration schemes, jaccpot'
 * THE GATE: ``fmm_scheme="nornax_kdk"`` computes what the built-in runner lane
   computes, bit for bit (an NFW halo, its parameters traced; 6 steps), through
   jaccpot programs of its own;
-* the deprecations: Odisseo's own FMM leapfrog loop and the older mesh lane's KDK
-  warn ``DeprecationWarning`` once, on the caller's line, naming the replacement.
+* since the 2026-11 switch a default fixed-step run reaches the runner without a
+  ``DeprecationWarning`` (the deprecated loops were removed).
 
 Small-N operating point and CPU trick as ``test_runner_lane.py``.
 """
@@ -25,10 +25,8 @@ import jax.numpy as jnp
 import numpy as np
 import pytest
 
-from odisseo import integration_api as api
 from odisseo import runner_coupling as rc
 from odisseo.integration_api import integrate, resolve_lane
-from odisseo.mesh_coupling import MESH_KDK_DEPRECATION, MeshOptions
 from odisseo.mesh_runner_coupling import mesh_runner_unsupported
 from odisseo.option_classes import FMM_ACC, SimulationConfig, SimulationParams
 
@@ -78,10 +76,9 @@ def test_a_scheme_selects_the_runner_lane(overrides, kw, lane):
     [
         dict(fmm_blockstep=True),
         dict(fmm_differentiable=True),
-        dict(fmm_mesh=True, mesh_options=MeshOptions(dt=1e-3)),
         dict(fixed_timestep=False),
     ],
-    ids=["blockstep", "differentiable", "older_mesh", "adaptive"],
+    ids=["blockstep", "differentiable", "adaptive"],
 )
 def test_the_lanes_with_their_own_step_refuse_a_scheme(overrides):
     cfg = SimulationConfig(
@@ -158,42 +155,3 @@ def test_a_default_fixed_step_run_warns_no_deprecation(monkeypatch):
     )
     assert lane == "fmm_runner"
     assert caught == []
-
-
-def test_the_loop_warns_when_called_directly():
-    from odisseo.jaccpot_coupling import integrate_leapfrog_jaccpot_active
-
-    cfg = SimulationConfig(N_particles=6, acceleration_scheme=FMM_ACC)
-    with pytest.warns(DeprecationWarning, match="fmm_runner"):
-        with pytest.raises(ValueError, match="num_steps must be positive"):
-            integrate_leapfrog_jaccpot_active(
-                jnp.zeros((6, 2, 3)), jnp.ones(6), cfg, SimulationParams(), num_steps=0
-            )
-
-
-def test_the_older_mesh_lane_warns_once_on_the_callers_line(monkeypatch):
-    def fake_old():
-        # the lane's own warning, as integrate_mesh_jaccpot issues it
-        warnings.warn(MESH_KDK_DEPRECATION, DeprecationWarning, stacklevel=2)
-
-    calls = []
-
-    def fake_lane(state, mass, config, params):
-        calls.append(config.mesh_options)
-        fake_old()
-        return state
-
-    monkeypatch.setattr(api, "_integrate_fmm_mesh", fake_lane)
-    state = jnp.zeros((6, 2, 3), jnp.float32)
-    cfg = SimulationConfig(
-        N_particles=6,
-        acceleration_scheme=FMM_ACC,
-        fmm_mesh=True,
-        mesh_options=MeshOptions(dt=1e-3),
-    )
-    (_, lane), caught = _caught(
-        lambda: integrate(state, jnp.ones(6), cfg, SimulationParams(), return_lane=True)
-    )
-    assert lane == "fmm_mesh" and len(calls) == 1
-    assert len(caught) == 1 and caught[0].filename == __file__
-    assert "fmm_mesh_runner" in str(caught[0].message)
