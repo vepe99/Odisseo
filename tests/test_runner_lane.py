@@ -36,6 +36,7 @@ runner tests, on the geometric MAC unless a test says otherwise.
 from __future__ import annotations
 
 import dataclasses
+import warnings
 
 import jax
 import jax.numpy as jnp
@@ -135,44 +136,31 @@ def fused_lane(monkeypatch):
 @pytest.mark.parametrize(
     "overrides, kw, lane",
     [
+        # since the 2026-11 switch every fixed-step run is the runner's: any N,
+        # any backend, any preset
         (
             dict(fmm_preset="galaxy"),
             dict(backend="cpu", num_particles=10),
             "fmm_runner",
         ),
         (dict(), dict(backend="gpu", num_particles=200_000), "fmm_runner"),
-        (dict(), dict(backend="gpu", num_particles=199_999), "fmm_forward"),
-        (dict(), dict(backend="cpu", num_particles=10**7), "fmm_forward"),
-        (dict(N_particles=200_000), dict(backend="gpu"), "fmm_runner"),
+        (dict(), dict(backend="gpu", num_particles=199_999), "fmm_runner"),
+        (dict(), dict(backend="cpu", num_particles=10**7), "fmm_runner"),
+        (dict(), dict(backend="cpu", num_particles=10), "fmm_runner"),
         (
             dict(fmm_preset="large_n_gpu"),
             dict(backend="gpu", num_particles=10**7),
-            "fmm_forward",
+            "fmm_runner",
         ),
         (
             dict(fmm_auto_large_n_profile=False),
             dict(backend="gpu", num_particles=10**7),
-            "fmm_forward",
+            "fmm_runner",
         ),
-        # the auto profile keeps the coupler for what the runner does not run
+        # adaptive steps: the coupler's diffrax lane
         (
             dict(fixed_timestep=False),
             dict(backend="gpu", num_particles=10**7),
-            "fmm_forward",
-        ),
-        (
-            dict(fmm_refresh_every=2),
-            dict(backend="gpu", num_particles=10**7),
-            "fmm_forward",
-        ),
-        (
-            dict(fmm_refresh_after_position_update=True),
-            dict(backend="gpu", num_particles=10**7),
-            "fmm_forward",
-        ),
-        (
-            dict(),
-            dict(backend="gpu", num_particles=10**7, scheduled=True),
             "fmm_forward",
         ),
         # the other FMM lanes keep their precedence
@@ -197,39 +185,150 @@ def test_resolve_lane_names_the_runner_lane(overrides, kw, lane):
     assert resolve_lane(cfg, **kw) == lane
 
 
+@pytest.mark.parametrize(
+    "overrides, kw",
+    [
+        (dict(fmm_refresh_every=2), dict()),
+        (dict(fmm_refresh_after_position_update=True), dict()),
+        (dict(), dict(scheduled=True)),
+        (dict(fmm_preset="galaxy"), dict(scheduled=True)),
+    ],
+)
+def test_what_only_the_removed_loop_ran_raises(overrides, kw):
+    """The fixed-step options only Odisseo's own FMM loop ran have no lane since
+    the 2026-11 switch: ``resolve_lane`` (and so ``integrate``) says so, naming
+    what still runs them."""
+    cfg = SimulationConfig(**{"acceleration_scheme": FMM_ACC, **overrides})
+    with pytest.raises(ValueError, match="was removed.*fmm_blockstep.*fixed_timestep"):
+        resolve_lane(cfg, **kw)
+
+
 def test_integrate_dispatches_on_the_lane_it_reports(monkeypatch):
-    """The auto profile on a GPU reaches the runner entry point; with an active
-    schedule it keeps the coupler's ``large_n_gpu`` loop; ``integrate`` reports the
-    lane that ran."""
+    """Every fixed-step run reaches the runner entry point, on a CPU too; with an
+    active schedule ``integrate`` raises before running anything."""
     calls = []
 
     def fake_runner(state, mass, config, params, *, scheduled):
         calls.append(("runner", scheduled))
         return rc.RunnerResult(state=state, snapshots=None, run=None)
 
-    def fake_coupler(*args, **kwargs):
-        calls.append(("coupler", kwargs["fmm_preset"]))
-        return kwargs["state"]
-
     monkeypatch.setattr(rc, "integrate_runner_jaccpot", fake_runner)
-    monkeypatch.setattr(api, "integrate_leapfrog_jaccpot_active", fake_coupler)
-    monkeypatch.setattr(api.jax, "default_backend", lambda: "gpu")
     state = jnp.zeros((6, 2, 3), jnp.float32)
     mass = jnp.ones((6,), jnp.float32)
-    cfg = SimulationConfig(
-        N_particles=6,
-        acceleration_scheme=FMM_ACC,
-        num_timesteps=3,
-        fmm_large_n_min_particles=6,
-    )
+    cfg = SimulationConfig(N_particles=6, acceleration_scheme=FMM_ACC, num_timesteps=3)
     params = SimulationParams()
-    assert integrate(state, mass, cfg, params, return_lane=True)[1] == "fmm_runner"
+    for backend in ("cpu", "gpu"):
+        monkeypatch.setattr(api.jax, "default_backend", lambda b=backend: b)
+        assert integrate(state, mass, cfg, params, return_lane=True)[1] == "fmm_runner"
     schedule = jnp.zeros((3, 6), jnp.int32)
-    out, lane = integrate(
-        state, mass, cfg, params, active_indices_schedule=schedule, return_lane=True
+    with pytest.raises(ValueError, match="active-particle schedule"):
+        integrate(state, mass, cfg, params, active_indices_schedule=schedule)
+    assert calls == [("runner", False), ("runner", False)]
+
+
+@pytest.mark.parametrize(
+    "overrides, kw, profile",
+    [
+        (dict(), dict(backend="cpu", num_particles=10**7), "config"),
+        (dict(), dict(backend="gpu", num_particles=199_999), "config"),
+        # the automatic large-N profile: the galaxy settings, as before the switch
+        (dict(), dict(backend="gpu", num_particles=200_000), "galaxy"),
+        (
+            dict(fmm_auto_large_n_profile=False),
+            dict(backend="gpu", num_particles=10**7),
+            "config",
+        ),
+        (
+            dict(fmm_preset="large_n_gpu"),
+            dict(backend="gpu", num_particles=10**7),
+            "config",
+        ),
+        (dict(fmm_preset="galaxy"), dict(backend="cpu", num_particles=10), "galaxy"),
+        (
+            dict(fmm_galaxy_settings=SMALL_N),
+            dict(backend="cpu", num_particles=10),
+            "galaxy",
+        ),
+    ],
+)
+def test_runner_profile(overrides, kw, profile):
+    cfg = SimulationConfig(**{"acceleration_scheme": FMM_ACC, **overrides})
+    assert rc.runner_profile(cfg, **kw) == profile
+
+
+def test_the_config_profile_maps_the_coupler_knobs():
+    """A config that sets nothing runs Odisseo's small-N defaults on the runner:
+    leaf 16, p4, theta 0.6, the geometric MAC, no cell level floor, at the state's
+    precision -- what the removed coupler loop read."""
+    f32, f64 = jnp.float32, jnp.float64
+    cfg = SimulationConfig(acceleration_scheme=FMM_ACC)
+    default = rc.config_settings(cfg, f32)
+    assert default == GalaxySettings(
+        leaf_size=16,
+        max_order=4,
+        theta=0.6,
+        cell_min_level=None,
+        mac_type="dehnen",
+        adaptive_eps=None,
+        precision="fp32",
     )
-    assert lane == "fmm_forward"
-    assert calls == [("runner", False), ("coupler", "large_n_gpu")]
+    assert rc.config_settings(cfg, f64).precision == "fp64"
+    # large_n_gpu kept its fp32 switch
+    nb = cfg._replace(fmm_preset="large_n_gpu")
+    assert rc.config_settings(nb, f64).precision == "fp32"
+    assert (
+        rc.config_settings(nb._replace(fmm_large_n_force_fp32=False), f64).precision
+        == "fp64"
+    )
+    mapped = rc.config_settings(
+        cfg._replace(
+            fmm_leaf_size=32, fmm_max_order=6, fmm_theta=0.4, softening_kernel="plummer"
+        ),
+        f32,
+    )
+    assert (mapped.leaf_size, mapped.max_order, mapped.theta) == (32, 6, 0.4)
+    assert mapped.softening_kernel == "plummer"
+    # fmm_fixed_order is the order the coupler ran when set
+    assert rc.config_settings(cfg._replace(fmm_fixed_order=5), f32).max_order == 5
+    err = rc.config_settings(
+        cfg._replace(fmm_mac_type="dehnen_error", fmm_adaptive_eps=3e-4), f32
+    )
+    assert (err.mac_type, err.adaptive_eps) == ("dehnen_error", 3e-4)
+    with pytest.raises(ValueError, match="fmm_adaptive_eps"):
+        rc.config_settings(cfg._replace(fmm_mac_type="dehnen_error"), f32)
+    with pytest.raises(ValueError, match="Dehnen MAC"):
+        rc.config_settings(cfg._replace(fmm_mac_type="bh"), f32)
+    # runner_settings dispatches on the profile
+    assert rc.runner_settings(cfg, f32, num_particles=10, backend="cpu") == default
+    assert (
+        rc.runner_settings(cfg, f32, num_particles=10**7, backend="gpu")
+        == GALAXY_SETTINGS
+    )
+
+
+def test_ignored_knobs_warn_once():
+    """The coupler's engine knobs are not read by the runner: a config that sets
+    one is told so once per process and knob set, naming the settings that run."""
+    rc._WARNED_IGNORED.clear()
+    cfg = SimulationConfig(acceleration_scheme=FMM_ACC)
+    settings = rc.config_settings(cfg, jnp.float32)
+    assert rc.ignored_knobs(cfg, settings, "config") == ()
+    # the coupler tied the tree's leaf target to the leaf size: no warning then
+    tied = cfg._replace(fmm_leaf_size=256, fmm_tree_leaf_target=256)
+    assert rc.ignored_knobs(tied, rc.config_settings(tied, jnp.float32), "config") == ()
+    knobs = cfg._replace(fmm_nearfield_edge_chunk_size=128, fmm_tree_leaf_target=64)
+    with pytest.warns(UserWarning, match="fmm_nearfield_edge_chunk_size=128.*leaf 16"):
+        found = rc.warn_ignored_knobs(knobs, settings, "config")
+    assert dict(found) == {"fmm_nearfield_edge_chunk_size": 128, "fmm_tree_leaf_target": 64}
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        rc.warn_ignored_knobs(knobs, settings, "config")  # once
+    # under the galaxy profile the leaf size, order and opening angle are not read
+    galaxy = cfg._replace(fmm_preset="galaxy", fmm_leaf_size=32)
+    assert dict(rc.ignored_knobs(galaxy, GALAXY_SETTINGS, "galaxy")) == {
+        "fmm_leaf_size": 32
+    }
+    rc._WARNED_IGNORED.clear()
 
 
 def test_the_settings_are_galaxy_settings_unless_given():
@@ -331,29 +430,49 @@ def test_the_cubic_box_setting_reaches_the_engine():
         assert solver.advanced.tree.cubic_bounds is cubic
 
 
-def test_an_explicit_galaxy_preset_refuses_what_the_runner_does_not_run(fused_lane):
+def test_the_runner_refuses_what_it_does_not_run(fused_lane):
+    """Called directly, ``integrate_runner_jaccpot`` refuses what it does not run,
+    naming what still runs it."""
     state, masses = _system()
     state = jnp.asarray(state, jnp.float32)
     masses = jnp.asarray(masses, jnp.float32)
     for cfg, kw in (
         (_config(fixed_timestep=False), {}),
         (_config(fmm_refresh_every=2), {}),
-        (_config(), dict(active_indices_schedule=jnp.zeros((6, 4), jnp.int32))),
+        (_config(), dict(scheduled=True)),
     ):
-        with pytest.raises(NotImplementedError, match="runner lane"):
-            integrate(state, masses, cfg, _params(), **kw)
+        with pytest.raises(NotImplementedError, match="fmm_runner.*removed"):
+            rc.integrate_runner_jaccpot(state, masses, cfg, _params(), **kw)
 
 
-def test_the_runner_lane_needs_a_gpu_backend(monkeypatch):
-    monkeypatch.setattr(jax, "default_backend", lambda: "cpu")
-    state, masses = _system()
-    with pytest.raises(NotImplementedError, match="GPU backend"):
-        integrate(
-            jnp.asarray(state, jnp.float32),
-            jnp.asarray(masses, jnp.float32),
-            _config(),
-            _params(),
-        )
+def test_the_runner_lane_runs_on_a_cpu_backend(monkeypatch):
+    """On a real CPU backend the lane takes the fused lane's CPU route
+    (``fused_lane_scope``): a config that sets nothing runs, and computes what the
+    same settings compute under the tests' reported GPU backend, bit for bit; the
+    real backend is restored afterwards."""
+    state_np, masses_np = _system()
+    state = jnp.asarray(state_np, jnp.float32)
+    masses = jnp.asarray(masses_np, jnp.float32)
+    params = SimulationParams(G=1.0, t_end=4 * DT)
+    cfg = SimulationConfig(
+        N_particles=N, acceleration_scheme=FMM_ACC, num_timesteps=4, softening=SOFTENING
+    )
+    if jax.default_backend() != "cpu":
+        pytest.skip("checks the CPU route")
+    out, lane = integrate(state, masses, cfg, params, return_lane=True)
+    assert lane == "fmm_runner"
+    assert jax.default_backend() == "cpu"
+    rc.clear_runner_cache()
+    monkeypatch.setattr(jax, "default_backend", lambda: "gpu")
+    settings = rc.config_settings(cfg, state.dtype)
+    ref = integrate(
+        state,
+        masses,
+        cfg._replace(fmm_galaxy_settings=settings, fmm_use_pallas=False),
+        params,
+    )
+    rc.clear_runner_cache()
+    assert np.array_equal(np.asarray(out), np.asarray(ref))
 
 
 # --------------------------------------------------------------------------

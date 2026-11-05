@@ -73,43 +73,6 @@ INTEGRATION_LANES = (
 )
 
 
-def _runner_selected(
-    config: SimulationConfig,
-    *,
-    num_particles: Optional[int],
-    backend: Optional[str],
-    scheduled: bool,
-) -> bool:
-    """Whether an ``FMM_ACC`` forward run goes to the runner lane.
-
-    ``fmm_preset="galaxy"`` asks for it (options it does not support then raise
-    there, rather than run another lane). The automatic large-N profile -- preset
-    ``"fast"`` on a GPU with at least ``fmm_large_n_min_particles`` particles, which
-    picked ``"large_n_gpu"`` on the coupler before -- picks it when the runner
-    supports the run, and keeps the coupler's ``"large_n_gpu"`` loop otherwise.
-    """
-    from odisseo.runner_coupling import runner_unsupported
-
-    preset = str(config.fmm_preset).strip().lower()
-    if preset == "galaxy":
-        return True
-    if getattr(config, "fmm_scheme", None) is not None:
-        # a scheme is the runner's (multi-node plan I1): asked for, as "galaxy"
-        return True
-    n = int(config.N_particles) if num_particles is None else int(num_particles)
-    on_gpu = (
-        str(jax.default_backend() if backend is None else backend).strip().lower()
-        == "gpu"
-    )
-    auto_large_n = (
-        bool(config.fmm_auto_large_n_profile)
-        and preset == "fast"
-        and on_gpu
-        and n >= max(1, int(config.fmm_large_n_min_particles))
-    )
-    return auto_large_n and runner_unsupported(config, scheduled=scheduled) is None
-
-
 def _mesh_runner_selected(config: SimulationConfig) -> bool:
     """Whether an ``fmm_mesh`` run goes to the runner's multi-GPU mode.
 
@@ -151,11 +114,12 @@ def resolve_lane(
     to check what a config would do before committing to a long run.
 
     ``"fmm_runner"`` is jaccpot's ``ProductionRunner`` (:mod:`odisseo.runner_coupling`):
-    ``fmm_preset="galaxy"``, a ``config.fmm_scheme`` (nornax's scheme in the runner,
-    multi-node plan I1), or the automatic large-N profile (preset ``"fast"`` on a
-    GPU at ``fmm_large_n_min_particles`` or more) for a run the runner does; that
-    choice depends on the particle count, the backend and the active-particle
-    schedule, which :func:`integrate` passes here.
+    since 2026-11 (multi-node plan, wave 3) EVERY fixed-step single-device
+    ``FMM_ACC`` run without block steps or the differentiable lane, any ``N``, CPU
+    or GPU. Which settings it runs with -- jaccpot's galaxy settings or the
+    config's own FMM knobs -- is :func:`odisseo.runner_coupling.runner_profile`'s
+    choice, not a lane. ``"fmm_forward"`` is the adaptive coupler lane
+    (``fixed_timestep=False``, diffrax steps).
 
     With ``fmm_mesh=True``: ``"fmm_mesh_runner"`` -- the same runner in its
     multi-GPU mode (:mod:`odisseo.mesh_runner_coupling`) -- for ``fmm_preset=
@@ -168,9 +132,10 @@ def resolve_lane(
     config:
         The configuration to resolve.
     num_particles:
-        The particle count; ``None`` reads ``config.N_particles``.
+        The particle count. Accepted for the callers' signature: since the
+        2026-11 switch it chooses no lane (only the runner's settings profile).
     backend:
-        ``jax.default_backend()`` when ``None``.
+        As ``num_particles``.
     scheduled:
         Whether the call carries an active-particle schedule
         (``active_indices_fn``, ``active_indices_schedule`` or
@@ -184,10 +149,14 @@ def resolve_lane(
     Raises
     ------
     ValueError
-        For an unknown ``acceleration_scheme``, or a ``config.fmm_scheme`` on a lane
+        For an unknown ``acceleration_scheme``; a ``config.fmm_scheme`` on a lane
         with its own step (block steps, the differentiable lane, the older mesh
-        lane).
+        lane, the adaptive lane); or a fixed-step run the runner does not do
+        (``fmm_refresh_every != 1``, ``fmm_refresh_after_position_update``, an
+        active-particle schedule), whose loop was removed: the message names what
+        still runs it.
     """
+    del num_particles, backend  # no lane depends on them since the 2026-11 switch
     direct_schemes = {
         DIRECT_ACC,
         DIRECT_ACC_LAXMAP,
@@ -218,14 +187,20 @@ def resolve_lane(
                     "Drop one of them."
                 )
             return own_step
-        if _runner_selected(
-            config,
-            num_particles=num_particles,
-            backend=backend,
-            scheduled=scheduled,
-        ):
-            return "fmm_runner"
-        return "fmm_forward"
+        if not bool(config.fixed_timestep):
+            if scheme is not None:
+                raise ValueError(
+                    f"config.fmm_scheme={scheme!r} is the production runner's "
+                    "(lane 'fmm_runner', fixed steps); the adaptive lane "
+                    "(fixed_timestep=False) has its own steps. Drop one of them."
+                )
+            return "fmm_forward"
+        from odisseo.runner_coupling import runner_unsupported, unsupported_message
+
+        reason = runner_unsupported(config, scheduled=scheduled)
+        if reason is not None:
+            raise ValueError(unsupported_message(reason))
+        return "fmm_runner"
     raise ValueError(
         f"unknown acceleration_scheme {int(config.acceleration_scheme)}"
     )
@@ -254,7 +229,9 @@ def integrate(
       `DIRECT_ACC_FOR_LOOP`, `DIRECT_ACC_SHARDING`, `NO_SELF_GRAVITY`)
       route to legacy ``time_integration``. Those are already differentiable in
       ``params``.
-    - ``FMM_ACC`` routes to the Jaccpot coupler workflow -- or, with
+    - ``FMM_ACC`` with fixed steps routes to jaccpot's ``ProductionRunner`` (lane
+      ``"fmm_runner"``, below); with ``fixed_timestep=False`` to the adaptive
+      coupler lane (``"fmm_forward"``, diffrax steps) -- or, with
       ``config.fmm_differentiable=True``, to the differentiable FMM lane in
       :mod:`odisseo.differentiable`, which supports ``jax.grad`` with respect to
       external-potential parameters, the initial state and masses.
@@ -268,22 +245,28 @@ def integrate(
       (momentum and energy drift, rung histograms, timings) are dropped -- call
       ``integrate_blockstep_jaccpot`` directly if you need them.
       ``fmm_blockstep`` takes precedence over ``fmm_differentiable``.
-    - ``FMM_ACC`` with ``config.fmm_preset="galaxy"`` -- and, by default, preset
-      ``"fast"`` on a GPU with at least ``fmm_large_n_min_particles`` particles --
-      routes to jaccpot's ``ProductionRunner`` (lane ``"fmm_runner"``,
-      :mod:`odisseo.runner_coupling`): jaccpot's galaxy settings (leaf 64, p6,
-      the preset's MAC, or ``config.fmm_galaxy_settings``), not ``fmm_leaf_size`` /
-      ``fmm_max_order`` / ``fmm_theta``. The preset's MAC is Dehnen's eq (16a) at
-      ``adaptive_eps`` 1e-4 since jaccpot's 2026-10-21 preset change (the geometric
-      MAC at theta 0.8 before): under it G and the softening are the solver's, so a
-      call with another ``params.G`` or ``softening`` compiles again (``dt`` and the
+    - ``FMM_ACC`` with fixed steps (every other option off) routes to jaccpot's
+      ``ProductionRunner`` (lane ``"fmm_runner"``, :mod:`odisseo.runner_coupling`),
+      any ``N``, CPU or GPU -- the default since 2026-11 (multi-node plan, wave 3),
+      replacing Odisseo's own FMM leapfrog loop. Its settings
+      (:func:`odisseo.runner_coupling.runner_settings`): jaccpot's galaxy settings
+      (leaf 64, p6, the preset's MAC; or ``config.fmm_galaxy_settings``) for
+      ``fmm_preset="galaxy"`` and for the automatic large-N profile (preset
+      ``"fast"`` on a GPU with at least ``fmm_large_n_min_particles`` particles);
+      otherwise the config's own ``fmm_leaf_size``, ``fmm_max_order``,
+      ``fmm_theta`` and MAC, with no cell level floor, at the state's precision.
+      The coupler's engine knobs are not read (warned once). The preset's MAC is
+      Dehnen's eq (16a) at ``adaptive_eps`` 1e-4 since jaccpot's 2026-10-21 preset
+      change: under it G and the softening are the solver's, so a call with
+      another ``params.G`` or ``softening`` compiles again (``dt`` and the
       potentials' parameters stay traced); ``fmm_galaxy_settings=GalaxySettings(
       mac_type="dehnen", adaptive_eps=None)`` is the geometric MAC
-      (``docs/source/production_fmm.md``). ``fmm_preset="large_n_gpu"`` keeps the
-      coupler's own loop. History runs return the state every
+      (``docs/source/production_fmm.md``). History runs return the state every
       ``num_timesteps // num_snapshots`` steps from the initial one, as host
       arrays, with the runner's energy and angular momentum; call
-      ``integrate_runner_jaccpot`` for the diagnostics of a plain run.
+      ``integrate_runner_jaccpot`` for the diagnostics of a plain run. A
+      fixed-step run it does not do (``fmm_refresh_every != 1``,
+      ``fmm_refresh_after_position_update``, an active-particle schedule) raises.
     - ``FMM_ACC`` with ``config.fmm_mesh=True`` and ``fmm_preset="galaxy"`` (or a
       ``MeshRunnerOptions`` as ``config.mesh_options``) routes to the same runner in
       its multi-GPU mode (lane ``"fmm_mesh_runner"``,
@@ -293,17 +276,15 @@ def integrate(
       softening are the solver's, and the final state is a host NumPy array in
       input order. A ``MeshOptions`` keeps the older mesh lane (``"fmm_mesh"``,
       :mod:`odisseo.mesh_coupling`) unchanged (``docs/source/parallelism.md``).
-    - ``FMM_ACC`` with ``config.fmm_scheme`` set (multi-node plan I1: nornax owns
-      the integration schemes) routes to ``"fmm_runner"`` as ``fmm_preset="galaxy"``
-      does, with the scheme in jaccpot's runner: ``"nornax_kdk"`` is
+    - ``config.fmm_scheme`` (multi-node plan I1: nornax owns the integration
+      schemes) is handed to ``"fmm_runner"``, with the scheme in jaccpot's runner: ``"nornax_kdk"`` is
       ``nornax.schemes.LeapfrogKDK``, bitwise to the runner's built-in KDK (``None``,
       the default). The lanes with their own step (``fmm_blockstep``,
       ``fmm_differentiable``, the older ``"fmm_mesh"``) refuse it, and so does
       ``"fmm_mesh_runner"`` until I2.
 
-    Deprecated (``DeprecationWarning``, nothing removed yet): Odisseo's own FMM
-    leapfrog loop -- lane ``"fmm_forward"`` with ``fixed_timestep=True``,
-    ``integrate_leapfrog_jaccpot_active`` -- in favour of ``"fmm_runner"``; the
+    Deprecated (``DeprecationWarning``): ``integrate_leapfrog_jaccpot_active``
+    (which ``integrate`` no longer reaches) in favour of ``"fmm_runner"``; the
     older mesh lane's KDK (``"fmm_mesh"``, ``MeshOptions``) in favour of
     ``"fmm_mesh_runner"`` (``docs/source/production_fmm.md``, "Integration
     schemes").

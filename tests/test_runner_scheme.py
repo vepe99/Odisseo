@@ -3,9 +3,9 @@
 The multi-node accuracy plan's U1: nornax owns the integration schemes, jaccpot's
 ``ProductionRunner`` the run, Odisseo the science. Pinned here:
 
-* routing: a ``fmm_scheme`` selects the runner lane for a fixed-step ``FMM_ACC`` run
-  (on any backend, as ``fmm_preset="galaxy"`` does); the lanes with their own step
-  refuse it; the multi-GPU runner lane refuses it until I2;
+* routing: a fixed-step ``FMM_ACC`` run is the runner's (since the 2026-11 switch,
+  with or without a scheme); the lanes with their own step (the adaptive one
+  included) refuse a scheme; the multi-GPU runner lane refuses it until I2;
 * ``runner_scheme``: ``None`` is the runner's built-in KDK, ``"nornax_kdk"``
   nornax's ``LeapfrogKDK``, other names and non-schemes are refused;
 * THE GATE: ``fmm_scheme="nornax_kdk"`` computes what the built-in runner lane
@@ -28,7 +28,6 @@ import pytest
 from odisseo import integration_api as api
 from odisseo import runner_coupling as rc
 from odisseo.integration_api import integrate, resolve_lane
-from odisseo.jaccpot_coupling import FMM_LEAPFROG_DEPRECATION
 from odisseo.mesh_coupling import MESH_KDK_DEPRECATION, MeshOptions
 from odisseo.mesh_runner_coupling import mesh_runner_unsupported
 from odisseo.option_classes import FMM_ACC, SimulationConfig, SimulationParams
@@ -59,8 +58,8 @@ from test_runner_lane import (  # noqa: E402
             dict(backend="gpu", num_particles=10),
             "fmm_runner",
         ),
-        # the default is untouched: the coupler on CPU / small N
-        (dict(), dict(backend="cpu", num_particles=10), "fmm_forward"),
+        # without a scheme too, since the 2026-11 switch (the built-in KDK)
+        (dict(), dict(backend="cpu", num_particles=10), "fmm_runner"),
         # the multi-GPU runner lane is selected (and refuses the scheme there)
         (
             dict(fmm_scheme="nornax_kdk", fmm_mesh=True, fmm_preset="galaxy"),
@@ -80,8 +79,9 @@ def test_a_scheme_selects_the_runner_lane(overrides, kw, lane):
         dict(fmm_blockstep=True),
         dict(fmm_differentiable=True),
         dict(fmm_mesh=True, mesh_options=MeshOptions(dt=1e-3)),
+        dict(fixed_timestep=False),
     ],
-    ids=["blockstep", "differentiable", "older_mesh"],
+    ids=["blockstep", "differentiable", "older_mesh", "adaptive"],
 )
 def test_the_lanes_with_their_own_step_refuse_a_scheme(overrides):
     cfg = SimulationConfig(
@@ -143,25 +143,21 @@ def _caught(fn):
     return out, [w for w in caught if issubclass(w.category, DeprecationWarning)]
 
 
-def test_the_fmm_leapfrog_loop_warns_once_on_the_callers_line(monkeypatch):
-    """Through ``integrate()``: one warning, attributed to this file, naming the
-    runner lane; the loop's own warning (emulated by the fake) is silenced."""
+def test_a_default_fixed_step_run_warns_no_deprecation(monkeypatch):
+    """Since the 2026-11 switch ``integrate()`` no longer reaches the deprecated
+    loop: a fixed-step run is the runner's, without a ``DeprecationWarning``."""
 
-    def fake_loop(**kwargs):
-        warnings.warn(FMM_LEAPFROG_DEPRECATION, DeprecationWarning, stacklevel=2)
-        return kwargs["state"]
+    def fake_runner(state, mass, config, params, *, scheduled):
+        return rc.RunnerResult(state=state, snapshots=None, run=None)
 
-    monkeypatch.setattr(api, "integrate_leapfrog_jaccpot_active", fake_loop)
+    monkeypatch.setattr(rc, "integrate_runner_jaccpot", fake_runner)
     state = jnp.zeros((6, 2, 3), jnp.float32)
     cfg = SimulationConfig(N_particles=6, acceleration_scheme=FMM_ACC, num_timesteps=2)
     (_, lane), caught = _caught(
         lambda: integrate(state, jnp.ones(6), cfg, SimulationParams(), return_lane=True)
     )
-    assert lane == "fmm_forward"
-    assert len(caught) == 1
-    assert caught[0].filename == __file__
-    assert "fmm_runner" in str(caught[0].message)
-    assert "nornax_kdk" in str(caught[0].message)
+    assert lane == "fmm_runner"
+    assert caught == []
 
 
 def test_the_loop_warns_when_called_directly():

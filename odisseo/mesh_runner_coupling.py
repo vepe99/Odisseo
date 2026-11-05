@@ -13,7 +13,7 @@ particles are decomposed into Morton domains, each segment is ONE
 domains are re-balanced between segments, a segment whose lists outgrow their
 capacities is re-planned and re-run on every card, and the diagnostics come at the
 segment edges. This module is :mod:`odisseo.runner_coupling` with a mesh: the same
-solver and settings (:func:`~odisseo.runner_coupling.galaxy_settings`,
+solver and settings (:func:`~odisseo.runner_coupling.runner_settings`,
 :func:`~odisseo.runner_coupling.build_galaxy_solver`), the same external field
 (:class:`~odisseo.runner_coupling.ExternalFieldParams`), the same snapshots, units and
 kept solver and runner. What differs:
@@ -83,8 +83,10 @@ from odisseo.runner_coupling import (
     build_galaxy_solver,
     external_acceleration,
     external_potential,
-    galaxy_settings,
+    runner_profile,
+    runner_settings,
     runner_unsupported,
+    warn_ignored_knobs,
 )
 
 __all__ = [
@@ -426,7 +428,11 @@ def integrate_mesh_runner_jaccpot(
     # system is placed on one card
     state_np = np.asarray(state)
     mass_np = np.asarray(mass, dtype=state_np.dtype)
-    settings = galaxy_settings(config, state_np.dtype)
+    n = int(state_np.shape[0])
+    settings = runner_settings(config, state_np.dtype, num_particles=n)
+    warn_ignored_knobs(
+        config, settings, runner_profile(config, num_particles=n), stacklevel=3
+    )
     external = len(config.external_accelerations) > 0
     segment, collector = _segment_plan(config, segment, num_steps)
 

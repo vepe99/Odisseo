@@ -171,7 +171,7 @@ _OLD = MeshOptions(dt=1e-3)
         (dict(), "fmm_mesh"),
         # and without fmm_mesh the single-card lanes
         (dict(fmm_mesh=False, fmm_preset="galaxy"), "fmm_runner"),
-        (dict(fmm_mesh=False, mesh_options=MeshRunnerOptions()), "fmm_forward"),
+        (dict(fmm_mesh=False, mesh_options=MeshRunnerOptions()), "fmm_runner"),
     ],
 )
 def test_resolve_lane_names_the_mesh_runner_lane(overrides, lane):
