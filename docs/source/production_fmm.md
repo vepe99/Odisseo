@@ -187,6 +187,14 @@ are NumPy arrays. `total_energy` (`K + W_self + W_ext`, jaccpot's O(N) fused-lan
 potential: about one force evaluation per snapshot) and `angular_momentum`
 (`sum m x x v`) are the runner's fp64 diagnostics.
 
+`odisseo.utils.E_pot` / `E_tot` take `FMM_ACC` too (since 2026-11): jaccpot's
+fused-lane potential at the lane's own settings
+(`runner_coupling.runner_self_gravity`, on a solver of its own so the run's engine
+is untouched), per particle in the direct schemes' convention (`m_i phi_i`, so the
+sum is `2 W_self + W_ext`; the runner's `total_energy` is `K + W_self + W_ext`).
+It is host-driven: under `jax.jit` / `jax.vmap` it runs as a `jax.pure_callback`,
+one evaluation per mapped state, with no gradient.
+
 A plain run returns the final state only and computes no diagnostics. For them,
 or for restart files and jaccpot's `SnapshotWriter` / `DiagnosticsLog` callbacks,
 call the lane directly:
