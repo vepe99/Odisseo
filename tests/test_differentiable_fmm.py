@@ -12,6 +12,13 @@ pin the properties that make the lane trustworthy:
   gradient seam is a silently *zero* self-gravity contribution, so the mass
   gradient (masses enter through self-gravity and nothing else) is checked against
   finite differences directly.
+
+Forward mode (jaccpot ``ad_mode="forward"``, main 1bb30620) runs on the large-N lane
+only: :class:`TestForwardModeOnTheLargeNLane` builds a ``fmm_preset="large_n_gpu"``
+plan on CPU (every Pallas kernel in interpret mode, ``jax.default_backend``
+reporting ``"gpu"``, as ``tests/test_runner_lane.py`` and jaccpot's own CPU gates
+do) and checks a diffrax ``ForwardMode`` jvp, ``jax.jacfwd`` over the halo
+parameters against ``jax.jacrev``, and the Fisher matrix as ``J^T J``.
 """
 
 import jax
@@ -30,8 +37,11 @@ from odisseo.differentiable import (
 from odisseo.integration_api import integrate
 from odisseo.option_classes import (
     DIRECT_ACC,
+    DOPRI5,
     FMM_ACC,
+    FORWARDMODE,
     LEAPFROG,
+    RECURSIVECHECKPOINTADJOING,
     NFW_POTENTIAL,
     NFWParams,
     SimulationConfig,
@@ -548,3 +558,219 @@ def test_topology_drift_rejects_tracers(plan, initial_conditions):
     state, _ = initial_conditions
     with pytest.raises(NotImplementedError, match="concrete positions"):
         jax.grad(lambda s: topology_drift(plan, s)["max_displacement"])(state[:, 0, :])
+
+
+
+# --------------------------------------------------------------------------
+# forward mode (jaccpot ad_mode="forward"): the large-N lane
+# --------------------------------------------------------------------------
+
+
+def _jaccpot_has_forward_mode() -> bool:
+    try:
+        from jaccpot.runtime.grad_options import ad_mode_override  # noqa: F401
+    except ImportError:
+        return False
+    return True
+
+
+needs_forward_mode = pytest.mark.skipif(
+    not _jaccpot_has_forward_mode(),
+    reason="installed jaccpot has no forward mode (ad_mode_override)",
+)
+
+
+@needs_forward_mode
+def test_forward_mode_is_refused_on_the_radix_lane(initial_conditions, plan):
+    """The radix lane's kernels are reverse-only: forward mode says so up front
+    (explicit or from an enclosing ``ad_mode_override``); an unknown mode is a
+    ``ValueError``."""
+    from jaccpot.runtime.grad_options import ad_mode_override
+
+    state, mass = initial_conditions
+    pos = state[:, 0, :]
+    with pytest.raises(NotImplementedError, match="large-N lane only"):
+        differentiable_fmm_self_acceleration(plan, pos, mass, ad_mode="forward")
+    with ad_mode_override("forward"):
+        with pytest.raises(NotImplementedError, match="large-N lane only"):
+            differentiable_fmm_self_acceleration(plan, pos, mass)
+    with pytest.raises(ValueError, match="ad_mode must be one of"):
+        differentiable_fmm_self_acceleration(plan, pos, mass, ad_mode="jvp")
+
+
+#: every Pallas kernel of the large-N lane in interpret mode, the CSR near field,
+#: the GPU's walk (jaccpot's ``tests/integration/strict/test_forward_mode.py`` set)
+_LARGE_N_ON_CPU = {
+    "JACCPOT_CASCADE_PALLAS": "1",
+    "JACCPOT_CASCADE_PALLAS_INTERPRET": "1",
+    "JACCPOT_M2L_CSR_INTERPRET": "1",
+    "JACCPOT_NEARFIELD_PALLAS_INTERPRET": "1",
+    "JACCPOT_NEARFIELD_LEAFPAIR_CSR": "1",
+    "JACCPOT_L2P_KERNEL": "interpret",
+    "JACCPOT_LARGE_N_RADIX_FAST_PAYLOAD_MAX_MB": "0",
+    "JACCPOT_WALK_PALLAS_INTERPRET": "1",
+}
+#: what a shell could set that changes the lane (scrubbed for the class)
+_LARGE_N_UNSET = ("JACCPOT_GRAD_AD_MODE", "JACCPOT_STRICT_SEGMENT_RETRY")
+LARGE_N_STEPS = 2
+#: the halo parameters the forward-mode tests differentiate
+HALO0 = (MVIR0, RS0)
+
+
+def make_large_n_config(**overrides):
+    """The large-N lane at a small operating point, float64 (not the preset's fp32)."""
+    values = dict(
+        N_particles=N_PARTICLES,
+        num_timesteps=LARGE_N_STEPS,
+        fixed_timestep=True,
+        integrator=LEAPFROG,
+        acceleration_scheme=FMM_ACC,
+        softening=1e-3,
+        external_accelerations=(NFW_POTENTIAL,),
+        fmm_leaf_size=16,
+        fmm_max_order=2,
+        fmm_theta=0.6,
+        fmm_basis="real",
+        fmm_tree_build_mode="static_radix",
+        fmm_preset="large_n_gpu",
+        fmm_large_n_force_fp32=False,
+        fmm_auto_large_n_profile=False,
+        fmm_use_pallas=True,
+        fmm_differentiable=True,
+    )
+    values.update(overrides)
+    return SimulationConfig(**values)
+
+
+def _halo_params(theta):
+    return make_params(mvir=theta[0], r_s=theta[1], t_end=0.2)
+
+
+@needs_forward_mode
+@pytest.mark.slow
+class TestForwardModeOnTheLargeNLane:
+    """Forward mode on a ``large_n_gpu`` plan: CPU, float64, N = 96, order 2.
+
+    The class scope holds the interpret environment and the backend patch for
+    exactly its own tests (traces happen in the tests, not only at plan build).
+    """
+
+    @pytest.fixture(scope="class")
+    def large_n(self, initial_conditions):
+        with pytest.MonkeyPatch.context() as mp:
+            for key in _LARGE_N_UNSET:
+                mp.delenv(key, raising=False)
+            for key, value in _LARGE_N_ON_CPU.items():
+                mp.setenv(key, value)
+            mp.setattr(jax, "default_backend", lambda: "gpu")
+            state, mass = initial_conditions
+            config = make_large_n_config()
+            plan = prepare_differentiable_fmm(
+                state, mass, config, _halo_params(HALO0)
+            )
+            assert plan.large_n_grad_plan is not None, "not the large-N lane"
+            assert plan.working_dtype == jnp.float64
+            yield dict(state=state, mass=mass, config=config, plan=plan, cache={})
+            jax.clear_caches()
+
+    @staticmethod
+    def _final_positions(large_n, ad_mode):
+        def run(theta):
+            return integrate_leapfrog_differentiable(
+                large_n["state"],
+                large_n["mass"],
+                large_n["config"],
+                _halo_params(theta),
+                plan=large_n["plan"],
+                num_steps=LARGE_N_STEPS,
+                ad_mode=ad_mode,
+            )[:, 0]
+
+        return run
+
+    def _jacobians(self, large_n):
+        """``(J_fwd, J_rev)`` of the final positions in (Mvir, r_s), once."""
+        cache = large_n["cache"]
+        if "jac" not in cache:
+            theta = jnp.asarray(HALO0)
+            fwd = jax.jacfwd(self._final_positions(large_n, "forward"))(theta)
+            rev = jax.jacrev(self._final_positions(large_n, None))(theta)
+            cache["jac"] = (np.asarray(fwd), np.asarray(rev))
+        return cache["jac"]
+
+    def test_diffrax_forward_mode_jvp(self, large_n):
+        """``diffrax_adjoint_method=FORWARDMODE`` derives jaccpot's forward mode:
+        ``jax.jvp`` through the adaptive solve runs, its primal is the reverse
+        configuration's forward, and its tangent in Mvir matches central
+        differences of the same frozen plan (and the reverse-mode gradient of the
+        ``RecursiveCheckpointAdjoint`` configuration)."""
+        state, mass, plan = large_n["state"], large_n["mass"], large_n["plan"]
+        base = dict(fixed_timestep=False, diffrax_solver=DOPRI5)
+        forward_config = make_large_n_config(
+            diffrax_adjoint_method=FORWARDMODE, **base
+        )
+        reverse_config = make_large_n_config(
+            diffrax_adjoint_method=RECURSIVECHECKPOINTADJOING, **base
+        )
+
+        def loss_of(config):
+            def loss(mvir):
+                final = integrate_diffrax_differentiable(
+                    state, mass, config, _halo_params((mvir, RS0)), plan=plan
+                )
+                return jnp.sum(final[:, 0] ** 2)
+
+            return loss
+
+        value, tangent = jax.jvp(
+            loss_of(forward_config), (jnp.asarray(MVIR0),), (jnp.asarray(1.0),)
+        )
+        reverse_loss = loss_of(reverse_config)
+        want_value, grad = jax.value_and_grad(reverse_loss)(jnp.asarray(MVIR0))
+        assert np.isfinite(float(tangent)) and float(tangent) != 0.0
+        assert abs(float(value) - float(want_value)) <= 1e-12 * abs(float(want_value))
+        assert abs(float(tangent) - float(grad)) <= 1e-8 * abs(float(grad))
+        fd = float(_central_difference(reverse_loss, MVIR0, rel_step=1e-5))
+        # adaptive stepping: the +-h solves may take other steps (the radix
+        # diffrax test's tolerance)
+        assert abs(float(tangent) - fd) / abs(fd) < 1e-3
+
+    def test_jacfwd_over_the_halo_parameters_matches_jacrev(self, large_n):
+        """``jax.jacfwd`` (forward mode, two tangents) of the final positions in
+        (Mvir, r_s) equals ``jax.jacrev`` (reverse mode, 3 N cotangents) on the
+        same plan, to round-off; both columns are live."""
+        fwd, rev = self._jacobians(large_n)
+        assert fwd.shape == rev.shape == (N_PARTICLES, 3, 2)
+        assert np.all(np.isfinite(fwd))
+        for k in range(2):
+            scale = float(np.max(np.abs(rev[..., k])))
+            assert scale > 0.0
+            assert float(np.max(np.abs(fwd[..., k] - rev[..., k]))) <= 1e-10 * scale
+
+    def test_fisher_matrix_is_jt_j_of_the_forward_jacobian(self, large_n):
+        """The FMM Fisher matrix is the Gauss-Newton ``J^T J`` (unit noise) of the
+        forward-mode Jacobian (``jacfwd(jacfwd)`` is refused: forward mode is
+        first order): symmetric, positive semi-definite, and equal to the
+        ``jax.jacrev`` Jacobian's ``J^T J``."""
+        fwd, rev = self._jacobians(large_n)
+        j_fwd = fwd.reshape(-1, 2)
+        j_rev = rev.reshape(-1, 2)
+        fisher = j_fwd.T @ j_fwd
+        want = j_rev.T @ j_rev
+        assert fisher.shape == (2, 2)
+        np.testing.assert_allclose(fisher, fisher.T, rtol=0.0, atol=0.0)
+        eigenvalues = np.linalg.eigvalsh(fisher)
+        assert np.all(eigenvalues >= -1e-12 * np.max(np.abs(eigenvalues)))
+        assert np.max(eigenvalues) > 0.0
+        np.testing.assert_allclose(fisher, want, rtol=1e-9, atol=0.0)
+
+    def test_second_order_forward_mode_is_refused(self, large_n):
+        """``jacfwd(jacfwd)`` -- the direct-sum notebooks' Hessian Fisher -- has no
+        rule through the FMM's forward-mode kernels (first order only)."""
+        theta = jnp.asarray(HALO0)
+
+        def scalar(t):
+            return jnp.sum(self._final_positions(large_n, "forward")(t) ** 2)
+
+        with pytest.raises(NotImplementedError, match="second-order forward mode"):
+            jax.jacfwd(jax.jacfwd(scalar))(theta)
