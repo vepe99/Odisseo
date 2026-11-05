@@ -276,7 +276,10 @@ split into spatial domains (RCB), each device builds its own tree and imports a 
 boundary particles from its neighbours, and a KDK leapfrog steps the whole system: drift,
 the force (one `shard_map` program) and kick, three dispatches per step, with no potential
 (so no total energy) and its own leaf size, order, opening angle and `dt` in `MeshOptions`.
-It is unchanged and stays reachable while its users need it. It has carried 25 million
+It is unchanged and stays reachable while its users need it, but its KDK is
+**deprecated** (multi-node plan I1: nornax owns the schemes, jaccpot's runner the
+run): a call warns `DeprecationWarning` naming the replacement, the runner's
+multi-GPU mode above (`MeshRunnerOptions`, lane `"fmm_mesh_runner"`). It has carried 25 million
 particles on 8×A100 (see
 `benchmark_a100/bulge_rollout/` for the exact setup and record). Like every jaccpot
 lane it needs `jax.config.update("jax_enable_x64", True)` at the top of the script;

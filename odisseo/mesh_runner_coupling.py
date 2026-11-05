@@ -192,7 +192,7 @@ def mesh_runner_unsupported(
     The single-card runner's limits (:func:`~odisseo.runner_coupling.
     runner_unsupported`: velocity Verlet at a fixed step, every particle on every
     step, the force refreshed after every drift), plus what the mesh mode has not:
-    a gradient path and block steps.
+    a gradient path, block steps and (until I2) a ``config.fmm_scheme``.
 
     Parameters
     ----------
@@ -215,6 +215,11 @@ def mesh_runner_unsupported(
         return (
             "fmm_blockstep=True (the mesh mode steps every particle at one dt; "
             "odisseo.blockstep_coupling runs block steps)"
+        )
+    if getattr(config, "fmm_scheme", None) is not None:
+        return (
+            f"fmm_scheme={config.fmm_scheme!r} (the multi-GPU runner runs its "
+            "built-in KDK; it takes a nornax scheme in the multi-node plan's I2)"
         )
     return runner_unsupported(config, scheduled=scheduled)
 
