@@ -342,7 +342,7 @@ def test_integrate_is_the_jaccpot_mesh_runner_and_a_second_call_compiles_nothing
     _bitwise(integrate(state, masses, cfg, _params()), out, "repeated call")
 
     # another G is another solver: the mesh force is static in it (looked up only)
-    settings = mrc.galaxy_settings(cfg, np.float64)
+    settings = mrc.runner_settings(cfg, np.float64, num_particles=N)
     options = mrc.mesh_runner_options(cfg)
     solver_3, _ = mrc._solver_and_runner(
         cfg, _params(G=1.1), settings, options, NDEV, N, True
