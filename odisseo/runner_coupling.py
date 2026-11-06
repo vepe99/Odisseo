@@ -544,6 +544,9 @@ _GALAXY_IGNORED_KNOBS = (
     ("fmm_theta", 0.6),
 )
 
+#: ``fmm_theta``: no effect under the error-based MAC (eq (16a) accepts by error)
+_THETA_KNOB = ("fmm_theta", 0.6)
+
 #: The ignored-knob sets already warned about in this process.
 _WARNED_IGNORED: set = set()
 
@@ -553,8 +556,11 @@ def ignored_knobs(config: SimulationConfig, settings: Any, profile: str) -> tupl
 
     A knob counts when its value differs from its default:
     :data:`RUNNER_IGNORED_KNOBS` always, plus, under profile ``"galaxy"``, the leaf
-    size, order and opening angle. ``fmm_tree_leaf_target`` counts only when it is
-    not the leaf size the run uses (the coupler tied the two).
+    size, order and opening angle, and under the error-based MAC (``settings.
+    mac_type == "dehnen_error"``: Odisseo's default ``fmm_mac_type="dehnen"`` keeps
+    jaccpot's preset one, eq (16a)) the opening angle ``fmm_theta``, which decides
+    no pair there. ``fmm_tree_leaf_target`` counts only when it is not the leaf
+    size the run uses (the coupler tied the two).
 
     Parameters
     ----------
@@ -571,7 +577,9 @@ def ignored_knobs(config: SimulationConfig, settings: Any, profile: str) -> tupl
         ``((name, value), ...)``.
     """
     knobs = RUNNER_IGNORED_KNOBS + (
-        _GALAXY_IGNORED_KNOBS if profile == "galaxy" else ()
+        _GALAXY_IGNORED_KNOBS
+        if profile == "galaxy"
+        else (_THETA_KNOB,) if settings.mac_type == "dehnen_error" else ()
     )
     found = [
         (name, getattr(config, name))
@@ -618,7 +626,13 @@ def warn_ignored_knobs(
         warnings.warn(
             f"the runner lane (fmm_runner, profile {profile!r}) does not read {names}: "
             f"it runs leaf {settings.leaf_size}, p{settings.max_order}, "
-            f"theta {settings.theta}, MAC {settings.mac_type!r}, {settings.precision}. "
+            f"theta {settings.theta}, MAC {settings.mac_type!r}, {settings.precision}"
+            + (
+                " (an error-based MAC: the opening angle decides no pair)"
+                if settings.mac_type == "dehnen_error"
+                else ""
+            )
+            + ". "
             "Set config.fmm_galaxy_settings (jaccpot.production.GalaxySettings) to "
             "change those; the knobs above were the removed fixed-step loop's "
             "(docs/source/production_fmm.md, 'Migration').",
@@ -628,89 +642,47 @@ def warn_ignored_knobs(
     return found
 
 
-#: What a CPU backend needs set for the fused lane under ``dehnen_error``: its
-#: force scale reads the CSR near field, run in Pallas interpret mode on a CPU
-#: (jaccpot's own CPU runner tests set the same).
-_CPU_DEHNEN_ERROR_ENV = {
-    "JACCPOT_NEARFIELD_PALLAS_INTERPRET": "1",
-    "JACCPOT_NEARFIELD_LEAFPAIR_CSR": "1",
-    "JACCPOT_LARGE_N_RADIX_FAST_PAYLOAD_MAX_MB": "0",
-}
-
-
 @contextlib.contextmanager
 def fused_lane_scope(config: SimulationConfig, settings: Any) -> Iterator[None]:
     """The scope every runner build, run and force evaluation runs in.
 
-    ``config``'s large-N environment overrides, and on a CPU backend the fused
-    lane's CPU route: jaccpot gates the fused lane's prepare on
-    ``jax.default_backend() == "gpu"``, and its pure-JAX near field runs on a CPU
-    unchanged, so inside this scope ``jax.default_backend()`` reports ``"gpu"``
-    (what jaccpot's own CPU tests of the lane do), with the Pallas kernels off
-    (:func:`_runner_use_pallas`) -- except, under ``dehnen_error``, the CSR near
-    field's, in interpret mode (:data:`_CPU_DEHNEN_ERROR_ENV`; an explicit shell
-    value wins), which that MAC's force scale needs.
-    The real backend is restored on exit. A stopgap until jaccpot takes a CPU
-    switch for the fused lane: process-global while it lasts, so do not run
-    other JAX work in another thread meanwhile.
+    ``config``'s large-N environment overrides (restored on exit). Nothing else:
+    on a CPU backend the solver itself takes jaccpot's fused-lane CPU route
+    (:func:`build_galaxy_solver`: ``RuntimePolicyConfig(cpu_fused_lane=True)``),
+    which runs the lane with the pure-JAX kernels and, under ``use_pallas=True``
+    (:func:`_runner_use_pallas`: ``dehnen_error``), the CSR near field in Pallas
+    interpret mode -- jaccpot scopes those switches to its own calls. The process's
+    ``jax.default_backend`` is no longer touched.
 
     Parameters
     ----------
     config : SimulationConfig
         The configuration.
     settings : GalaxySettings
-        The run's settings (their MAC).
+        The run's settings (kept for the callers' signature).
 
     Yields
     ------
     None
     """
-    import os
-
     from odisseo.jaccpot_coupling import _temporary_large_n_environment
 
-    global _CPU_SCOPE
-    real_backend = jax.default_backend
-    on_cpu = _backend_name() == "cpu"
-    env = (
-        {
-            k: v
-            for k, v in _CPU_DEHNEN_ERROR_ENV.items()
-            if os.environ.get(k) is None
-        }
-        if on_cpu and settings.mac_type == "dehnen_error"
-        else {}
-    )
+    del settings
     with _temporary_large_n_environment(config):
-        try:
-            os.environ.update(env)
-            if on_cpu:
-                jax.default_backend = lambda: "gpu"
-                _CPU_SCOPE = True
-            yield
-        finally:
-            if on_cpu:
-                jax.default_backend = real_backend
-                _CPU_SCOPE = False
-            for key in env:
-                os.environ.pop(key, None)
-
-
-#: Inside :func:`fused_lane_scope` on a CPU backend (which then reports "gpu").
-_CPU_SCOPE = False
+        yield
 
 
 def _runner_use_pallas(config: SimulationConfig, settings: Any) -> Optional[bool]:
     """``use_pallas`` for the runner's solver.
 
     On a CPU backend: on under ``dehnen_error`` (its force scale needs the CSR near
-    field's Pallas kernel, run in interpret mode there: :func:`fused_lane_scope`),
-    off otherwise (the pure-JAX near field). On a GPU: the config's
+    field's Pallas kernel, which jaccpot's CPU route runs in interpret mode), off
+    otherwise (the pure-JAX near field). On a GPU: the config's
     (``jaccpot_coupling._resolve_use_pallas``).
     """
     from odisseo.jaccpot_coupling import _resolve_use_pallas
 
-    if _CPU_SCOPE or _backend_name() == "cpu":
+    if _backend_name() == "cpu":
         return settings.mac_type == "dehnen_error"
     return _resolve_use_pallas(config)
 
@@ -794,6 +766,7 @@ def build_galaxy_solver(
     softening: float,
     use_pallas: Optional[bool] = None,
     mac_force_scale_mode: str = "paper_fb",
+    cpu_fused_lane: Optional[bool] = None,
 ) -> Any:
     """``FastMultipoleMethod(preset="galaxy")`` with ``settings``.
 
@@ -817,6 +790,11 @@ def build_galaxy_solver(
         ``jaccpot_coupling._resolve_use_pallas``.
     mac_force_scale_mode : str
         Under ``mac_type="dehnen_error"``: how eq (16)'s force scale is obtained.
+    cpu_fused_lane : Optional[bool]
+        jaccpot's fused-lane CPU route (``RuntimePolicyConfig.cpu_fused_lane``):
+        the lane on a CPU backend with the GPU's lane policy and the pure-JAX
+        kernels. ``None`` (the default): on when ``jax.default_backend()`` is
+        ``"cpu"``. No effect on a GPU.
 
     Returns
     -------
@@ -843,7 +821,15 @@ def build_galaxy_solver(
     advanced = dataclasses.replace(
         base,
         tree=tree,
-        runtime=dataclasses.replace(base.runtime, fixed_order=int(settings.max_order)),
+        runtime=dataclasses.replace(
+            base.runtime,
+            fixed_order=int(settings.max_order),
+            cpu_fused_lane=(
+                _backend_name() == "cpu"
+                if cpu_fused_lane is None
+                else bool(cpu_fused_lane)
+            ),
+        ),
         mac_type=str(settings.mac_type),
     )
     criterion: dict = {}
@@ -913,6 +899,7 @@ def _solver_and_runner(
         tuple(sorted(_large_n_environment_overrides(config).items())),
         int(num_particles),
         bool(external),
+        _backend_name(),  # the solver's CPU route is decided at build
         None if scheme is None else scheme.key(),
     )
     kept = _CACHE.get(key)
@@ -1179,7 +1166,7 @@ def integrate_runner_jaccpot(
     The settings are :func:`runner_settings`' (:func:`runner_profile`: jaccpot's
     galaxy settings, or the config's own FMM knobs); a knob the lane does not read
     is warned about once (:func:`warn_ignored_knobs`). On a CPU backend the run
-    takes the fused lane's CPU route (:func:`fused_lane_scope`).
+    takes jaccpot's fused-lane CPU route (:func:`build_galaxy_solver`).
     """
     from jaccpot import ForceParams
 
@@ -1310,6 +1297,7 @@ def runner_self_gravity(
             use_pallas,
             tuple(sorted(_large_n_environment_overrides(config).items())),
             n,
+            _backend_name(),  # the solver's CPU route is decided at build
         )
         solver = _FIELD_CACHE.get(key)
         if solver is None:
