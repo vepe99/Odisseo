@@ -1,13 +1,13 @@
 """The ``fmm_mesh_runner`` lane: ``integrate()`` on jaccpot's runner across devices.
 
-``fmm_mesh=True`` with ``fmm_preset="galaxy"`` (or a ``MeshRunnerOptions`` as
-``mesh_options``) runs jaccpot's ``ProductionRunner`` in its multi-GPU mode
-(:mod:`odisseo.mesh_runner_coupling`); a ``MeshOptions`` keeps the older mesh lane
-(:mod:`odisseo.mesh_coupling`, ``tests/test_mesh_lane.py``). Pinned here:
+``fmm_mesh=True`` (a ``MeshRunnerOptions`` or ``None`` as ``mesh_options``) runs
+jaccpot's ``ProductionRunner`` in its multi-GPU mode
+(:mod:`odisseo.mesh_runner_coupling`); the older mesh lane
+(``odisseo.mesh_coupling``) was removed in 2026-11. Pinned here:
 
-* dispatch: which configs reach the lane and which keep the older one, through
-  ``resolve_lane`` and ``integrate(..., return_lane=True)`` -- a ``MeshOptions``
-  still reaches ``integrate_mesh_jaccpot`` with its options, whatever the preset;
+* dispatch: every ``fmm_mesh`` config reaches the lane, through ``resolve_lane``
+  and ``integrate(..., return_lane=True)``; any other ``mesh_options`` raises,
+  naming the replacement;
 * what the mesh mode does not run is refused, naming it;
 * THIN CLIENT: ``integrate()`` computes what ``ProductionRunner(mesh=...)`` called
   directly computes, bit for bit (an NFW halo, its parameters traced), and returns
@@ -41,10 +41,8 @@ import jax.numpy as jnp
 import numpy as np
 import pytest
 
-from odisseo import mesh_coupling
 from odisseo import mesh_runner_coupling as mrc
 from odisseo.integration_api import INTEGRATION_LANES, integrate, resolve_lane
-from odisseo.mesh_coupling import MeshOptions
 from odisseo.mesh_runner_coupling import MeshRunnerOptions
 from odisseo.option_classes import (
     DIRECT_ACC,
@@ -148,9 +146,6 @@ def _bitwise(got, want, what):
 # Dispatch and options: no integration.
 # --------------------------------------------------------------------------
 
-_OLD = MeshOptions(dt=1e-3)
-
-
 @pytest.mark.parametrize(
     "overrides, lane",
     [
@@ -164,14 +159,12 @@ _OLD = MeshOptions(dt=1e-3)
         # what the mesh mode does not run still reaches it, and is refused there
         (dict(fmm_preset="galaxy", fmm_differentiable=True), "fmm_mesh_runner"),
         (dict(fmm_preset="galaxy", fmm_blockstep=True), "fmm_mesh_runner"),
-        # a MeshOptions keeps the older lane, whatever the preset
-        (dict(mesh_options=_OLD), "fmm_mesh"),
-        (dict(fmm_preset="galaxy", mesh_options=_OLD), "fmm_mesh"),
-        (dict(fmm_preset="large_n_gpu", mesh_options=_OLD), "fmm_mesh"),
-        (dict(), "fmm_mesh"),
+        # whatever the preset (the older mesh lane was removed in 2026-11)
+        (dict(), "fmm_mesh_runner"),
+        (dict(fmm_preset="large_n_gpu"), "fmm_mesh_runner"),
         # and without fmm_mesh the single-card lanes
         (dict(fmm_mesh=False, fmm_preset="galaxy"), "fmm_runner"),
-        (dict(fmm_mesh=False, mesh_options=MeshRunnerOptions()), "fmm_forward"),
+        (dict(fmm_mesh=False, mesh_options=MeshRunnerOptions()), "fmm_runner"),
     ],
 )
 def test_resolve_lane_names_the_mesh_runner_lane(overrides, lane):
@@ -182,21 +175,17 @@ def test_resolve_lane_names_the_mesh_runner_lane(overrides, lane):
 
 
 def test_integrate_dispatches_on_the_lane_it_reports(monkeypatch):
-    """``fmm_mesh`` with the galaxy preset reaches the runner's mesh entry point, a
-    ``MeshOptions`` the older lane's ``integrate_mesh_jaccpot`` with its options and
-    step count, as before; ``integrate`` reports the lane that ran."""
+    """``fmm_mesh`` reaches the runner's mesh entry point; ``integrate`` reports the
+    lane that ran. Anything but a ``MeshRunnerOptions`` (or ``None``) as
+    ``mesh_options`` -- the removed older lane's ``MeshOptions`` was one -- raises,
+    naming the replacement."""
     calls = []
 
     def fake_runner(state, mass, config, params, *, scheduled):
         calls.append(("runner", scheduled))
         return mrc.RunnerResult(state=state, snapshots=None, run=None)
 
-    def fake_old(state, mass, config, params, *, options, n_steps):
-        calls.append(("old", options, n_steps))
-        return mesh_coupling.MeshResult(state=state)
-
     monkeypatch.setattr(mrc, "integrate_mesh_runner_jaccpot", fake_runner)
-    monkeypatch.setattr(mesh_coupling, "integrate_mesh_jaccpot", fake_old)
     state = jnp.zeros((6, 2, 3), jnp.float32)
     mass = jnp.ones((6,), jnp.float32)
     cfg = SimulationConfig(
@@ -204,16 +193,15 @@ def test_integrate_dispatches_on_the_lane_it_reports(monkeypatch):
         acceleration_scheme=FMM_ACC,
         num_timesteps=3,
         fmm_mesh=True,
-        fmm_preset="galaxy",
     )
     params = SimulationParams()
     lane = integrate(state, mass, cfg, params, return_lane=True)[1]
     assert lane == "fmm_mesh_runner"
-    lane = integrate(
-        state, mass, cfg._replace(mesh_options=_OLD), params, return_lane=True
-    )[1]
-    assert lane == "fmm_mesh"
-    assert calls == [("runner", False), ("old", _OLD, 3)]
+    with pytest.raises(TypeError, match="removed.*fmm_mesh_runner.*MeshRunnerOptions"):
+        integrate(state, mass, cfg._replace(mesh_options=object()), params)
+    with pytest.raises(TypeError, match="MeshRunnerOptions"):
+        resolve_lane(cfg._replace(mesh_options={"dt": 1e-3}))
+    assert calls == [("runner", False)]
 
 
 @pytest.mark.parametrize(
@@ -354,7 +342,7 @@ def test_integrate_is_the_jaccpot_mesh_runner_and_a_second_call_compiles_nothing
     _bitwise(integrate(state, masses, cfg, _params()), out, "repeated call")
 
     # another G is another solver: the mesh force is static in it (looked up only)
-    settings = mrc.galaxy_settings(cfg, np.float64)
+    settings = mrc.runner_settings(cfg, np.float64, num_particles=N)
     options = mrc.mesh_runner_options(cfg)
     solver_3, _ = mrc._solver_and_runner(
         cfg, _params(G=1.1), settings, options, NDEV, N, True

@@ -61,8 +61,9 @@ lane for a fixed-step ``FMM_ACC`` run, as ``fmm_preset="galaxy"`` does.
 
 from __future__ import annotations
 
+import contextlib
 import dataclasses
-from typing import Any, Callable, NamedTuple, Optional, Sequence
+from typing import Any, Callable, Iterator, NamedTuple, Optional, Sequence
 
 import jax
 import jax.numpy as jnp
@@ -267,6 +268,32 @@ def runner_unsupported(
     return None
 
 
+def unsupported_message(reason: str) -> str:
+    """The error for a fixed-step ``FMM_ACC`` run the runner does not do.
+
+    Since the 2026-11 switch the runner is the only fixed-step single-device FMM
+    lane: the coupler's leapfrog loop, which ran these options, is removed.
+
+    Parameters
+    ----------
+    reason : str
+        :func:`runner_unsupported`'s.
+
+    Returns
+    -------
+    str
+        The message, naming what still runs it.
+    """
+    return (
+        f"the fixed-step FMM lane (fmm_runner, jaccpot's ProductionRunner) does not "
+        f"run {reason}. Odisseo's own FMM leapfrog loop, which did, was removed in "
+        "2026-11 (docs/source/production_fmm.md, 'Migration'). Use "
+        "fmm_refresh_every=1 and fmm_refresh_after_position_update=False on the "
+        "runner; fmm_blockstep=True (individual timesteps) for active particles; or "
+        "fixed_timestep=False (the adaptive lane, which keeps these options)."
+    )
+
+
 #: The names ``config.fmm_scheme`` takes for nornax's schemes.
 RUNNER_SCHEMES = ("nornax_kdk",)
 
@@ -308,6 +335,384 @@ def runner_scheme(config: SimulationConfig) -> Any:
         f"config.fmm_scheme={scheme!r}: one of {RUNNER_SCHEMES}, None (the runner's "
         "built-in KDK), or a jaccpot.scheme.SplitStepScheme object"
     )
+
+
+#: The two ways :func:`runner_settings` sizes the runner (:func:`runner_profile`).
+RUNNER_PROFILES = ("galaxy", "config")
+
+
+def _backend_name(backend: Optional[str] = None) -> str:
+    """``backend``, or ``jax.default_backend()``, lower-case."""
+    return str(jax.default_backend() if backend is None else backend).strip().lower()
+
+
+def runner_profile(
+    config: SimulationConfig,
+    *,
+    num_particles: Optional[int] = None,
+    backend: Optional[str] = None,
+) -> str:
+    """Which settings the runner lane runs ``config`` with.
+
+    * ``"galaxy"``: jaccpot's ``GalaxySettings`` (:func:`galaxy_settings`) -- for
+      ``config.fmm_galaxy_settings`` given, ``fmm_preset="galaxy"``, or the
+      automatic large-N profile (preset ``"fast"`` with
+      ``fmm_auto_large_n_profile`` on a GPU at ``fmm_large_n_min_particles`` or
+      more particles; the runner's settings there before the 2026-11 switch too).
+    * ``"config"``: ``SimulationConfig``'s own FMM knobs (:func:`config_settings`)
+      -- every other run, so a config that sets nothing runs at Odisseo's small-N
+      defaults (leaf 16, p4) with jaccpot's preset MAC (eq (16a) at 1e-4).
+
+    Parameters
+    ----------
+    config : SimulationConfig
+        The configuration.
+    num_particles : Optional[int]
+        The particle count; ``None`` reads ``config.N_particles``.
+    backend : Optional[str]
+        ``jax.default_backend()`` when ``None``.
+
+    Returns
+    -------
+    str
+        One of :data:`RUNNER_PROFILES`.
+    """
+    if getattr(config, "fmm_galaxy_settings", None) is not None:
+        return "galaxy"
+    preset = str(config.fmm_preset).strip().lower()
+    if preset == "galaxy":
+        return "galaxy"
+    n = int(config.N_particles) if num_particles is None else int(num_particles)
+    if (
+        bool(config.fmm_auto_large_n_profile)
+        and preset == "fast"
+        and _backend_name(backend) == "gpu"
+        and n >= max(1, int(config.fmm_large_n_min_particles))
+    ):
+        return "galaxy"
+    return "config"
+
+
+def config_settings(config: SimulationConfig, state_dtype: Any) -> Any:
+    """``GalaxySettings`` from ``SimulationConfig``'s FMM knobs (profile ``"config"``).
+
+    What the removed coupler loop read, mapped onto the runner's settings:
+
+    * ``leaf_size`` = ``fmm_leaf_size``; ``max_order`` = ``fmm_fixed_order`` when
+      set, else ``fmm_max_order``; ``theta`` = ``fmm_theta``;
+    * the MAC: ``fmm_mac_type="dehnen"`` (Odisseo's default, which cannot be told
+      from "not set") keeps jaccpot's preset MAC (``GALAXY_SETTINGS``: Dehnen's eq
+      (16a) at ``adaptive_eps`` 1e-4), as under the ``"galaxy"`` profile;
+      ``"dehnen_error"`` is eq (16a) at ``fmm_adaptive_eps``; the fused lane runs
+      no other MAC (refused). The fused lane's GEOMETRIC Dehnen MAC is not the
+      coupler's at the same angle: at leaf 16, p4, theta 0.6 its force rel-L2 was
+      4.3e-3 on the FMM notebook's N = 512 cube (the coupler's 1.2e-4; eq (16a) at
+      1e-4: 4.3e-5), and at leaf 64 it overflowed a fixed capacity in that cube's
+      collapse, where eq (16a) ran (2026-11-06, CPU). It stays reachable through
+      ``fmm_galaxy_settings=GalaxySettings(mac_type="dehnen", adaptive_eps=None,
+      ...)``. Under eq (16a) ``theta`` decides no pair;
+    * the precision: the state's (an fp64 state an fp64 force), except
+      ``fmm_preset="large_n_gpu"`` with ``fmm_large_n_force_fp32`` (the default),
+      which ran fp32 on the coupler too;
+    * no cell level floor (``cell_min_level=None``: level 8 cuts 1-3 particles per
+      leaf at small N); the leaf capacity, its headroom and the cubic Morton box
+      are jaccpot's defaults; the softening kernel is ``config.softening_kernel``.
+
+    The coupler's engine knobs have no runner counterpart and are not read
+    (:data:`RUNNER_IGNORED_KNOBS`; :func:`warn_ignored_knobs` says so once).
+
+    Parameters
+    ----------
+    config : SimulationConfig
+        The configuration.
+    state_dtype : Any
+        The state's dtype.
+
+    Returns
+    -------
+    GalaxySettings
+        The settings.
+
+    Raises
+    ------
+    ValueError
+        For a MAC the fused lane does not run, or ``dehnen_error`` without an eps.
+    """
+    from jaccpot.production import GALAXY_SETTINGS, GalaxySettings
+
+    mac = str(config.fmm_mac_type).strip().lower()
+    if mac == "dehnen_error":
+        if config.fmm_adaptive_eps is None:
+            raise ValueError(
+                "fmm_mac_type='dehnen_error' needs config.fmm_adaptive_eps, the "
+                "relative force-accuracy target of Dehnen's eq (16a)"
+            )
+        mac_fields = dict(
+            mac_type="dehnen_error", adaptive_eps=float(config.fmm_adaptive_eps)
+        )
+    elif mac == "dehnen":
+        mac_fields = dict(
+            mac_type=GALAXY_SETTINGS.mac_type, adaptive_eps=GALAXY_SETTINGS.adaptive_eps
+        )
+    else:
+        raise ValueError(
+            f"the runner lane runs the Dehnen MAC ('dehnen' or 'dehnen_error'); got "
+            f"fmm_mac_type={config.fmm_mac_type!r}. The adaptive lane "
+            "(fixed_timestep=False) still runs the coupler's other MACs."
+        )
+    fp32 = jnp.dtype(state_dtype) != jnp.float64 or (
+        str(config.fmm_preset).strip().lower() == "large_n_gpu"
+        and bool(config.fmm_large_n_force_fp32)
+    )
+    order = (
+        config.fmm_max_order if config.fmm_fixed_order is None else config.fmm_fixed_order
+    )
+    return GalaxySettings(
+        leaf_size=int(config.fmm_leaf_size),
+        max_order=int(order),
+        theta=float(config.fmm_theta),
+        cell_min_level=None,
+        softening_kernel=str(config.softening_kernel),
+        precision="fp32" if fp32 else "fp64",
+        **mac_fields,
+    )
+
+
+def runner_settings(
+    config: SimulationConfig,
+    state_dtype: Any,
+    *,
+    num_particles: Optional[int] = None,
+    backend: Optional[str] = None,
+) -> Any:
+    """The ``GalaxySettings`` the runner lanes run ``config`` with.
+
+    :func:`galaxy_settings` under profile ``"galaxy"``, :func:`config_settings`
+    under ``"config"`` (:func:`runner_profile`).
+
+    Parameters
+    ----------
+    config : SimulationConfig
+        The configuration.
+    state_dtype : Any
+        The state's dtype.
+    num_particles : Optional[int]
+        The particle count; ``None`` reads ``config.N_particles``.
+    backend : Optional[str]
+        ``jax.default_backend()`` when ``None``.
+
+    Returns
+    -------
+    GalaxySettings
+        The settings.
+    """
+    profile = runner_profile(config, num_particles=num_particles, backend=backend)
+    if profile == "galaxy":
+        return galaxy_settings(config, state_dtype)
+    return config_settings(config, state_dtype)
+
+
+#: The coupler knobs of ``SimulationConfig`` the runner lanes do not read, with
+#: their defaults: engine and memory tuning of the removed fixed-step loop, which
+#: the adaptive lane (``fixed_timestep=False``) still reads. Under profile
+#: ``"galaxy"`` the settings' own leaf size, order and opening angle replace
+#: ``fmm_leaf_size``, ``fmm_max_order``, ``fmm_fixed_order`` and ``fmm_theta`` too.
+RUNNER_IGNORED_KNOBS = (
+    ("fmm_basis", "real"),
+    ("fmm_farfield_mode", "auto"),
+    ("fmm_m2l_chunk_size", None),
+    ("fmm_nearfield_mode", "auto"),
+    ("fmm_nearfield_edge_chunk_size", 256),
+    ("fmm_tree_build_mode", "static_radix"),
+    ("fmm_jit_tree", None),
+    ("fmm_jit_traversal", True),
+    ("fmm_max_pair_queue", None),
+    ("fmm_pair_process_block", None),
+    ("fmm_max_interactions_per_node", None),
+    ("fmm_max_neighbors_per_leaf", None),
+    ("fmm_prepare_stage_memory_split_enabled", None),
+    ("fmm_upward_leaf_batch_size", None),
+    ("fmm_enforce_static_shape_contract", False),
+    ("fmm_static_shape_warmup_prepares", 0),
+)
+
+#: The knobs (with their defaults) the ``"galaxy"`` profile does not read either.
+_GALAXY_IGNORED_KNOBS = (
+    ("fmm_leaf_size", 16),
+    ("fmm_max_order", 4),
+    ("fmm_fixed_order", None),
+    ("fmm_theta", 0.6),
+)
+
+#: The ignored-knob sets already warned about in this process.
+_WARNED_IGNORED: set = set()
+
+
+def ignored_knobs(config: SimulationConfig, settings: Any, profile: str) -> tuple:
+    """The knobs ``config`` sets that the runner lane does not read.
+
+    A knob counts when its value differs from its default:
+    :data:`RUNNER_IGNORED_KNOBS` always, plus, under profile ``"galaxy"``, the leaf
+    size, order and opening angle. ``fmm_tree_leaf_target`` counts only when it is
+    not the leaf size the run uses (the coupler tied the two).
+
+    Parameters
+    ----------
+    config : SimulationConfig
+        The configuration.
+    settings : GalaxySettings
+        :func:`runner_settings`'.
+    profile : str
+        :func:`runner_profile`'s.
+
+    Returns
+    -------
+    tuple
+        ``((name, value), ...)``.
+    """
+    knobs = RUNNER_IGNORED_KNOBS + (
+        _GALAXY_IGNORED_KNOBS if profile == "galaxy" else ()
+    )
+    found = [
+        (name, getattr(config, name))
+        for name, default in knobs
+        if getattr(config, name) != default
+    ]
+    if int(config.fmm_tree_leaf_target) not in (32, int(settings.leaf_size)):
+        found.append(("fmm_tree_leaf_target", config.fmm_tree_leaf_target))
+    return tuple(found)
+
+
+def warn_ignored_knobs(
+    config: SimulationConfig, settings: Any, profile: str, *, stacklevel: int = 2
+) -> tuple:
+    """Warn once per process and knob set that the runner lane ignores them.
+
+    Not an error: the knobs tune the removed coupler loop's engine and memory, not
+    the physics the runner computes, and the adaptive lane still reads them. Not
+    silent either: the run's numbers do not depend on them any more.
+
+    Parameters
+    ----------
+    config : SimulationConfig
+        The configuration.
+    settings : GalaxySettings
+        :func:`runner_settings`'.
+    profile : str
+        :func:`runner_profile`'s.
+    stacklevel : int
+        ``warnings.warn``'s.
+
+    Returns
+    -------
+    tuple
+        :func:`ignored_knobs`' (also when nothing is warned).
+    """
+    import warnings
+
+    found = ignored_knobs(config, settings, profile)
+    key = (profile, found)
+    if found and key not in _WARNED_IGNORED:
+        _WARNED_IGNORED.add(key)
+        names = ", ".join(f"{name}={value!r}" for name, value in found)
+        warnings.warn(
+            f"the runner lane (fmm_runner, profile {profile!r}) does not read {names}: "
+            f"it runs leaf {settings.leaf_size}, p{settings.max_order}, "
+            f"theta {settings.theta}, MAC {settings.mac_type!r}, {settings.precision}. "
+            "Set config.fmm_galaxy_settings (jaccpot.production.GalaxySettings) to "
+            "change those; the knobs above were the removed fixed-step loop's "
+            "(docs/source/production_fmm.md, 'Migration').",
+            UserWarning,
+            stacklevel=stacklevel + 1,
+        )
+    return found
+
+
+#: What a CPU backend needs set for the fused lane under ``dehnen_error``: its
+#: force scale reads the CSR near field, run in Pallas interpret mode on a CPU
+#: (jaccpot's own CPU runner tests set the same).
+_CPU_DEHNEN_ERROR_ENV = {
+    "JACCPOT_NEARFIELD_PALLAS_INTERPRET": "1",
+    "JACCPOT_NEARFIELD_LEAFPAIR_CSR": "1",
+    "JACCPOT_LARGE_N_RADIX_FAST_PAYLOAD_MAX_MB": "0",
+}
+
+
+@contextlib.contextmanager
+def fused_lane_scope(config: SimulationConfig, settings: Any) -> Iterator[None]:
+    """The scope every runner build, run and force evaluation runs in.
+
+    ``config``'s large-N environment overrides, and on a CPU backend the fused
+    lane's CPU route: jaccpot gates the fused lane's prepare on
+    ``jax.default_backend() == "gpu"``, and its pure-JAX near field runs on a CPU
+    unchanged, so inside this scope ``jax.default_backend()`` reports ``"gpu"``
+    (what jaccpot's own CPU tests of the lane do), with the Pallas kernels off
+    (:func:`_runner_use_pallas`) -- except, under ``dehnen_error``, the CSR near
+    field's, in interpret mode (:data:`_CPU_DEHNEN_ERROR_ENV`; an explicit shell
+    value wins), which that MAC's force scale needs.
+    The real backend is restored on exit. A stopgap until jaccpot takes a CPU
+    switch for the fused lane: process-global while it lasts, so do not run
+    other JAX work in another thread meanwhile.
+
+    Parameters
+    ----------
+    config : SimulationConfig
+        The configuration.
+    settings : GalaxySettings
+        The run's settings (their MAC).
+
+    Yields
+    ------
+    None
+    """
+    import os
+
+    from odisseo.jaccpot_coupling import _temporary_large_n_environment
+
+    global _CPU_SCOPE
+    real_backend = jax.default_backend
+    on_cpu = _backend_name() == "cpu"
+    env = (
+        {
+            k: v
+            for k, v in _CPU_DEHNEN_ERROR_ENV.items()
+            if os.environ.get(k) is None
+        }
+        if on_cpu and settings.mac_type == "dehnen_error"
+        else {}
+    )
+    with _temporary_large_n_environment(config):
+        try:
+            os.environ.update(env)
+            if on_cpu:
+                jax.default_backend = lambda: "gpu"
+                _CPU_SCOPE = True
+            yield
+        finally:
+            if on_cpu:
+                jax.default_backend = real_backend
+                _CPU_SCOPE = False
+            for key in env:
+                os.environ.pop(key, None)
+
+
+#: Inside :func:`fused_lane_scope` on a CPU backend (which then reports "gpu").
+_CPU_SCOPE = False
+
+
+def _runner_use_pallas(config: SimulationConfig, settings: Any) -> Optional[bool]:
+    """``use_pallas`` for the runner's solver.
+
+    On a CPU backend: on under ``dehnen_error`` (its force scale needs the CSR near
+    field's Pallas kernel, run in interpret mode there: :func:`fused_lane_scope`),
+    off otherwise (the pure-JAX near field). On a GPU: the config's
+    (``jaccpot_coupling._resolve_use_pallas``).
+    """
+    from odisseo.jaccpot_coupling import _resolve_use_pallas
+
+    if _CPU_SCOPE or _backend_name() == "cpu":
+        return settings.mac_type == "dehnen_error"
+    return _resolve_use_pallas(config)
 
 
 def galaxy_settings(config: SimulationConfig, state_dtype: Any) -> Any:
@@ -489,24 +894,22 @@ def _solver_and_runner(
     The key holds what the solver is built with, except ``params.G`` (passed per
     call as a traced force parameter) unless the MAC is ``dehnen_error``, which
     takes the solver's own G only. The particle count is in it: the automatic leaf
-    capacity is sized at the first prepare and only grows afterwards.
+    capacity is sized at the first prepare and only grows afterwards. Called inside
+    :func:`fused_lane_scope`.
     """
     from jaccpot import ProductionRunner
 
-    from odisseo.jaccpot_coupling import (
-        _large_n_environment_overrides,
-        _resolve_use_pallas,
-        _temporary_large_n_environment,
-    )
+    from odisseo.jaccpot_coupling import _large_n_environment_overrides
 
     scale_carry = settings.mac_type == "dehnen_error"
     scheme = runner_scheme(config)
+    use_pallas = _runner_use_pallas(config, settings)
     key = (
         settings,
         float(config.softening),
         float(params.G) if scale_carry else None,
         str(config.fmm_mac_force_scale_mode) if scale_carry else None,
-        _resolve_use_pallas(config),
+        use_pallas,
         tuple(sorted(_large_n_environment_overrides(config).items())),
         int(num_particles),
         bool(external),
@@ -515,14 +918,13 @@ def _solver_and_runner(
     kept = _CACHE.get(key)
     if kept is None:
         _CACHE.clear()  # one configuration at a time: its programs and last handle
-        with _temporary_large_n_environment(config):
-            solver = build_galaxy_solver(
-                settings,
-                G=float(params.G),
-                softening=float(config.softening),
-                use_pallas=_resolve_use_pallas(config),
-                mac_force_scale_mode=str(config.fmm_mac_force_scale_mode),
-            )
+        solver = build_galaxy_solver(
+            settings,
+            G=float(params.G),
+            softening=float(config.softening),
+            use_pallas=use_pallas,
+            mac_force_scale_mode=str(config.fmm_mac_force_scale_mode),
+        )
         runner = ProductionRunner(
             solver,
             settings=settings,
@@ -767,41 +1169,36 @@ def integrate_runner_jaccpot(
     Raises
     ------
     NotImplementedError
-        For a configuration the runner does not run (:func:`runner_unsupported`), or
-        off a GPU backend: the fused lane's prepare runs on a GPU only.
+        For a configuration the runner does not run (:func:`runner_unsupported`).
     ValueError
         For a non-positive ``num_timesteps`` / ``num_snapshots``, or a ``segment``
         whose length does not divide the snapshot interval.
+
+    Notes
+    -----
+    The settings are :func:`runner_settings`' (:func:`runner_profile`: jaccpot's
+    galaxy settings, or the config's own FMM knobs); a knob the lane does not read
+    is warned about once (:func:`warn_ignored_knobs`). On a CPU backend the run
+    takes the fused lane's CPU route (:func:`fused_lane_scope`).
     """
     from jaccpot import ForceParams
 
-    from odisseo.jaccpot_coupling import _temporary_large_n_environment
-
     reason = runner_unsupported(config, scheduled=scheduled)
     if reason is not None:
-        raise NotImplementedError(
-            f"the runner lane (fmm_preset='galaxy') does not run {reason}; use "
-            "fmm_preset='large_n_gpu' for the coupler's own loop on the fused lane."
-        )
-    if str(jax.default_backend()).strip().lower() != "gpu":
-        raise NotImplementedError(
-            "the runner lane (fmm_preset='galaxy') is jaccpot's fused single-GPU "
-            "lane, whose prepare runs on a GPU backend only; got "
-            f"{jax.default_backend()!r}. Use fmm_preset='fast' on a CPU."
-        )
+        raise NotImplementedError(unsupported_message(reason))
     num_steps = int(config.num_timesteps)
     if num_steps <= 0:
         raise ValueError("num_timesteps must be positive")
     state_arr = jnp.asarray(state)
     mass_arr = jnp.asarray(mass, dtype=state_arr.dtype)
-    settings = galaxy_settings(config, state_arr.dtype)
+    n = int(state_arr.shape[0])
+    profile = runner_profile(config, num_particles=n)
+    settings = runner_settings(config, state_arr.dtype, num_particles=n)
+    warn_ignored_knobs(config, settings, profile, stacklevel=3)
     external = len(config.external_accelerations) > 0
 
     segment, collector = _segment_plan(config, segment, num_steps)
 
-    solver, runner = _solver_and_runner(
-        config, params, settings, int(state_arr.shape[0]), external
-    )
     # the runner traces dt, G and eps^2 (SegmentConfig.traced_params); dehnen_error
     # takes the solver's own G and softening only
     force_params = (
@@ -814,16 +1211,17 @@ def integrate_runner_jaccpot(
         if external
         else None
     )
-    # this call's segment plan and callbacks on the kept runner; the callbacks are
-    # dropped afterwards, so the kept runner holds no snapshot between calls
-    runner.segment = segment
-    runner.callbacks = ((collector,) if collector is not None else ()) + tuple(
-        callbacks
-    )
-    runner.step_callback = step_callback
-    runner.step_callback_stride = int(step_callback_stride)
-    try:
-        with _temporary_large_n_environment(config):
+    with fused_lane_scope(config, settings):
+        solver, runner = _solver_and_runner(config, params, settings, n, external)
+        # this call's segment plan and callbacks on the kept runner; the callbacks
+        # are dropped afterwards, so the kept runner holds no snapshot between calls
+        runner.segment = segment
+        runner.callbacks = ((collector,) if collector is not None else ()) + tuple(
+            callbacks
+        )
+        runner.step_callback = step_callback
+        runner.step_callback_stride = int(step_callback_stride)
+        try:
             run = runner.run(
                 state_arr,
                 mass_arr,
@@ -832,8 +1230,110 @@ def integrate_runner_jaccpot(
                 force_params=force_params,
                 external_params=external_params,
             )
-    finally:
-        runner.callbacks = ()
-        runner.step_callback = None
+        finally:
+            runner.callbacks = ()
+            runner.step_callback = None
     snapshots = _collected_snapshots(collector, config, num_steps, run)
     return RunnerResult(state=run.state, snapshots=snapshots, run=run)
+
+
+# --------------------------------------------------------------------------
+# The lane's self-gravity at one state (odisseo.utils.E_pot, force checks).
+# --------------------------------------------------------------------------
+
+#: ``{key: solver}`` for :func:`runner_self_gravity`, the most recent
+#: configuration only: a solver of its own, built by the runner's builder from the
+#: runner's settings, so that an evaluation never changes the kept run's engine
+#: (its recorded walk caps and level widths, its compiled programs).
+_FIELD_CACHE: dict = {}
+
+
+def runner_self_gravity(
+    state: jnp.ndarray,
+    mass: jnp.ndarray,
+    config: SimulationConfig,
+    params: SimulationParams,
+    *,
+    potential: bool = True,
+) -> tuple:
+    """The runner lane's self-gravity at ``state``: accelerations and potential.
+
+    The force ``integrate()`` would run ``config`` with at these positions --
+    :func:`runner_settings`' settings, :func:`build_galaxy_solver`'s solver, G
+    ``params.G`` and softening ``config.softening`` -- evaluated once: jaccpot's
+    full eager prepare of the fused lane (``FusedForceProvider.prepare``), then its
+    accelerations and its O(N) potential (``FusedForceProvider.potential``: the
+    near field and the far field's L2P, the program the runner's energy
+    diagnostic runs) on that topology. Host-driven: concrete arrays only.
+
+    Parameters
+    ----------
+    state : jnp.ndarray
+        ``[N, 2, 3]``; positions only are read.
+    mass : jnp.ndarray
+        ``[N]``, cast to the state's dtype.
+    config : SimulationConfig
+        The configuration (its external field is not included).
+    params : SimulationParams
+        ``G``.
+    potential : bool
+        Also evaluate the potential.
+
+    Returns
+    -------
+    tuple
+        ``(acc, phi)``: ``[N, 3]`` accelerations and ``[N]`` potential per unit
+        mass (``phi_i = -G sum_{j != i} m_j psi(r_ij)``; ``None`` without
+        ``potential``), in the state's dtype, in input order.
+
+    Raises
+    ------
+    RuntimeError
+        If the prepared topology overflowed a capacity (its values are not the
+        force then).
+    """
+    from jaccpot.runtime.fused_provider import FusedForceProvider
+
+    from odisseo.jaccpot_coupling import _large_n_environment_overrides
+
+    state_arr = jnp.asarray(state)
+    mass_arr = jnp.asarray(mass, dtype=state_arr.dtype)
+    n = int(state_arr.shape[0])
+    settings = runner_settings(config, state_arr.dtype, num_particles=n)
+    with fused_lane_scope(config, settings):
+        use_pallas = _runner_use_pallas(config, settings)
+        key = (
+            settings,
+            float(config.softening),
+            float(params.G),
+            str(config.fmm_mac_force_scale_mode),
+            use_pallas,
+            tuple(sorted(_large_n_environment_overrides(config).items())),
+            n,
+        )
+        solver = _FIELD_CACHE.get(key)
+        if solver is None:
+            _FIELD_CACHE.clear()
+            solver = build_galaxy_solver(
+                settings,
+                G=float(params.G),
+                softening=float(config.softening),
+                use_pallas=use_pallas,
+                mac_force_scale_mode=str(config.fmm_mac_force_scale_mode),
+            )
+            _FIELD_CACHE[key] = solver
+        prov, topology = FusedForceProvider.prepare(
+            solver,
+            state_arr[:, 0],
+            mass_arr,
+            leaf_size=int(settings.leaf_size),
+            max_order=int(settings.max_order),
+        )
+        if not bool(prov.capacity_ok(topology)):
+            raise RuntimeError(
+                "runner_self_gravity: the fused lane's prepare at this state "
+                f"overflowed a capacity (N={n}, {settings!r})"
+            )
+        acc = prov.accelerations(topology, None)
+        phi = prov.potential(topology, None) if potential else None
+    return acc, phi

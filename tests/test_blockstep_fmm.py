@@ -1287,7 +1287,8 @@ def test_resolve_lane_names_every_lane_and_rejects_the_unknown(config):
     assert resolve_lane(base._replace(acceleration_scheme=DIRECT_ACC)) == "direct"
 
     fmm = base._replace(acceleration_scheme=FMM_ACC)
-    assert resolve_lane(fmm) == "fmm_forward"
+    assert resolve_lane(fmm) == "fmm_runner"
+    assert resolve_lane(fmm._replace(fixed_timestep=False)) == "fmm_forward"
     assert resolve_lane(fmm._replace(fmm_differentiable=True)) == "fmm_differentiable"
     assert resolve_lane(fmm._replace(fmm_blockstep=True)) == "fmm_blockstep"
     # Precedence is documented on integrate(); pin it rather than trust the order.

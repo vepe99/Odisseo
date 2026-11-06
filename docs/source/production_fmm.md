@@ -1,38 +1,72 @@
-# Galaxy-scale runs on jaccpot's production runner
+# FMM runs on jaccpot's production runner
 
-`integrate()` hands large shared-timestep FMM runs to jaccpot's
-`ProductionRunner` (jaccpot `docs/production.md`): the fused single-GPU lane,
-run as K-step `strict_run_v2(carry="particles")` segments with traced
-parameters, capacity re-plans and diagnostics at the segment edges. Odisseo
-builds the solver, maps its configuration onto it and packages the result
-(`odisseo.runner_coupling`); the step itself is jaccpot's, so it costs what it
-costs in jaccpot's harness (`bench/fused_memory_budget.py`).
+`integrate()` hands every fixed-step shared-timestep FMM run to jaccpot's
+`ProductionRunner` (jaccpot `docs/production.md`): the fused lane, run as K-step
+`strict_run_v2(carry="particles")` segments with traced parameters, capacity
+re-plans and diagnostics at the segment edges. Odisseo builds the solver, maps its
+configuration onto it and packages the result (`odisseo.runner_coupling`); the step
+itself is jaccpot's, so it costs what it costs in jaccpot's harness
+(`bench/fused_memory_budget.py`).
 
 ## Which runs go there
 
-`resolve_lane()` names the lane `"fmm_runner"` for an `FMM_ACC` run (not
-`fmm_mesh` -- the same runner across GPUs, [below](#across-the-gpus-of-a-node) --,
-`fmm_blockstep` or `fmm_differentiable`, which keep precedence) when
+Since 2026-11 (multi-node plan, wave 3; a user decision) `resolve_lane()` names the
+lane `"fmm_runner"` for **every** fixed-step `FMM_ACC` run on one device -- any
+`N`, CPU or GPU, any preset -- except `fmm_mesh` (the same runner across GPUs,
+[below](#across-the-gpus-of-a-node)), `fmm_blockstep` and `fmm_differentiable`,
+which keep precedence. `fixed_timestep=False` is the adaptive coupler lane
+(`"fmm_forward"`, diffrax steps), unchanged.
 
-- `config.fmm_preset == "galaxy"`, or
-- the automatic large-N profile applies: preset `"fast"` (the default),
-  `fmm_auto_large_n_profile=True` (the default), a GPU backend and at least
-  `fmm_large_n_min_particles` (200,000) particles -- **and** the runner runs the
-  call: `fixed_timestep=True`, `fmm_refresh_every=1`,
-  `fmm_refresh_after_position_update=False` and no active-particle schedule.
-  Otherwise the auto profile keeps the coupler's `"large_n_gpu"` loop, as before.
+A fixed-step run the runner does not do -- `fmm_refresh_every != 1`,
+`fmm_refresh_after_position_update=True`, an active-particle schedule -- raises a
+`ValueError` naming what still runs it: Odisseo's own FMM leapfrog loop, which
+ran these, is gone ([Migration](#migration)).
 
-`fmm_preset="large_n_gpu"` always keeps the coupler's loop. An explicit
-`"galaxy"` with an option the runner does not run raises `NotImplementedError`
-instead of falling back, and so does a CPU backend: the fused lane's prepare runs
-on a GPU only (jaccpot's own CPU tests report the backend as `"gpu"` to run its
-pure-JAX route; `tests/test_runner_lane.py` does the same). On a CPU, and below
-the threshold, nothing changes.
+**On a CPU** the run takes the fused lane's CPU route
+(`runner_coupling.fused_lane_scope`): jaccpot gates the fused lane's prepare on
+`jax.default_backend() == "gpu"`, and its pure-JAX near field runs on a CPU
+unchanged, so for the duration of the build, the run and a force evaluation the
+backend is reported as `"gpu"` (what jaccpot's own CPU tests of the lane do), the
+Pallas kernels are off, and under `dehnen_error` the CSR near field runs in Pallas
+interpret mode (its force scale needs it). The real backend is restored
+afterwards. It is process-global while it lasts: run no other JAX work in another
+thread meanwhile. A stopgap until jaccpot takes a CPU switch for the fused lane.
 
-**So the default changed:** `SimulationConfig()` with `FMM_ACC` on a GPU at
-200,000 particles or more now runs jaccpot's galaxy settings -- leaf 64,
-expansion order 6, cell level floor 8, automatic leaf capacity, the preset's MAC,
-an fp32 force -- not `fmm_leaf_size=16`, `fmm_max_order=4`, `fmm_theta=0.6`.
+### The settings: two profiles
+
+`runner_coupling.runner_profile()` picks how the runner is sized:
+
+| profile | when | settings |
+|---|---|---|
+| `"galaxy"` | `fmm_galaxy_settings` given; `fmm_preset="galaxy"`; or the automatic large-N profile: preset `"fast"` (the default), `fmm_auto_large_n_profile=True` (the default), a GPU backend and at least `fmm_large_n_min_particles` (200,000) particles | jaccpot's `GALAXY_SETTINGS` -- leaf 64, p6, cell level floor 8, automatic leaf capacity, the preset's MAC, fp32 -- or `fmm_galaxy_settings` (`galaxy_settings()`) |
+| `"config"` | every other run (a config that sets nothing, on a CPU or below 200,000 particles; `fmm_preset="large_n_gpu"`, `"fast"` with the auto profile off, ...) | the config's own FMM knobs (`config_settings()`): `leaf_size=fmm_leaf_size` (16), `max_order=fmm_fixed_order or fmm_max_order` (4), `theta=fmm_theta` (0.6), no cell level floor, jaccpot's automatic leaf capacity and cubic Morton box, the state's precision (fp32 for `"large_n_gpu"` with `fmm_large_n_force_fp32`, as on the coupler); the MAC: `fmm_mac_type="dehnen"` (the default) keeps jaccpot's preset MAC, eq (16a) at 1e-4, as under `"galaxy"`; `"dehnen_error"` with `fmm_adaptive_eps` sets the target |
+
+The coupler's engine knobs have no runner counterpart and are **not read**:
+`fmm_basis`, `fmm_farfield_mode`, `fmm_m2l_chunk_size`, `fmm_nearfield_mode`,
+`fmm_nearfield_edge_chunk_size`, `fmm_tree_build_mode`, `fmm_tree_leaf_target`
+(unless it equals the leaf size), `fmm_jit_tree`, `fmm_jit_traversal`, the pair-queue
+and traversal capacities, `fmm_prepare_stage_memory_split_enabled`,
+`fmm_upward_leaf_batch_size`, `fmm_enforce_static_shape_contract`,
+`fmm_static_shape_warmup_prepares` -- and under the `"galaxy"` profile
+`fmm_leaf_size`, `fmm_max_order`, `fmm_fixed_order` and `fmm_theta` too. A config
+that sets one to a non-default value gets one `UserWarning` per process and knob
+set (`runner_coupling.warn_ignored_knobs`), naming the settings that run. They
+tune the removed loop's engine and memory, not the physics, and the adaptive lane
+still reads them, so they warn rather than raise. Any MAC other than `"dehnen"` /
+`"dehnen_error"` raises: the fused lane runs these two.
+
+**Why `"dehnen"` is not the geometric MAC under `"config"`.** The fused lane's
+geometric Dehnen MAC is not the coupler's at the same opening angle: at leaf 16, p4,
+theta 0.6 its force rel-L2 against the fp64 direct sum was 4.3e-3 on the FMM
+notebook's N = 512 cube (fp64 force: the same 4.3e-3, so truncation) and 3.8e-3 on
+four blobs, where the coupler had 1.2e-4 and 9.2e-5; theta 0.4 gave 3.2e-4, p6 at
+0.6 1.7e-3. Eq (16a) at 1e-4 at leaf 16, p4: 4.3e-5. In the cube's collapse the
+geometric MAC at leaf 64 (and 256) overflowed a fixed capacity
+(`JACCPOT_STATIC_STRICT_FUSED_COMPACT_FAR_PAIR_CAP`, never re-planned), eq (16a) at
+leaf 16 and 64 ran through (2026-11-06, CPU). The geometric MAC stays reachable
+through `fmm_galaxy_settings=GalaxySettings(mac_type="dehnen", adaptive_eps=None,
+...)`. Under eq (16a) G and the softening are the solver's (another value
+compiles) and `theta` decides no pair.
 
 **The MAC is the preset's.** Since jaccpot's 2026-10-21 preset change
 (`GalaxySettings(mac_type="dehnen_error", adaptive_eps=1e-4)`) that is Dehnen's
@@ -52,9 +86,10 @@ config = config._replace(
 )
 ```
 
-`fmm_mac_type="dehnen"` (Odisseo's default) keeps the settings' MAC, so it
-cannot ask for the geometric one; `fmm_mac_type="dehnen_error"` with
-`fmm_adaptive_eps` sets the target.
+Under the `"galaxy"` profile `fmm_mac_type="dehnen"` (Odisseo's default) keeps the
+settings' MAC, so it cannot ask for the geometric one; `fmm_mac_type="dehnen_error"`
+with `fmm_adaptive_eps` sets the target. (Under the `"config"` profile
+`fmm_mac_type` is the MAC.)
 
 ## Integration schemes (multi-node plan I1)
 
@@ -68,33 +103,24 @@ runner a scheme:
 | `"nornax_kdk"` | `nornax.schemes.LeapfrogKDK`: the same KDK written by nornax, **bitwise** the built-in (`tests/test_runner_scheme.py`) |
 | an object | any `jaccpot.scheme.SplitStepScheme` (hashable) |
 
-Setting it selects `"fmm_runner"` for a fixed-step `FMM_ACC` run on any backend,
-as `fmm_preset="galaxy"` does, so the runner's settings apply (above). The lanes
-with their own step -- `fmm_blockstep`, `fmm_differentiable`, the older
-`"fmm_mesh"` -- refuse it, and so does `"fmm_mesh_runner"` until the plan's I2
+It selects nothing since the 2026-11 switch (every fixed-step run is the
+runner's) and changes no setting. The lanes with their own step --
+`fmm_blockstep`, `fmm_differentiable`, the adaptive `"fmm_forward"` -- refuse it, and so does `"fmm_mesh_runner"` until the plan's I2
 gives the multi-GPU runner the same seam. The scheme is part of the kept
 runner's key: switching it builds a new runner and compiles.
 
-**Deprecated** (`DeprecationWarning`, once, on the caller's line; nothing is
-removed yet):
+**Removed** in 2026-11 (multi-node plan, wave 3; deprecated in I1):
 
 - Odisseo's own FMM leapfrog loop: `integrate_leapfrog_jaccpot_active`,
   `build_jitted_leapfrog_jaccpot_active`, and lane `"fmm_forward"` with
-  `fixed_timestep=True` -- replaced by `"fmm_runner"` (`fmm_preset="galaxy"`,
-  optionally `fmm_scheme="nornax_kdk"`);
-- the older mesh lane's KDK (`"fmm_mesh"`, `MeshOptions`,
-  `mesh_coupling.integrate_mesh_jaccpot`) -- replaced by `"fmm_mesh_runner"`
-  (`docs/source/parallelism.md`).
+  `fixed_timestep=True` -- replaced by `"fmm_runner"` (above; optionally
+  `fmm_scheme="nornax_kdk"`);
+- the older mesh lane (`"fmm_mesh"`, `MeshOptions`, `odisseo.mesh_coupling`) --
+  replaced by `"fmm_mesh_runner"` (`docs/source/parallelism.md`).
 
-**The default lane is not switched yet.** `SimulationConfig()` with `FMM_ACC` on a
-CPU, or below the large-N threshold, still runs the coupler's loop (now with the
-warning): the runner would run it with other numerics (leaf 64, p6, the preset's
-MAC, fp32 force instead of `fmm_leaf_size=16`, `fmm_max_order=4`,
-`fmm_theta=0.6`), so every such run's numbers would change. Switching is a
-decision for a later session. The adaptive diffrax FMM path
-(`fixed_timestep=False`), the block-step lane (nornax's block KDK already) and the
-differentiable lane are not leapfrog loops the runner replaces and are not
-deprecated.
+The adaptive diffrax FMM path (`fixed_timestep=False`), the block-step lane
+(nornax's block KDK already) and the differentiable lane are not leapfrog loops
+the runner replaces and stay.
 
 ## Settings
 
@@ -102,28 +128,26 @@ The runner lane reads:
 
 | field | |
 |---|---|
-| `softening`, `softening_kernel`, `params.G` | the solver's softening (Plummer-equivalent), kernel and G, exactly as the coupler passes them |
-| `fmm_galaxy_settings` | a `jaccpot.production.GalaxySettings`; `None` is `GALAXY_SETTINGS` |
+| `softening`, `softening_kernel`, `params.G` | the solver's softening (Plummer-equivalent), kernel and G, exactly as the coupler passed them |
+| `fmm_galaxy_settings` | a `jaccpot.production.GalaxySettings`: the `"galaxy"` profile with these settings |
+| `fmm_preset`, `fmm_auto_large_n_profile`, `fmm_large_n_min_particles` | the profile (above) |
+| `fmm_leaf_size`, `fmm_max_order`, `fmm_fixed_order`, `fmm_theta` | the `"config"` profile's settings |
 | `fmm_mac_type="dehnen_error"`, `fmm_adaptive_eps`, `fmm_mac_force_scale_mode` | Dehnen's eq (16a) MAC; any MAC other than `"dehnen"` / `"dehnen_error"` is refused |
-| `fmm_large_n_force_fp32=False` with a float64 state | the fp64 force (without `fmm_galaxy_settings`) |
-| `fmm_use_pallas` / `ODISSEO_FMM_USE_PALLAS`, the `fmm_large_n_*` environment knobs | as on the coupler |
+| `fmm_large_n_force_fp32=False` with a float64 state | the fp64 force under `"galaxy"` (without `fmm_galaxy_settings`) and `"large_n_gpu"` |
+| `fmm_use_pallas` / `ODISSEO_FMM_USE_PALLAS`, the `fmm_large_n_*` environment knobs | as on the coupler (on a GPU; the CPU route sets its own) |
+| `fmm_scheme` | the integration scheme (above) |
 | `external_accelerations` and the potentials' fields | the external field |
 
 The solver is `preset="galaxy"`'s own configuration with the settings' leaf size,
 cell level floor, leaf capacity, Morton box (`GalaxySettings.cubic_bounds`, from
 jaccpot's S3b on), order and MAC put in, so whatever else the preset sets comes
-with it; `GALAXY_SETTINGS` builds exactly the preset.
-
-It does **not** read `fmm_leaf_size`, `fmm_max_order`, `fmm_theta`, the tree,
-near-field, traversal or static-shape knobs: every `SimulationConfig` field has a
-default, so a value "set by the caller" cannot be told from the default.
-`fmm_galaxy_settings` is the way to change them:
+with it; `GALAXY_SETTINGS` builds exactly the preset. `fmm_galaxy_settings` is the
+way to set anything else:
 
 ```python
 from jaccpot.production import GalaxySettings
 
 config = config._replace(
-    fmm_preset="galaxy",
     fmm_galaxy_settings=GalaxySettings(adaptive_eps=1e-5, max_order=8),
     # or the geometric MAC at a tighter angle:
     # GalaxySettings(mac_type="dehnen", adaptive_eps=None, theta=0.6, max_order=8)
@@ -176,6 +200,14 @@ are NumPy arrays. `total_energy` (`K + W_self + W_ext`, jaccpot's O(N) fused-lan
 potential: about one force evaluation per snapshot) and `angular_momentum`
 (`sum m x x v`) are the runner's fp64 diagnostics.
 
+`odisseo.utils.E_pot` / `E_tot` take `FMM_ACC` too (since 2026-11): jaccpot's
+fused-lane potential at the lane's own settings
+(`runner_coupling.runner_self_gravity`, on a solver of its own so the run's engine
+is untouched), per particle in the direct schemes' convention (`m_i phi_i`, so the
+sum is `2 W_self + W_ext`; the runner's `total_energy` is `K + W_self + W_ext`).
+It is host-driven: under `jax.jit` / `jax.vmap` it runs as a `jax.pure_callback`,
+one evaluation per mapped state, with no gradient.
+
 A plain run returns the final state only and computes no diagnostics. For them,
 or for restart files and jaccpot's `SnapshotWriter` / `DiagnosticsLog` callbacks,
 call the lane directly:
@@ -204,13 +236,12 @@ With `fmm_mesh=True` the same runner runs in its multi-GPU mode (jaccpot
 particles are decomposed into Morton domains, each segment is one
 `jit(shard_map(scan))` program on the fused multi-GPU lane, the domains are
 re-balanced between segments, and a segment that outgrows a capacity on any card is
-re-planned and re-run on all of them. `resolve_lane()` picks it for
-
-- `fmm_mesh=True` with `fmm_preset="galaxy"`, or
-- `fmm_mesh=True` with a `MeshRunnerOptions` as `config.mesh_options`;
-
-a `MeshOptions` there keeps the older mesh lane (`"fmm_mesh"`,
-`odisseo.mesh_coupling`), whatever the preset (`docs/source/parallelism.md`).
+re-planned and re-run on all of them. `resolve_lane()` picks it for every
+`fmm_mesh=True` run, with a `MeshRunnerOptions` (or `None`, its defaults) as
+`config.mesh_options`; anything else there raises a `TypeError` naming it (the
+older mesh lane and its `MeshOptions` were removed in 2026-11;
+`docs/source/parallelism.md`). Its settings are the single-card lane's
+(`runner_settings`, the same two profiles).
 
 ```python
 from odisseo.mesh_runner_coupling import MeshRunnerOptions
@@ -264,3 +295,44 @@ out.run.edges[-1].plan["mesh"]   # ndev, cap, live counts
 Launch it as one process with the cards visible and `XLA_FLAGS` set before jax
 starts (`docs/source/parallelism.md`, "One large simulation across the GPUs of a
 node").
+
+## Migration
+
+What the 2026-11 switch (multi-node plan, wave 3) changed for a fixed-step
+`FMM_ACC` run on one device:
+
+| before | now |
+|---|---|
+| a config that sets nothing, on a CPU or below 200,000 particles: Odisseo's own leapfrog loop over jaccpot's coupler (`fmm_forward`), at `fmm_leaf_size` 16, `fmm_max_order` 4, `fmm_theta` 0.6, the geometric MAC | the runner (`fmm_runner`) at the same leaf size and order (profile `"config"`) with jaccpot's preset MAC (eq (16a) at 1e-4): no cell level floor, jaccpot's automatic leaf capacity and cubic Morton box, the fused lane's force; numbers move ([below](#what-moved)) |
+| `fmm_preset="large_n_gpu"`: the coupler's loop on the large-N lane | the runner, profile `"config"`, fp32 force as before |
+| `fmm_preset="galaxy"`, or the auto large-N profile on a GPU | unchanged: the runner at jaccpot's galaxy settings |
+| the coupler's engine knobs (tree, near field, traversal, static shapes) | not read; warned once (above) |
+| `fmm_mesh=True` with a `MeshOptions` (the older mesh lane) | removed: a `TypeError`; `MeshRunnerOptions` (lane `"fmm_mesh_runner"`) |
+| `integrate_leapfrog_jaccpot_active`, `build_jitted_leapfrog_jaccpot_active`, `mesh_coupling.integrate_mesh_jaccpot` | removed: `integrate()` (or `runner_coupling.integrate_runner_jaccpot` / `mesh_runner_coupling.integrate_mesh_runner_jaccpot` for the diagnostics, restart files and callbacks) |
+| `fmm_refresh_every > 1`, `fmm_refresh_after_position_update=True`, an active-particle schedule | a `ValueError` naming what still runs them (`fmm_blockstep=True` for individual timesteps, `fixed_timestep=False` for the adaptive lane) |
+| a MAC other than `"dehnen"` / `"dehnen_error"` | a `ValueError` (the adaptive lane keeps the others) |
+| CPU backend: the runner refused it | the fused lane's CPU route (above) |
+| `fixed_timestep=False` | unchanged: the adaptive coupler lane |
+
+### What moved
+
+The removed loop (Odisseo base 1172746, lane `fmm_forward`) against the runner
+(lane `fmm_runner`, profile `"config"`), N = 512, 200 fixed steps, 50 snapshots,
+float32 state, CPU (2026-11-06; jaccpot `mn/wave2` dd65b611). Force: rel-L2 of the
+self-gravity at t = 0 against the fp64 direct sum. Energy: the conserved `K +
+W_self + W_ext` by fp64 direct sum on the snapshots. Wall: the second call (the
+first compiles), on a shared host (load 26-50, the two sides partly overlapping):
+reported, not a result.
+
+| IC, config | force rel-L2 old / new | max abs(dE/E0) old / new | wall [s] old / new |
+|---|---|---|---|
+| the FMM notebook's cube (512 masses 0.5-1.5 in [-1, 1]^3, softening 1e-3, dt 5e-3), no FMM knob set | 1.20e-4 / 4.30e-5 | 83.9 / 84.2 | 365 / 507 |
+| the same, the notebook's own knobs (`"large_n_gpu"`, leaf 256, p4) | 1.01e-7 / 9.93e-8 | 84.6 / 86.3 | 382 / 364 |
+| four blobs (total mass 1) in an NFW halo (`Mvir` 10, `r_s` 1), softening 1e-2, dt 2^-10, no knob set | 9.24e-5 / 2.29e-5 | 1.90e-4 / 1.89e-4 | 545 / 250 |
+
+The cube is not resolved (it collapses within the run; I1 measured |dE/E0| 47 on
+it): its energy is no claim, and its trajectories diverge (final positions differ
+by up to 2e2). On the blobs the final positions agree to 1.0e-4. At leaf 16, p4,
+theta 0.6 with the fused lane's geometric MAC the force rel-L2 would have been
+4.3e-3 (cube) and 3.8e-3 (blobs): the reason the `"config"` profile keeps the
+preset's MAC (above).

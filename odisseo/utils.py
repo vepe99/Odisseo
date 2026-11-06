@@ -3,10 +3,11 @@ from functools import partial
 import jax
 from jax import jit
 import jax.numpy as jnp
+import numpy as np
 from odisseo.dynamics import direct_acc, direct_acc_laxmap, direct_acc_matrix, direct_acc_for_loop, direct_acc_sharding, no_self_gravity
 from odisseo.potentials import combined_external_acceleration_vmpa_switch
 from odisseo.option_classes import SimulationConfig, SimulationParams
-from odisseo.option_classes import DIRECT_ACC, DIRECT_ACC_LAXMAP, DIRECT_ACC_MATRIX, DIRECT_ACC_FOR_LOOP, DIRECT_ACC_SHARDING, NO_SELF_GRAVITY
+from odisseo.option_classes import DIRECT_ACC, DIRECT_ACC_LAXMAP, DIRECT_ACC_MATRIX, DIRECT_ACC_FOR_LOOP, DIRECT_ACC_SHARDING, NO_SELF_GRAVITY, FMM_ACC
 from odisseo.units import CodeUnits
 
 from astropy import units as u
@@ -53,14 +54,24 @@ def E_kin(state: jnp.ndarray,
     return 0.5 * (jnp.sum(state[:, 1]**2, axis=1) * mass)
     
 
-@partial(jax.jit, static_argnames=['config'])
-@jaxtyped(typechecker=typechecker)
 def E_pot(state: jnp.ndarray,
         mass: jnp.ndarray,
         config: SimulationConfig,
         params: SimulationParams, ) -> jnp.ndarray:
     """
     Return the potential energy of the system.
+
+    Per particle, ``m_i * phi_i`` with ``phi_i`` the full self-gravity potential at
+    particle ``i`` (summed over every other particle), plus ``m_i * Phi_ext`` with
+    the external potentials. Summed over particles that is ``2 W_self + W_ext``
+    (each pair counted twice), on every acceleration scheme.
+
+    The direct schemes evaluate the pair sum (jitted, ``config`` static). ``FMM_ACC``
+    evaluates jaccpot's FMM potential with the solver settings of the lane the
+    config resolves to (:func:`odisseo.runner_coupling.runner_self_gravity`: the
+    runner lane's settings, the fused lane's O(N) potential); it is host-driven, so
+    under ``jax.jit`` / ``jax.vmap`` it runs as a ``jax.pure_callback`` (one
+    evaluation per mapped state) and has no gradient.
 
     Args:
         state (jnp.ndarray): Array of shape (N_particles, 6) representing the positions and velocities of the particles.
@@ -72,6 +83,18 @@ def E_pot(state: jnp.ndarray,
         E_tot: The potential energy of each particle in the system.
 
     """
+    if config.acceleration_scheme == FMM_ACC:
+        return _E_pot_fmm(state, mass, config, params)
+    return _E_pot_direct(state, mass, config, params)
+
+
+@partial(jax.jit, static_argnames=['config'])
+@jaxtyped(typechecker=typechecker)
+def _E_pot_direct(state: jnp.ndarray,
+        mass: jnp.ndarray,
+        config: SimulationConfig,
+        params: SimulationParams, ) -> jnp.ndarray:
+    """:func:`E_pot` on the direct schemes."""
     
     if config.acceleration_scheme == DIRECT_ACC:
         _, pot = direct_acc(state, mass, config, params, return_potential=True)
@@ -85,24 +108,76 @@ def E_pot(state: jnp.ndarray,
         _, pot = direct_acc_sharding(state, mass, config, params, return_potential=True)
     elif config.acceleration_scheme == NO_SELF_GRAVITY:
         _, pot = no_self_gravity(state, mass, config, params, return_potential=True)
+    else:
+        raise ValueError(
+            f"E_pot: unknown acceleration_scheme {config.acceleration_scheme!r}"
+        )
     
     self_Epot = pot*mass
 
-    external_Epot = 0.
+    return self_Epot + _external_E_pot(state, mass, config, params)
+
+
+def _external_E_pot(state, mass, config, params):
+    """``m_i * Phi_ext(x_i)`` (``0.`` without external potentials)."""
     if len(config.external_accelerations) > 0:
         _, external_pot = combined_external_acceleration_vmpa_switch(state, config, params, return_potential=True)
-        external_Epot = external_pot*mass
-        
-    return self_Epot + external_Epot
+        return external_pot*mass
+    return 0.
 
-@partial(jax.jit, static_argnames=['config'])
-@jaxtyped(typechecker=typechecker)
+
+def _traced(*trees) -> bool:
+    """Whether any leaf of ``trees`` is a tracer (inside jit, vmap or grad)."""
+    return any(
+        isinstance(leaf, jax.core.Tracer)
+        for tree in trees
+        for leaf in jax.tree_util.tree_leaves(tree)
+    )
+
+
+def _E_pot_fmm(state, mass, config, params):
+    """:func:`E_pot` on ``FMM_ACC``: jaccpot's potential, the runner lane's settings."""
+    from odisseo.runner_coupling import runner_self_gravity
+
+    state = jnp.asarray(state)
+    mass = jnp.asarray(mass)
+    dtype = jnp.result_type(state.dtype, mass.dtype)
+
+    def self_energy(state_in, mass_in, params_in):
+        # inside a pure_callback the inputs arrive committed to the CPU and the
+        # default device is the CPU; the lane runs on the default backend's
+        # device (the GPU on a GPU host), from host copies
+        state_in, mass_in = np.asarray(state_in), np.asarray(mass_in)
+        params_in = jax.tree_util.tree_map(np.asarray, params_in)
+        with jax.default_device(jax.devices()[0]):
+            _, phi = runner_self_gravity(state_in, mass_in, config, params_in)
+        return np.asarray(
+            np.asarray(phi, np.float64) * np.asarray(mass_in, np.float64), dtype
+        )
+
+    if _traced(state, mass, params):
+        self_Epot = jax.pure_callback(
+            self_energy,
+            jax.ShapeDtypeStruct(mass.shape, dtype),
+            state,
+            mass,
+            params,
+            vmap_method="sequential",
+        )
+    else:
+        self_Epot = jnp.asarray(self_energy(state, mass, params))
+    return self_Epot + _external_E_pot(state, mass, config, params)
+
+
 def E_tot(state: jnp.ndarray,
         mass: jnp.ndarray,
         config: SimulationConfig,
         params: SimulationParams, ) -> jnp.ndarray:
     """
     Return the total energy of the system.
+
+    ``E_kin + E_pot`` per particle (see :func:`E_pot` for its convention and the
+    ``FMM_ACC`` evaluation).
 
     Args:
         state (jnp.ndarray): Array of shape (N_particles,2, 3) representing the positions and velocities of the particles.
@@ -114,8 +189,19 @@ def E_tot(state: jnp.ndarray,
         float: The total energy of each particle in the system
 
     """
-    
-    return E_kin(state, mass) + E_pot(state, mass, config, params)
+    if config.acceleration_scheme == FMM_ACC:
+        return E_kin(state, mass) + _E_pot_fmm(state, mass, config, params)
+    return _E_tot_direct(state, mass, config, params)
+
+
+@partial(jax.jit, static_argnames=['config'])
+@jaxtyped(typechecker=typechecker)
+def _E_tot_direct(state: jnp.ndarray,
+        mass: jnp.ndarray,
+        config: SimulationConfig,
+        params: SimulationParams, ) -> jnp.ndarray:
+    """:func:`E_tot` on the direct schemes (one jitted program, as before)."""
+    return E_kin(state, mass) + _E_pot_direct(state, mass, config, params)
 
 @partial(jax.jit, )
 @jaxtyped(typechecker=typechecker)
