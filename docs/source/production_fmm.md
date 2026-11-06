@@ -313,3 +313,26 @@ What the 2026-11 switch (multi-node plan, wave 3) changed for a fixed-step
 | a MAC other than `"dehnen"` / `"dehnen_error"` | a `ValueError` (the adaptive lane keeps the others) |
 | CPU backend: the runner refused it | the fused lane's CPU route (above) |
 | `fixed_timestep=False` | unchanged: the adaptive coupler lane |
+
+### What moved
+
+The removed loop (Odisseo base 1172746, lane `fmm_forward`) against the runner
+(lane `fmm_runner`, profile `"config"`), N = 512, 200 fixed steps, 50 snapshots,
+float32 state, CPU (2026-11-06; jaccpot `mn/wave2` dd65b611). Force: rel-L2 of the
+self-gravity at t = 0 against the fp64 direct sum. Energy: the conserved `K +
+W_self + W_ext` by fp64 direct sum on the snapshots. Wall: the second call (the
+first compiles), on a shared host (load 26-50, the two sides partly overlapping):
+reported, not a result.
+
+| IC, config | force rel-L2 old / new | max abs(dE/E0) old / new | wall [s] old / new |
+|---|---|---|---|
+| the FMM notebook's cube (512 masses 0.5-1.5 in [-1, 1]^3, softening 1e-3, dt 5e-3), no FMM knob set | 1.20e-4 / 4.30e-5 | 83.9 / 84.2 | 365 / 507 |
+| the same, the notebook's own knobs (`"large_n_gpu"`, leaf 256, p4) | 1.01e-7 / 9.93e-8 | 84.6 / 86.3 | 382 / 364 |
+| four blobs (total mass 1) in an NFW halo (`Mvir` 10, `r_s` 1), softening 1e-2, dt 2^-10, no knob set | 9.24e-5 / 2.29e-5 | 1.90e-4 / 1.89e-4 | 545 / 250 |
+
+The cube is not resolved (it collapses within the run; I1 measured |dE/E0| 47 on
+it): its energy is no claim, and its trajectories diverge (final positions differ
+by up to 2e2). On the blobs the final positions agree to 1.0e-4. At leaf 16, p4,
+theta 0.6 with the fused lane's geometric MAC the force rel-L2 would have been
+4.3e-3 (cube) and 3.8e-3 (blobs): the reason the `"config"` profile keeps the
+preset's MAC (above).
