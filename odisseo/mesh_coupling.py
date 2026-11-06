@@ -53,6 +53,7 @@ drift and kinetic energy are exact, and are what :class:`MeshInvariants` carries
 from __future__ import annotations
 
 import time
+import warnings
 from dataclasses import dataclass, field
 from typing import Any, Callable, Optional
 
@@ -70,7 +71,18 @@ __all__ = [
     "assert_no_capacity_overflow",
     "mesh_invariants",
     "integrate_mesh_jaccpot",
+    "MESH_KDK_DEPRECATION",
 ]
+
+#: The deprecation of this lane's own KDK (multi-node plan I1, U1: nornax owns the
+#: schemes, jaccpot's ProductionRunner the run, on one card or a mesh).
+MESH_KDK_DEPRECATION = (
+    "The older mesh lane's own KDK (odisseo.mesh_coupling.integrate_mesh_jaccpot; "
+    "integrate() lane 'fmm_mesh', a MeshOptions) is deprecated and will be "
+    "removed. Use jaccpot's ProductionRunner in its multi-GPU mode, lane "
+    "'fmm_mesh_runner': a odisseo.mesh_runner_coupling.MeshRunnerOptions as "
+    "mesh_options, or fmm_preset='galaxy'"
+)
 
 
 @dataclass(frozen=True)
@@ -638,7 +650,14 @@ def integrate_mesh_jaccpot(
     ------
     RuntimeError
         If the mesh lane is unavailable, or a capacity overflow fires.
+
+    .. deprecated::
+        This lane's own KDK is deprecated (multi-node plan I1) and warns
+        :data:`MESH_KDK_DEPRECATION`: use lane ``"fmm_mesh_runner"`` (jaccpot's
+        ``ProductionRunner`` in its multi-GPU mode, a ``MeshRunnerOptions`` or
+        ``fmm_preset="galaxy"``; :mod:`odisseo.mesh_runner_coupling`).
     """
+    warnings.warn(MESH_KDK_DEPRECATION, DeprecationWarning, stacklevel=2)
     import jax
     import jax.numpy as jnp
     from jax.sharding import NamedSharding

@@ -56,6 +56,46 @@ config = config._replace(
 cannot ask for the geometric one; `fmm_mac_type="dehnen_error"` with
 `fmm_adaptive_eps` sets the target.
 
+## Integration schemes (multi-node plan I1)
+
+nornax owns the integration schemes, jaccpot's `ProductionRunner` the run and
+Odisseo the science (the plan's decision U1). `config.fmm_scheme` hands the
+runner a scheme:
+
+| `fmm_scheme` | the step |
+|---|---|
+| `None` (default) | the runner's built-in velocity-Verlet KDK, unchanged |
+| `"nornax_kdk"` | `nornax.schemes.LeapfrogKDK`: the same KDK written by nornax, **bitwise** the built-in (`tests/test_runner_scheme.py`) |
+| an object | any `jaccpot.scheme.SplitStepScheme` (hashable) |
+
+Setting it selects `"fmm_runner"` for a fixed-step `FMM_ACC` run on any backend,
+as `fmm_preset="galaxy"` does, so the runner's settings apply (above). The lanes
+with their own step -- `fmm_blockstep`, `fmm_differentiable`, the older
+`"fmm_mesh"` -- refuse it, and so does `"fmm_mesh_runner"` until the plan's I2
+gives the multi-GPU runner the same seam. The scheme is part of the kept
+runner's key: switching it builds a new runner and compiles.
+
+**Deprecated** (`DeprecationWarning`, once, on the caller's line; nothing is
+removed yet):
+
+- Odisseo's own FMM leapfrog loop: `integrate_leapfrog_jaccpot_active`,
+  `build_jitted_leapfrog_jaccpot_active`, and lane `"fmm_forward"` with
+  `fixed_timestep=True` -- replaced by `"fmm_runner"` (`fmm_preset="galaxy"`,
+  optionally `fmm_scheme="nornax_kdk"`);
+- the older mesh lane's KDK (`"fmm_mesh"`, `MeshOptions`,
+  `mesh_coupling.integrate_mesh_jaccpot`) -- replaced by `"fmm_mesh_runner"`
+  (`docs/source/parallelism.md`).
+
+**The default lane is not switched yet.** `SimulationConfig()` with `FMM_ACC` on a
+CPU, or below the large-N threshold, still runs the coupler's loop (now with the
+warning): the runner would run it with other numerics (leaf 64, p6, the preset's
+MAC, fp32 force instead of `fmm_leaf_size=16`, `fmm_max_order=4`,
+`fmm_theta=0.6`), so every such run's numbers would change. Switching is a
+decision for a later session. The adaptive diffrax FMM path
+(`fixed_timestep=False`), the block-step lane (nornax's block KDK already) and the
+differentiable lane are not leapfrog loops the runner replaces and are not
+deprecated.
+
 ## Settings
 
 The runner lane reads:

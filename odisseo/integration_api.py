@@ -1,11 +1,14 @@
 from __future__ import annotations
 
+import warnings
 from typing import Callable, Optional
 
 import jax
 import jax.numpy as jnp
 
 from odisseo.jaccpot_coupling import (
+    FMM_LEAPFROG_DEPRECATION,
+    _fmm_leapfrog_warned_by_caller,
     integrate_diffrax_jaccpot_active,
     integrate_leapfrog_jaccpot_active,
 )
@@ -90,6 +93,9 @@ def _runner_selected(
     preset = str(config.fmm_preset).strip().lower()
     if preset == "galaxy":
         return True
+    if getattr(config, "fmm_scheme", None) is not None:
+        # a scheme is the runner's (multi-node plan I1): asked for, as "galaxy"
+        return True
     n = int(config.N_particles) if num_particles is None else int(num_particles)
     on_gpu = (
         str(jax.default_backend() if backend is None else backend).strip().lower()
@@ -145,7 +151,8 @@ def resolve_lane(
     to check what a config would do before committing to a long run.
 
     ``"fmm_runner"`` is jaccpot's ``ProductionRunner`` (:mod:`odisseo.runner_coupling`):
-    ``fmm_preset="galaxy"``, or the automatic large-N profile (preset ``"fast"`` on a
+    ``fmm_preset="galaxy"``, a ``config.fmm_scheme`` (nornax's scheme in the runner,
+    multi-node plan I1), or the automatic large-N profile (preset ``"fast"`` on a
     GPU at ``fmm_large_n_min_particles`` or more) for a run the runner does; that
     choice depends on the particle count, the backend and the active-particle
     schedule, which :func:`integrate` passes here.
@@ -173,6 +180,13 @@ def resolve_lane(
     -------
     str
         One of :data:`INTEGRATION_LANES`.
+
+    Raises
+    ------
+    ValueError
+        For an unknown ``acceleration_scheme``, or a ``config.fmm_scheme`` on a lane
+        with its own step (block steps, the differentiable lane, the older mesh
+        lane).
     """
     direct_schemes = {
         DIRECT_ACC,
@@ -186,14 +200,24 @@ def resolve_lane(
         return "direct"
     if int(config.acceleration_scheme) == int(FMM_ACC):
         # fmm_blockstep takes precedence over fmm_differentiable.
+        scheme = getattr(config, "fmm_scheme", None)
+        own_step = None
         if bool(getattr(config, "fmm_mesh", False)):
             if _mesh_runner_selected(config):
                 return "fmm_mesh_runner"
-            return "fmm_mesh"
-        if bool(getattr(config, "fmm_blockstep", False)):
-            return "fmm_blockstep"
-        if bool(getattr(config, "fmm_differentiable", False)):
-            return "fmm_differentiable"
+            own_step = "fmm_mesh"
+        elif bool(getattr(config, "fmm_blockstep", False)):
+            own_step = "fmm_blockstep"
+        elif bool(getattr(config, "fmm_differentiable", False)):
+            own_step = "fmm_differentiable"
+        if own_step is not None:
+            if scheme is not None:
+                raise ValueError(
+                    f"config.fmm_scheme={scheme!r} is the production runner's "
+                    f"(lane 'fmm_runner'); lane {own_step!r} has its own step. "
+                    "Drop one of them."
+                )
+            return own_step
         if _runner_selected(
             config,
             num_particles=num_particles,
@@ -269,6 +293,20 @@ def integrate(
       softening are the solver's, and the final state is a host NumPy array in
       input order. A ``MeshOptions`` keeps the older mesh lane (``"fmm_mesh"``,
       :mod:`odisseo.mesh_coupling`) unchanged (``docs/source/parallelism.md``).
+    - ``FMM_ACC`` with ``config.fmm_scheme`` set (multi-node plan I1: nornax owns
+      the integration schemes) routes to ``"fmm_runner"`` as ``fmm_preset="galaxy"``
+      does, with the scheme in jaccpot's runner: ``"nornax_kdk"`` is
+      ``nornax.schemes.LeapfrogKDK``, bitwise to the runner's built-in KDK (``None``,
+      the default). The lanes with their own step (``fmm_blockstep``,
+      ``fmm_differentiable``, the older ``"fmm_mesh"``) refuse it, and so does
+      ``"fmm_mesh_runner"`` until I2.
+
+    Deprecated (``DeprecationWarning``, nothing removed yet): Odisseo's own FMM
+    leapfrog loop -- lane ``"fmm_forward"`` with ``fixed_timestep=True``,
+    ``integrate_leapfrog_jaccpot_active`` -- in favour of ``"fmm_runner"``; the
+    older mesh lane's KDK (``"fmm_mesh"``, ``MeshOptions``) in favour of
+    ``"fmm_mesh_runner"`` (``docs/source/production_fmm.md``, "Integration
+    schemes").
 
     Parameters
     ----------
@@ -311,7 +349,17 @@ def integrate(
         return _tagged(time_integration(primitive_state, mass, config, params))
 
     if lane == "fmm_mesh":
-        return _tagged(_integrate_fmm_mesh(primitive_state, mass, config, params))
+        from odisseo.mesh_coupling import MESH_KDK_DEPRECATION
+
+        # on the caller's line, once (the lane's own warning is silenced below)
+        warnings.warn(MESH_KDK_DEPRECATION, DeprecationWarning, stacklevel=2)
+        with warnings.catch_warnings():
+            warnings.filterwarnings(
+                "ignore",
+                message=r"The older mesh lane's own KDK",
+                category=DeprecationWarning,
+            )
+            return _tagged(_integrate_fmm_mesh(primitive_state, mass, config, params))
 
     if lane == "fmm_blockstep":
         return _tagged(
@@ -441,7 +489,11 @@ def integrate(
     )
 
     if bool(config.fixed_timestep):
-        states_or_final = integrate_leapfrog_jaccpot_active(**common_kwargs)
+        # Odisseo's own FMM leapfrog loop (multi-node plan I1): deprecated, warned
+        # on the caller's line, once; the runner lane replaces it
+        warnings.warn(FMM_LEAPFROG_DEPRECATION, DeprecationWarning, stacklevel=2)
+        with _fmm_leapfrog_warned_by_caller():
+            states_or_final = integrate_leapfrog_jaccpot_active(**common_kwargs)
     else:
         states_or_final = integrate_diffrax_jaccpot_active(**common_kwargs)
 

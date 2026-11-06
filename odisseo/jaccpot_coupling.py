@@ -4,6 +4,7 @@ import hashlib
 import inspect
 import os
 import time
+import warnings
 from collections import Counter
 from contextlib import contextmanager
 from functools import partial
@@ -26,6 +27,30 @@ from odisseo.option_classes import (
     SimulationParams,
 )
 from odisseo.potentials import combined_external_acceleration_vmpa_switch
+
+#: The deprecation of Odisseo's own FMM leapfrog loop (multi-node plan I1, U1:
+#: nornax owns the schemes, jaccpot's ProductionRunner the run). Matched as a
+#: regular expression by the callers that warn on their caller's behalf.
+FMM_LEAPFROG_DEPRECATION = (
+    "Odisseo's own FMM leapfrog loop (integrate_leapfrog_jaccpot_active; "
+    "integrate() lane 'fmm_forward' with fixed_timestep=True) is deprecated and "
+    "will be removed. Use jaccpot's ProductionRunner, lane 'fmm_runner': "
+    "integrate() with fmm_preset='galaxy' (optionally fmm_scheme='nornax_kdk', "
+    "nornax's KDK, bitwise to the runner's built-in one), or "
+    "odisseo.runner_coupling.integrate_runner_jaccpot"
+)
+
+
+@contextmanager
+def _fmm_leapfrog_warned_by_caller():
+    """Silence the loop's own deprecation where a caller has issued it already."""
+    with warnings.catch_warnings():
+        warnings.filterwarnings(
+            "ignore",
+            message=r"Odisseo's own FMM leapfrog loop",
+            category=DeprecationWarning,
+        )
+        yield
 
 
 def _large_n_environment_overrides(
@@ -553,6 +578,13 @@ def integrate_leapfrog_jaccpot_active(
 ) -> jnp.ndarray:
     """Integrate with Jaccpot FMM using optional active-particle substeps.
 
+    .. deprecated::
+        Odisseo's own FMM leapfrog loop is deprecated (multi-node plan I1: nornax
+        owns the integration schemes, jaccpot's ``ProductionRunner`` the run) and
+        warns :data:`FMM_LEAPFROG_DEPRECATION`. Use lane ``"fmm_runner"``
+        (``fmm_preset="galaxy"``, optionally ``fmm_scheme="nornax_kdk"``) or
+        :func:`odisseo.runner_coupling.integrate_runner_jaccpot`.
+
     Notes
     -----
     - Source tree is refreshed every ``refresh_every`` steps.
@@ -567,6 +599,7 @@ def integrate_leapfrog_jaccpot_active(
       caller opts into; the external field is always evaluated at the current
       positions.
     """
+    warnings.warn(FMM_LEAPFROG_DEPRECATION, DeprecationWarning, stacklevel=2)
     if int(num_steps) <= 0:
         raise ValueError("num_steps must be positive")
     if int(refresh_every) <= 0:
@@ -3128,9 +3161,18 @@ def build_jitted_leapfrog_jaccpot_active(
     The returned function accepts `(state, mass)` arrays and executes the
     selected FMM integration configuration on jaccpot's internal compiled path.
     Set ``outer_jit=True`` to additionally wrap the full call in ``jax.jit``.
+
+    .. deprecated::
+        It runs :func:`integrate_leapfrog_jaccpot_active`, Odisseo's own FMM
+        leapfrog loop, and warns its deprecation once, here.
     """
+    warnings.warn(FMM_LEAPFROG_DEPRECATION, DeprecationWarning, stacklevel=2)
 
     def _eager(state: jnp.ndarray, mass: jnp.ndarray) -> jnp.ndarray:
+        with _fmm_leapfrog_warned_by_caller():
+            return _eager_loop(state, mass)
+
+    def _eager_loop(state: jnp.ndarray, mass: jnp.ndarray) -> jnp.ndarray:
         return integrate_leapfrog_jaccpot_active(
             state,
             mass,

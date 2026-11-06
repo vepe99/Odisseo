@@ -367,3 +367,14 @@ class SimulationConfig(NamedTuple):
     # are read as on every lane. Typed loosely so this module does not import
     # jaccpot; appended at the END, like the fields above.
     fmm_galaxy_settings: Optional[Any] = None
+    # --- the runner lane's integration scheme (multi-node plan I1) ------------
+    # nornax owns the integration schemes, jaccpot's ProductionRunner the run.
+    # None: the runner's built-in velocity-Verlet KDK, exactly as before.
+    # "nornax_kdk": nornax.schemes.LeapfrogKDK, the same KDK written by nornax
+    # (bitwise to the built-in). Or any object satisfying jaccpot's
+    # jaccpot.scheme.SplitStepScheme protocol (hashable: it is part of this
+    # config). Setting it routes a fixed-step FMM_ACC run to the runner lane
+    # ("fmm_runner") as fmm_preset="galaxy" does; the multi-GPU runner lane takes
+    # one in I2 and refuses it until then, and the block-step, differentiable and
+    # older mesh lanes have their own steps and refuse it. Appended at the END.
+    fmm_scheme: Optional[Any] = None

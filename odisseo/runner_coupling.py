@@ -50,6 +50,13 @@ not read ``fmm_leaf_size``, ``fmm_max_order``, ``fmm_theta`` or any other couple
 knob; it does honour ``fmm_mac_type="dehnen_error"`` with ``fmm_adaptive_eps`` (and
 ``fmm_mac_force_scale_mode``), and ``fmm_large_n_force_fp32=False`` with a float64
 state selects the fp64 force (:func:`galaxy_settings`).
+
+THE SCHEME (multi-node plan I1). nornax owns the integration schemes, jaccpot the
+force and the run: ``config.fmm_scheme`` is handed to the runner as
+``ProductionRunner(scheme=...)`` (:func:`runner_scheme`). ``None`` keeps the runner's
+built-in velocity-Verlet KDK; ``"nornax_kdk"`` is ``nornax.schemes.LeapfrogKDK``, the
+same KDK written by nornax, bitwise to the built-in. Setting it also selects this
+lane for a fixed-step ``FMM_ACC`` run, as ``fmm_preset="galaxy"`` does.
 """
 
 from __future__ import annotations
@@ -260,6 +267,49 @@ def runner_unsupported(
     return None
 
 
+#: The names ``config.fmm_scheme`` takes for nornax's schemes.
+RUNNER_SCHEMES = ("nornax_kdk",)
+
+
+def runner_scheme(config: SimulationConfig) -> Any:
+    """The integration scheme the runner lane hands jaccpot's runner.
+
+    Parameters
+    ----------
+    config : SimulationConfig
+        The configuration; ``config.fmm_scheme`` is read.
+
+    Returns
+    -------
+    Any
+        ``None`` (the runner's built-in KDK), ``nornax.schemes.LeapfrogKDK()`` for
+        ``"nornax_kdk"``, or the object given.
+
+    Raises
+    ------
+    ValueError
+        For a name that is not in :data:`RUNNER_SCHEMES`.
+    TypeError
+        For an object that is not a ``jaccpot.scheme.SplitStepScheme``.
+    """
+    scheme = getattr(config, "fmm_scheme", None)
+    if scheme is None:
+        return None
+    if not isinstance(scheme, str):
+        from jaccpot.scheme import check_scheme
+
+        return check_scheme(scheme)
+    name = scheme.strip().lower()
+    if name == "nornax_kdk":
+        from nornax.schemes import LeapfrogKDK
+
+        return LeapfrogKDK()
+    raise ValueError(
+        f"config.fmm_scheme={scheme!r}: one of {RUNNER_SCHEMES}, None (the runner's "
+        "built-in KDK), or a jaccpot.scheme.SplitStepScheme object"
+    )
+
+
 def galaxy_settings(config: SimulationConfig, state_dtype: Any) -> Any:
     """The ``GalaxySettings`` the runner lane runs ``config`` with.
 
@@ -450,6 +500,7 @@ def _solver_and_runner(
     )
 
     scale_carry = settings.mac_type == "dehnen_error"
+    scheme = runner_scheme(config)
     key = (
         settings,
         float(config.softening),
@@ -459,6 +510,7 @@ def _solver_and_runner(
         tuple(sorted(_large_n_environment_overrides(config).items())),
         int(num_particles),
         bool(external),
+        None if scheme is None else scheme.key(),
     )
     kept = _CACHE.get(key)
     if kept is None:
@@ -476,6 +528,7 @@ def _solver_and_runner(
             settings=settings,
             external_acceleration_fn=external_acceleration if external else None,
             external_potential_fn=external_potential if external else None,
+            scheme=scheme,
         )
         kept = (solver, runner)
         _CACHE[key] = kept
