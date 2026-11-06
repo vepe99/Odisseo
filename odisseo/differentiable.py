@@ -66,10 +66,42 @@ Two consequences for a *simulation* (as opposed to a single force call):
 Bare ``jax.grad`` is the supported usage; jaccpot's inner kernels are already
 jit-compiled. An outer ``jax.jit`` around the whole integration works at moderate
 N but can hit host-side ops in jaccpot's re-run sweeps at large N.
+
+Forward mode (``jax.jvp``, ``jax.jacfwd``, ``jax.linearize``)
+-------------------------------------------------------------
+
+jaccpot's FMM kernels are ``custom_vjp`` s: reverse mode by default, and a jvp
+through them raises (``can't apply forward-mode autodiff (jvp) to a custom_vjp
+function``). jaccpot's ``ad_mode="forward"`` (main 1bb30620 on) gives the
+**large-N lane** (``fmm_preset="large_n_gpu"``) ``custom_jvp`` siblings whose primal
+is the production kernel, bitwise. The radix lane (``static_radix`` with the
+``"fast"`` / ``"accurate"`` presets) stays reverse-only. Select it per call:
+
+* ``ad_mode="forward"`` on :func:`integrate_leapfrog_differentiable`,
+  :func:`differentiable_total_acceleration` or
+  :func:`differentiable_fmm_self_acceleration`;
+* :func:`integrate_diffrax_differentiable` derives it from
+  ``config.diffrax_adjoint_method == FORWARDMODE`` (diffrax's ``ForwardMode``
+  adjoint needs it), so a ``FORWARDMODE`` config goes through ``jax.jvp`` /
+  ``jax.jacfwd`` with no other change;
+* or wrap the trace in ``jaccpot.runtime.grad_options.ad_mode_override("forward")``
+  (``ad_mode=None``, the default everywhere here, follows it): the route for
+  :func:`odisseo.integration_api.integrate`.
+
+The mode is read when the force is TRACED, and it is part of ``jax.jit``'s cache
+key: a jitted function traced in forward mode is not reused in reverse mode, so the
+same plan serves ``jax.grad`` and ``jax.jacfwd`` side by side. Forward mode is
+**first order only**: ``jax.grad`` of a forward-mode program, and
+``jacfwd(jacfwd)`` / ``jax.hessian``, refuse. So the Fisher matrix of an FMM run
+is the Gauss-Newton form ``F = J^T C^{-1} J`` from ONE ``jax.jacfwd`` (``J`` the
+Jacobian of the model's observables in the few parameters, cheap in forward mode)
+-- not the Hessian of the log-likelihood that Odisseo's direct-sum Fisher
+notebooks take with ``jacfwd(jacfwd)``.
 """
 
 from __future__ import annotations
 
+import contextlib
 import dataclasses
 from dataclasses import dataclass
 from typing import Any, Optional
@@ -402,10 +434,48 @@ def _maybe_large_n_grad_plan(solver: Any, prepared_state: Any) -> Optional[Any]:
     return prepare_large_n_grad_plan(solver, prepared_state)
 
 
+#: The AD modes the differentiable lane takes (jaccpot's ``ad_mode``). ``None``
+#: follows an enclosing ``ad_mode_override``, then ``JACCPOT_GRAD_AD_MODE``, then
+#: reverse.
+AD_MODES = (None, "reverse", "forward")
+
+
+def _ad_mode_scope(ad_mode: Optional[str]) -> Any:
+    """jaccpot's ``ad_mode_override(ad_mode)``, or a null context for ``None``.
+
+    Raises:
+        ValueError: for an unknown mode.
+        NotImplementedError: for an explicit mode with a jaccpot that predates it.
+    """
+    if ad_mode not in AD_MODES:
+        raise ValueError(f"ad_mode must be one of {AD_MODES}, got {ad_mode!r}")
+    if ad_mode is None:
+        return contextlib.nullcontext()
+    try:
+        from jaccpot.runtime.grad_options import ad_mode_override
+    except ImportError:  # pragma: no cover - a jaccpot before forward mode
+        raise NotImplementedError(
+            f"ad_mode={ad_mode!r} needs a jaccpot with forward mode "
+            "(jaccpot.runtime.grad_options.ad_mode_override, main 1bb30620 on)"
+        )
+    return ad_mode_override(ad_mode)
+
+
+def _effective_ad_mode() -> str:
+    """The AD mode jaccpot resolves now (``"reverse"`` without forward mode)."""
+    try:
+        from jaccpot.runtime.grad_options import resolve_ad_mode
+    except ImportError:  # pragma: no cover - a jaccpot before forward mode
+        return "reverse"
+    return resolve_ad_mode()
+
+
 def differentiable_fmm_self_acceleration(
     plan: DifferentiableFMMPlan,
     positions: jnp.ndarray,
     mass: jnp.ndarray,
+    *,
+    ad_mode: Optional[str] = None,
 ) -> jnp.ndarray:
     """Self-gravity acceleration, differentiable w.r.t. ``positions`` and ``mass``.
 
@@ -413,18 +483,34 @@ def differentiable_fmm_self_acceleration(
         plan: Frozen topology from :func:`prepare_differentiable_fmm`.
         positions: Live positions, shape ``(N, 3)``, in the original particle order.
         mass: Live masses, shape ``(N,)``.
+        ad_mode: ``"forward"`` traces the force for ``jax.jvp`` / ``jax.jacfwd``
+            (jaccpot's ``custom_jvp`` seams; large-N plans only), ``"reverse"``
+            for ``jax.grad``; ``None`` (default) follows an enclosing
+            ``ad_mode_override`` (module docstring, "Forward mode").
 
     Returns:
         jnp.ndarray: ``(N, 3)`` accelerations in the original particle order.
+
+    Raises:
+        NotImplementedError: forward mode on a radix (non-large-N) plan, whose
+            kernels are reverse-only.
     """
     out_dtype = jnp.asarray(positions).dtype
-    acc = plan.solver.differentiable_accelerations(
-        plan.prepared_state,
-        jnp.asarray(positions).astype(plan.working_dtype),
-        jnp.asarray(mass).astype(plan.working_dtype),
-        grad_plan=plan.large_n_grad_plan,
-        grad_config=plan.grad_config,
-    )
+    with _ad_mode_scope(ad_mode):
+        if plan.large_n_grad_plan is None and _effective_ad_mode() == "forward":
+            raise NotImplementedError(
+                "forward mode (ad_mode='forward') differentiates jaccpot's large-N "
+                "lane only: build the plan with fmm_preset='large_n_gpu'. The radix "
+                f"lane (preset {plan.preset!r}) is reverse-only: use jax.grad / "
+                "jax.jacrev there."
+            )
+        acc = plan.solver.differentiable_accelerations(
+            plan.prepared_state,
+            jnp.asarray(positions).astype(plan.working_dtype),
+            jnp.asarray(mass).astype(plan.working_dtype),
+            grad_plan=plan.large_n_grad_plan,
+            grad_config=plan.grad_config,
+        )
     return jnp.asarray(acc).astype(out_dtype)
 
 
@@ -434,13 +520,18 @@ def differentiable_total_acceleration(
     mass: jnp.ndarray,
     config: SimulationConfig,
     params: SimulationParams,
+    *,
+    ad_mode: Optional[str] = None,
 ) -> jnp.ndarray:
     """Total acceleration: fixed-topology FMM self-gravity plus external potentials.
 
     Differentiable with respect to ``state``, ``mass`` and — the point of this
-    module — every field of ``params``.
+    module — every field of ``params``. ``ad_mode`` as
+    :func:`differentiable_fmm_self_acceleration`.
     """
-    acc = differentiable_fmm_self_acceleration(plan, state[:, 0, :], mass)
+    acc = differentiable_fmm_self_acceleration(
+        plan, state[:, 0, :], mass, ad_mode=ad_mode
+    )
     if len(config.external_accelerations) > 0:
         acc = acc + combined_external_acceleration_vmpa_switch(state, config, params)
     return acc
@@ -480,6 +571,7 @@ def integrate_leapfrog_differentiable(
     dt: Optional[Any] = None,
     return_history: bool = False,
     grad_config: Optional[Any] = None,
+    ad_mode: Optional[str] = None,
 ):
     """Fixed-step leapfrog with FMM self-gravity, differentiable end to end.
 
@@ -502,6 +594,9 @@ def integrate_leapfrog_differentiable(
             ``(num_steps + 1, N, 2, 3)``, instead of only the final one.
         grad_config: Optional ``jaccpot.GradConfig``, used only when this call
             builds the plan itself.
+        ad_mode: ``"forward"`` for ``jax.jvp`` / ``jax.jacfwd`` (large-N plans
+            only), ``"reverse"`` for ``jax.grad``; ``None`` (default) follows an
+            enclosing ``ad_mode_override`` (module docstring, "Forward mode").
 
     Returns:
         jnp.ndarray: the final state, or the full history if ``return_history``.
@@ -533,7 +628,7 @@ def integrate_leapfrog_differentiable(
     dt_arr = jnp.asarray(dt_val, dtype=state_curr.dtype)
 
     acc = differentiable_total_acceleration(
-        plan_resolved, state_curr, mass_arr, config, params
+        plan_resolved, state_curr, mass_arr, config, params, ad_mode=ad_mode
     )
 
     history = [state_curr] if return_history else None
@@ -544,7 +639,7 @@ def integrate_leapfrog_differentiable(
         state_curr = state_curr.at[:, 0].set(pos_new)
 
         acc_new = differentiable_total_acceleration(
-            plan_resolved, state_curr, mass_arr, config, params
+            plan_resolved, state_curr, mass_arr, config, params, ad_mode=ad_mode
         )
 
         vel_new = state_curr[:, 1] + 0.5 * (acc + acc_new) * dt_arr
@@ -571,6 +666,7 @@ def integrate_diffrax_differentiable(
     return_history: bool = False,
     grad_config: Optional[Any] = None,
     max_steps: int = 100_000,
+    ad_mode: Optional[str] = None,
 ):
     """Adaptive-step diffrax integration with FMM self-gravity, differentiable.
 
@@ -590,6 +686,11 @@ def integrate_diffrax_differentiable(
             final one.
         grad_config: Optional ``jaccpot.GradConfig`` for a plan built here.
         max_steps: diffrax step budget.
+        ad_mode: jaccpot's AD mode for the FMM. ``None`` (default) derives it
+            from the adjoint: ``"forward"`` for ``FORWARDMODE`` (diffrax's
+            ``ForwardMode`` differentiates by jvp, which the reverse-mode kernels
+            refuse; large-N plans only), else the enclosing
+            ``ad_mode_override`` (reverse by default).
 
     Returns:
         jnp.ndarray: final state ``(N, 2, 3)``, or ``(num_snapshots, N, 2, 3)``.
@@ -629,6 +730,8 @@ def integrate_diffrax_differentiable(
         adjoint = diffrax.RecursiveCheckpointAdjoint()
     elif config.diffrax_adjoint_method == FORWARDMODE:
         adjoint = diffrax.ForwardMode()
+        if ad_mode is None:
+            ad_mode = "forward"
     else:
         raise ValueError("unsupported diffrax_adjoint_method")
 
@@ -636,7 +739,7 @@ def integrate_diffrax_differentiable(
         del t
         mass_in = args
         acc = differentiable_total_acceleration(
-            plan_resolved, y, mass_in, config, params
+            plan_resolved, y, mass_in, config, params, ad_mode=ad_mode
         )
         return jnp.stack((y[:, 1], acc), axis=1)
 

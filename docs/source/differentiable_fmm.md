@@ -174,6 +174,55 @@ Two things to plan around:
   `fmm_grad_nearfield_lane="fast_lane"` rather than waiting for `"auto"` to switch
   for you.
 
+## Forward mode (`jax.jvp`, `jax.jacfwd`)
+
+jaccpot's FMM kernels are `custom_vjp`s, so by default a jvp through them raises
+(`can't apply forward-mode autodiff (jvp) to a custom_vjp function`). jaccpot's
+`ad_mode="forward"` (jaccpot main 1bb30620 on) gives the **large-N lane**
+(`fmm_preset="large_n_gpu"`) `custom_jvp` siblings whose primal is the production
+kernel, bit for bit. Forward mode pays when the parameters are few (one tangent per
+parameter, `jax.jacfwd` batches them) or the run is long (a jvp stores no residuals,
+so its memory does not grow with the steps).
+
+```python
+config = config._replace(fmm_preset="large_n_gpu")      # the radix lane is reverse-only
+plan = prepare_differentiable_fmm(state0, mass, config, params)
+
+def observables(theta):                                  # theta = (Mvir, r_s)
+    p = params._replace(NFW_params=params.NFW_params._replace(Mvir=theta[0], r_s=theta[1]))
+    final = integrate_leapfrog_differentiable(state0, mass, config, p, plan=plan,
+                                              ad_mode="forward")
+    return final[:, 0].reshape(-1)
+
+J = jax.jacfwd(observables)(theta0)                      # [n_obs, 2], one pass
+fisher = J.T @ (J / sigma[:, None] ** 2)                  # Gauss-Newton Fisher
+```
+
+* **Selecting it.** `ad_mode="forward"` on `integrate_leapfrog_differentiable`,
+  `differentiable_total_acceleration` or `differentiable_fmm_self_acceleration`.
+  `integrate_diffrax_differentiable` derives it from
+  `diffrax_adjoint_method=FORWARDMODE` (diffrax's `ForwardMode` adjoint
+  differentiates by jvp). Through `integrate`, or anywhere else, wrap the call in
+  `jaccpot.runtime.grad_options.ad_mode_override("forward")`: `ad_mode=None`, the
+  default, follows it. The mode is read when the force is traced and is part of
+  `jax.jit`'s cache key, so one plan serves `jax.grad` and `jax.jacfwd` side by side.
+* **The radix lane is reverse-only.** Forward mode on a radix plan (`"fast"` /
+  `"accurate"` presets) raises `NotImplementedError` up front.
+* **First order only.** `jax.grad` of a forward-mode program and `jacfwd(jacfwd)` /
+  `jax.hessian` are refused. So **the FMM Fisher matrix is `J^T C^-1 J`** from one
+  `jax.jacfwd`: the Gauss-Newton (expected) Fisher of a Gaussian likelihood, not the
+  Hessian of the log-likelihood that Odisseo's direct-sum Fisher notebooks
+  (`notebooks/dev/albastross/Fisher_contour/`) take with `jacfwd(jacfwd)`. The two
+  agree at the best fit for a well-specified model; away from it, the Hessian adds
+  a residual-weighted second-derivative term that `J^T J` leaves out.
+* **Gates** (`tests/test_differentiable_fmm.py::TestForwardModeOnTheLargeNLane`,
+  slow; CPU with jaccpot's Pallas kernels in interpret mode and
+  `jax.default_backend` patched to `"gpu"`, fp64, N=96): a diffrax `ForwardMode`
+  jvp against the `RecursiveCheckpointAdjoint` gradient and central differences;
+  `jax.jacfwd` over (`Mvir`, `r_s`) against `jax.jacrev`; the Fisher `J^T J`
+  symmetric, positive semi-definite, equal to the `jacrev` one; `jacfwd(jacfwd)`
+  refused.
+
 ## Limits
 
 * **Active-particle scheduling is not supported.** It is a forward-throughput
@@ -199,3 +248,5 @@ Two things to plan around:
 | gradient w.r.t. masses is exactly zero | the FMM self-gravity term is not being differentiated | check the plan came from `prepare_differentiable_fmm`, not the forward coupler |
 | OOM in the backward at N ≳ 10⁵ | bucketed near-field reverse | leave `fmm_grad_nearfield_lane="auto"` |
 | AD and FD disagree | FD perturbed a run that rebuilt the tree | FD the same frozen plan |
+| `TypeError: can't apply forward-mode autodiff (jvp) to a custom_vjp function` | `jax.jvp` / `jax.jacfwd` / diffrax `ForwardMode` through the reverse-mode kernels | a `large_n_gpu` plan and `ad_mode="forward"` (or `ad_mode_override("forward")`); see [Forward mode](#forward-mode-jaxjvp-jaxjacfwd) |
+| `NotImplementedError: forward mode ... large-N lane only` | forward mode on a radix plan | build the plan with `fmm_preset="large_n_gpu"`, or use `jax.jacrev` |
