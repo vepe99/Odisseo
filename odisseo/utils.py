@@ -144,7 +144,13 @@ def _E_pot_fmm(state, mass, config, params):
     dtype = jnp.result_type(state.dtype, mass.dtype)
 
     def self_energy(state_in, mass_in, params_in):
-        _, phi = runner_self_gravity(state_in, mass_in, config, params_in)
+        # inside a pure_callback the inputs arrive committed to the CPU and the
+        # default device is the CPU; the lane runs on the default backend's
+        # device (the GPU on a GPU host), from host copies
+        state_in, mass_in = np.asarray(state_in), np.asarray(mass_in)
+        params_in = jax.tree_util.tree_map(np.asarray, params_in)
+        with jax.default_device(jax.devices()[0]):
+            _, phi = runner_self_gravity(state_in, mass_in, config, params_in)
         return np.asarray(
             np.asarray(phi, np.float64) * np.asarray(mass_in, np.float64), dtype
         )
