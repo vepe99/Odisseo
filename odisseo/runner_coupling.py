@@ -404,13 +404,16 @@ def config_settings(config: SimulationConfig, state_dtype: Any) -> Any:
       from "not set") keeps jaccpot's preset MAC (``GALAXY_SETTINGS``: Dehnen's eq
       (16a) at ``adaptive_eps`` 1e-4), as under the ``"galaxy"`` profile;
       ``"dehnen_error"`` is eq (16a) at ``fmm_adaptive_eps``; the fused lane runs
-      no other MAC (refused). The fused lane's GEOMETRIC Dehnen MAC is not the
-      coupler's at the same angle: at leaf 16, p4, theta 0.6 its force rel-L2 was
-      4.3e-3 on the FMM notebook's N = 512 cube (the coupler's 1.2e-4; eq (16a) at
-      1e-4: 4.3e-5), and at leaf 64 it overflowed a fixed capacity in that cube's
-      collapse, where eq (16a) ran (2026-11-06, CPU). It stays reachable through
+      no other MAC (refused). So ``fmm_theta`` has NO effect here: under eq
+      (16a) the opening angle decides no pair (a non-default value warns once,
+      :func:`ignored_knobs`). The fused lane's GEOMETRIC Dehnen MAC is not the
+      coupler's accuracy at the same angle: its cell leaves hold a third to a
+      quarter of ``leaf_size`` at small N, so far more of the force comes through
+      expansions (leaf 16, p4, theta 0.6: rel-L2 4.3e-3 on the FMM notebook's
+      N = 512 cube against the coupler's 1.2e-4; theta ~0.3 matches it there;
+      eq (16a) at 1e-4: 4.3e-5; FUP, 2026-11-06). It stays reachable through
       ``fmm_galaxy_settings=GalaxySettings(mac_type="dehnen", adaptive_eps=None,
-      ...)``. Under eq (16a) ``theta`` decides no pair;
+      theta=...)``;
     * the precision: the state's (an fp64 state an fp64 force), except
       ``fmm_preset="large_n_gpu"`` with ``fmm_large_n_force_fp32`` (the default),
       which ran fp32 on the coupler too;
