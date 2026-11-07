@@ -273,9 +273,9 @@ def integrate(
     - ``config.fmm_scheme`` (multi-node plan I1: nornax owns the integration
       schemes) is handed to ``"fmm_runner"``, with the scheme in jaccpot's runner: ``"nornax_kdk"`` is
       ``nornax.schemes.LeapfrogKDK``, bitwise to the runner's built-in KDK (``None``,
-      the default). The lanes with their own step (``fmm_blockstep``,
-      ``fmm_differentiable``, the adaptive ``"fmm_forward"``) refuse it, and so does
-      ``"fmm_mesh_runner"`` until I2.
+      the default), and to ``"fmm_mesh_runner"`` (I2: jaccpot runs it on each
+      device's rows). The lanes with their own step (``fmm_blockstep``,
+      ``fmm_differentiable``, the adaptive ``"fmm_forward"``) refuse it.
 
     Removed in 2026-11 (multi-node plan, wave 3; deprecated in I1): Odisseo's own
     FMM leapfrog loop (``integrate_leapfrog_jaccpot_active``,

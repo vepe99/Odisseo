@@ -19,7 +19,10 @@ jaccpot's ``ProductionRunner`` in its multi-GPU mode
   momentum that came through the edges are the host fp64 sums over the gathered
   states;
 * with a direct-sum force the lane follows Odisseo's fp64 direct lane (same
-  velocity Verlet, halo, G, softening and kernel).
+  velocity Verlet, halo, G, softening and kernel);
+* ``fmm_scheme`` (I2): nornax's ``LeapfrogKDK`` reaches the runner as its scheme and
+  the lane computes the built-in's state, bit for bit; another scheme is another
+  kept runner.
 
 The fused multi-GPU force prepares on a GPU only and compiles for minutes on CPU
 devices (jaccpot gates it through the runner in a slow job of its own,
@@ -348,6 +351,28 @@ def test_integrate_is_the_jaccpot_mesh_runner_and_a_second_call_compiles_nothing
         cfg, _params(G=1.1), settings, options, NDEV, N, True
     )
     assert solver_3 is not solver
+    mrc.clear_mesh_runner_cache()
+
+
+@needs_two
+def test_a_nornax_scheme_runs_on_the_mesh_and_is_the_built_in_bitwise():
+    """``fmm_scheme="nornax_kdk"`` on the multi-GPU runner lane (I2): the runner
+    gets nornax's ``LeapfrogKDK`` and the final state is the built-in lane's, bit
+    for bit; the scheme is part of the kept runner's key."""
+    nornax_schemes = pytest.importorskip("nornax.schemes")
+    state, masses = _system()
+    mrc.clear_mesh_runner_cache()
+    built_in = integrate(state, masses, _config(), _params())
+    ((_, runner_none),) = mrc._CACHE.values()
+    assert runner_none.scheme is None
+    with_scheme, lane = integrate(
+        state, masses, _config(fmm_scheme="nornax_kdk"), _params(), return_lane=True
+    )
+    assert lane == "fmm_mesh_runner"
+    ((_, runner),) = mrc._CACHE.values()
+    assert runner is not runner_none
+    assert runner.scheme == nornax_schemes.LeapfrogKDK()
+    _bitwise(with_scheme, built_in, "final state with nornax's KDK")
     mrc.clear_mesh_runner_cache()
 
 

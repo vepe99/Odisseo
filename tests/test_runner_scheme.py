@@ -5,7 +5,8 @@ The multi-node accuracy plan's U1: nornax owns the integration schemes, jaccpot'
 
 * routing: a fixed-step ``FMM_ACC`` run is the runner's (since the 2026-11 switch,
   with or without a scheme); the lanes with their own step (the adaptive one
-  included) refuse a scheme; the multi-GPU runner lane refuses it until I2;
+  included) refuse a scheme; the multi-GPU runner lane takes it (I2, gated in
+  ``test_mesh_runner_lane.py``);
 * ``runner_scheme``: ``None`` is the runner's built-in KDK, ``"nornax_kdk"``
   nornax's ``LeapfrogKDK``, other names and non-schemes are refused;
 * THE GATE: ``fmm_scheme="nornax_kdk"`` computes what the built-in runner lane
@@ -58,7 +59,7 @@ from test_runner_lane import (  # noqa: E402
         ),
         # without a scheme too, since the 2026-11 switch (the built-in KDK)
         (dict(), dict(backend="cpu", num_particles=10), "fmm_runner"),
-        # the multi-GPU runner lane is selected (and refuses the scheme there)
+        # the multi-GPU runner lane is selected (and runs the scheme there, I2)
         (
             dict(fmm_scheme="nornax_kdk", fmm_mesh=True, fmm_preset="galaxy"),
             dict(),
@@ -88,13 +89,12 @@ def test_the_lanes_with_their_own_step_refuse_a_scheme(overrides):
         resolve_lane(cfg)
 
 
-def test_the_multi_gpu_runner_refuses_a_scheme_until_i2():
+def test_the_multi_gpu_runner_takes_a_scheme_since_i2():
     cfg = SimulationConfig(
         acceleration_scheme=FMM_ACC, fmm_preset="galaxy", fmm_mesh=True
     )
     assert mesh_runner_unsupported(cfg) is None
-    reason = mesh_runner_unsupported(cfg._replace(fmm_scheme="nornax_kdk"))
-    assert reason is not None and "I2" in reason
+    assert mesh_runner_unsupported(cfg._replace(fmm_scheme="nornax_kdk")) is None
 
 
 def test_runner_scheme_names():

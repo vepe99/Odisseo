@@ -245,6 +245,10 @@ config = config._replace(acceleration_scheme=FMM_ACC, fmm_preset="galaxy", fmm_m
 final = integrate(state, mass, config, params)   # host NumPy array, input order
 ```
 
+`config.fmm_scheme` (e.g. `"nornax_kdk"`, nornax's `LeapfrogKDK`) works here as on
+one card (multi-node plan I2): jaccpot runs the scheme on each device's rows, and the
+KDK is the built-in mesh runner bit for bit.
+
 `MeshRunnerOptions` has the mesh-only knobs: `ndev`, `repartition_every`,
 `cap_headroom` and `force` (`docs/source/production_fmm.md`, "Across the GPUs of a
 node", with what differs from one card: G and the softening are the solver's, the
