@@ -329,6 +329,48 @@ def test_ignored_knobs_warn_once():
     rc._WARNED_IGNORED.clear()
 
 
+def test_fmm_theta_warns_under_the_error_based_mac():
+    """Under the default ``fmm_mac_type="dehnen"`` the ``"config"`` profile runs
+    jaccpot's eq (16a), where the opening angle decides no pair: a non-default
+    ``fmm_theta`` warns once (FUP, 2026-11-06); the geometric MAC reads it."""
+    rc._WARNED_IGNORED.clear()
+    cfg = SimulationConfig(acceleration_scheme=FMM_ACC, fmm_theta=0.4)
+    settings = rc.config_settings(cfg, jnp.float32)
+    assert settings.mac_type == "dehnen_error" and settings.theta == 0.4
+    with pytest.warns(UserWarning, match="fmm_theta=0.4.*opening angle decides no pair"):
+        found = rc.warn_ignored_knobs(cfg, settings, "config")
+    assert dict(found) == {"fmm_theta": 0.4}
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        rc.warn_ignored_knobs(cfg, settings, "config")  # once
+    assert rc.ignored_knobs(cfg._replace(fmm_theta=0.6), settings, "config") == ()
+    geometric = dataclasses.replace(settings, mac_type="dehnen", adaptive_eps=None)
+    assert rc.ignored_knobs(cfg, geometric, "config") == ()
+    rc._WARNED_IGNORED.clear()
+
+
+def test_the_builder_takes_jaccpots_cpu_route_on_a_cpu(monkeypatch):
+    """On a CPU backend the runner's solver is built with jaccpot's fused-lane CPU
+    route (``RuntimePolicyConfig(cpu_fused_lane=True)``), on a GPU without it, and
+    ``fused_lane_scope`` no longer reports another backend."""
+    on_cpu = rc.build_galaxy_solver(SMALL_N, G=1.0, softening=1e-2, cpu_fused_lane=True)
+    assert on_cpu.advanced.runtime.cpu_fused_lane is True
+    assert on_cpu._impl.cpu_fused_lane is True
+    off = rc.build_galaxy_solver(SMALL_N, G=1.0, softening=1e-2, cpu_fused_lane=False)
+    assert off.advanced.runtime.cpu_fused_lane is False
+    monkeypatch.setattr(rc, "_backend_name", lambda backend=None: "gpu")
+    auto = rc.build_galaxy_solver(SMALL_N, G=1.0, softening=1e-2)
+    assert auto.advanced.runtime.cpu_fused_lane is False
+    monkeypatch.undo()
+    if jax.default_backend() == "cpu":
+        auto = rc.build_galaxy_solver(SMALL_N, G=1.0, softening=1e-2)
+        assert auto.advanced.runtime.cpu_fused_lane is True
+    real = jax.default_backend
+    cfg = SimulationConfig(acceleration_scheme=FMM_ACC)
+    with rc.fused_lane_scope(cfg, rc.config_settings(cfg, jnp.float32)):
+        assert jax.default_backend is real
+
+
 def test_the_settings_are_galaxy_settings_unless_given():
     f32, f64 = jnp.float32, jnp.float64
     cfg = SimulationConfig(acceleration_scheme=FMM_ACC, fmm_preset="galaxy")
@@ -378,7 +420,10 @@ def test_galaxy_settings_build_the_galaxy_preset():
         return {k: repr(v) for k, v in vars(solver._impl).items()}
 
     preset = engine(FastMultipoleMethod(preset="galaxy", G=2.0, softening=1e-3))
-    built = rc.build_galaxy_solver(GALAXY_SETTINGS, G=2.0, softening=1e-3)
+    # without jaccpot's CPU route, which the builder takes on a CPU backend
+    built = rc.build_galaxy_solver(
+        GALAXY_SETTINGS, G=2.0, softening=1e-3, cpu_fused_lane=False
+    )
     assert engine(built) == preset
     impl = rc.build_galaxy_solver(SMALL_N, G=1.0, softening=1e-2)._impl
     assert (impl.theta, impl.fixed_order) == (pytest.approx(0.6), 4)
@@ -444,10 +489,10 @@ def test_the_runner_refuses_what_it_does_not_run(fused_lane):
 
 
 def test_the_runner_lane_runs_on_a_cpu_backend(monkeypatch):
-    """On a real CPU backend the lane takes the fused lane's CPU route
-    (``fused_lane_scope``): a config that sets nothing runs, and computes what the
-    same settings compute under the tests' reported GPU backend, bit for bit; the
-    real backend is restored afterwards."""
+    """On a real CPU backend the lane takes jaccpot's fused-lane CPU route (the
+    solver's ``RuntimePolicyConfig(cpu_fused_lane=True)``): a config that sets
+    nothing runs, and computes what the same settings compute under the tests'
+    reported GPU backend, bit for bit; the backend is never patched."""
     state_np, masses_np = _system()
     state = jnp.asarray(state_np, jnp.float32)
     masses = jnp.asarray(masses_np, jnp.float32)

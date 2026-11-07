@@ -221,13 +221,24 @@ class SimulationConfig(NamedTuple):
     # (runner_coupling.runner_profile): "galaxy" -- and "fast" on a GPU at
     # fmm_large_n_min_particles or more (the auto profile below) -- jaccpot's
     # galaxy settings; anything else the knobs fmm_leaf_size / fmm_max_order /
-    # fmm_theta / fmm_mac_type ("large_n_gpu": an fp32 force). The other coupler
-    # knobs here are read by the adaptive lane (fixed_timestep=False) only.
+    # fmm_mac_type ("large_n_gpu": an fp32 force; fmm_theta has no effect, below).
+    # The other coupler knobs here are read by the adaptive lane
+    # (fixed_timestep=False) only.
     fmm_preset: str = "fast"
     # Real (Dehnen) harmonics: jaccpot's only basis since its 2026-10 cleanup.
     # "solidfmm" is an alias for it (bit-identical forces); "complex" (C) and
     # "cartesian" (K) were removed there and raise at solver construction.
     fmm_basis: str = "real"
+    # The opening angle of the coupler's geometric MAC. NO EFFECT on the runner lane
+    # (every fixed-step FMM_ACC run): under the default fmm_mac_type="dehnen" it runs
+    # jaccpot's preset MAC, Dehnen's error-based eq (16a) at 1e-4, and under
+    # "dehnen_error" eq (16a) at fmm_adaptive_eps -- the opening angle decides no
+    # pair, and a non-default value warns once (runner_coupling.warn_ignored_knobs).
+    # The adaptive lane (fixed_timestep=False) still reads it. An angle-based MAC on
+    # the runner: fmm_galaxy_settings=GalaxySettings(mac_type="dehnen",
+    # adaptive_eps=None, theta=...); its cell leaves need a smaller angle than the
+    # coupler's for the same accuracy (theta ~0.3 at N ~ 500 matched the coupler at
+    # 0.6; docs/source/production_fmm.md, "fmm_theta has no effect").
     fmm_theta: float = 0.6
     # Accepted and ignored since the jaccpot 2026-10 cleanup (X4): the
     # "large_n_gpu" preset alone selects jaccpot's large-N lane, so this is no
