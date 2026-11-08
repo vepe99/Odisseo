@@ -105,9 +105,11 @@ runner a scheme:
 
 It selects nothing since the 2026-11 switch (every fixed-step run is the
 runner's) and changes no setting. The lanes with their own step --
-`fmm_blockstep`, `fmm_differentiable`, the adaptive `"fmm_forward"` -- refuse it, and so does `"fmm_mesh_runner"` until the plan's I2
-gives the multi-GPU runner the same seam. The scheme is part of the kept
-runner's key: switching it builds a new runner and compiles.
+`fmm_blockstep`, `fmm_differentiable`, the adaptive `"fmm_forward"` -- refuse it.
+The multi-GPU runner lane `"fmm_mesh_runner"` takes it too (the plan's I2): jaccpot
+runs the scheme on each device's rows inside the segment, and `"nornax_kdk"` is the
+built-in mesh runner bit for bit. The scheme is part of the kept runner's key (on
+either lane): switching it builds a new runner and compiles.
 
 **Removed** in 2026-11 (multi-node plan, wave 3; deprecated in I1):
 

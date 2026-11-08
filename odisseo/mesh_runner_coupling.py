@@ -37,6 +37,10 @@ kept solver and runner. What differs:
   soon as it exists. The angular momentum is exact either way.
 * No in-scan ``step_callback``, no gradients, no block steps, no active-particle
   schedules (:func:`mesh_runner_unsupported`).
+* **The integration scheme** (``config.fmm_scheme``, as on one card:
+  :func:`~odisseo.runner_coupling.runner_scheme`) goes to the runner as
+  ``ProductionRunner(scheme=...)``; jaccpot runs it on each device's rows inside
+  the segment (multi-node plan I2). ``"nornax_kdk"`` is the built-in KDK, bitwise.
 
 LAUNCHING. One process, every card of the mesh visible to it. Pick the cards (on a
 shared node with ``autocvd``) and set ``XLA_FLAGS`` BEFORE jax starts -- XLA reads it
@@ -190,7 +194,8 @@ def mesh_runner_unsupported(
     The single-card runner's limits (:func:`~odisseo.runner_coupling.
     runner_unsupported`: velocity Verlet at a fixed step, every particle on every
     step, the force refreshed after every drift), plus what the mesh mode has not:
-    a gradient path, block steps and (until I2) a ``config.fmm_scheme``.
+    a gradient path and block steps. A ``config.fmm_scheme`` runs on the mesh too
+    (the multi-node plan's I2: jaccpot runs the scheme on each device's rows).
 
     Parameters
     ----------
@@ -213,11 +218,6 @@ def mesh_runner_unsupported(
         return (
             "fmm_blockstep=True (the mesh mode steps every particle at one dt; "
             "odisseo.blockstep_coupling runs block steps)"
-        )
-    if getattr(config, "fmm_scheme", None) is not None:
-        return (
-            f"fmm_scheme={config.fmm_scheme!r} (the multi-GPU runner runs its "
-            "built-in KDK; it takes a nornax scheme in the multi-node plan's I2)"
         )
     return runner_unsupported(config, scheduled=scheduled)
 
@@ -263,7 +263,9 @@ def _solver_and_runner(
         _resolve_use_pallas,
         _temporary_large_n_environment,
     )
+    from odisseo.runner_coupling import runner_scheme
 
+    scheme = runner_scheme(config)
     key = (
         settings,
         float(config.softening),
@@ -275,6 +277,7 @@ def _solver_and_runner(
         int(ndev),
         int(num_particles),
         bool(external),
+        None if scheme is None else scheme.key(),
     )
     kept = _CACHE.get(key)
     if kept is None:
@@ -298,6 +301,7 @@ def _solver_and_runner(
             settings=settings,
             external_acceleration_fn=external_acceleration if external else None,
             external_potential_fn=external_potential if external else None,
+            scheme=scheme,
             mesh=MeshRunConfig(
                 make_mesh(int(ndev)),
                 repartition_every=int(options.repartition_every),
