@@ -25,3 +25,5 @@ __pycache__/
 
 # editor settings
 .vscode/
+
+*uv.lock

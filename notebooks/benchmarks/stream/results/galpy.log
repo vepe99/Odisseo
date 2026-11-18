@@ -1,0 +1,9 @@
+[galpy] N=   500 rep=0 wall=    14.95s setup=  2.18s int/s=1.674e+07
+[galpy] N=   500 rep=1 wall=    14.89s setup=  0.00s int/s=1.681e+07
+[galpy] N=   500 rep=2 wall=    15.00s setup=  0.00s int/s=1.669e+07
+[galpy] N=  1000 rep=0 wall=    52.42s setup=  0.00s int/s=1.910e+07
+[galpy] N=  1000 rep=1 wall=    51.89s setup=  0.00s int/s=1.929e+07
+[galpy] N=  1000 rep=2 wall=    51.91s setup=  0.00s int/s=1.928e+07
+[galpy] N=  2000 rep=0 wall=   178.94s setup=  0.00s int/s=2.238e+07
+[galpy] N=  4000 rep=0 wall=   679.81s setup=  0.00s int/s=2.356e+07
+[galpy] N=  8000 rep=0 wall=  2621.59s setup=  0.00s int/s=2.444e+07

@@ -1,0 +1,2 @@
+[odisseo_cpu] device cpu core [63] (cpu:0)
+[odisseo_cpu] DIRECT_ACC         N=  8000 rep=0 wall=6265.313s compile=  4.3s int/s=2.043e+07

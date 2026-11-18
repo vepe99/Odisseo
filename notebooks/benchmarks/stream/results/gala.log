@@ -1,0 +1,9 @@
+[gala] N=   500 rep=0 wall=    19.21s setup=  1.10s int/s=1.302e+07
+[gala] N=   500 rep=1 wall=    19.86s setup=  1.04s int/s=1.260e+07
+[gala] N=   500 rep=2 wall=    19.84s setup=  1.03s int/s=1.261e+07
+[gala] N=  1000 rep=0 wall=    87.21s setup=  2.09s int/s=1.148e+07
+[gala] N=  1000 rep=1 wall=    82.64s setup=  2.11s int/s=1.211e+07
+[gala] N=  1000 rep=2 wall=    80.46s setup=  2.20s int/s=1.244e+07
+[gala] N=  2000 rep=0 wall=   343.56s setup=  4.32s int/s=1.165e+07
+[gala] N=  4000 rep=0 wall=  1338.14s setup=  9.12s int/s=1.197e+07
+[gala] N=  8000 rep=0 wall=  5173.73s setup= 16.86s int/s=1.238e+07

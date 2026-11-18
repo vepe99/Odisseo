@@ -1,0 +1,116 @@
+[odisseo] GPU 7: NVIDIA A100-PCIE-40GB, 40960 MiB (cuda:0)
+[odisseo] DIRECT_ACC         N=   500 rep=0 wall=   0.552s compile=  2.0s int/s=9.061e+08
+[odisseo] DIRECT_ACC         N=   500 rep=1 wall=   0.556s compile=  2.0s int/s=8.996e+08
+[odisseo] DIRECT_ACC         N=   500 rep=2 wall=   0.566s compile=  2.0s int/s=8.830e+08
+[odisseo] DIRECT_ACC         N=   500 rep=3 wall=   0.568s compile=  2.0s int/s=8.810e+08
+[odisseo] DIRECT_ACC         N=   500 rep=4 wall=   0.562s compile=  2.0s int/s=8.901e+08
+[odisseo] DIRECT_ACC         N=  1000 rep=0 wall=   0.628s compile=  1.8s int/s=3.186e+09
+[odisseo] DIRECT_ACC         N=  1000 rep=1 wall=   0.639s compile=  1.8s int/s=3.129e+09
+[odisseo] DIRECT_ACC         N=  1000 rep=2 wall=   0.642s compile=  1.8s int/s=3.117e+09
+[odisseo] DIRECT_ACC         N=  1000 rep=3 wall=   0.643s compile=  1.8s int/s=3.112e+09
+[odisseo] DIRECT_ACC         N=  1000 rep=4 wall=   0.641s compile=  1.8s int/s=3.122e+09
+[odisseo] DIRECT_ACC         N=  2000 rep=0 wall=   0.899s compile=  2.1s int/s=8.900e+09
+[odisseo] DIRECT_ACC         N=  2000 rep=1 wall=   0.893s compile=  2.1s int/s=8.963e+09
+[odisseo] DIRECT_ACC         N=  2000 rep=2 wall=   0.895s compile=  2.1s int/s=8.936e+09
+[odisseo] DIRECT_ACC         N=  2000 rep=3 wall=   0.897s compile=  2.1s int/s=8.921e+09
+[odisseo] DIRECT_ACC         N=  2000 rep=4 wall=   0.922s compile=  2.1s int/s=8.680e+09
+[odisseo] DIRECT_ACC         N=  4000 rep=0 wall=   1.739s compile=  2.1s int/s=1.841e+10
+[odisseo] DIRECT_ACC         N=  4000 rep=1 wall=   1.738s compile=  2.1s int/s=1.841e+10
+[odisseo] DIRECT_ACC         N=  4000 rep=2 wall=   1.754s compile=  2.1s int/s=1.825e+10
+[odisseo] DIRECT_ACC         N=  4000 rep=3 wall=   1.783s compile=  2.1s int/s=1.794e+10
+[odisseo] DIRECT_ACC         N=  4000 rep=4 wall=   1.831s compile=  2.1s int/s=1.748e+10
+[odisseo] DIRECT_ACC         N=  8000 rep=0 wall=   6.172s compile=  2.0s int/s=2.074e+10
+[odisseo] DIRECT_ACC         N=  8000 rep=1 wall=   6.188s compile=  2.0s int/s=2.069e+10
+[odisseo] DIRECT_ACC         N=  8000 rep=2 wall=   6.214s compile=  2.0s int/s=2.060e+10
+[odisseo] DIRECT_ACC         N=  8000 rep=3 wall=   6.192s compile=  2.0s int/s=2.067e+10
+[odisseo] DIRECT_ACC         N=  8000 rep=4 wall=   6.214s compile=  2.0s int/s=2.060e+10
+[odisseo] DIRECT_ACC         N= 16000 rep=0 wall=  30.857s compile=  3.1s int/s=1.659e+10
+[odisseo] DIRECT_ACC         N= 16000 rep=1 wall=  30.883s compile=  3.1s int/s=1.658e+10
+[odisseo] DIRECT_ACC         N= 16000 rep=2 wall=  30.835s compile=  3.1s int/s=1.660e+10
+[odisseo] DIRECT_ACC         N= 16000 rep=3 wall=  30.876s compile=  3.1s int/s=1.658e+10
+[odisseo] DIRECT_ACC         N= 16000 rep=4 wall=  30.839s compile=  3.1s int/s=1.660e+10
+[odisseo] DIRECT_ACC         N= 32000 rep=0 wall= 113.376s compile=  3.4s int/s=1.806e+10
+[odisseo] DIRECT_ACC         N= 32000 rep=1 wall= 113.399s compile=  3.4s int/s=1.806e+10
+[odisseo] DIRECT_ACC         N= 32000 rep=2 wall= 113.438s compile=  3.4s int/s=1.805e+10
+W1118 11:20:00.859062 4104553 bfc_allocator.cc:317] Allocator (GPU_0_bfc) ran out of memory trying to allocate 30.53GiB with freed_by_count=0. The caller indicates that this is not a failure, but this may mean that there could be performance gains if more memory were available.
+E1118 11:20:00.859347 4103749 config_assigner.cc:383] Could not get config for HLO: %input_reduce_fusion.8 = f64[64000,3,128]{2,1,0} fusion(%loop_power_fusion.1, %get-tuple-element.437, %get-tuple-element.438, %loop_multiply_fusion.4), kind=kInput, calls=
+(param_0.1000: f64[64000,64000], param_1.1203: f64[3,64000], param_2.852: f64[64000,1,3], param_3.592: f64[64000]) -> f64[64000,3,128] {
+  %param_2.852 = f64[64000,1,3]{2,1,0} parameter(2)
+  %bitcast.17.26 = f64[64000,3]{1,0} bitcast(%param_2.852), metadata={op_name="jit(time_integration)/jit(_time_integration_fixed_steps)/while/body/closed_call/jit(leapfrog)/jit(direct_acc)/vmap(vmap(jit(single_body_acc)))/slice" stack_frame_id=3948}
+  %broadcast.5176.21 = f64[64000,3,64000]{2,1,0} broadcast(%bitcast.17.26), dimensions={0,1}, metadata={op_name="jit(time_integration)/jit(_time_integration_fixed_steps)/while/body/closed_call/jit(leapfrog)/jit(direct_acc)/vmap(vmap(jit(single_body_acc)))/sub" stack_frame_id=3948}
+  %param_1.1203 = f64[3,64000]{1,0} parameter(1)
+  %broadcast.5177.19 = f64[64000,3,64000]{2,1,0} broadcast(%param_1.1203), dimensions={1,2}, metadata={op_name="jit(time_integration)/jit(_time_integration_fixed_steps)/while/body/closed_call/jit(leapfrog)/jit(direct_acc)/vmap(vmap(jit(single_body_acc)))/sub" stack_frame_id=3948}
+  %subtract.4.19 = f64[64000,3,64000]{2,1,0} subtract(%broadcast.5176.21, %broadcast.5177.19), metadata={op_name="jit(time_integration)/jit(_time_integration_fixed_steps)/while/body/closed_call/jit(leapfrog)/jit(direct_acc)/vmap(vmap(jit(single_body_acc)))/sub" stack_frame_id=3948}
+  %constant.4116.14 = f64[] constant(0), metadata={op_name="jit(time_integration)/jit(_time_integration_fixed_steps)/while/body/closed_call/jit(leapfrog)/jit(combined_external_acceleration_vmpa_switch)/vmap(jit(PowerSphericalPotentialwCutoff))/jit(acceleration)/vmap(jvp(jit(potential)))/jit(norm)" stack_frame_id=3523}
+  %broadcast.5172.20 = f64[64000,3,64000]{2,1,0} broadcast(%constant.4116.14), dimensions={}, metadata={op_name="jit(time_integration)/jit(_time_integration_fixed_steps)/while/body/closed_call/jit(leapfrog)/jit(direct_acc)/vmap(vmap(jit(single_body_acc)))" stack_frame_id=3547}
+  %compare.17.7 = pred[64000,3,64000]{2,1,0} compare(%subtract.4.19, %broadcast.5172.20), direction=EQ, metadata={op_name="jit(time_integration)/jit(_time_integration_fixed_steps)/while/body/closed_call/jit(leapfrog)/jit(direct_acc)/vmap(vmap(jit(single_body_acc)))/eq" stack_frame_id=3950}
+  %constant.4146.2 = pred[] constant(true), metadata={op_name="jit(time_integration)/jit(_time_integration_fixed_steps)/while/body/closed_call/jit(leapfrog)/jit(direct_acc)/vmap(vmap(jit(single_body_acc)))" stack_frame_id=3547}
+  %reduce_and.17.5 = pred[64000,64000]{1,0} reduce(%compare.17.7, %constant.4146.2), dimensions={1}, to_apply=
+  (reduce_and.18: pred[], reduce_and.19: pred[]) -> pred[] {
+    %reduce_and.18 = pred[] parameter(0), metadata={op_name="reduce_and"}
+    %reduce_and.19 = pred[] parameter(1), metadata={op_name="reduce_and"}
+    ROOT %reduce_and.20.0 = pred[] and(%reduce_and.18, %reduce_and.19), metadata={op_name="reduce_and" stack_frame_id=3}
+  }, metadata={op_name="jit(time_integration)/jit(_time_integration_fixed_steps)/while/body/closed_call/jit(leapfrog)/jit(direct_acc)/vmap(vmap(jit(single_body_acc)))/reduce_and" stack_frame_id=3951}
+  %convert_element_type.259.3 = s32[64000,64000]{1,0} convert(%reduce_and.17.5), metadata={op_name="jit(time_integration)/jit(_time_integration_fixed_steps)/while/body/closed_call/jit(leapfrog)/jit(direct_acc)/vmap(vmap(jit(single_body_acc)))/convert_element_type" stack_frame_id=3952}
+  %constant.4147.1 = s32[] constant(1), metadata={op_name="jit(time_integration)/jit(_time_integration_fixed_steps)/while/body/closed_call/jit(leapfrog)/jit(direct_acc)/vmap(vmap(jit(single_body_acc)))" stack_frame_id=3547}
+  %broadcast.4363.6 = s32[64000,64000]{1,0} broadcast(%constant.4147.1), dimensions={}, metadata={op_name="jit(time_integration)/jit(_time_integration_fixed_steps)/while/body/closed_call/jit(leapfrog)/jit(direct_acc)/vmap(vmap(jit(single_body_acc)))/select_n" stack_frame_id=3554}
+  %select_n.846.3 = pred[64000,64000]{1,0} compare(%convert_element_type.259.3, %broadcast.4363.6), direction=LT, metadata={op_name="jit(time_integration)/jit(_time_integration_fixed_steps)/while/body/closed_call/jit(leapfrog)/jit(direct_acc)/vmap(vmap(jit(single_body_acc)))/select_n" stack_frame_id=3952}
+  %broadcast.5178.1 = pred[64000,3,64000]{2,1,0} broadcast(%select_n.846.3), dimensions={0,2}, metadata={op_name="jit(time_integration)/jit(_time_integration_fixed_steps)/while/body/closed_call/jit(leapfrog)/jit(direct_acc)/vmap(vmap(jit(single_body_acc)))/broadcast_in_dim" stack_frame_id=3952}
+  %param_3.592 = f64[64000]{0} parameter(3)
+  %broadcast.5174.4 = f64[64000,3,64000]{2,1,0} broadcast(%param_3.592), dimensions={2}, metadata={op_name="jit(time_integration)/jit(_time_integration_fixed_steps)/while/body/closed_call/jit(leapfrog)/jit(direct_acc)/vmap(vmap(jit(single_body_acc)))/mul" stack_frame_id=3555}
+  %param_0.1000 = f64[64000,64000]{1,0} parameter(0)
+  %broadcast.5179.3 = f64[64000,3,64000]{2,1,0} broadcast(%param_0.1000), dimensions={0,2}, metadata={op_name="jit(time_integration)/jit(_time_integration_fixed_steps)/while/body/closed_call/jit(leapfrog)/jit(direct_acc)/vmap(vmap(jit(single_body_acc)))/div" stack_frame_id=3957}
+  %divide.7.5 = f64[64000,3,64000]{2,1,0} divide(%subtract.4.19, %broadcast.5179.3), metadata={op_name="jit(time_integration)/jit(_time_integration_fixed_steps)/while/body/closed_call/jit(leapfrog)/jit(direct_acc)/vmap(vmap(jit(single_body_acc)))/div" stack_frame_id=3957}
+  %multiply.71.5 = f64[64000,3,64000]{2,1,0} multiply(%broadcast.5174.4, %divide.7.5), metadata={op_name="jit(time_integration)/jit(_time_integration_fixed_steps)/while/body/closed_call/jit(leapfrog)/jit(direct_acc)/vmap(vmap(jit(single_body_acc)))/mul" stack_frame_id=3953}
+  %select.7.3 = f64[64000,3,64000]{2,1,0} select(%broadcast.5178.1, %multiply.71.5, %broadcast.5172.20), metadata={op_name="jit(time_integration)/jit(_time_integration_fixed_steps)/while/body/closed_call/jit(leapfrog)/jit(direct_acc)/vmap(vmap(jit(single_body_acc)))/select_n" stack_frame_id=3952}
+  %bitcast.117.1 = f64[64000,3,128,500]{3,2,1,0} bitcast(%select.7.3), metadata={op_name="jit(time_integration)/jit(_time_integration_fixed_steps)/while/body/closed_call/jit(leapfrog)/jit(direct_acc)/vmap(vmap(jit(single_body_acc)))/select_n" stack_frame_id=3952}
+  ROOT %reduce.244.1 = f64[64000,3,128]{2,1,0} reduce(%bitcast.117.1, %constant.4116.14), dimensions={3}, to_apply=
+  (reduce_sum.339: f64[], reduce_sum.340: f64[]) -> f64[] {
+    %reduce_sum.339 = f64[] parameter(0), metadata={op_name="reduce_sum"}
+    %reduce_sum.340 = f64[] parameter(1), metadata={op_name="reduce_sum"}
+    ROOT %reduce_sum.341.0 = f64[] add(%reduce_sum.339, %reduce_sum.340), metadata={op_name="reduce_sum"}
+  }, metadata={op_name="jit(time_integration)/jit(_time_integration_fixed_steps)/while/body/closed_call/jit(leapfrog)/jit(direct_acc)/vmap()/reduce_sum" stack_frame_id=3958}
+}, metadata={op_name="jit(time_integration)/jit(_time_integration_fixed_steps)/while/body/closed_call/jit(leapfrog)/jit(direct_acc)/vmap()/reduce_sum" deduplicated_name="input_reduce_fusion.8" stack_frame_id=3958}. Status: INTERNAL: Autotuning failed for HLO: %input_reduce_fusion.8 = f64[64000,3,128]{2,1,0} fusion(%loop_power_fusion.1, %get-tuple-element.437, %get-tuple-element.438, %loop_multiply_fusion.4), kind=kInput, calls=%fused_reduce.8, metadata={op_name="jit(time_integration)/jit(_time_integration_fixed_steps)/while/body/closed_call/jit(leapfrog)/jit(direct_acc)/vmap()/reduce_sum" deduplicated_name="input_reduce_fusion.8" stack_frame_id=3958}. Failed to profile configs: Out of memory while trying to allocate 30.53GiB.
+W1118 11:20:11.059600 4104578 bfc_allocator.cc:514] Allocator (GPU_0_bfc) ran out of memory trying to allocate 30.52GiB (rounded to 32768000000)requested by op 
+If the cause is memory fragmentation maybe the environment variable 'TF_GPU_ALLOCATOR=cuda_malloc_async' will improve the situation. 
+Current allocation summary follows.
+Current allocation summary follows.
+W1118 11:20:11.059893 4104578 bfc_allocator.cc:525] *___________________________________________________________________________________________________
+W1118 11:20:21.060114 4104578 bfc_allocator.cc:514] Allocator (GPU_0_bfc) ran out of memory trying to allocate 30.52GiB (rounded to 32768000000)requested by op 
+If the cause is memory fragmentation maybe the environment variable 'TF_GPU_ALLOCATOR=cuda_malloc_async' will improve the situation. 
+Current allocation summary follows.
+Current allocation summary follows.
+W1118 11:20:21.060303 4104578 bfc_allocator.cc:525] *___________________________________________________________________________________________________
+E1118 11:20:21.060555 4103749 config_assigner.cc:383] Could not get config for HLO: %loop_power_fusion = f64[64000,64000]{1,0} fusion(%get-tuple-element.480, %get-tuple-element.481), kind=kLoop, calls=
+(param_0.1028: f64[3,64000], param_1.1232: f64[64000,1,3]) -> f64[64000,64000] {
+  %param_1.1232 = f64[64000,1,3]{2,1,0} parameter(1)
+  %bitcast.151 = f64[64000,3]{1,0} bitcast(%param_1.1232), metadata={op_name="jit(time_integration)/jit(_time_integration_fixed_steps)/while/body/closed_call/jit(leapfrog)/slice" stack_frame_id=3540}
+  %broadcast.5170.23 = f64[64000,3,64000]{2,1,0} broadcast(%bitcast.151), dimensions={0,1}, metadata={op_name="jit(time_integration)/jit(_time_integration_fixed_steps)/while/body/closed_call/jit(leapfrog)/jit(direct_acc)/vmap(vmap(jit(single_body_acc)))/sub" stack_frame_id=3550}
+  %param_0.1028 = f64[3,64000]{1,0} parameter(0)
+  %broadcast.5171.21 = f64[64000,3,64000]{2,1,0} broadcast(%param_0.1028), dimensions={1,2}, metadata={op_name="jit(time_integration)/jit(_time_integration_fixed_steps)/while/body/closed_call/jit(leapfrog)/jit(direct_acc)/vmap(vmap(jit(single_body_acc)))/sub" stack_frame_id=3550}
+  %subtract.3.21 = f64[64000,3,64000]{2,1,0} subtract(%broadcast.5170.23, %broadcast.5171.21), metadata={op_name="jit(time_integration)/jit(_time_integration_fixed_steps)/while/body/closed_call/jit(leapfrog)/jit(direct_acc)/vmap(vmap(jit(single_body_acc)))/sub" stack_frame_id=3550}
+  %multiply.68.7 = f64[64000,3,64000]{2,1,0} multiply(%subtract.3.21, %subtract.3.21), metadata={op_name="jit(time_integration)/jit(_time_integration_fixed_steps)/while/body/closed_call/jit(leapfrog)/jit(direct_acc)/vmap(vmap(jit(single_body_acc)))/jit(norm)/mul" stack_frame_id=3556}
+  %constant.4116.15 = f64[] constant(0), metadata={op_name="jit(time_integration)/jit(_time_integration_fixed_steps)/while/body/closed_call/jit(leapfrog)/jit(combined_external_acceleration_vmpa_switch)/vmap(jit(PowerSphericalPotentialwCutoff))/jit(acceleration)/vmap(jvp(jit(potential)))/jit(norm)" stack_frame_id=3523}
+  %reduce_sum.320.7 = f64[64000,64000]{1,0} reduce(%multiply.68.7, %constant.4116.15), dimensions={1}, to_apply=
+  (reduce_sum.3: f64[], reduce_sum.4: f64[]) -> f64[] {
+    %reduce_sum.3 = f64[] parameter(0), metadata={op_name="reduce_sum"}
+    %reduce_sum.4 = f64[] parameter(1), metadata={op_name="reduce_sum"}
+    ROOT %reduce_sum.5.0 = f64[] add(%reduce_sum.3, %reduce_sum.4), metadata={op_name="reduce_sum"}
+  }, metadata={op_name="jit(time_integration)/jit(_time_integration_fixed_steps)/while/body/closed_call/jit(leapfrog)/jit(direct_acc)/vmap(vmap(jit(single_body_acc)))/jit(norm)/reduce_sum" stack_frame_id=3556}
+  %sqrt.214.5 = f64[64000,64000]{1,0} sqrt(%reduce_sum.320.7), metadata={op_name="jit(time_integration)/jit(_time_integration_fixed_steps)/while/body/closed_call/jit(leapfrog)/jit(direct_acc)/vmap(vmap(jit(single_body_acc)))/jit(norm)/sqrt" stack_frame_id=3556}
+  %integer_pow.908.3 = f64[64000,64000]{1,0} multiply(%sqrt.214.5, %sqrt.214.5), metadata={op_name="jit(time_integration)/jit(_time_integration_fixed_steps)/while/body/closed_call/jit(leapfrog)/jit(direct_acc)/vmap(vmap(jit(single_body_acc)))/integer_pow" stack_frame_id=3557}
+  %constant.4149.2 = f64[] constant(1.0000000000000006e-10), metadata={op_name="jit(time_integration)/jit(_time_integration_fixed_steps)/while/body/closed_call/jit(leapfrog)/jit(direct_acc)/vmap(vmap(jit(single_body_acc)))" stack_frame_id=3547}
+  %add.2910.4 = f64[64000,64000]{1,0} broadcast(%constant.4149.2), dimensions={}, metadata={op_name="jit(time_integration)/jit(_time_integration_fixed_steps)/while/body/closed_call/jit(leapfrog)/jit(direct_acc)/vmap(vmap(jit(single_body_acc)))/add" stack_frame_id=3557}
+  %add.2911.3 = f64[64000,64000]{1,0} add(%integer_pow.908.3, %add.2910.4), metadata={op_name="jit(time_integration)/jit(_time_integration_fixed_steps)/while/body/closed_call/jit(leapfrog)/jit(direct_acc)/vmap(vmap(jit(single_body_acc)))/add" stack_frame_id=3557}
+  %constant.4118.3 = f64[] constant(1.5), metadata={op_name="jit(time_integration)/jit(_time_integration_fixed_steps)/while/body/closed_call/jit(leapfrog)/jit(combined_external_acceleration_vmpa_switch)/vmap(jit(PowerSphericalPotentialwCutoff))/jit(acceleration)/vmap(jvp(jit(potential)))" stack_frame_id=3522}
+  %pow.790.1 = f64[64000,64000]{1,0} broadcast(%constant.4118.3), dimensions={}, metadata={op_name="jit(time_integration)/jit(_time_integration_fixed_steps)/while/body/closed_call/jit(leapfrog)/jit(direct_acc)/vmap(vmap(jit(single_body_acc)))/pow" stack_frame_id=3558}
+  ROOT %pow.791.1 = f64[64000,64000]{1,0} power(%add.2911.3, %pow.790.1), metadata={op_name="jit(time_integration)/jit(_time_integration_fixed_steps)/while/body/closed_call/jit(leapfrog)/jit(direct_acc)/vmap(vmap(jit(single_body_acc)))/pow" stack_frame_id=3558}
+}, metadata={op_name="jit(time_integration)/jit(_time_integration_fixed_steps)/while/body/closed_call/jit(leapfrog)/jit(direct_acc)/vmap(vmap(jit(single_body_acc)))/pow" deduplicated_name="loop_power_fusion" stack_frame_id=3558}. Status: INTERNAL: Autotuning failed for HLO: %loop_power_fusion = f64[64000,64000]{1,0} fusion(%get-tuple-element.480, %get-tuple-element.481), kind=kLoop, calls=%fused_power, metadata={op_name="jit(time_integration)/jit(_time_integration_fixed_steps)/while/body/closed_call/jit(leapfrog)/jit(direct_acc)/vmap(vmap(jit(single_body_acc)))/pow" deduplicated_name="loop_power_fusion" stack_frame_id=3558}. Failed to pick best config: All configs failed during profiling.
+Failures (2):
+EXECUTION FAILED: RESOURCE_EXHAUSTED: Out of memory while trying to allocate 30.52GiB. [tf-allocator-allocation-error='']
+EXECUTION FAILED: RESOURCE_EXHAUSTED: Out of memory while trying to allocate 30.52GiB. [tf-allocator-allocation-error='']
+[odisseo] DIRECT_ACC N=64000 error: INTERNAL: Failed to get configs for: 2 out of 28 instructions. See logs for all failures. Example failure: 
+Autotuning failed for HLO: %input_reduce_fusion.8 = f64[64000,3,128]{2,1,0} fusion(%loop_pow
+[odisseo] DIRECT_ACC_LAXMAP  N= 64000 rep=0 wall= 454.241s compile=  3.2s int/s=1.803e+10
+[odisseo] DIRECT_ACC_LAXMAP  N= 64000 rep=1 wall= 454.202s compile=  3.2s int/s=1.804e+10
+[odisseo] DIRECT_ACC_LAXMAP  N= 64000 rep=2 wall= 454.322s compile=  3.2s int/s=1.803e+10
