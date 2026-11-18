@@ -30,11 +30,11 @@ bibliography: paper.bib
 Zenodo-doi: 10.5281/zenodo.14992689
 ---
 
-# Background
+# Summary
 
 N-body simulations, which model the interactions within a system of particles, are a fundamental tool in computational physics with widespread applications [e.g. planetary science, stellar cluster dynamics, cosmology, molecular dynamics]. While Odisseo (Optimized Differentiable Integrator for Stellar Systems Evolution of Orbits) can be used in any context where an N-body simulation is useful, a key motivating application in galactic astrophysics is the study of stellar streams. Stellar streams are the fossilized remnants of dwarf galaxies and globular clusters that have been tidally disrupted by the gravitational potential of their host galaxy. These structures, observed as coherent filaments of stars in the Milky Way and other nearby galaxies, are powerful probes of astrophysics. Their morphology and kinematics encode detailed information about the host galaxy's gravitational field, making them ideal for mapping its shape. Furthermore, studying the properties of streams and their progenitors is key to unraveling the hierarchical assembly history of galaxies.
 
-The standard workflow has involved running computationally expensive simulations, comparing their projected outputs to observational data via summary statistics, and then using statistical methods like MCMC to explore the vast parameter spaces. While successful, this approaches looses information by compressing rich datasets into simple statistics, and struggles with the high-dimensional parameter spaces required by increasingly complex models. With Odisseo we aim to explore how the new paradigm of differentiable simulations and automatic-differentiation can be adopted to challenge many-body problems.
+The standard workflow has involved running computationally expensive simulations, comparing their projected outputs to observational data via summary statistics, and then using statistical methods like MCMC to explore the vast parameter spaces. While successful, this approaches loses information by compressing rich datasets into simple statistics, and struggles with the high-dimensional parameter spaces required by increasingly complex models. With Odisseo we aim to explore how the new paradigm of differentiable simulations and automatic-differentiation can be adopted to challenge many-body problems.
 
 # Statement of Need
 
@@ -46,7 +46,7 @@ Odisseo is designed with open-source, community-driven development in mind, prov
 
 # State of the field
 
-Many established direct N-body code are already available, such as `PeTar` [@wang_petar_2020], `NBODY6++GPUT` [@wang_nbody6gpu_2015], written in low-level language like C and C++, provide state-of-the-art accuracy and performance. In this context, `Odisseo` prioritize maintainability, readability, and accessibility for a community developments with his high-level Python codebase, facilitating fast prototyping of ideas and allowing for novel techiques in computational physics to be integrated easily, such as end-to-end automatic differentiability (see Sec. `Software Design`).
+Many established direct N-body code are already available, such as `PeTar` [@wang_petar_2020], `NBODY6++GPUT` [@wang_nbody6gpu_2015], written in low-level language like C and C++, provide state-of-the-art accuracy and performance. In this context, `Odisseo` prioritizes maintainability, readability, and accessibility for a community developments with this high-level Python codebase, facilitating fast prototyping of ideas and allowing for novel techiques in computational physics to be integrated easily, such as end-to-end automatic differentiability (see Sec. `Software Design`).
 
 # Software Design
 
