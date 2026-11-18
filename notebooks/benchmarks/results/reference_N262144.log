@@ -1,0 +1,22 @@
+[ref] waiting for CPU: load 45.6
+[ref] waiting for CPU: load 33.6
+[ref] waiting for CPU: load 24.8
+[ref] waiting for CPU: load 20.1
+[ref] N=262144 r=0 status=ok wall=   409.49s GPU=3 cores_used=14.4 load 16.3->26.7 tree_steps=2048 |dE/E|=7.083542695388184e-05 (petar reported 7.07e-05) 
+[ref] waiting for CPU: load 30.7
+[ref] waiting for CPU: load 22.5
+[ref] waiting for CPU: load 27.5
+[ref] waiting for CPU: load 25.7
+[ref] N=262144 r=1 status=ok wall=   407.33s GPU=3 cores_used=14.4 load 19.2->23.1 tree_steps=2048 |dE/E|=7.083542695388184e-05 (petar reported 7.07e-05) 
+[ref] waiting for CPU: load 32.0
+[ref] waiting for CPU: load 28.9
+[ref] waiting for CPU: load 21.6
+[ref] N=262144 r=2 status=ok wall=   399.74s GPU=3 cores_used=14.4 load 17.1->32.1 tree_steps=2048 |dE/E|=7.083542695388184e-05 (petar reported 7.07e-05) 
+[ref] waiting for CPU: load 33.2
+[ref] waiting for CPU: load 25.4
+[ref] N=262144 r=3 status=ok wall=   401.02s GPU=3 cores_used=14.4 load 19.4->25.5 tree_steps=2048 |dE/E|=7.083542695388184e-05 (petar reported 7.07e-05) 
+[ref] waiting for CPU: load 36.0
+[ref] waiting for CPU: load 25.5
+[ref] N=262144 r=4 status=ok wall=   375.05s GPU=7 cores_used=14.4 load 19.0->20.4 tree_steps=2048 |dE/E|=7.083542695388184e-05 (petar reported 7.07e-05) 
+[ref] rows -> /export/home/vgiusepp/Odisseo/notebooks/benchmarks/results/reference.csv
+[ref] provenance -> /export/home/vgiusepp/Odisseo/notebooks/benchmarks/results/provenance_reference_20261118T133329.json

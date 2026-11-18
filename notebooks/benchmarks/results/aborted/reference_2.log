@@ -1,0 +1,2 @@
+[ref] N=  4096 r=0 status=ok wall=    20.12s GPU=3 cores_used=11.1 load 23.6->37.6 tree_steps=512 |dE/E|=0.00035683660228107275 (petar reported 3.57e-04) 
+[ref] waiting for CPU: load 37.6

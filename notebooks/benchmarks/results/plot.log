@@ -1,0 +1,60 @@
+[plot] not plotted: odisseo_DIRECT_ACC_fp64 N=65536 status=oom JaxRuntimeError: INTERNAL: Failed to get configs for: 4 out of 14 instructions. See logs for all failures. Example failure: 
+[plot] not plotted: odisseo_DIRECT_ACC_fp64 N=131072 status=oom JaxRuntimeError: INTERNAL: Failed to get configs for: 4 out of 11 instructions. See logs for all failures. Example failure: 
+[plot] not plotted: odisseo_DIRECT_ACC_fp32 N=131072 status=oom JaxRuntimeError: INTERNAL: Failed to get configs for: 2 out of 14 instructions. See logs for all failures. Example failure: 
+[plot] not plotted: odisseo_matched_DIRECT_ACC_fp64 N=65536 status=error JaxRuntimeError: INTERNAL: Failed to get configs for: 4 out of 14 instructions. See logs for all failures. Example failure: 
+[plot] not plotted: odisseo_matched_DIRECT_ACC_fp64 N=131072 status=error JaxRuntimeError: INTERNAL: Failed to get configs for: 4 out of 14 instructions. See logs for all failures. Example failure: 
+[plot] not plotted: odisseo_matched_DIRECT_ACC_fp32 N=131072 status=error JaxRuntimeError: INTERNAL: Failed to get configs for: 2 out of 14 instructions. See logs for all failures. Example failure: 
+series                                       N rep  n_steps compile_s   wall_med   wall_q25   wall_q75    ips_med  GFLOP/s    |dE/E|
+odisseo_matched_DIRECT_ACC_fp32           4096   5       64     0.298     0.0414     0.0414     0.0415  5.183e+10   1036.6  3.42e-04
+odisseo_matched_DIRECT_ACC_fp32          16384   5       32     0.206     0.2765     0.2759     0.2770  6.213e+10   1242.6  1.05e-04
+odisseo_matched_DIRECT_ACC_fp32          65536   5       32     0.197     4.7164     4.7067     4.7270  5.828e+10   1165.6  6.79e-05
+odisseo_matched_DIRECT_ACC_LAXMAP_fp32    4096   5       64     0.276     0.0466     0.0466     0.0468  4.604e+10    920.8  3.42e-04
+odisseo_matched_DIRECT_ACC_LAXMAP_fp32   16384   5       32     0.262     0.2706     0.2706     0.2708  6.348e+10   1269.5  1.05e-04
+odisseo_matched_DIRECT_ACC_LAXMAP_fp32   65536   5       32     0.293     4.7208     4.7060     4.7278  5.823e+10   1164.5  6.79e-05
+odisseo_matched_DIRECT_ACC_LAXMAP_fp32  131072   5       23     0.298    13.3535    13.2694    13.4060  5.918e+10   1183.6  6.99e-05
+odisseo_matched_DIRECT_ACC_LAXMAP_fp32  262144   5       16     0.303    36.5860    36.3755    36.6800  6.011e+10   1202.1  6.88e-05
+odisseo_matched_DIRECT_ACC_fp64           4096   5       64     0.261     0.0832     0.0830     0.0833  2.580e+10    516.1  3.42e-04
+odisseo_matched_DIRECT_ACC_fp64          16384   5       32     0.332     0.9800     0.9780     0.9808  1.753e+10    350.6  1.05e-04
+odisseo_matched_DIRECT_ACC_LAXMAP_fp64    4096   5       64     0.301     0.0832     0.0832     0.0835  2.580e+10    516.0  3.42e-04
+odisseo_matched_DIRECT_ACC_LAXMAP_fp64   16384   5       32     0.294     0.9961     0.9943     0.9962  1.725e+10    345.0  1.05e-04
+odisseo_matched_DIRECT_ACC_LAXMAP_fp64   65536   5       32     0.318    15.1879    15.1324    15.2277  1.810e+10    362.0  6.79e-05
+odisseo_matched_DIRECT_ACC_LAXMAP_fp64  131072   5       23     0.338    44.1096    43.9354    44.1804  1.792e+10    358.3  6.99e-05
+odisseo_matched_DIRECT_ACC_LAXMAP_fp64  262144   5       16     0.334   120.0491   119.9664   120.0751  1.832e+10    366.4  6.88e-05
+odisseo_DIRECT_ACC_fp32                   1024   5   302161     0.729    13.6900    13.6897    13.6903  4.629e+10    925.8  9.51e-05
+odisseo_DIRECT_ACC_fp32                   2048   5    82551     1.018     9.7056     9.7001     9.7132  7.135e+10   1427.0  1.62e-05
+odisseo_DIRECT_ACC_fp32                   4096   5    21711     0.843    10.4674    10.4652    10.4686  6.960e+10   1391.9  6.26e-05
+odisseo_DIRECT_ACC_fp32                   8192   5     4919     0.557     9.5395     9.5393     9.5449  6.921e+10   1384.2  7.41e-05
+odisseo_DIRECT_ACC_fp32                  16384   5      971     0.398     8.5703     8.5693     8.5736  6.083e+10   1216.5  1.62e-06
+odisseo_DIRECT_ACC_fp32                  32768   5      264     7.961     9.3409     9.3313     9.3474  6.069e+10   1213.9  6.74e-09
+odisseo_DIRECT_ACC_fp32                  65536   5       66     8.868     9.5875     9.5714     9.6076  5.913e+10   1182.7  8.82e-06
+odisseo_DIRECT_ACC_LAXMAP_fp32            1024   5   302161     0.235    13.6883    13.6868    13.6884  4.629e+10    925.9  9.51e-05
+odisseo_DIRECT_ACC_LAXMAP_fp32            2048   5    82551     0.213     9.7288     9.7225     9.7331  7.118e+10   1423.6  1.62e-05
+odisseo_DIRECT_ACC_LAXMAP_fp32            4096   5    21711     0.213    10.4713    10.4679    10.4714  6.957e+10   1391.4  6.26e-05
+odisseo_DIRECT_ACC_LAXMAP_fp32            8192   5     4919     0.217     9.5449     9.5444     9.5489  6.917e+10   1383.4  7.41e-05
+odisseo_DIRECT_ACC_LAXMAP_fp32           16384   5      971     0.472     8.2896     8.2884     8.2907  6.289e+10   1257.7  1.62e-06
+odisseo_DIRECT_ACC_LAXMAP_fp32           32768   5      264     7.759     9.5644     9.5504     9.5749  5.928e+10   1185.5  6.74e-09
+odisseo_DIRECT_ACC_LAXMAP_fp32           65536   5       66     9.145     9.6651     9.6568     9.6709  5.866e+10   1173.2  8.82e-06
+odisseo_DIRECT_ACC_LAXMAP_fp32          131072   5       17     2.903     9.5957     9.5840     9.6149  6.087e+10   1217.5  1.05e-04
+odisseo_DIRECT_ACC_LAXMAP_fp32          262144   5        4     3.515     9.0331     8.9993     9.0553  6.086e+10   1217.2  1.83e-03
+odisseo_DIRECT_ACC_fp64                   1024   5   302161     0.232    30.6276    30.6264    30.6277  2.069e+10    413.8  4.73e-12
+odisseo_DIRECT_ACC_fp64                   2048   5    82551     0.232    30.0610    30.0592    30.0626  2.304e+10    460.7  1.15e-11
+odisseo_DIRECT_ACC_fp64                   4096   5    21711     0.233    29.9534    29.9511    29.9562  2.432e+10    486.4  2.64e-10
+odisseo_DIRECT_ACC_fp64                   8192   5     4919     0.228    29.6028    29.6007    29.6089  2.230e+10    446.0  2.60e-09
+odisseo_DIRECT_ACC_fp64                  16384   5      971     0.225    30.1002    30.0997    30.1009  1.732e+10    346.4  1.17e-08
+odisseo_DIRECT_ACC_fp64                  32768   5      264     0.210    29.9850    29.9731    30.0009  1.891e+10    378.1  4.47e-08
+odisseo_DIRECT_ACC_LAXMAP_fp64            1024   5   302161     0.250    30.6521    30.6504    30.6525  2.067e+10    413.5  4.73e-12
+odisseo_DIRECT_ACC_LAXMAP_fp64            2048   5    82551     0.256    30.0464    30.0430    30.0473  2.305e+10    460.9  1.15e-11
+odisseo_DIRECT_ACC_LAXMAP_fp64            4096   5    21711     0.269    29.9625    29.9555    29.9672  2.431e+10    486.3  2.64e-10
+odisseo_DIRECT_ACC_LAXMAP_fp64            8192   5     4919     0.251    29.5955    29.5778    29.6041  2.231e+10    446.2  2.60e-09
+odisseo_DIRECT_ACC_LAXMAP_fp64           16384   5      971     0.870    30.3010    30.2911    30.3033  1.720e+10    344.1  1.17e-08
+odisseo_DIRECT_ACC_LAXMAP_fp64           32768   5      264     1.467    30.2313    30.2077    30.2322  1.875e+10    375.1  4.47e-08
+odisseo_DIRECT_ACC_LAXMAP_fp64           65536   5       66     0.309    30.6727    30.5748    30.6810  1.848e+10    369.7  8.82e-06
+odisseo_DIRECT_ACC_LAXMAP_fp64          131072   5       17     1.461    31.4435    31.2743    31.5424  1.858e+10    371.5  1.05e-04
+odisseo_DIRECT_ACC_LAXMAP_fp64          262144   5        4     1.713    29.8170    29.6095    29.9165  1.844e+10    368.8  1.83e-03
+petar_gpu                                 4096   5      512       nan     8.0858     7.9348     8.2860        nan      nan  3.57e-04
+petar_gpu                                16384   5     1024       nan    22.7970    22.7169    25.1460        nan      nan  1.19e-04
+petar_gpu                                65536   5     1024       nan    54.3845    53.6374    54.5889        nan      nan  1.42e-04
+petar_gpu                               131072   5     2048       nan   190.1542   179.3769   190.6542        nan      nan  7.30e-05
+petar_gpu                               262144   5     2048       nan   401.0224   399.7385   407.3330        nan      nan  7.08e-05
+[plot] /export/home/vgiusepp/Odisseo/notebooks/benchmarks/results/summary.csv
+[plot] /export/home/vgiusepp/Odisseo/notebooks/benchmarks/results/throughput.pdf

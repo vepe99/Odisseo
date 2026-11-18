@@ -1,0 +1,18 @@
+[ref] N=  4096 r=0 status=ok wall=     8.49s GPU=7 cores_used=13.2 load 11.7->12.6 tree_steps=512 |dE/E|=0.00035683660228107275 (petar reported 3.57e-04) 
+[ref] N=  4096 r=1 status=ok wall=     8.29s GPU=7 cores_used=12.7 load 12.6->13.5 tree_steps=512 |dE/E|=0.00035683660228107275 (petar reported 3.57e-04) 
+[ref] N=  4096 r=2 status=ok wall=     8.09s GPU=3 cores_used=13.1 load 13.5->14.6 tree_steps=512 |dE/E|=0.00035683660228107275 (petar reported 3.57e-04) 
+[ref] N=  4096 r=3 status=ok wall=     7.93s GPU=3 cores_used=13.1 load 14.6->15.9 tree_steps=512 |dE/E|=0.00035683660228107275 (petar reported 3.57e-04) 
+[ref] N=  4096 r=4 status=ok wall=     7.69s GPU=3 cores_used=12.9 load 15.9->16.7 tree_steps=512 |dE/E|=0.00035683660228107275 (petar reported 3.57e-04) 
+[ref] N= 16384 r=0 status=ok wall=    22.80s GPU=3 cores_used=14.8 load 16.7->20.1 tree_steps=1024 |dE/E|=0.00011894237479327961 (petar reported 1.19e-04) 
+[ref] N= 16384 r=1 status=ok wall=    25.15s GPU=3 cores_used=13.8 load 20.1->22.5 tree_steps=1024 |dE/E|=0.00011894237479327961 (petar reported 1.19e-04) 
+[ref] N= 16384 r=2 status=ok wall=    22.72s GPU=3 cores_used=14.8 load 22.5->24.2 tree_steps=1024 |dE/E|=0.00011894237479327961 (petar reported 1.19e-04) 
+[ref] N= 16384 r=3 status=ok wall=    25.82s GPU=3 cores_used=13.7 load 24.2->25.7 tree_steps=1024 |dE/E|=0.00011894237479327961 (petar reported 1.19e-04) 
+[ref] N= 16384 r=4 status=ok wall=    20.91s GPU=3 cores_used=13.7 load 25.7->31.3 tree_steps=1024 |dE/E|=0.00011894237479327961 (petar reported 1.19e-04) 
+[ref] N= 65536 r=0 status=ok wall=    53.62s GPU=3 cores_used=15.3 load 32.8->30.0 tree_steps=1024 |dE/E|=0.0001422619238911169 (petar reported 1.43e-04) 
+[ref] N= 65536 r=1 status=ok wall=    54.38s GPU=3 cores_used=15.3 load 32.2->30.0 tree_steps=1024 |dE/E|=0.0001422619238911169 (petar reported 1.43e-04) 
+[ref] N= 65536 r=2 status=ok wall=    54.59s GPU=3 cores_used=15.4 load 34.9->30.4 tree_steps=1024 |dE/E|=0.0001422619238911169 (petar reported 1.43e-04) 
+[ref] N= 65536 r=3 status=ok wall=    62.39s GPU=3 cores_used=14.9 load 32.0->35.8 tree_steps=1024 |dE/E|=0.0001422619238911169 (petar reported 1.43e-04) 
+[ref] waiting for CPU: load 39.2
+[ref] N= 65536 r=4 status=ok wall=    53.64s GPU=3 cores_used=15.3 load 28.5->26.8 tree_steps=1024 |dE/E|=0.0001422619238911169 (petar reported 1.43e-04) 
+[ref] rows -> /export/home/vgiusepp/Odisseo/notebooks/benchmarks/results/reference.csv
+[ref] provenance -> /export/home/vgiusepp/Odisseo/notebooks/benchmarks/results/provenance_reference_20261118T110740.json

@@ -1,0 +1,58 @@
+{
+  "1024": {
+    "n_steps": 302161,
+    "calibrated_on": "DIRECT_ACC_fp64",
+    "calibration_steps": 21457,
+    "calibration_wall_s": 2.130356300622225,
+    "target_seconds": 30.0
+  },
+  "2048": {
+    "n_steps": 82551,
+    "calibrated_on": "DIRECT_ACC_fp64",
+    "calibration_steps": 5364,
+    "calibration_wall_s": 1.9493441469967365,
+    "target_seconds": 30.0
+  },
+  "4096": {
+    "n_steps": 21711,
+    "calibrated_on": "DIRECT_ACC_fp64",
+    "calibration_steps": 1341,
+    "calibration_wall_s": 1.8530120719224215,
+    "target_seconds": 30.0
+  },
+  "8192": {
+    "n_steps": 4919,
+    "calibrated_on": "DIRECT_ACC_fp64",
+    "calibration_steps": 335,
+    "calibration_wall_s": 2.042948419228196,
+    "target_seconds": 30.0
+  },
+  "16384": {
+    "n_steps": 971,
+    "calibrated_on": "DIRECT_ACC_fp64",
+    "calibration_steps": 83,
+    "calibration_wall_s": 2.565106162801385,
+    "target_seconds": 30.0
+  },
+  "32768": {
+    "n_steps": 264,
+    "calibrated_on": "DIRECT_ACC_fp64",
+    "calibration_steps": 20,
+    "calibration_wall_s": 2.2719709277153015,
+    "target_seconds": 30.0
+  },
+  "65536": {
+    "n_steps": 66,
+    "calibrated_on": "DIRECT_ACC_LAXMAP_fp64",
+    "calibration_steps": 5,
+    "calibration_wall_s": 2.2776515800505877,
+    "target_seconds": 30.0
+  },
+  "131072": {
+    "n_steps": 17,
+    "calibrated_on": "DIRECT_ACC_LAXMAP_fp64",
+    "calibration_steps": 1,
+    "calibration_wall_s": 1.8149920757859945,
+    "target_seconds": 30.0
+  }
+}

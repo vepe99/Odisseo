@@ -1,0 +1,74 @@
+Usage: petar [option] filename
+       filename: initial or restart data (snapshot) filename
+       Data file content:
+            First line: 
+             1. File_ID: 0 for initialization, else for restarting
+             2. N_particle 
+             3. Time
+            Following lines:
+             1. mass: mass of particle
+             2-4. pos.[x/y/z]: 3D position of particle
+             5-7. vel.[x/y/z]: 3D velocity of particle
+             8. bin_stat: binary status storing pair id and status [formatted] (0.0)
+             9. r_search: neighbor searching radius (0.0)
+             10. id: identification of particle, should be a positive unique value (>0)
+             11. mass_bk: artificial particle parameter 1 [formatted] (0.0)
+             12. status: artificial particle parameter 2 [formatted] (0.0)
+             13. r_in: inner changeover radius (0.0)
+             14. r_out: outer changeover radius (0.0)
+             15-17. acc_soft.[x/y/z]: 3D soft (long-range) acceleration (0.0)
+             18. pot_tot: total potential (0.0)
+             19. pot_soft: soft potential (0.0)
+             20. n_b: number of neighbors (0)
+          PS: (*) show initialization values which should be used together with FILE_ID = 0
+              [formatted] indicates that the value is only for save, cannot be directly read
+Options:
+          default values are shown after ':'
+          the char in [] indicates argument type: I: 64bit integer; F: 64bit floating; S: string
+ -G  [F] Gravitational constant: 1
+ -T  [F] Particle-tree opening angle theta: 0.3
+        --dt-max-factor          [F] Limit of tree timestep/hard timestep: 4
+        --energy-err-ar          [F] Maximum energy error allowed for the ARC integrator: 1e-08
+        --energy-err-hard        [F] Maximum energy error allowed for the hard integrator: 0.0001
+        --hermite-eta            [F] Hermite timestep coefficient eta: 0.1
+        --nstep-dt-soft-kepler   [F] Determines the tree timestep by P(r_in)/nstep, where P(r_in) is the binary period with the semi-major axis of r_in, nstep is the argument of this option (e.g., 32.0): not used
+ -o  [F] Output time interval for particle dataset snapshots: 1
+ -r  [F] Outer boundary radius for the changeover function (r_out), if value is zero and -s is not used, use 0.1 GM/[N^(1/3) sigma_3D^2]; if -s is given, calculate r_out from dt_soft: 0
+        --r-bin                  [F] Tidal tensor box size and the radial criterion for detecting multiple systems (binaries, triples, etc.), if value is zero, use 0.8*r_in: 0
+        --r-escape               [F] Escape radius criterion, <0: remove particles when r>-r_escape; >=0: remove particles when r>r_escape and energy>0: 2.12676e+37
+        --r-ratio                [F] r_in / r_out: 0.1
+        --r-search-min           [F] Minimum neighbor search radius for hard clusters: auto
+ -s  [F] Tree timestep (dt_soft), if the value is zero (default) and --nstep-dt-soft-kepler is not used, then dt_soft = 0.1*r_out/sigma_1D: 0
+        --search-peri-factor     [F] Neighbor search coefficient for periapsis check: 1.5
+        --search-vel-factor      [F] Neighbor search coefficient for velocity check (v*dt): 3
+        --slowdown-factor        [F] Slowdown perturbation criterion: 0.0001
+        --soft-eps               [F] Softening epsilon: 0
+ -t  [F] End time of simulation: 10
+ -a  [I] Data output style: 0 - create new output files and overwrite existing ones except snapshots; 1 - append new data to existing files: 1
+ -b  [I] Number of primordial binaries for initialization (assuming the binaries' IDs are 1,2*n_bin): 0
+        --detect-interrupt       [I] Modify orbits of AR groups based on the interruption function: 0: turn off; 1: modify inside AR integration and accumulate energy change; 2. modify and also interrupt the hard drift: 0
+        --dt-min-hermite         [I] Power index n for the smallest timestep (0.5^n) allowed in the Hermite integrator: 40
+ -i  [I] Data read(r)/write(w) format BINARY(B)/ASCII(A): r-B/w-A (3), r-A/w-B (2), rw-A (1), rw-B (0): 1
+        --id-offset              [I] Starting ID for artificial particles, total number of real particles must always be smaller than this: n_glb+1
+ -n  [I] Total number of particles, used only for a test with the internal equal-mass Plummer model generator (assuming G=1 and the input data filename is __Plummer): 100000
+        --number-group-limit     [I] Particle-tree group number limit: Optimized for x86-AVX2 (512)
+        --number-interrupt-limit [I] Interrupted hard integrator limit: 128
+        --number-leaf-limit      [I] Particle-tree leaf number limit: Optimal value should be slightly >= 11 + N_bin_sample (20)
+        --number-sample-average  [I] Average target number of sample particles per process: 100
+        --number-step-tt         [I] Number of steps per slow-down binary orbits (binary period/tree timestep) for isolated binaries; also the maximum criterion for activating tidal tensor method: 8
+        --step-limit-ar          [I] Maximum step allowed for the ARC sym integrator: 1000000
+ -u  [I] Input data unit, 0: unknown, referring to G; 1: mass:Msun, length:pc, time:Myr, velocity:pc/Myr: 0
+ -w  [I] File writing style: 0, no output; 1. write snapshots, status, and profile separately; 2. write snapshot and status in one line per step (no MPI support); 3. write only status and profile: 1
+        --write-group-info       [I] Print new and end of groups: 0: no print; 1: print to file [data filename prefix].group.[MPI rank] if -w >0: 1
+ -f  [S] Prefix of filenames for output data: [prefix].**: data
+ -p  [S] Input parameter file (this option should be used first before any other options): input.par
+        --disable-print-info:  Do not print information
+        --disable-write-info:  Do not write information
+  -h(--help):               print help
+*** PS: dt_soft: tree time step
+        r_in : transit function inner boundary radius
+        r_out: transit function outer boundary radius
+        sigma: half-mass radius velocity dispersion
+        n_bin: number of primordial binaries
+        <m>  : averaged mass
+MemoryPool::finalize() is completed!

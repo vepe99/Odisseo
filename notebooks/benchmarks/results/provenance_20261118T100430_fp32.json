@@ -1,0 +1,20 @@
+{
+  "precision": "fp32",
+  "jax_version": "0.10.2",
+  "jaxlib_version": "0.10.2",
+  "jax_enable_x64": false,
+  "jax_default_backend": "gpu",
+  "device": "cuda:0",
+  "device_kind": "NVIDIA A100-PCIE-40GB",
+  "backend_platform_version": "PJRT C API\ncuda 13000",
+  "env": {
+    "CUDA_DEVICE_ORDER": "PCI_BUS_ID",
+    "CUDA_VISIBLE_DEVICES": "7",
+    "TF_CPP_MIN_LOG_LEVEL": "1"
+  },
+  "jax_config_relevant": {
+    "jax_enable_x64": "False",
+    "jax_default_matmul_precision": "None",
+    "jax_numpy_dtype_promotion": "standard"
+  }
+}

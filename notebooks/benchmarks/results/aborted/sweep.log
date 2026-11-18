@@ -1,0 +1,9 @@
+[bench] GPU 7: NVIDIA A100-PCIE-40GB (40GB), uuid GPU-a6a1e29a-a625-194e-953b-a052a509f0b7
+[ic] wrote /export/home/vgiusepp/Odisseo/notebooks/benchmarks/data/ic/plummer_N2048_seed42.npz  E=-0.250000000000000  Q=0.500000000000000
+[ic] wrote /export/home/vgiusepp/Odisseo/notebooks/benchmarks/data/ic/plummer_N4096_seed42.npz  E=-0.250000000000000  Q=0.500000000000000
+[ic] wrote /export/home/vgiusepp/Odisseo/notebooks/benchmarks/data/ic/plummer_N8192_seed42.npz  E=-0.250000000000000  Q=0.500000000000000
+[ic] wrote /export/home/vgiusepp/Odisseo/notebooks/benchmarks/data/ic/plummer_N32768_seed42.npz  E=-0.250000000000000  Q=0.500000000000000
+[ic] wrote /export/home/vgiusepp/Odisseo/notebooks/benchmarks/data/ic/plummer_N65536_seed42.npz  E=-0.250000000000000  Q=0.500000000000000
+[ic] wrote /export/home/vgiusepp/Odisseo/notebooks/benchmarks/data/ic/plummer_N131072_seed42.npz  E=-0.250000000000000  Q=0.500000000000000
+[bench] worker fp64: /export/home/vgiusepp/Odisseo/notebooks/benchmarks/../../.venv/bin/python /export/home/vgiusepp/Odisseo/notebooks/benchmarks/run_odisseo.py --worker fp64 --run-id 20261118T095548 --csv /export/home/vgiusepp/Odisseo/notebooks/benchmarks/results/odisseo_throughput.csv --out-dir /export/home/vgiusepp/Odisseo/notebooks/benchmarks/results --N 1024 2048 4096 8192 16384 32768 65536 131072 --schemes DIRECT_ACC DIRECT_ACC_LAXMAP --target-seconds 30.0 --repeats 5 --dt 0.00390625 --softening 0.0078125 --seed 42 --batch-size 10000 --max-steps 2000000
+[fp64] DIRECT_ACC         N=   1024 steps= 302506 compile=  0.23s wall median=  30.619s IQR=[30.529,30.624] int/s=2.072e+10 |dE/E|=4.74e-01

@@ -1,0 +1,21 @@
+[matched] GPU 7: NVIDIA A100-PCIE-40GB (40GB); targets: N=262144: 7.084e-05
+[fp64] DIRECT_ACC_LAXMAP N=262144 ladder n=8 |dE/E|=2.585e-04 target=7.084e-05
+[fp64] DIRECT_ACC_LAXMAP N=262144 ladder n=11 |dE/E|=1.454e-04 target=7.084e-05
+[fp64] DIRECT_ACC_LAXMAP N=262144 ladder n=16 |dE/E|=6.883e-05 target=7.084e-05
+[fp64] DIRECT_ACC_LAXMAP N=262144 ladder n=23 |dE/E|=4.392e-05 target=7.084e-05
+[fp64] DIRECT_ACC_LAXMAP N=262144 n=16 wall=118.3156s |dE/E|=6.883e-05 ratio=0.97 matched=True
+[fp64] DIRECT_ACC_LAXMAP N=262144 n=16 wall=119.9664s |dE/E|=6.883e-05 ratio=0.97 matched=True
+[fp64] DIRECT_ACC_LAXMAP N=262144 n=16 wall=120.0801s |dE/E|=6.883e-05 ratio=0.97 matched=True
+[fp64] DIRECT_ACC_LAXMAP N=262144 n=16 wall=120.0491s |dE/E|=6.883e-05 ratio=0.97 matched=True
+[fp64] DIRECT_ACC_LAXMAP N=262144 n=16 wall=120.0751s |dE/E|=6.883e-05 ratio=0.97 matched=True
+[fp32] DIRECT_ACC_LAXMAP N=262144 ladder n=8 |dE/E|=2.585e-04 target=7.084e-05
+[fp32] DIRECT_ACC_LAXMAP N=262144 ladder n=11 |dE/E|=1.454e-04 target=7.084e-05
+[fp32] DIRECT_ACC_LAXMAP N=262144 ladder n=16 |dE/E|=6.883e-05 target=7.084e-05
+[fp32] DIRECT_ACC_LAXMAP N=262144 ladder n=23 |dE/E|=4.392e-05 target=7.084e-05
+[fp32] DIRECT_ACC_LAXMAP N=262144 n=16 wall=35.9547s |dE/E|=6.883e-05 ratio=0.97 matched=True
+[fp32] DIRECT_ACC_LAXMAP N=262144 n=16 wall=36.3755s |dE/E|=6.883e-05 ratio=0.97 matched=True
+[fp32] DIRECT_ACC_LAXMAP N=262144 n=16 wall=36.5860s |dE/E|=6.883e-05 ratio=0.97 matched=True
+[fp32] DIRECT_ACC_LAXMAP N=262144 n=16 wall=36.6800s |dE/E|=6.883e-05 ratio=0.97 matched=True
+[fp32] DIRECT_ACC_LAXMAP N=262144 n=16 wall=36.7221s |dE/E|=6.883e-05 ratio=0.97 matched=True
+[matched] rows -> /export/home/vgiusepp/Odisseo/notebooks/benchmarks/results/odisseo_matched.csv
+[matched] provenance -> /export/home/vgiusepp/Odisseo/notebooks/benchmarks/results/provenance_matched_20261118T144437.json

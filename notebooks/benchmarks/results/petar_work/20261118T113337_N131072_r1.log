@@ -1,0 +1,126 @@
+     //==================================\\
+     ||                                  ||
+     || ::::::: ::::::. ::::::. .::::::. ||
+     || ::      ::    : ::    : ::       ||
+     || ::::::  ::    : ::::::'  `:::::. ||
+     || ::      ::::::' ::      `......' ||
+     ||     Framework for Developing     ||
+     ||        Particle Simulator        ||
+     ||     Version 7.0 (2021/08)        ||
+     \\==================================//
+
+       Home   : https://github.com/fdps/fdps 
+       E-mail : fdps-support@mail.jmlab.jp
+       Licence: MIT (see, https://github.com/FDPS/FDPS/blob/master/LICENSE)
+       Note   : Please cite the following papers.
+                - Iwasawa et al. (2016, Publications of the Astronomical Society of Japan, 68, 54)
+                - Namekata et al. (2018, Publications of the Astronomical Society of Japan, 70, 70)
+
+       Copyright (C) 2015 
+         Masaki Iwasawa, Ataru Tanikawa, Natsuki Hosono,
+         Keigo Nitadori, Takayuki Muranushi, Daisuke Namekata,
+         Kentaro Nomura, Junichiro Makino and many others
+******** FDPS has successfully begun. ********
+
+ ******************************************
+  ██████╗ ███████╗████████╗ █████╗ ██████╗
+  ██╔══██╗██╔════╝╚══██╔══╝██╔══██╗██╔══██╗
+  ██████╔╝█████╗     ██║   ███████║██████╔╝
+  ██╔═══╝ ██╔══╝     ██║   ██╔══██║██╔══██╗
+  ██║     ███████╗   ██║   ██║  ██║██║  ██║
+  ╚═╝     ╚══════╝   ╚═╝   ╚═╝  ╚═╝╚═╝  ╚═╝
+ ******************************************
+Version: 1294_298
+============== PeTar ================
+ Online document: (preparing)
+ GitHub page: https://github.com/lwang-astro/PeTar
+ License: MIT
+ Please cite the following papers when you use PeTar for any publications
+    FDPS: see above FPDS Logo message
+    SDAR: Wang L., Nitadori K., Makino J., 2020, MNRAS, 493, 3398
+    PeTar: Wang L., Iwasawa M., Nitadori K., Makino J., 2020, MNRAS, 497, 536
+ Copyright (C) 2017
+    Long Wang, Masaki Iwasawa, Keigo Nitadori, Junichiro Makino and many others
+=====================================
+Use quadrupole moment in tree force calculation
+Use 3rd order tidal tensor method
+Use Pseudoparticle multipole method
+Use orbit-dependent neighbor criterion
+Check energy of short-range (hard) integration
+Count isolated particles in hard clusters
+Use SIMD
+Use GPU
+Calculate profile
+Calculate GPU profile
+Use AR TTL method
+Use slowdown Tree method
+Use slowdown timescale criterion
+Print adjust group information
+=====================================
+Data read(r)/write(w) format BINARY(B)/ASCII(A): r-B/w-A (3), r-A/w-B (2), rw-A (1), rw-B (0):   1
+Input data unit, 0: unknown, referring to G; 1: mass:Msun, length:pc, time:Myr, velocity:pc/Myr:   0
+Gravitational constant:   1
+End time of simulation:   1
+Output time interval for particle dataset snapshots:   1
+Softening epsilon:   0.0078125
+Number of primordial binaries for initialization (assuming the binaries' IDs are 1,2*n_bin):   0
+File writing style: 0, no output; 1. write snapshots, status, and profile separately; 2. write snapshot and status in one line per step (no MPI support); 3. write only status and profile:   1
+Data output style: 0 - create new output files and overwrite existing ones except snapshots; 1 - append new data to existing files:   0
+Prefix of filenames for output data: [prefix].**:   data
+Reading data file name: input.dat
+----- Finish reading input options of PeTar -----
+----- Parallelization information -----
+MPI processors: 1
+OMP threads:    16
+----- Reading file: input.dat -----
+Number of particles = 131072
+Time = 0
+----- Parameter list: -----
+ Average mass                      = 7.62939453125e-06
+ Mean inner changeover radius      = 0.00039372532809215
+ Mean outer changeover radius      = 0.0039372532809215
+ Mean SDAR group detection radius  = 0.00031498026247372
+ Minimum neighbor searching radius = 0.0045352732376557
+ Velocity dispersion               = 0.40824829046386
+ Tree time step                    = 0.00048828125
+ Output time step                  = 1
+-----  Dump parameter files -----
+Save input parameters to file input.par
+Save hard_manager parameters to file input.par.hard
+-----  Finish parameter initialization -----
+
+Time: 0  N_real(loc): 131072  N_real(glb): 131072  N_all(loc): 131072  N_all(glb): 131072  N_remove(glb): 0  N_escape(glb): 0
+Energy:       Error/Total           Error       Error_cum           Total         Kinetic       Potential          Modify    Modify_group   Modify_single        Error_PP    Error_PP_cum
+Physic:                -0               0               0      -0.2493363            0.25      -0.4993363               0               0               0               0               0
+Slowdown:              -0               0               0      -0.2493363            0.25      -0.4993363               0               0               0               0               0
+Angular Momentum:  |L|err: 0  |L|err_cum: 0  L: -0.000151147   0.0003464125    0.0003719181  |L|: 0.0005302548
+C.M.: mass: 1 pos: -0.005053568   -0.002522672    0.001338085 vel: 0.0008997637   0.00058392    0.0005464639
+
+Time: 1  N_real(loc): 131072  N_real(glb): 131072  N_all(loc): 131072  N_all(glb): 131072  N_remove(glb): 0  N_escape(glb): 0
+Energy:       Error/Total           Error       Error_cum           Total         Kinetic       Potential          Modify    Modify_group   Modify_single        Error_PP    Error_PP_cum
+Physic:      7.346454e-05   -1.831872e-05   -1.831872e-05      -0.2493546       0.2495065      -0.4988611   -4.719473e-20               0               0   -8.971004e-06   -8.971004e-06
+Slowdown:    7.346454e-05   -1.831872e-05   -1.831872e-05      -0.2493546       0.2495065      -0.4988611   -2.779449e-20               0               0   -9.109726e-06   -9.109726e-06
+Angular Momentum:  |L|err: 1.586643e-08  |L|err_cum: 1.586643e-08  L: -0.0001511334   0.0003464127    0.0003719261  |L|: 0.0005302567
+C.M.: mass: 1 pos: -0.003844356   -0.001953574    0.001857789 vel: 0.000711131   0.0002512182    -0.0003234782
+Tree step number: 2048
+**** Wallclock time per step (local): [Min/Max]
+  Total        PP_single    PP_cluster   PP_cross     PP_intrpt*   Tree_NB      Tree_Force   Force_corr   Kick         FindCluster  CreateGroup  Domain_deco  Ex_Ptcl      Output       Status       Other      
+     0.091476   0.00060593    0.0010072            0            0     0.014912     0.072394   0.00028042   0.00017861    0.0010846   0.00036224   3.6868e-07   3.1862e-05   0.00032487     3.66e-06   6.9429e-05
+     0.091476   0.00060599    0.0010073            0            0     0.014921     0.072601   0.00028047   0.00017865    0.0010846   0.00036228   4.0493e-07     3.19e-05   0.00032487   3.6602e-06   6.9723e-05
+**** FDPS tree soft force time profile (local):
+  Sample_ptcl  Domain_deco  Ex_ptcl      Set_ptcl_LT  Set_ptcl_GT  Make_LT      Make_GT      SetRootCell  Calc_force   Calc_mom_LT  Calc_mom_GT  Make_LET_1   Make_LET_2   Ex_LET_1     Ex_LET_2     Write_back 
+            0            0            0    0.0012399    1.601e-05    0.0067574     0.013724   5.4321e-05     0.048298   0.00089049   0.00097265   8.6784e-05            0   1.6841e-05            0   0.00033893
+**** Tree neighbor time profile (local):
+  Sample_ptcl  Domain_deco  Ex_ptcl      Set_ptcl_LT  Set_ptcl_GT  Make_LT      Make_GT      SetRootCell  Calc_force   Calc_mom_LT  Calc_mom_GT  Make_LET_1   Make_LET_2   Ex_LET_1     Ex_LET_2     Write_back 
+            0            0            0   0.00061881   8.0512e-06    0.0064587    0.0036462   4.3966e-05    0.0024599   0.00064268   0.00057165   0.00012603            0   9.8479e-06            0   0.00032686
+**** GPU time profile (local):
+  copy         send         receive      calc_force       n_walk       n_epi        n_epj        n_spj        n_call 
+    0.0030434    0.0031512   0.00058859     0.024878       995.07   1.3114e+05   6.4943e+06   4.3569e+06       5.2715
+**** Number per step (global):
+  PP_single    PP_cluster   PP_cross     PP_intrpt*   Cluster      Cross        AR_step_sum  AR_tsyn_sum  AR_group_N   Iso_group_N  H4_step_sum  H4_no_NB     Ep-Ep_sum    Ep-Sp_sum  
+   1.2882e+05       2248.1            0            0         1106            0        31.81       11.174            0            0       6467.5       1.6099   1.0099e+09   6.3871e+08
+**** Number of members in clusters (global):
+            1            2            3            4            5            6
+   1.2882e+05       1071.3       33.091       1.4355     0.086426     0.003418
+MemoryPool::finalize() is completed!
+******** FDPS has successfully finished. ********
