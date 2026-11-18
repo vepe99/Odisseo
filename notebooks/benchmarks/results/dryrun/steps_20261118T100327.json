@@ -1,0 +1,9 @@
+{
+  "1024": {
+    "n_steps": 19887,
+    "calibrated_on": "DIRECT_ACC_fp64",
+    "calibration_steps": 1430,
+    "calibration_wall_s": 0.14381130784749985,
+    "target_seconds": 2.0
+  }
+}

@@ -1,4 +1,2 @@
 # generated initial conditions (re-creatable bit-for-bit with ic.py)
 data/
-# dry-run output
-results/dryrun/

@@ -1,0 +1,95 @@
+{
+  "run_id": "20261118T101349",
+  "created_utc": "2026-11-18T09:13:51+00:00",
+  "script": "run_matched.py",
+  "argv": [
+    "run_matched.py",
+    "--dry-run",
+    "--exclude-gpu",
+    "7",
+    "--gpu-timeout",
+    "600"
+  ],
+  "args": {
+    "reference_csv": "/export/home/vgiusepp/Odisseo/notebooks/benchmarks/results/dryrun/reference.csv",
+    "reference_run_id": null,
+    "precisions": [
+      "fp64",
+      "fp32"
+    ],
+    "schemes": [
+      "DIRECT_ACC",
+      "DIRECT_ACC_LAXMAP"
+    ],
+    "repeats": 5,
+    "n0": 8,
+    "max_steps": 200000,
+    "match_factor": 3.0,
+    "seed": 42,
+    "batch_size": 10000,
+    "out_dir": "/export/home/vgiusepp/Odisseo/notebooks/benchmarks/results/dryrun",
+    "csv": null,
+    "run_id": null,
+    "gpu_timeout": 600,
+    "exclude_gpu": [
+      7
+    ],
+    "allow_shared_gpu": false,
+    "dry_run": true,
+    "worker": null
+  },
+  "targets": {
+    "4096": {
+      "target": 0.00035683660228107275,
+      "t_end": 1.0,
+      "softening": 0.0078125,
+      "run_id": "20261118T101222",
+      "n": 1,
+      "code": "petar"
+    }
+  },
+  "gpu": {
+    "index": "3",
+    "name": "NVIDIA A100-PCIE-40GB",
+    "uuid": "GPU-07c86868-017c-f277-ea84-e5fb7ca92fe9",
+    "memory.total": "40960",
+    "driver_version": "595.71.05",
+    "pci.bus_id": "00000000:44:00.0",
+    "clocks.max.sm": "1410",
+    "power.limit": "250.00",
+    "variant": "40GB",
+    "autocvd_selection": [
+      3
+    ]
+  },
+  "cuda": {
+    "driver_cuda_version": "13.2"
+  },
+  "host": {
+    "hostname": "compgpu9",
+    "platform": "Linux-6.8.0-124-generic-x86_64-with-glibc2.39",
+    "python": "3.13.11 (main, Jan 14 2026, 19:38:04) [Clang 21.1.4 ]",
+    "cpu_count": 64,
+    "cpu_model": "AMD EPYC 7452 32-Core Processor"
+  },
+  "odisseo_git": {
+    "commit": "76e484db614f9da762302c96672a8c9a9cb78fe7",
+    "dirty": false,
+    "describe": "76e484d-dirty"
+  },
+  "env": {
+    "CUDA_DEVICE_ORDER": "PCI_BUS_ID",
+    "CUDA_VISIBLE_DEVICES": "3"
+  },
+  "workers": {
+    "fp64": {
+      "returncode": 0
+    },
+    "fp32": {
+      "returncode": 0
+    }
+  },
+  "jax_version": "0.10.2",
+  "jaxlib_version": "0.10.2",
+  "finished_utc": "2026-11-18T09:14:21+00:00"
+}
