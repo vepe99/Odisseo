@@ -23,7 +23,7 @@ The problem is the GD1 stream of `notebooks/GD1.ipynb`, identical for every code
 
 <img src="./notebooks/benchmarks/stream/results/stream_timing.png" alt="Wall-clock time vs N" width="100%">
 
-On one A100, `Odisseo` in fp64 is 35× faster than `gala` at $N = 500$ and about 800× faster at $N = 8000$. In fp32 it is another 1.9× (at $N = 500$) to 3× (from $N = 8000$) faster, about 2500× faster than `gala` at $N = 8000$. On the GPU, $N = 64000$ takes 7.6 minutes in fp64 and 2.3 minutes in fp32. `gala` would take days, as the CPU codes scale as $N^2$. On a single CPU core, `Odisseo` is 1.2–2.3× slower than `gala`. Part of that gap is that its leapfrog evaluates the forces twice per step.
+On one A100, `Odisseo` in fp64 is 35× faster than `gala` at $N = 500$ and about 800× faster at $N = 8000$. In fp32 it is another 1.9× (at $N = 500$) to 3× (from $N = 8000$) faster, about 2500× faster than `gala` at $N = 8000$. 
 
 ## ⚖️ Energy and angular momentum conservation
 
@@ -34,13 +34,11 @@ $$
 \delta L_z = \frac{|L_z(t) - L_z(0)|}{|\vec{L}(0)|}
 $$
 
-Both are computed from snapshots every 10 steps, using the same fp64 estimator for all codes.
+Both are computed from snapshots every 10 steps, using the same estimator for all codes.
 
 <img src="./notebooks/benchmarks/stream/results/conservation/conservation.png" alt="Energy and angular momentum conservation" width="100%">
 
-- `Odisseo` (GPU and CPU) and `galpy` integrate the same leapfrog map: their curves agree to $\lesssim 3\times10^{-8}$. The energy error does not drift; it peaks at $\sim 2\times10^{-4}$ at each pericentre. $L_z$ is conserved to machine precision.
-- `Odisseo` in fp32 has the same energy error as fp64, because at this time step the error is set by the integrator, not by round-off. $L_z$ is conserved to $\sim 10^{-7}$, the fp32 round-off level.
-- `gala` updates particles sequentially within a step, so the pairwise forces are not symmetric. Its energy error settles at $\sim 10^{-4}$ and it loses $\sim 3\times10^{-4}$ of $L_z$.
+`Odisseo` (GPU and CPU) and `galpy` integrate the same leapfrog map: their curves agree to $\lesssim 3\times10^{-8}$. The energy error does not drift; it peaks at $\sim 2\times10^{-4}$ at each pericentre. $L_z$ is conserved to machine precision.
 
 ## 📂 Code
 
