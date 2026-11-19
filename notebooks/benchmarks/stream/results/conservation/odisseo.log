@@ -1,0 +1,5 @@
+[odisseo] device cuda:0
+[odisseo] N=500 median |x_final - benchmark final| = 0.00e+00 (code units)
+[odisseo] N=500 saved 101 snapshots in 0.9s -> /export/home/vgiusepp/Odisseo/notebooks/benchmarks/stream/results/conservation/traj_odisseo_N500.npz
+[odisseo] N=2000 median |x_final - benchmark final| = 0.00e+00 (code units)
+[odisseo] N=2000 saved 101 snapshots in 1.2s -> /export/home/vgiusepp/Odisseo/notebooks/benchmarks/stream/results/conservation/traj_odisseo_N2000.npz

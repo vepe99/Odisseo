@@ -144,3 +144,67 @@ up to 16 OpenMP threads, and the host load average was 12–29 on 64 cores. Both
 CPU codes are single threaded and compute-bound, and their per-N throughput
 stayed flat (gala 1.17–1.26e7 int/s), so the effect looks small. For
 publication-grade CPU numbers, rerun them on an idle machine.
+
+## Energy and angular momentum vs time (`stream_conservation.py`)
+
+A separate, untimed pass that re-runs the same problem (N = 500 and 2000) and
+saves a snapshot every 10 steps. The final states are identical to the timed
+runs. E, P and L are computed for every code with one fp64 estimator: numpy
+direct-sum softened self-potential plus Odisseo's external potential.
+
+```bash
+$PY  stream_conservation.py run --code odisseo     --N 500 2000
+$PY  stream_conservation.py run --code odisseo_cpu --N 500 2000 --core 63
+$CPY stream_conservation.py run --code gala        --N 500 2000 --core 62
+$CPY stream_conservation.py run --code galpy       --N 500 2000 --core 61
+$PY  stream_conservation.py analyze   # results/conservation/conservation.{pdf,png}, conservation_summary.csv
+```
+
+The external potential is static and axisymmetric, so E and L_z are conserved.
+P and L_x, L_y are not, because the host exerts a net force and torque.
+
+| | max \|ΔE/E\| | final \|ΔE/E\| | max \|ΔL_z\|/\|L\| |
+|---|---|---|---|
+| Odisseo GPU, Odisseo CPU, galpy | 2.2e-4 | 1.2e-4 | 2.5e-15 |
+| gala | 3.2e-4 | 2.4e-4 | 2.9e-4 |
+
+* Odisseo (GPU and CPU) and galpy give the same energy curve, to 3.6e-14
+  relative at N = 500 and 3e-8 at N = 2000. The error peaks at each
+  pericentre and does not drift.
+* gala's sequential update (see above) breaks the pairwise force symmetry. It
+  loses 2–3e-4 of L_z in the first ~0.3 Gyr, and its energy error settles at
+  ~1e-4 instead of returning to ~1e-5.
+* **galpy's built-in N-body routine.** `galpy.snapshot.directnbody.direct_nbody`
+  (2011, undocumented) is not usable:
+  * `import galpy.snapshot` fails on Python 3 because of a Python 2 implicit
+    relative import.
+  * It calls `evaluateRforces(R, z, pot)` with the old argument order.
+  * With both bugs shimmed it is correct (it matches our force to 5e-15), but
+    it is a pure-Python O(N²) loop: 1.6 s per step at N = 500, about 160×
+    slower than the numpy version used here.
+
+## Odisseo GPU in fp32 (`--code odisseo_fp32`)
+
+This is the same GPU run with `jax_enable_x64` off, so the state, masses and
+all arithmetic are float32. The final states are cast to float64 before
+saving, and E and L are computed with the same fp64 estimator as for the
+other codes.
+
+```bash
+$PY stream_benchmark.py    run --code odisseo_fp32 --N 500 1000 2000 4000 8000 16000 32000 64000
+$PY stream_conservation.py run --code odisseo_fp32 --N 500 2000
+```
+
+| N | 500 | 1000 | 2000 | 4000 | 8000 | 16000 | 32000 | 64000 |
+|---|---|---|---|---|---|---|---|---|
+| fp32 wall [s] | 0.30 | 0.35 | 0.42 | 0.76 | 2.09 | 8.26 | 36.5 | 139 |
+| fp64 / fp32 | 1.9 | 1.9 | 2.1 | 2.3 | 3.0 | 3.7 | 3.1 | 3.3 |
+
+* **Throughput.** It saturates at about 6e10 pair interactions/s.
+  `DIRECT_ACC` fits in memory at N = 64000, unlike fp64.
+* **Conservation.** \|ΔE/E\| is the same as in fp64 (max 2.2e-4), since the
+  leapfrog truncation error dominates. \|ΔL_z\|/\|L\| is ~1e-7 at N = 500 and
+  ~4e-8 at N = 2000 (fp32 round-off), compared with 1e-15 in fp64.
+* **JAX version.** These runs used jax 0.11.2, while the fp64 runs above used
+  0.10.2. Rerunning fp64 under 0.11.2 at N = 2000 and 8000 gave timings within
+  2% of the originals (0.88 vs 0.90 s and 6.13 vs 6.19 s).

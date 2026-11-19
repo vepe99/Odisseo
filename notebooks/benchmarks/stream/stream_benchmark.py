@@ -62,12 +62,12 @@ CSV_COLS = ["timestamp_utc", "code", "device", "N", "precision", "scheme", "repe
             "interactions_per_s", "threads", "loadavg_before", "loadavg_after", "host", "cpu_model",
             "versions", "error"]
 
-CODES = ["odisseo", "odisseo_cpu", "gala", "galpy"]
-LABEL = {"odisseo": "Odisseo (1×A100 GPU)", "odisseo_cpu": "Odisseo (1 CPU core)",
+CODES = ["odisseo", "odisseo_fp32", "odisseo_cpu", "gala", "galpy"]
+LABEL = {"odisseo": "Odisseo (1×A100 GPU)", "odisseo_fp32": "Odisseo fp32 (1×A100 GPU)", "odisseo_cpu": "Odisseo (1 CPU core)",
          "gala": "gala (1 CPU core)", "galpy": "galpy (1 CPU core)"}
-COLOR = {"odisseo": "#2a6fdb", "odisseo_cpu": "#7aa7ee", "gala": "#d1495b", "galpy": "#edae49"}
-MARKER = {"odisseo": "o", "odisseo_cpu": "s", "gala": "D", "galpy": "^"}
-LS = {"odisseo": "-", "odisseo_cpu": "--", "gala": "-", "galpy": "-"}
+COLOR = {"odisseo": "#2a6fdb", "odisseo_fp32": "#1b9e77", "odisseo_cpu": "#7aa7ee", "gala": "#d1495b", "galpy": "#edae49"}
+MARKER = {"odisseo": "o", "odisseo_fp32": "P", "odisseo_cpu": "s", "gala": "D", "galpy": "^"}
+LS = {"odisseo": "-", "odisseo_fp32": "-.", "odisseo_cpu": "--", "gala": "-", "galpy": "-"}
 
 
 # --------------------------------------------------------------------------- #
@@ -139,10 +139,11 @@ def self_potential_energy(pos, mass, eps, G, threads=8) -> float:
 # --------------------------------------------------------------------------- #
 # Odisseo                                                                      #
 # --------------------------------------------------------------------------- #
-def odisseo_setup(N: int):
-    """(code_units, config, params) for Odisseo, fp64. Imports JAX."""
+def odisseo_setup(N: int, x64: bool = True):
+    """(code_units, config, params) for Odisseo, fp64 unless x64=False. Imports JAX."""
     import jax
-    jax.config.update("jax_enable_x64", True)
+    if x64:
+        jax.config.update("jax_enable_x64", True)
     from astropy import units as u
     import odisseo.option_classes as oc
     from odisseo.units import CodeUnits
@@ -230,8 +231,9 @@ def cmd_setup(a) -> None:
     print(f"[setup] wrote {DATA / 'potential_check.npz'}")
 
 
-def run_odisseo(a, device: str) -> None:
-    code = "odisseo" if device == "gpu" else "odisseo_cpu"
+def run_odisseo(a, device: str, fp32: bool = False) -> None:
+    code = "odisseo_fp32" if fp32 else ("odisseo" if device == "gpu" else "odisseo_cpu")
+    prec = "fp32" if fp32 else "fp64"
     if device == "cpu":
         # one thread, pinned to one core: same footing as gala / galpy
         os.environ["JAX_PLATFORMS"] = "cpu"
@@ -250,10 +252,13 @@ def run_odisseo(a, device: str) -> None:
                                   "--format=csv,noheader"], capture_output=True, text=True).stdout.strip()
 
     import jax
-    jax.config.update("jax_enable_x64", True)
+    import jax.numpy as jnp
+    if not fp32:
+        jax.config.update("jax_enable_x64", True)
     from odisseo import construct_initial_state
     from odisseo.time_integration import time_integration
     import odisseo.option_classes as oc
+    dtype = np.float32 if fp32 else np.float64
 
     dev = jax.devices()[0]
     assert dev.platform == device, (dev.platform, device)
@@ -263,13 +268,13 @@ def run_odisseo(a, device: str) -> None:
 
     for N in a.N:
         ic = load_ic(N); meta = ic["meta"]
-        _, config, params = odisseo_setup(N)
+        _, config, params = odisseo_setup(N, x64=not fp32)
         n_steps = a.n_steps or meta["n_steps"]
         if a.n_steps:
             config = config._replace(num_timesteps=n_steps)
             params = params._replace(t_end=n_steps * meta["dt"])
-        state = jax.device_put(construct_initial_state(jnp.asarray(ic["pos"]), jnp.asarray(ic["vel"])), dev)
-        mass = jax.device_put(jnp.asarray(ic["mass"]), dev)
+        state = jax.device_put(construct_initial_state(jnp.asarray(ic["pos"], dtype), jnp.asarray(ic["vel"], dtype)), dev)
+        mass = jax.device_put(jnp.asarray(ic["mass"], dtype), dev)
         if device == "cpu":
             reps = 3 if N <= 1000 else 1
         else:
@@ -277,7 +282,7 @@ def run_odisseo(a, device: str) -> None:
         # DIRECT_ACC first; DIRECT_ACC_LAXMAP only if it fails (e.g. OOM at N = 64000 on 40 GB)
         for sch in ("DIRECT_ACC", "DIRECT_ACC_LAXMAP"):
             cfg = config._replace(acceleration_scheme=getattr(oc, sch), batch_size=a.batch_size)
-            base = dict(code=code, device=device, N=N, precision="fp64", scheme=sch, n_steps=n_steps,
+            base = dict(code=code, device=device, N=N, precision=prec, scheme=sch, n_steps=n_steps,
                         dt=meta["dt"], force_evals_per_step=2, n_force_evals=2 * n_steps, threads=1,
                         host=platform.node(), cpu_model=cpu_model(), versions=versions)
             try:
@@ -300,7 +305,8 @@ def run_odisseo(a, device: str) -> None:
                     print(f"[{code}] {sch:18s} N={N:6d} rep={r} wall={wall:9.3f}s "
                           f"compile={t_comp:5.1f}s int/s={ips:.3e}", flush=True)
                 o = np.asarray(out)
-                assert o.dtype == np.float64
+                assert o.dtype == dtype, o.dtype
+                o = o.astype(np.float64)
                 _save_final(a, code, N, o[:, 0], o[:, 1], ic, wall)
                 break
             except Exception as e:
@@ -462,8 +468,8 @@ def run_cpu_code(a, code: str) -> None:
 
 def cmd_run(a) -> None:
     RESULTS.mkdir(parents=True, exist_ok=True)
-    if a.code in ("odisseo", "odisseo_cpu"):
-        run_odisseo(a, "gpu" if a.code == "odisseo" else "cpu")
+    if a.code in ("odisseo", "odisseo_fp32", "odisseo_cpu"):
+        run_odisseo(a, "cpu" if a.code == "odisseo_cpu" else "gpu", fp32=a.code == "odisseo_fp32")
     else:
         run_cpu_code(a, a.code)
 
@@ -511,7 +517,8 @@ def cmd_analyze(a) -> None:
 
     # ---- timing figure: common N grid (the N run by gala / galpy)
     grid = sorted({s["N"] for s in summary if s["code"] in ("gala", "galpy")})
-    fig, ax = plt.subplots(figsize=(6.4, 4.8), constrained_layout=True)
+    # same style as the docs scaling plot (notebooks/scalability, gpu_scaling_combined.png)
+    fig, ax = plt.subplots(figsize=(12, 11))   # axes ~12x8 in, plus room for the legend above
     for code in CODES:
         ss = sorted([s for s in summary if s["code"] == code and s["N"] in grid], key=lambda s: s["N"])
         if not ss:
@@ -519,16 +526,22 @@ def cmd_analyze(a) -> None:
         N_ = [s["N"] for s in ss]; m = np.array([s["median"] for s in ss])
         err = [m - [s["min"] for s in ss], [s["max"] for s in ss] - m]
         ax.errorbar(N_, m, yerr=err, marker=MARKER[code], ls=LS[code], color=COLOR[code],
-                    label=LABEL[code], capsize=2, ms=5)
+                    label=LABEL[code], capsize=5, ms=10, lw=2)
     gala0 = [s["median"] for s in summary if s["code"] == "gala" and s["N"] == grid[0]]
     if gala0:
         Ns = np.array(grid, float)
-        ax.plot(Ns, gala0[0] * (Ns / Ns[0]) ** 2, ":", color="grey", lw=1, label=r"$\propto N^2$")
-    ax.set(xscale="log", yscale="log", xlabel="N particles", ylabel="wall-clock [s]",
-           title="GD1 stream, direct N-body")
-    ax.legend(fontsize=8, loc="upper left"); ax.grid(alpha=0.3, which="both")
+        ax.plot(Ns, gala0[0] * (Ns / Ns[0]) ** 2, ":", color="grey", lw=2, label=r"$\propto N^2$")
+    ax.set(xscale="log", yscale="log")
+    ax.set_xlabel("N particles", fontsize=30); ax.set_ylabel("Wall-clock time [s]", fontsize=30)
+    ax.set_xticks(grid, [str(n) for n in grid]); ax.xaxis.set_minor_formatter(matplotlib.ticker.NullFormatter())
+    ax.tick_params(axis="both", which="major", labelsize=30)
+    ax.grid(alpha=0.3, which="both")
+    # legend above the axes, as in the conservation plot
+    h, l = ax.get_legend_handles_labels()
+    fig.legend(h, l, fontsize=20, loc="upper center", ncol=2, frameon=False, bbox_to_anchor=(0.5, 1.0))
+    fig.tight_layout(rect=(0, 0, 1, 0.85))
     for ext in ("pdf", "png"):
-        fig.savefig(RESULTS / f"stream_timing.{ext}", dpi=150)
+        fig.savefig(RESULTS / f"stream_timing.{ext}", bbox_inches="tight", dpi=300)
 
 
 # --------------------------------------------------------------------------- #

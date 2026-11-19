@@ -1,0 +1,5 @@
+[odisseo_cpu] device cpu:0
+[odisseo_cpu] N=500 median |x_final - benchmark final| = 1.43e-13 (code units)
+[odisseo_cpu] N=500 saved 101 snapshots in 42.1s -> /export/home/vgiusepp/Odisseo/notebooks/benchmarks/stream/results/conservation/traj_odisseo_cpu_N500.npz
+[odisseo_cpu] N=2000 median |x_final - benchmark final| = 9.65e-13 (code units)
+[odisseo_cpu] N=2000 saved 101 snapshots in 457.4s -> /export/home/vgiusepp/Odisseo/notebooks/benchmarks/stream/results/conservation/traj_odisseo_cpu_N2000.npz

@@ -13,6 +13,7 @@ first_simulation.md
 conservation.md
 units.md
 parallelism.md
+benchmarks.md
 ```
 
 `odisseo` differentiable direct Nbody written in `JAX`.

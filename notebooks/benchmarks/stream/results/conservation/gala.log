@@ -1,0 +1,5 @@
+[check] external acceleration vs Odisseo: gala 6.9e-14, galpy 5.9e-14 (max rel)
+[gala] N=500 median |x_final - benchmark final| = 0.00e+00 (code units)
+[gala] N=500 saved 101 snapshots in 22.6s -> /export/home/vgiusepp/Odisseo/notebooks/benchmarks/stream/results/conservation/traj_gala_N500.npz
+[gala] N=2000 median |x_final - benchmark final| = 0.00e+00 (code units)
+[gala] N=2000 saved 101 snapshots in 320.8s -> /export/home/vgiusepp/Odisseo/notebooks/benchmarks/stream/results/conservation/traj_gala_N2000.npz
