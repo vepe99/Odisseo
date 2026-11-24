@@ -71,6 +71,8 @@ __all__ = [
     "solver_settings",
     "build_solvers",
     "clusters_scheme",
+    "repark_empty_slots",
+    "install_empty_slot_repark",
 ]
 
 BAUMGARDT_BASE_URL = "https://people.smp.uq.edu.au/HolgerBaumgardt/globular/"
@@ -805,11 +807,18 @@ def build_solvers(eps_g: float, eps_c: float, *, G: float = 1.0, backend: Option
     """
     from odisseo.runner_coupling import build_galaxy_solver
 
+    import jax
+
+    backend = backend or jax.default_backend()
     settings = solver_settings(backend)
+    # use_pallas as Odisseo's runner lane (runner_coupling._runner_use_pallas): on CPU only under
+    # dehnen_error (interpret mode), never for the geometric MAC
+    on_cpu = backend == "cpu"
     gal = build_galaxy_solver(settings, G=G, softening=eps_g,
-                              use_pallas=(settings.mac_type == "dehnen_error") or None)
+                              use_pallas=(settings.mac_type == "dehnen_error") if on_cpu else
+                              ((settings.mac_type == "dehnen_error") or None))
     cs = dataclasses.replace(settings, mac_type="dehnen", adaptive_eps=None, theta=float(cluster_theta))
-    clu = build_galaxy_solver(cs, G=G, softening=eps_c)
+    clu = build_galaxy_solver(cs, G=G, softening=eps_c, use_pallas=False if on_cpu else None)
     return gal, clu, settings
 
 
@@ -827,6 +836,7 @@ def clusters_scheme(
     cluster_leaf_size: int = 64,
     cluster_batch: Optional[int] = 1,
     block_size: Optional[int] = 1024,
+    repark_empty: bool = True,
     **scheme_kwargs: Any,
 ) -> Any:
     """``nornax.adapters.jaccpot_runner.ClustersRunnerScheme`` with documented defaults.
@@ -839,7 +849,9 @@ def clusters_scheme(
       (``docs/hybrid_hermite.md`` section 12 item 6: unchanged here); ``None``: no
       stripping;
     - ``reserve``: :func:`default_reserve`;
-    - ``options=dict(cross="fmm", coupling="fmm", cluster_leaf_size=64)``.
+    - ``options=dict(cross="fmm", coupling="fmm", cluster_leaf_size=64)``;
+    - ``repark_empty=True``: every edge ends with :func:`repark_empty_slots` (an Odisseo
+      workaround: without it the star tree re-plans at every edge of a moving cluster).
 
     Parameters
     ----------
@@ -851,7 +863,7 @@ def clusters_scheme(
         The star provider (:func:`build_solvers`).
     G : float
         Gravitational constant.
-    n_sub, reserve, policy, cross, coupling, cluster_leaf_size, cluster_batch, block_size
+    n_sub, reserve, policy, cross, coupling, cluster_leaf_size, cluster_batch, block_size, repark_empty
         See above.
     **scheme_kwargs : Any
         More ``ClustersRunnerScheme`` fields (``max_retries``, ``measure_jumps``, ...).
@@ -875,7 +887,7 @@ def clusters_scheme(
         split=MembershipSplit(DirectSumGravity(G=float(G), softening=float(eps_c), block_size=block_size)),
         cluster_batch=cluster_batch,
     )
-    return ClustersRunnerScheme(
+    out = ClustersRunnerScheme(
         scheme,
         (jnp.asarray(xc), jnp.asarray(vc), jnp.asarray(mc)),
         reserve=default_reserve(K, M) if reserve is None else int(reserve),
@@ -884,3 +896,68 @@ def clusters_scheme(
         options=dict(cross=cross, coupling=coupling, cluster_leaf_size=int(cluster_leaf_size)),
         **scheme_kwargs,
     )
+    if repark_empty:
+        install_empty_slot_repark(out)
+    return out
+
+
+def repark_empty_slots(state: Any) -> Any:
+    """Move every cluster's EMPTY slots (stripped stars) inside its member radius, co-moving.
+
+    nornax keeps a stripped star's slot where the star left, at rest, and builds the
+    clusters' star tree over all ``[K, M]`` slots: as the cluster moves on (~1 kpc per
+    50-step segment for Pal 5) that tree's box grows, and the star tree re-plans --
+    and recompiles -- at EVERY edge (~22 min per segment at 1e7 + 4096 on a shared
+    A100, 2026-11-25). This puts each empty slot at ``X + d min(1, R / |d|)`` (``X``,
+    ``V``: the filled slots' centre of mass and velocity, ``R`` their farthest member,
+    ``d`` the slot's offset from ``X``) with velocity ``V``, so the empty slots stay
+    within the cluster's own box. An empty slot is massless: the internal force,
+    the stripping policy, the back-reaction groups (filled slots only), the energy
+    and the momenta do not see it; it only shapes the star tree's box. Deterministic
+    from the state, so restarts stay bitwise. Dissolved clusters (no mass) are left
+    alone. A request to nornax is recorded (HH4b REPORT): exclude empty slots from the
+    star tree's box, or park them co-moving there.
+
+    Parameters
+    ----------
+    state : ClusterHybridState
+        The scheme's state.
+
+    Returns
+    -------
+    ClusterHybridState
+        The state with the empty slots moved.
+    """
+    import jax.numpy as jnp
+
+    cl = state.clusters
+    x, v, m = cl.positions, cl.velocities, cl.masses
+    filled = m > 0
+    mk = jnp.sum(jnp.where(filled, m, 0.0), axis=1)
+    live = mk > 0
+    safe = jnp.where(live, mk, 1.0)[:, None]
+    X = jnp.sum(jnp.where(filled[..., None], m[..., None] * x, 0.0), axis=1) / safe
+    V = jnp.sum(jnp.where(filled[..., None], m[..., None] * v, 0.0), axis=1) / safe
+    d = x - X[:, None, :]
+    r = jnp.sqrt(jnp.sum(d * d, axis=-1))
+    R = jnp.max(jnp.where(filled, r, 0.0), axis=1)[:, None]
+    shrink = jnp.where(r > R, R / jnp.where(r > 0, r, 1.0), 1.0)
+    move = (~filled) & live[:, None]
+    x_new = jnp.where(move[..., None], X[:, None, :] + d * shrink[..., None], x).astype(x.dtype)
+    v_new = jnp.where(move[..., None], jnp.broadcast_to(V[:, None, :], v.shape), v).astype(v.dtype)
+    return state._replace(clusters=cl._replace(positions=x_new, velocities=v_new))
+
+
+def install_empty_slot_repark(scheme: Any) -> Any:
+    """Wrap ``scheme.edge`` so every edge ends with :func:`repark_empty_slots` (in place)."""
+    import dataclasses as _dc
+
+    real_edge = scheme.edge
+
+    def edge(carry: Any, **kw: Any) -> tuple:
+        carry, info = real_edge(carry, **kw)
+        return _dc.replace(carry, state=repark_empty_slots(carry.state)), info
+
+    object.__setattr__(scheme, "edge", edge)
+    return scheme
+

@@ -181,3 +181,44 @@ def test_clusters_scheme_defaults(catalogue):
     assert s.scheme.split.internal.softening == pytest.approx(eps_c)
     np.testing.assert_array_equal(np.asarray(s.clusters[2]), mc)
     assert gc.clusters_scheme((xc, vc, mc), eps_c=eps_c, cluster_solver=clu, policy=None).policy is None
+
+
+def test_repark_empty_slots():
+    """Empty slots move inside their cluster's member radius, co-moving; filled ones do not move."""
+    from typing import Any, NamedTuple
+
+    import jax.numpy as jnp
+
+    class Stars(NamedTuple):
+        positions: Any
+        velocities: Any
+        masses: Any
+
+    class State(NamedTuple):
+        clusters: Any
+
+    rng = np.random.default_rng(0)
+    x = rng.normal(size=(3, 8, 3)) * 0.01
+    x[:, :, 0] += np.array([1.0, 2.0, 3.0])[:, None]
+    v = rng.normal(size=(3, 8, 3)) * 0.1
+    m = np.full((3, 8), 0.5)
+    m[0, :3] = 0.0  # three stripped stars, left 5 units away at rest
+    x[0, :3] += 5.0
+    v[0, :3] = 0.0
+    m[2] = 0.0  # a dissolved cluster
+    state = State(Stars(jnp.asarray(x), jnp.asarray(v), jnp.asarray(m)))
+    out = gc.repark_empty_slots(state).clusters
+    xo, vo = np.asarray(out.positions), np.asarray(out.velocities)
+    filled = m > 0
+    np.testing.assert_array_equal(xo[filled], x[filled])
+    np.testing.assert_array_equal(vo[filled], v[filled])
+    np.testing.assert_array_equal(xo[2], x[2])  # dissolved: untouched
+    X = (m[0, 3:, None] * x[0, 3:]).sum(0) / m[0, 3:].sum()
+    V = (m[0, 3:, None] * v[0, 3:]).sum(0) / m[0, 3:].sum()
+    R = np.linalg.norm(x[0, 3:] - X, axis=1).max()
+    r_new = np.linalg.norm(xo[0, :3] - X, axis=1)
+    np.testing.assert_allclose(r_new, R, rtol=1e-12)
+    np.testing.assert_allclose(vo[0, :3], np.broadcast_to(V, (3, 3)), rtol=1e-12)
+    assert len({tuple(np.round(p, 12)) for p in xo[0, :3]}) == 3  # distinct points
+    again = gc.repark_empty_slots(State(out)).clusters  # idempotent
+    np.testing.assert_allclose(np.asarray(again.positions), xo, rtol=0, atol=1e-15)
