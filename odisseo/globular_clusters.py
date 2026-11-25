@@ -67,6 +67,8 @@ __all__ = [
     "clusters_from_catalogue",
     "default_cluster_softening",
     "default_reserve",
+    "crossing_times",
+    "default_n_sub",
     "integrate_orbit",
     "solver_settings",
     "build_solvers",
@@ -716,6 +718,23 @@ def default_cluster_softening(table: Sequence[dict], fraction: float = 1.0 / 20.
     same rule with the scale read from the half-mass radius.
     """
     return float(fraction * min(row["r_half"] for row in table) / 1.3048)
+
+
+def crossing_times(table: Sequence[dict], G: float = 1.0) -> np.ndarray:
+    """Each cluster's half-mass crossing time ``sqrt(r_h^3 / (G M))`` (code units)."""
+    return np.array([math.sqrt(row["r_half"] ** 3 / (G * row["mass"])) for row in table])
+
+
+def default_n_sub(dt: float, table: Sequence[dict], per_crossing: int = 20, minimum: int = 8,
+                  G: float = 1.0) -> int:
+    """Fixed internal substeps: ``per_crossing`` steps per crossing time of the MOST compact cluster.
+
+    One ``n_sub`` serves every cluster (adaptive per-cluster steps are nornax's Aarseth
+    work, ``docs/hybrid_hermite.md`` section 12 item 3), so the most compact cluster sets
+    it: Pal 5 alone (t_cr ~ 0.12 code units) needs ``minimum`` at ``dt = 1e-3``; the
+    catalogue's 165 clusters (t_cr down to ~6e-4) need ~35.
+    """
+    return int(max(minimum, math.ceil(per_crossing * dt / float(crossing_times(table, G).min()))))
 
 
 def default_reserve(K: int, M: int) -> int:

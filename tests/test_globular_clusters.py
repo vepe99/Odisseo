@@ -222,3 +222,11 @@ def test_repark_empty_slots():
     assert len({tuple(np.round(p, 12)) for p in xo[0, :3]}) == 3  # distinct points
     again = gc.repark_empty_slots(State(out)).clusters  # idempotent
     np.testing.assert_allclose(np.asarray(again.positions), xo, rtol=0, atol=1e-15)
+
+
+def test_default_n_sub(catalogue):
+    table = gc.cluster_table(["Pal 5", "NGC 104"], catalogue)
+    t = gc.crossing_times(table)
+    assert t[0] == pytest.approx(np.sqrt(table[0]["r_half"] ** 3 / table[0]["mass"]))
+    assert gc.default_n_sub(1e-3, table[:1]) == 8  # Pal 5 alone: the minimum
+    assert gc.default_n_sub(1e-3, table) == int(np.ceil(20e-3 / t.min()))  # 47 Tuc sets it

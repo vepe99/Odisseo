@@ -56,7 +56,7 @@ def parse(argv=None):
     p.add_argument("--t-gyr", type=float, default=None, help="span (default: prepare's)")
     p.add_argument("--segments", type=int, default=None, help="stop after this many segments (functional runs)")
     p.add_argument("--dt", type=float, default=1e-3)
-    p.add_argument("--n-sub", type=int, default=8)
+    p.add_argument("--n-sub", default="auto", help="internal substeps, or 'auto' (globular_clusters.default_n_sub)")
     p.add_argument("--steps", type=int, default=50, help="steps per segment")
     p.add_argument("--energy-every", type=int, default=1, help="segments between energy diagnostics")
     p.add_argument("--snap-every", type=int, default=10, help="segments between snapshots")
@@ -117,6 +117,7 @@ def main(argv=None):
     xc, vc, mc, table = gc.clusters_from_catalogue(names, a.M, model=a.model, catalogue=cat, centres=centres,
                                                    seed=a.seed, return_table=True)
     eps_c = a.eps_c or gc.default_cluster_softening(table)
+    a.n_sub = gc.default_n_sub(a.dt, table) if a.n_sub == "auto" else int(a.n_sub)
     K = len(names)
     reserve = a.reserve if a.reserve is not None else (K * a.M if K == 1 else gc.default_reserve(K, a.M))
     gal, clu, settings = gc.build_solvers(eps_g, eps_c)
@@ -132,7 +133,7 @@ def main(argv=None):
         table=[dict(name=r["name"], mass_msun=r["mass_msun"], r_half_pc=r["r_half_pc"], w0=r["w0"]) for r in table],
     )
     gcmw.write_json(os.path.join(a.out, "run.json"), config)
-    print(f"[run] K={K} M={a.M} N={N:,} eps_g={eps_g:.4g} eps_c={eps_c:.3g} reserve={reserve} steps={num_steps} "
+    print(f"[run] K={K} M={a.M} N={N:,} eps_g={eps_g:.4g} eps_c={eps_c:.3g} n_sub={a.n_sub} t_cr_min={gc.crossing_times(table).min():.3g} reserve={reserve} steps={num_steps} "
           f"dt={a.dt} backend={jax.default_backend()}", flush=True)
 
     rows_path = os.path.join(a.out, "rows.jsonl")
