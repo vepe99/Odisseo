@@ -128,10 +128,56 @@ radii; Baumgardt & Hilker 2018, Baumgardt et al. 2023). Cite these when you use 
 4. `run_static.py`: the same stars as a plain Odisseo N-body system in the static fit;
 5. `analyse.py`: conservation, stripping, the stream track live vs static.
 
-`GC_SMALL=1` (the default) runs everything on CPU in minutes (galaxy 2e4, M = 256, 20 Myr). The
-committed figures are the GPU demo; see the results section below.
+`GC_SMALL=1` (the default) runs everything on CPU: galaxy 1e5 subsampled to 5000, M = 64, 2 Myr; 13.5 min
+end to end with nbconvert on this host, compile-dominated. `GC_SMALL=0 GC_RUN=0` only plots existing GPU
+outputs; that is how the committed figures were made:
 
-RESULTS_PLACEHOLDER
+```bash
+ODISSEO_GC_RUNS=... ODISSEO_GC_DATA=... GC_SMALL=0 GC_RUN=0 \
+  jupyter nbconvert --to notebook --execute --inplace notebooks/gc_in_mw/Pal5_live_MW.ipynb
+```
+
+### Results (2026-11-25, local shared A100s: functional, no timings)
+
+**The live Milky Way.** The a4 `galaxy` model of `tools/a4_galaxy_ics.py` (seed 7) at 1e6 particles:
+
+- the disc has 6e10 Msun, a halo particle 1.4e6 Msun, softening 100 pc;
+- v_c at 8 kpc is 250 km/s.
+
+The galaxy is rotated into the Milky Way's sense, as described above.
+
+**The static MW.** `prepare.py` fitted Odisseo's static MW to the live model's potential where Pal 5's orbit
+goes:
+
+- free parameters: the halo and the disc; the bulge is the model's own Hernquist;
+- result: halo 1.14e12 Msun, r_s 22.9 kpc; disc 6.8e10 Msun, h_R 3.9 kpc, h_z 1 kpc (h_z at its bound);
+- force difference along the orbit: median 1.6 %, p90 5.2 %, max 10 % (the MN3 disc and the SCM's contracted,
+  cut-off halo); v_c(8 kpc) 239 vs 250 km/s.
+
+The nominal analytic components were worse: 5 % median, 10 % p90. This difference is the live-vs-static
+potential difference of the sanity check. As orbits: Pal 5 integrated back 1 Gyr in the live model's
+potential and forward again in each potential ends 2.74 kpc apart at the present. That is 0.16 kpc after
+75 Myr.
+
+**Pal 5** (King, W0 = 2.03 from c = 0.51; 1.34e4 Msun; r_h 27.6 pc; M = 4096 stars; eps_c 0.11 pc;
+`n_sub = 8` at `dt = 1e-3`), started 1 Gyr back:
+
+- **Span.** The live arm reached 134 Myr of the 1 Gyr by the PR (the driver keeps running: every capacity
+  re-plan and every restore recompiles the program set, ~20 min each on the shared host). The comparison
+  below is at its last snapshot, 74.55 Myr. The static arm ran the whole Gyr; its energy drift is 5e-6.
+- **Conservation (live).** E - ledger drift <= 7.9e-8 and |ΔP| <= 8.9e-9 to 134 Myr. Stripped stars: 0, 0, 0,
+  2, 12, 36, 93, 304, 683 at 15-Myr edges. Pal 5, with today's mass carried back 1 Gyr, comes apart at its
+  first pericentre: the catalogue's initial mass is ~6e4 Msun.
+- **Live vs static at 74.55 Myr.**
+  - The progenitors are 0.141 kpc apart, against 0.162 kpc between the point orbits in the two potentials:
+    agreement within the live-vs-static potential difference.
+  - Each progenitor follows its own potential's point orbit: live to 25 pc, static to 2 pc.
+  - The stream tracks in each progenitor's orbital frame agree to a median |Δφ2| of 0.006 deg (max 0.023)
+    and |Δr|/r of 1.5e-4.
+  - Stars beyond 50 pc of their progenitor: 4.6 % live, 8.8 % static.
+
+**Resolution.** The same Pal 5 in a 1e7 galaxy (2 Gyr back point, eps_g 46 pc) ran 104 Myr: 91 stripped,
+E - ledger drift 7.8e-8, device peak 5.4 GB.
 
 ## The K ~ 150 bundle
 
