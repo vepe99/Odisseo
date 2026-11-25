@@ -812,13 +812,13 @@ def solver_settings(backend: Optional[str] = None, **overrides: Any) -> Any:
 
 
 def build_solvers(eps_g: float, eps_c: float, *, G: float = 1.0, backend: Optional[str] = None,
-                  cluster_theta: float = 0.5) -> Tuple[Any, Any, Any]:
+                  cluster_theta: float = 0.5, cluster_leaf_headroom: float = 2.0) -> Tuple[Any, Any, Any]:
     """The galaxy solver, the clusters' star solver and the runner's settings.
 
     The galaxy: :func:`odisseo.runner_coupling.build_galaxy_solver` with
     :func:`solver_settings` (Odisseo's runner lane). The star provider (back-reaction
     and coupling): the same builder, geometric Dehnen MAC at ``cluster_theta`` (its
-    rebuild carries no force scale; nornax section 10), softening ``eps_c``.
+    rebuild carries no force scale; nornax section 10), softening ``eps_c``, leaf headroom ``cluster_leaf_headroom`` (2: the star tree spreads as stars strip).
 
     Returns
     -------
@@ -837,7 +837,11 @@ def build_solvers(eps_g: float, eps_c: float, *, G: float = 1.0, backend: Option
     gal = build_galaxy_solver(settings, G=G, softening=eps_g,
                               use_pallas=(settings.mac_type == "dehnen_error") if on_cpu else
                               ((settings.mac_type == "dehnen_error") or None))
-    cs = dataclasses.replace(settings, mac_type="dehnen", adaptive_eps=None, theta=float(cluster_theta))
+    # the star tree's leaves get more headroom than the galaxy's (1.15): a stripped cluster spreads, its
+    # tree's needs creep up, and every capacity re-plan recompiles the whole program set (~20 min on a
+    # loaded host: 1e6/1e7 + Pal 5, 2026-11-25)
+    cs = dataclasses.replace(settings, mac_type="dehnen", adaptive_eps=None, theta=float(cluster_theta),
+                             leaf_headroom=float(cluster_leaf_headroom))
     clu = build_galaxy_solver(cs, G=G, softening=eps_c, use_pallas=False if on_cpu else None)
     return gal, clu, settings
 

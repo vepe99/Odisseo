@@ -130,6 +130,7 @@ def main(argv=None):
         device=str(jax.devices()[0]), settings=str(settings), prepare=a.prepare, seed=a.seed,
         cuda_visible=os.environ.get("CUDA_VISIBLE_DEVICES"), xla_flags=os.environ.get("XLA_FLAGS"),
         allocator=os.environ.get("XLA_PYTHON_CLIENT_ALLOCATOR"),
+        jaccpot_env={k: v for k, v in os.environ.items() if k.startswith("JACCPOT_")},
         table=[dict(name=r["name"], mass_msun=r["mass_msun"], r_half_pc=r["r_half_pc"], w0=r["w0"]) for r in table],
     )
     gcmw.write_json(os.path.join(a.out, "run.json"), config)
