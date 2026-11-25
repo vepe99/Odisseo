@@ -117,7 +117,8 @@ def main(argv=None):
     fig, ax = plt.subplots(1, 3, figsize=(16, 4.2), tight_layout=True)
     ax[0].plot(t, e_led, ".-", label="live: (E - ledger) drift")
     if len(es) > 1:
-        ax[0].plot(ts, (es - es[0]) / abs(es[0]), "s-", ms=3, label="static: cluster E drift")
+        upto = ts <= t.max() + 1e-9  # the live run's span
+        ax[0].plot(ts[upto], ((es - es[0]) / abs(es[0]))[upto], "s-", ms=3, label="static: cluster E drift")
     ax[0].set_xlabel("t [Myr]")
     ax[0].set_ylabel("relative energy drift")
     ax[0].legend()
@@ -169,12 +170,12 @@ def main(argv=None):
         axx.plot(fs[:, i0], fs[:, i1], "g-", lw=0.6, alpha=0.5, label="point orbit, static fit")
         axx.scatter(S["x"][:, i0] * gcmw.KPC, S["x"][:, i1] * gcmw.KPC, s=1, c="tab:orange", label="static N-body")
         axx.scatter(L["x"][:, i0] * gcmw.KPC, L["x"][:, i1] * gcmw.KPC, s=1, c="tab:blue", label="live MW")
-        axx.plot(today[i0] * gcmw.KPC, today[i1] * gcmw.KPC, "r*", ms=14,
+        axx.plot(today[i0] * gcmw.KPC, today[i1] * gcmw.KPC, "r*", ms=9,
                  label="Pal 5 today" if complete else f"point orbit (live model) at {L['time'] * myr:.0f} Myr")
         axx.set_xlabel("x [kpc]")
         axx.set_ylabel(f"{lab} [kpc]")
         axx.set_aspect("equal", "datalim")
-    ax[0, 0].legend(fontsize=8, markerscale=4)
+    ax[0, 0].legend(fontsize=8)
     ax[1, 0].scatter(p1S, p2S, s=1, c="tab:orange", label="static")
     ax[1, 0].scatter(p1L, p2L, s=1, c="tab:blue", label="live")
     mid = 0.5 * (bins[1:] + bins[:-1])
