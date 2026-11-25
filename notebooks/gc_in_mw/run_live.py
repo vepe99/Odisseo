@@ -65,6 +65,8 @@ def parse(argv=None):
     p.add_argument("--eps-c", type=float, default=None, help="cluster softening (default r_h,min / 26)")
     p.add_argument("--reserve", type=int, default=None)
     p.add_argument("--coupling", default="fmm", choices=("fmm", "direct", "none"))
+    p.add_argument("--max-retries", type=int, default=4,
+                   help="capacity re-plans per segment (nornax's default 2: a dissolving cluster needed more)")
     p.add_argument("--seed", type=int, default=0)
     p.add_argument("--restore-preflight-patch", action=argparse.BooleanOptionalAction, default=True,
                    help="TEMPORARY jaccpot workaround when continuing a run (gcmw.patch_jaccpot_csr_restore_preflight)")
@@ -124,7 +126,7 @@ def main(argv=None):
     reserve = a.reserve if a.reserve is not None else (K * a.M if K == 1 else gc.default_reserve(K, a.M))
     gal, clu, settings = gc.build_solvers(eps_g, eps_c)
     clusters = gc.clusters_scheme((xc, vc, mc), eps_c=eps_c, cluster_solver=clu, n_sub=a.n_sub, reserve=reserve,
-                                  coupling=a.coupling)
+                                  coupling=a.coupling, max_retries=a.max_retries)
     config = dict(
         names=names, K=K, M=a.M, model=a.model, N_galaxy=N, galaxy=os.path.abspath(a.galaxy), galaxy_meta=meta,
         t_gyr=t_gyr, num_steps=num_steps, dt=a.dt, n_sub=a.n_sub, steps_per_segment=a.steps, eps_g=eps_g,
