@@ -230,3 +230,112 @@ def test_default_n_sub(catalogue):
     assert t[0] == pytest.approx(np.sqrt(table[0]["r_half"] ** 3 / table[0]["mass"]))
     assert gc.default_n_sub(1e-3, table[:1]) == 8  # Pal 5 alone: the minimum
     assert gc.default_n_sub(1e-3, table) == int(np.ceil(20e-3 / t.min()))  # 47 Tuc sets it
+
+
+# ---------------------------------------------------------------------------
+# repark_empty (TEMPORARY workaround): physics-neutral, and it bounds the star tree's box.
+# The runner's loop reduced, on nornax's direct-sum reference force (as nornax's own
+# tests/unit/test_jaccpot_runner_scheme.py), float64, no jaccpot: an orbiting cluster that
+# loses stars at several edges.
+# ---------------------------------------------------------------------------
+
+
+def _orbiting_system(m=32, n=64, seed=3):
+    rng = np.random.default_rng(seed)
+    u = rng.uniform(0.05, 0.9, n)
+    r = 1.0 / np.sqrt(u ** (-2.0 / 3.0) - 1.0)
+    d = rng.normal(size=(n, 3))
+    xg = r[:, None] * d / np.linalg.norm(d, axis=1)[:, None]
+    vg = 0.3 * rng.normal(size=(n, 3))
+    mg = np.full(n, 1.0 / n)
+    xc = 0.05 * rng.normal(size=(1, m, 3)) + np.array([1.0, 0.0, 0.0])
+    vc = 0.05 * rng.normal(size=(1, m, 3)) + np.array([0.0, 0.7, 0.0])
+    mc = np.full((1, m), 2e-3 / m)
+    return xg, vg, mg, xc, vc, mc
+
+
+def _drive_scheme(repark, segments=10, dt=0.01, steps=5):
+    import jax
+    import jax.numpy as jnp
+
+    from nornax.hybrid_clusters import DirectClustersForce, StrippingPolicy
+
+    jax.config.update("jax_enable_x64", True)
+    slow = DirectClustersForce(softening=0.05)
+
+    def factory(rs, solver, settings, xg, mg, xc, mc, *, reserve, n_live=None, galaxy_aux=None):
+        return slow, None
+
+    xg, vg, mg, xc, vc, mc = _orbiting_system()
+    rs = gc.clusters_scheme(
+        (xc, vc, mc), eps_c=0.01, cluster_solver=None, n_sub=4, reserve=64, block_size=None, cluster_batch=None,
+        policy=StrippingPolicy(r_factor=0.6, min_members=4), slow_factory=factory, repark_empty=repark,
+    )
+    carry = rs.start(None, None, jnp.stack([jnp.asarray(xg), jnp.asarray(vg)], 1), jnp.asarray(mg),
+                     dt=dt, t0=0.0, escapers=None)
+    takes, boxes, members = [], [], []
+    for k in range(segments):
+        carry = rs.segment(carry, dt, steps)
+        assert not rs.verdict(carry)
+        carry, info = rs.edge(carry, index=k + 1, escapers_due=False, energy=False)
+        takes.append(info["n_take"])
+        cl = carry.state.clusters
+        x = np.asarray(cl.positions)[0]
+        filled = np.asarray(cl.masses)[0] > 0
+        boxes.append(float(np.max(x.max(0) - x.min(0))))  # the star tree's slots: all of them
+        com = (np.asarray(cl.masses)[0][filled, None] * x[filled]).sum(0) / np.asarray(cl.masses)[0][filled].sum()
+        members.append(float(np.max(np.linalg.norm(x[filled] - com, axis=1))))  # R: the farthest member
+    return carry.state, takes, boxes, members
+
+
+@pytest.fixture(scope="module")
+def repark_runs():
+    pytest.importorskip("nornax.adapters.jaccpot_runner", exc_type=ImportError)
+    return _drive_scheme(True), _drive_scheme(False)
+
+
+def test_repark_empty_is_physics_neutral(repark_runs):
+    (on, takes_on, _, _), (off, takes_off, _, _) = repark_runs
+    assert sum(takes_on) > 0 and sum(1 for t in takes_on if t) >= 2  # several stripping edges
+    assert takes_on == takes_off  # the same stars leave at the same edges
+    for name in ("galaxy_positions", "galaxy_velocities", "galaxy_masses", "galaxy_acc", "n_live",
+                 "galaxy_star_id", "star_id", "dwell", "ledger"):
+        np.testing.assert_allclose(np.asarray(getattr(on, name)), np.asarray(getattr(off, name)),
+                                   rtol=1e-13, atol=0, err_msg=name)
+    filled = np.asarray(on.clusters.masses) > 0
+    np.testing.assert_array_equal(filled, np.asarray(off.clusters.masses) > 0)
+    for name in ("positions", "velocities", "masses"):
+        np.testing.assert_allclose(np.asarray(getattr(on.clusters, name))[filled],
+                                   np.asarray(getattr(off.clusters, name))[filled], rtol=1e-13, atol=0,
+                                   err_msg=name)
+    np.testing.assert_allclose(np.asarray(on.cluster_acc)[filled], np.asarray(off.cluster_acc)[filled],
+                               rtol=1e-13, atol=0)
+
+
+def test_repark_empty_bounds_the_star_tree_box(repark_runs):
+    """The cause of the per-edge star-tree re-plan: without the re-park the slots' box grows with the
+    cluster's travel; with it the box stays within the members' own extent."""
+    (_, _, boxes_on, members_on), (_, _, boxes_off, members_off) = repark_runs
+    assert all(b <= 2 * r * (1 + 1e-12) for b, r in zip(boxes_on, members_on))  # inside the members' sphere
+    assert boxes_off[-1] > 2.0 * 2 * members_off[-1]  # left-behind slots stretch the box
+    assert boxes_off[-1] > 1.5 * boxes_on[-1]
+
+
+def test_repark_empty_fails_loud_on_a_changed_nornax():
+    class NoHooks:
+        def edge(self, carry, **kw):
+            return carry, {}
+
+    with pytest.raises(RuntimeError, match="repark_empty=False"):
+        gc.install_empty_slot_repark(NoHooks())
+
+    class NoTransfer:
+        def edge(self, carry, **kw):
+            return carry, {}
+
+        def _edge_progs(self, slow):
+            return object()
+
+    s = gc.install_empty_slot_repark(NoTransfer())
+    with pytest.raises(RuntimeError, match="repark_empty=False"):
+        s._edge_progs(None)

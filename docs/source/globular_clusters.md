@@ -52,12 +52,16 @@ result = runner.run(galaxy_state, galaxy_masses, dt=1e-3, num_steps=...)
 - `reserve = default_reserve(K, M)` = `K M / 8` rounded up to 1024 free galaxy rows for stripped stars
   (grown, with a re-plan, when full); a run that dissolves its clusters should pass `K * M`.
 - `options = dict(cross="fmm", coupling="fmm", cluster_leaf_size=64)`.
-- `repark_empty=True` (an Odisseo workaround): every edge ends with `repark_empty_slots`, which moves
-  each cluster's empty (stripped) slots inside its member radius, co-moving. nornax builds the clusters'
+- `repark_empty=True` (TEMPORARY, until nornax keeps empty slots out of the star tree's box): after every
+  transfer and at every edge's end, `install_empty_slot_repark` moves each cluster's empty (stripped) slots
+  inside its member radius, co-moving. It wraps nornax's private `_edge_progs(slow).transfer` on the
+  scheme instance and raises (naming `repark_empty=False`) if nornax changes those. nornax builds the clusters'
   star tree over all `[K, M]` slots and leaves an emptied slot where its star left, at rest; as the cluster
   moves on, that tree's box grows and the star tree re-planned -- a full prepare and a recompilation -- at
-  every edge (22 min per segment at 1e7 + 4096). Empty slots are massless, so this changes no force,
-  energy or momentum; it is deterministic, so restarts stay bitwise.
+  every edge (22 min per segment at 1e7 + 4096). Empty slots are massless: over four stripping edges of an
+  orbiting cluster the galaxy, its accelerations, the members, their accelerations and the ledger equal
+  `repark_empty=False`'s bitwise (`tests/test_globular_clusters.py`), while the slots' box stays inside the
+  members' sphere instead of growing with the cluster's travel. Deterministic, so restarts stay bitwise.
 - `default_n_sub(dt, table)`: one fixed `n_sub` serves every cluster, so the most compact cluster sets it
   (20 internal steps per half-mass crossing time; Pal 5 alone: 8 at `dt = 1e-3`; the 165-cluster bundle:
   54, set by Liller 1). The softening `eps_c` is likewise one value for all clusters

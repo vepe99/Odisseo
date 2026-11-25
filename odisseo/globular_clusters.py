@@ -873,8 +873,10 @@ def clusters_scheme(
       stripping;
     - ``reserve``: :func:`default_reserve`;
     - ``options=dict(cross="fmm", coupling="fmm", cluster_leaf_size=64)``;
-    - ``repark_empty=True``: every edge ends with :func:`repark_empty_slots` (an Odisseo
-      workaround: without it the star tree re-plans at every edge of a moving cluster).
+    - ``repark_empty=True``: TEMPORARY (until nornax keeps empty slots out of the star tree's
+      box): :func:`install_empty_slot_repark` re-parks the empty slots after every transfer and
+      edge; without it the star tree re-plans at every stripping edge of a moving cluster.
+      Physics-neutral (tested); raises if nornax's private hooks it wraps change.
 
     Parameters
     ----------
@@ -925,7 +927,7 @@ def clusters_scheme(
 
 
 def repark_empty_slots(state: Any) -> Any:
-    """Move every cluster's EMPTY slots (stripped stars) inside its member radius, co-moving.
+    """TEMPORARY workaround: move every cluster's EMPTY slots inside its member radius, co-moving.
 
     nornax keeps a stripped star's slot where the star left, at rest, and builds the
     clusters' star tree over all ``[K, M]`` slots: as the cluster moves on (~1 kpc per
@@ -972,38 +974,71 @@ def repark_empty_slots(state: Any) -> Any:
 
 
 def install_empty_slot_repark(scheme: Any) -> Any:
-    """Repark empty slots (:func:`repark_empty_slots`) right after every transfer and at every edge's end.
+    """TEMPORARY (until nornax keeps empty slots out of the star tree's box; HH4b request 1).
 
-    The transfer's re-park matters most: nornax's stripping edge refreshes the slow
-    force right after the transfer, and a star tree that still holds the just-emptied
-    slots out in the tails overflowed its capacities there ('refresh', 'star tree':
-    a full re-plan and recompilation per burst of stripping). The empty slots are
-    massless, so the transfer's ledger jump (computed before) is unchanged. In place;
-    returns ``scheme``.
+    Repark empty slots (:func:`repark_empty_slots`) right after every transfer and at every
+    edge's end. The transfer's re-park matters most: nornax's stripping edge refreshes the
+    slow force right after the transfer, and a star tree that still holds the just-emptied
+    slots out in the tails overflowed its capacities there ('refresh', 'star tree': a full
+    re-plan and recompilation per burst of stripping). The empty slots are massless, so
+    nothing physical changes (``tests/test_globular_clusters.py``: membership, galaxy,
+    member states and accelerations and the ledger equal ``repark_empty=False``'s).
+
+    It wraps nornax's PRIVATE ``ClustersRunnerScheme._edge_progs(slow).transfer`` on this
+    instance (nothing global). If nornax changes those, this raises (``RuntimeError``
+    naming ``repark_empty=False``) instead of silently doing nothing.
+
+    Parameters
+    ----------
+    scheme : ClustersRunnerScheme
+        The scheme (changed in place).
+
+    Returns
+    -------
+    ClustersRunnerScheme
+        ``scheme``.
+
+    Raises
+    ------
+    RuntimeError
+        If the scheme has no ``edge`` / ``_edge_progs``, its programs no ``transfer``,
+        or a transfer does not return ``(state, ...)`` with a cluster block.
     """
     import dataclasses as _dc
 
-    real_edge = scheme.edge
+    hint = ("odisseo.globular_clusters' empty-slot re-park wraps nornax's private "
+            "ClustersRunnerScheme._edge_progs(slow).transfer; {what}. This nornax changed them: "
+            "pass clusters_scheme(..., repark_empty=False) (and expect a star-tree re-plan per "
+            "stripping edge of a moving cluster) or update the workaround.")
+    real_edge = getattr(scheme, "edge", None)
     real_progs = getattr(scheme, "_edge_progs", None)
+    if not callable(real_edge) or not callable(real_progs):
+        raise RuntimeError(hint.format(what="the scheme has no edge/_edge_progs"))
+
+    def _checked(state: Any) -> Any:
+        if not hasattr(state, "clusters") or not hasattr(state.clusters, "masses"):
+            raise RuntimeError(hint.format(what="a transfer returned no ClusterHybridState first"))
+        return repark_empty_slots(state)
 
     def edge(carry: Any, **kw: Any) -> tuple:
         carry, info = real_edge(carry, **kw)
-        return _dc.replace(carry, state=repark_empty_slots(carry.state)), info
+        return _dc.replace(carry, state=_checked(carry.state)), info
+
+    class _Progs:
+        def __init__(self, progs: Any) -> None:
+            if not callable(getattr(progs, "transfer", None)):
+                raise RuntimeError(hint.format(what="its edge programs have no transfer"))
+            self._progs = progs
+
+        def __getattr__(self, name: str) -> Any:
+            return getattr(self._progs, name)
+
+        def transfer(self, state: Any, *args: Any, **kw: Any) -> Any:
+            out = self._progs.transfer(state, *args, **kw)
+            if not isinstance(out, tuple) or not out:
+                raise RuntimeError(hint.format(what="transfer returned no (state, ...) tuple"))
+            return (_checked(out[0]),) + tuple(out[1:])
 
     object.__setattr__(scheme, "edge", edge)
-    if real_progs is not None:
-
-        class _Progs:
-            def __init__(self, progs: Any) -> None:
-                self._progs = progs
-
-            def __getattr__(self, name: str) -> Any:
-                return getattr(self._progs, name)
-
-            def transfer(self, state: Any, *args: Any, **kw: Any) -> Any:
-                out = self._progs.transfer(state, *args, **kw)
-                return (repark_empty_slots(out[0]),) + tuple(out[1:])
-
-        object.__setattr__(scheme, "_edge_progs", lambda slow: _Progs(real_progs(slow)))
+    object.__setattr__(scheme, "_edge_progs", lambda slow: _Progs(real_progs(slow)))
     return scheme
-
