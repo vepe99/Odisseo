@@ -66,9 +66,12 @@ def live_final(live_dir):
                 n_stripped=len(d["stripped_m"]), snaps=snaps)
 
 
-def static_final(static_dir):
+def static_final(static_dir, t=None):
+    """The static run's state at the chunk end closest to ``t`` (default: its last)."""
     chunks = sorted(glob.glob(os.path.join(static_dir, "chunk_*.npz")))
-    d = np.load(chunks[-1])
+    times = np.array([float(np.load(c)["time"]) for c in chunks])
+    k = len(chunks) - 1 if t is None else int(np.argmin(np.abs(times - t)))
+    d = np.load(chunks[k])
     s = d["state"]
     with open(os.path.join(static_dir, "run.json")) as fh:
         run = json.load(fh)
@@ -96,7 +99,10 @@ def main(argv=None):
         live_run = json.load(fh)
     rows = read_rows(os.path.join(a.live, "rows.jsonl"))
     srows = read_rows(os.path.join(a.static, "rows.jsonl"))
-    L, S = live_final(a.live), static_final(a.static)
+    L = live_final(a.live)
+    S = static_final(a.static, L["time"])  # the comparison is at the live run's last snapshot
+    t_end = prep["T_code"]
+    complete = abs(L["time"] - t_end) < 1e-6
     myr = gcmw.TIME_MYR
 
     # ---- conservation and stripping (live) ---------------------------------------
@@ -134,14 +140,19 @@ def main(argv=None):
     sep = np.linalg.norm(pz["fwd_live"][:, 0, 0] - pz["fwd_static"][:, 0, 0], axis=-1) * gcmw.KPC
     tt = np.linspace(0, prep["t_gyr"] * 1e3, len(sep))
     ax[1].plot(tt, sep)
+    ax[1].axvline(L["time"] * myr, color="k", ls=":", lw=0.8)
     ax[1].set_xlabel("t [Myr]")
     ax[1].set_ylabel("point-orbit separation, live model vs static [kpc]")
     fig.savefig(os.path.join(a.out, "potential.png"), dpi=110)
 
     # ---- the stream -----------------------------------------------------------------
+    nt = len(pz["fwd_live"])
+    tq = np.linspace(0.0, t_end, nt)
+    point_live = np.array([np.interp(L["time"], tq, pz["fwd_live"][:, 0, 0, i]) for i in range(3)])
+    point_static = np.array([np.interp(L["time"], tq, pz["fwd_static"][:, 0, 0, i]) for i in range(3)])
     cL, vL = shrinking_centre(L["x"], L["v"], L["m"])
     cS, vS = shrinking_centre(S["x"], S["v"], S["m"])
-    today = np.array(prep["today"]["x"])[0]
+    today = np.array(prep["today"]["x"])[0] if complete else point_live
     p1L, p2L, rL = gcmw.stream_coordinates(L["x"], cL, vL)
     p1S, p2S, rS = gcmw.stream_coordinates(S["x"], cS, vS)
     lo, hi = np.percentile(np.concatenate([p1L, p1S]), [0.5, 99.5])
@@ -158,7 +169,8 @@ def main(argv=None):
         axx.plot(fs[:, i0], fs[:, i1], "g-", lw=0.6, alpha=0.5, label="point orbit, static fit")
         axx.scatter(S["x"][:, i0] * gcmw.KPC, S["x"][:, i1] * gcmw.KPC, s=1, c="tab:orange", label="static N-body")
         axx.scatter(L["x"][:, i0] * gcmw.KPC, L["x"][:, i1] * gcmw.KPC, s=1, c="tab:blue", label="live MW")
-        axx.plot(today[i0] * gcmw.KPC, today[i1] * gcmw.KPC, "r*", ms=14, label="Pal 5 today")
+        axx.plot(today[i0] * gcmw.KPC, today[i1] * gcmw.KPC, "r*", ms=14,
+                 label="Pal 5 today" if complete else f"point orbit (live model) at {L['time'] * myr:.0f} Myr")
         axx.set_xlabel("x [kpc]")
         axx.set_ylabel(f"{lab} [kpc]")
         axx.set_aspect("equal", "datalim")
@@ -188,7 +200,11 @@ def main(argv=None):
                     energy_drift_max=float(np.max(np.abs((es - es[0]) / es[0]))) if len(es) > 1 else None),
         today_kpc=today * gcmw.KPC,
         progenitor_offset_live_vs_static_kpc=float(np.linalg.norm(cL - cS) * gcmw.KPC),
-        point_orbit_offset_live_model_vs_static_kpc=float(prep["present_offset_static_vs_live_kpc"][0]),
+        complete=complete, compared_at_myr=L["time"] * myr, static_chunk_time_myr=S["time"] * myr,
+        point_orbit_offset_live_model_vs_static_kpc=float(np.linalg.norm(point_live - point_static) * gcmw.KPC),
+        point_orbit_offset_at_present_kpc=float(prep["present_offset_static_vs_live_kpc"][0]),
+        live_progenitor_vs_point_orbit_kpc=float(np.linalg.norm(cL - point_live) * gcmw.KPC),
+        static_progenitor_vs_point_orbit_static_kpc=float(np.linalg.norm(cS - point_static) * gcmw.KPC),
         live_progenitor_vs_today_kpc=float(np.linalg.norm(cL - today) * gcmw.KPC),
         static_progenitor_vs_today_kpc=float(np.linalg.norm(cS - today) * gcmw.KPC),
         track=dict(bins_deg=[float(bins[0]), float(bins[-1]), len(bins) - 1], bins_compared=int(both.sum()),

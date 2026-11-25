@@ -64,15 +64,15 @@ result = runner.run(galaxy_state, galaxy_masses, dt=1e-3, num_steps=...)
   (`default_cluster_softening`: the smallest r_h / 26).
 
 **Continuing a run** (`ProductionRunner.run(restart_from=...)`, the `.npz` restarts `run_live.py` writes):
-on a GPU at large N call `patch_jaccpot_csr_restore_preflight()` first (`run_live.py` does). jaccpot's
-pinned trace state does not carry its static target-block preflight key, and a restored 1e7 run refused its
-first segment ("fused payload static target-block cap was not preflighted"); on the CSR near-field lane the
-key's leaf count does not matter (the cap is 1, the block rectangle a never-read placeholder), and the patch
-accepts exactly that difference. With it the 1e7 Pal 5 run continued bitwise; the bundle's continuation
-was not bitwise (jaccpot warned that the galaxy provider's compile key differs), with its ledger in class.
-- Solvers: on a GPU jaccpot's `GALAXY_SETTINGS` (leaf 64, p6, `dehnen_error` at 1e-4, fp32); on CPU the
-  geometric Dehnen MAC at theta 0.6 (the error-based MAC's force scale needs the Pallas near field, which
-  the CPU route only interprets). The star solver is geometric at theta 0.5 with softening `eps_c`.
+on a GPU at large N a restored run refused its first segment ("fused payload static target-block cap was not
+preflighted"): jaccpot's pinned trace state does not carry its static target-block preflight key. The demo's
+`run_live.py` applies a TEMPORARY workaround when it continues a run (`--restore-preflight-patch`, on by
+default there; `gcmw.patch_jaccpot_csr_restore_preflight`, not part of the `odisseo` package). It makes that one
+check, in jaccpot's `_large_n_pipeline` module only, accept a key that differs only in the leaf count when both
+caps are 1: on the CSR near-field lane the cap is forced to 1 and the block rectangle is a never-read
+placeholder. Every other mismatch still raises. It goes away once jaccpot carries the key. With it the 1e7
+Pal 5 run continued bitwise; the bundle's continuation was not bitwise (jaccpot warned that the galaxy
+provider's compile key differs), with its ledger in class.
 
 ## The catalogue
 

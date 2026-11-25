@@ -75,7 +75,6 @@ __all__ = [
     "clusters_scheme",
     "repark_empty_slots",
     "install_empty_slot_repark",
-    "patch_jaccpot_csr_restore_preflight",
 ]
 
 BAUMGARDT_BASE_URL = "https://people.smp.uq.edu.au/HolgerBaumgardt/globular/"
@@ -1008,59 +1007,3 @@ def install_empty_slot_repark(scheme: Any) -> Any:
         object.__setattr__(scheme, "_edge_progs", lambda slow: _Progs(real_progs(slow)))
     return scheme
 
-
-def patch_jaccpot_csr_restore_preflight() -> bool:
-    """Let a restored large-N GPU run pass jaccpot's static target-block preflight on the CSR lane.
-
-    jaccpot's fused lane records ``(num_leaves, block_size, cap)`` on the solver at an
-    eager prepare and refuses a traced refresh whose key differs
-    (``_large_n_pipeline.prepare_large_n_state``). After ``ProductionRunner.run(
-    restart_from=...)`` the force is re-prepared at the restart's positions and then
-    runs under the WRITER's pinned trace state (``jaccpot.carried``), whose leaf count
-    differs: the first segment raises "fused payload static target-block cap was not
-    preflighted ..." (1e7 galaxy + Pal 5, 2026-11-25; the CPU route at 2e4 restores
-    fine). On the CSR near-field lane the cap is forced to 1 and the target-block
-    rectangle is a one-block placeholder that is never read (jaccpot's own comment), so
-    the key's leaf count does not matter there. This patch makes the check accept a key
-    that differs only in ``num_leaves`` when both caps are 1; every other mismatch still
-    raises. Only for continuing runs; a request to jaccpot is recorded (HH4b REPORT):
-    carry the preflight key in the pinned trace state. Turning the fused payload off
-    instead (``JACCPOT_LARGE_N_RADIX_FAST_PAYLOAD_IN_FUSED=0``) breaks ``dehnen_error``
-    ("return_force_scale is wired on the radix fast-lane acceleration route only").
-
-    Returns
-    -------
-    bool
-        Whether the patch was installed (``False``: no such check in this jaccpot, or
-        already patched).
-    """
-    import builtins
-
-    try:
-        import jaccpot.runtime._large_n_pipeline as lnp
-    except ImportError:
-        return False
-    attr = builtins.getattr(lnp, "_STATIC_TARGET_BLOCKS_PREFLIGHT_ATTR", None)
-    if attr is None or builtins.getattr(lnp, "_odisseo_csr_preflight_patch", False):
-        return False
-
-    class _CsrKey(tuple):
-        def __eq__(self, other: Any) -> bool:
-            if tuple.__eq__(self, other) is True:
-                return True
-            try:
-                return len(other) == 3 and self[1] == other[1] and self[2] == 1 and other[2] == 1
-            except TypeError:
-                return False
-
-        __hash__ = tuple.__hash__
-
-    def _getattr(obj: Any, name: str, *default: Any) -> Any:
-        value = builtins.getattr(obj, name, *default)
-        if name == attr and isinstance(value, tuple) and len(value) == 3:
-            return _CsrKey(value)
-        return value
-
-    lnp.getattr = _getattr  # module-global lookup shadows the builtin in that module only
-    lnp._odisseo_csr_preflight_patch = True
-    return True

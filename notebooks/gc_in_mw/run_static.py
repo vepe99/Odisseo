@@ -38,13 +38,17 @@ def main(argv=None):
     p.add_argument("--seed", type=int, default=0)
     p.add_argument("--t-gyr", type=float, default=None)
     p.add_argument("--dt", type=float, default=2.5e-4, help="leapfrog step (code units)")
-    p.add_argument("--chunks", type=int, default=20)
+    p.add_argument("--chunks", type=int, default=None,
+                   help="default: one chunk per live segment (the static run's chunk ends are the live edges)")
+    p.add_argument("--live-dt", type=float, default=1e-3, help="the live run's dt (its span and edges)")
+    p.add_argument("--live-steps", type=int, default=100, help="the live run's steps per segment")
     p.add_argument("--eps-c", type=float, default=None)
     p.add_argument("--small", action="store_true", help="CPU small mode: M 64, 2 Myr, 2 chunks")
     p.add_argument("--out", required=True)
     a = p.parse_args(argv)
     if a.small:
-        a.M, a.t_gyr, a.chunks = min(a.M, 64), a.t_gyr or 0.002, min(a.chunks, 2)
+        a.M, a.t_gyr, a.chunks = min(a.M, 64), a.t_gyr or 0.002, 2
+        a.live_steps = 5
 
     import jax
 
@@ -66,8 +70,15 @@ def main(argv=None):
     eps_c = a.eps_c or gc.default_cluster_softening(table)
     t_gyr = a.t_gyr if a.t_gyr is not None else prep["t_gyr"]
     T = t_gyr * 1e3 / gcmw.TIME_MYR
-    steps_chunk = max(1, int(round(T / a.chunks / a.dt)))
-    t_chunk = steps_chunk * a.dt
+    # the live run's span exactly (run_live.py: whole segments of --live-steps at --live-dt)
+    seg_live = a.live_steps * a.live_dt
+    n_seg = max(1, int(round(T / seg_live)))
+    T = n_seg * seg_live
+    if a.chunks is None:
+        a.chunks = n_seg
+    t_chunk = T / a.chunks
+    steps_chunk = max(1, int(round(t_chunk / a.dt)))
+    a.dt = t_chunk / steps_chunk
     n = xc.shape[0] * xc.shape[1]
     config, params = gcmw.static_config_params(
         prep["fit_params"], N_particles=n, num_timesteps=steps_chunk, softening=eps_c, softening_kernel="plummer",
