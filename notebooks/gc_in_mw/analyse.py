@@ -102,7 +102,7 @@ def main(argv=None):
     L = live_final(a.live)
     S = static_final(a.static, L["time"])  # the comparison is at the live run's last snapshot
     t_end = prep["T_code"]
-    complete = abs(L["time"] - t_end) < 1e-6
+    complete = L["time"] >= live_run["num_steps"] * live_run["dt"] - 1e-9  # the live run's own end
     myr = gcmw.TIME_MYR
 
     # ---- conservation and stripping (live) ---------------------------------------
