@@ -439,7 +439,8 @@ def test_galaxy_settings_build_the_galaxy_preset():
 
 
 #: The ``GalaxySettings`` fields ``galaxy_settings`` / ``build_galaxy_solver`` map
-#: (``carry`` is the runner's; ``cubic_bounds`` arrives with jaccpot's S3b).
+#: (``carry`` and ``drift_order`` are the runner's: ``ProductionRunner(settings=...)``
+#: receives the whole settings; ``cubic_bounds`` arrives with jaccpot's S3b).
 MAPPED_SETTINGS = {
     "leaf_size",
     "max_order",
@@ -452,6 +453,7 @@ MAPPED_SETTINGS = {
     "mac_type",
     "adaptive_eps",
     "carry",
+    "drift_order",
     "precision",
 }
 
