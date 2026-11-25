@@ -973,18 +973,40 @@ def repark_empty_slots(state: Any) -> Any:
 
 
 def install_empty_slot_repark(scheme: Any) -> Any:
-    """Wrap ``scheme.edge`` so every edge ends with :func:`repark_empty_slots` (in place)."""
+    """Repark empty slots (:func:`repark_empty_slots`) right after every transfer and at every edge's end.
+
+    The transfer's re-park matters most: nornax's stripping edge refreshes the slow
+    force right after the transfer, and a star tree that still holds the just-emptied
+    slots out in the tails overflowed its capacities there ('refresh', 'star tree':
+    a full re-plan and recompilation per burst of stripping). The empty slots are
+    massless, so the transfer's ledger jump (computed before) is unchanged. In place;
+    returns ``scheme``.
+    """
     import dataclasses as _dc
 
     real_edge = scheme.edge
+    real_progs = getattr(scheme, "_edge_progs", None)
 
     def edge(carry: Any, **kw: Any) -> tuple:
         carry, info = real_edge(carry, **kw)
         return _dc.replace(carry, state=repark_empty_slots(carry.state)), info
 
     object.__setattr__(scheme, "edge", edge)
-    return scheme
+    if real_progs is not None:
 
+        class _Progs:
+            def __init__(self, progs: Any) -> None:
+                self._progs = progs
+
+            def __getattr__(self, name: str) -> Any:
+                return getattr(self._progs, name)
+
+            def transfer(self, state: Any, *args: Any, **kw: Any) -> Any:
+                out = self._progs.transfer(state, *args, **kw)
+                return (repark_empty_slots(out[0]),) + tuple(out[1:])
+
+        object.__setattr__(scheme, "_edge_progs", lambda slow: _Progs(real_progs(slow)))
+    return scheme
 
 
 def patch_jaccpot_csr_restore_preflight() -> bool:
