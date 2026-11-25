@@ -181,7 +181,8 @@ def main(argv=None):
                         restart_every=a.restart_every, restart_path=restart, domain_guard="off")
     runner = ProductionRunner(gal, settings=settings, segment=seg, scheme=clusters, callbacks=[on_edge])
     if os.path.exists(restart):
-        print(f"[run] continuing from {restart}", flush=True)
+        patched = gc.patch_jaccpot_csr_restore_preflight()
+        print(f"[run] continuing from {restart} (CSR restore preflight patch: {patched})", flush=True)
         res = runner.run(dt=a.dt, num_steps=num_steps, restart_from=restart)
     else:
         state = jnp.stack([jnp.asarray(xg[:, 0], jnp.float32), jnp.asarray(xg[:, 1], jnp.float32)], 1)
