@@ -216,6 +216,12 @@ def main(argv=None):
                    extent_live_deg=[float(np.percentile(p1L, 1)), float(np.percentile(p1L, 99))],
                    extent_static_deg=[float(np.percentile(p1S, 1)), float(np.percentile(p1S, 99))]),
         static_fit=prep["fit_stats"], vc_8kpc=prep["vc_kms_at_8kpc"],
+        # mass loss on equal terms (the static run has no stripping bookkeeping): the fraction of
+        # the stars farther than R from their own progenitor
+        outside_fraction={f"{int(r_pc)}pc": dict(
+            live=float(np.mean(np.linalg.norm(L["x"] - cL, axis=1) > r_pc / 1e4)),
+            static=float(np.mean(np.linalg.norm(S["x"] - cS, axis=1) > r_pc / 1e4)))
+            for r_pc in (50.0, 100.0, 200.0)},
     )
     gcmw.write_json(os.path.join(a.out, "summary.json"), summary)
     print(json.dumps(summary, indent=1, default=gcmw._jsonable))

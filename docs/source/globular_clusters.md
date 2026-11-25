@@ -140,4 +140,24 @@ RESULTS_PLACEHOLDER
 functional run is a few segments; the long run is resumable. Scaling numbers are HoreKa's (jaccpot job
 `hh3`), not this page's.
 
-BUNDLE_PLACEHOLDER
+**The functional run** (2026-11-25; local shared A100: functional, no timings). 1e7 galaxy, K = 165 King
+clusters x 1000 stars, `n_sub = 54` (Liller 1 sets it), `eps_c` 0.06 pc, reserve 21504, `dt = 1e-3`, 4 segments
+x 10 steps (6 Myr):
+
+| edge | t [Myr] | stripped | E - ledger drift | \|ΔP\| | retries / re-plans | peak |
+|---|---|---|---|---|---|---|
+| 1 | 1.5 | 183 | 5.0e-8 | 3.8e-10 | 0 / 0 | 4.84 GB |
+| 2 | 3.0 | 295 | 7.5e-8 | 7.5e-10 | 0 / 0 | 4.84 GB |
+| 3 | 4.5 | 373 | 6.5e-8 | 1.1e-9 | 0 / 0 | 4.51 GB |
+| 4 | 6.0 | 389 | 5.3e-8 | 1.5e-9 | 0 / 0 | 4.51 GB |
+
+No cluster dissolved. Thirteen clusters lost stars, and they fall into two groups:
+
+- bulge clusters (R_GC < 2 kpc): Gran 1 12 %, Liller 1, Terzan 2, NGC 6528;
+- diffuse outer clusters whose catalogue King extent is larger than 2 r_J at today's position: Whiting 1 8 %,
+  Pal 13 6 %, AM 4 -- an initial-condition transient of putting today's structure on today's orbit.
+
+The run resumed once from its restart (`galaxy_provider_key` warning, not bitwise, ledger in class).
+`notebooks/gc_in_mw/analyse_bundle.py` makes the figure and `bundle_summary.json`. A long run is
+`bundle.sh long`. Expect each capacity re-plan to recompile the whole program set, and
+`cluster_batch=1` runs the 165 clusters' Hermite substeps one after the other.
