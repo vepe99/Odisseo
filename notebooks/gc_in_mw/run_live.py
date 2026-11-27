@@ -53,6 +53,9 @@ def parse(argv=None):
     p.add_argument("--max-clusters", type=int, default=None, help="with ALL: the K most massive")
     p.add_argument("--M", type=int, default=1000, help="stars per cluster")
     p.add_argument("--model", default="king", choices=("king", "plummer"))
+    p.add_argument("--mass", default="present",
+                   help="'present' (catalogue), 'initial' (its lg M_ini) or Msun (globular_clusters.cluster_table)")
+    p.add_argument("--r-half-pc", type=float, default=None, help="3D half-mass radius [pc] instead of the catalogue's")
     p.add_argument("--t-gyr", type=float, default=None, help="span (default: prepare's)")
     p.add_argument("--segments", type=int, default=None, help="stop after this many segments (functional runs)")
     p.add_argument("--dt", type=float, default=1e-3)
@@ -79,6 +82,12 @@ def parse(argv=None):
         a.snap_every = min(a.snap_every, 1)
         a.restart_every = min(a.restart_every, 2)
     return a
+
+
+
+def _mass_arg(v):
+    """'present' / 'initial' or a number of Msun."""
+    return v if v in ("present", "initial") else float(v)
 
 
 def main(argv=None):
@@ -117,7 +126,7 @@ def main(argv=None):
     N = len(mg_all)
     eps_g = a.eps_g or 0.01 * (N / 1e6) ** (-1.0 / 3.0)
     xc, vc, mc, table = gc.clusters_from_catalogue(names, a.M, model=a.model, catalogue=cat, centres=centres,
-                                                   seed=a.seed, return_table=True)
+                                                   seed=a.seed, mass=_mass_arg(a.mass), r_half_pc=a.r_half_pc, return_table=True)
     eps_c = a.eps_c or gc.default_cluster_softening(table)
     a.n_sub = gc.default_n_sub(a.dt, table) if a.n_sub == "auto" else int(a.n_sub)
     K = len(names)
@@ -133,7 +142,9 @@ def main(argv=None):
         cuda_visible=os.environ.get("CUDA_VISIBLE_DEVICES"), xla_flags=os.environ.get("XLA_FLAGS"),
         allocator=os.environ.get("XLA_PYTHON_CLIENT_ALLOCATOR"),
         jaccpot_env={k: v for k, v in os.environ.items() if k.startswith("JACCPOT_")},
-        table=[dict(name=r["name"], mass_msun=r["mass_msun"], r_half_pc=r["r_half_pc"], w0=r["w0"]) for r in table],
+        mass=a.mass, r_half_pc=a.r_half_pc,
+        table=[dict(name=r["name"], mass=r["mass"], mass_msun=r["mass_msun"], r_half_pc=r["r_half_pc"], w0=r["w0"])
+               for r in table],
     )
     gcmw.write_json(os.path.join(a.out, "run.json"), config)
     print(f"[run] K={K} M={a.M} N={N:,} eps_g={eps_g:.4g} eps_c={eps_c:.3g} n_sub={a.n_sub} t_cr_min={gc.crossing_times(table).min():.3g} reserve={reserve} steps={num_steps} "

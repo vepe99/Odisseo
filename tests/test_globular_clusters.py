@@ -196,3 +196,17 @@ def test_requires_hh5():
     pytest.importorskip("nornax.adapters.jaccpot_runner", exc_type=ImportError)
     pytest.importorskip("jaccpot.carried", exc_type=ImportError)
     gc.require_hh5()
+
+
+def test_mass_and_radius_overrides(catalogue):
+    """mass='initial' reads the catalogue's lg(M_ini); explicit masses and radii override it."""
+    assert catalogue["PAL_5"].mass_initial == pytest.approx(10 ** 4.78)
+    t = gc.cluster_table(["Pal 5"], catalogue, mass="initial")[0]
+    assert t["mass_msun"] == pytest.approx(10 ** 4.78) and t["mass_source"] == "initial"
+    t = gc.cluster_table(["Pal 5", "NGC 5466"], catalogue, mass=2.5e4, r_half_pc=[20.0, 10.0])
+    assert [r["mass_msun"] for r in t] == [2.5e4, 2.5e4] and [r["r_half_pc"] for r in t] == [20.0, 10.0]
+    assert t[0]["mass"] == pytest.approx(2.5e-6) and t[0]["r_half"] == pytest.approx(2e-3)
+    xc, vc, mc = gc.clusters_from_catalogue(["Pal 5"], M=64, catalogue=catalogue, mass=2.5e4)
+    assert mc.sum() == pytest.approx(2.5e-6)
+    with pytest.raises(ValueError):
+        gc.cluster_table(["Pal 5"], catalogue, mass="final")

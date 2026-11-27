@@ -174,6 +174,9 @@ class GCRecord:
         Core radius (Spitzer 1987; King's r0) [pc].
     r_tidal : float
         Tidal radius (Webb et al. 2013 eq 8) [pc].
+    mass_initial : float
+        Initial mass [Msun], ``10**lg(M_ini)`` (Baumgardt & Makino 2003 eqs 10, 12 with the
+        cluster's orbit and present mass; ``nan`` where missing).
     published : Optional[dict]
         The catalogue's own Galactocentric ``X, Y, Z`` [kpc] and ``U, V, W`` [km/s].
     """
@@ -189,6 +192,7 @@ class GCRecord:
     r_half: float = float("nan")
     r_core: float = float("nan")
     r_tidal: float = float("nan")
+    mass_initial: float = float("nan")
     published: Optional[dict] = None
 
     @property
@@ -240,7 +244,7 @@ def parse_baumgardt_structure(text: str) -> Dict[str, dict]:
     """Parse the structural table (``combined_table.txt``).
 
     Columns used (1-based): 1 name, 10 mass [Msun], 16 r_c, 18 r_h,m (3D), 19 r_t
-    [pc]. Trailing columns may be missing (the rotation columns of a few rows).
+    [pc], 25 lg(M_ini) [Msun]. Trailing columns may be missing (the rotation columns of a few rows).
 
     Parameters
     ----------
@@ -250,7 +254,7 @@ def parse_baumgardt_structure(text: str) -> Dict[str, dict]:
     Returns
     -------
     dict
-        ``{key: dict(mass, r_core, r_half, r_tidal)}``.
+        ``{key: dict(mass, r_core, r_half, r_tidal, mass_initial)}``.
 
     Raises
     ------
@@ -262,7 +266,8 @@ def parse_baumgardt_structure(text: str) -> Dict[str, dict]:
         if len(r) < 19:
             raise ValueError(f"structure table: row too short ({len(r)} columns): {r[:2]}")
         out[normalize_name(r[0])] = dict(
-            mass=float(r[9]), r_core=float(r[15]), r_half=float(r[17]), r_tidal=float(r[18])
+            mass=float(r[9]), r_core=float(r[15]), r_half=float(r[17]), r_tidal=float(r[18]),
+            mass_initial=10.0 ** float(r[24]) if len(r) > 24 else float("nan")
         )
     return out
 
@@ -597,7 +602,8 @@ def sample_plummer(n: int, *, mass: float, r_half: float, G: float = 1.0,
 
 
 def cluster_table(names: Sequence[str], catalogue: Mapping[str, GCRecord], *, frame: Any = None,
-                  units: CodeUnits = GALAXY_UNITS, w0_default: float = 5.0) -> list:
+                  units: CodeUnits = GALAXY_UNITS, w0_default: float = 5.0, mass: Any = "present",
+                  r_half_pc: Any = None) -> list:
     """Per-cluster parameters in code units: centre, mass, half-mass radius, W0.
 
     Parameters
@@ -612,12 +618,17 @@ def cluster_table(names: Sequence[str], catalogue: Mapping[str, GCRecord], *, fr
         Code units.
     w0_default : float
         W0 where the catalogue has no concentration.
+    mass : str or float or sequence
+        ``"present"`` (the catalogue's mass), ``"initial"`` (its ``10**lg(M_ini)``: for a cluster
+        started Gyr back), or masses in Msun (one, or one per cluster).
+    r_half_pc : None or float or sequence
+        3D half-mass radii in pc instead of the catalogue's.
 
     Returns
     -------
     list of dict
         ``name, x [3], v [3], mass, r_half, w0, concentration`` (code units) plus
-        ``mass_msun, r_half_pc``.
+        ``mass_msun, r_half_pc, mass_source``.
 
     Raises
     ------
@@ -630,13 +641,25 @@ def cluster_table(names: Sequence[str], catalogue: Mapping[str, GCRecord], *, fr
             raise ValueError(f"{r.name}: no mass / half-mass radius in the structural table")
     pos, vel = observed_to_galactocentric(recs, frame)
     xs, vs = to_code_units(pos, vel, units)
+    K = len(recs)
+    if isinstance(mass, str):
+        if mass not in ("present", "initial"):
+            raise ValueError(f"mass must be 'present', 'initial' or numbers, got {mass!r}")
+        masses = [r.mass if mass == "present" else r.mass_initial for r in recs]
+        if not all(np.isfinite(masses)):
+            raise ValueError("the catalogue has no initial mass for: "
+                             + ", ".join(r.name for r, mm in zip(recs, masses) if not np.isfinite(mm)))
+    else:
+        masses = list(np.broadcast_to(np.asarray(mass, float), (K,)))
+    radii = [r.r_half for r in recs] if r_half_pc is None else list(np.broadcast_to(np.asarray(r_half_pc, float), (K,)))
     out = []
     for k, r in enumerate(recs):
         c = r.concentration
         out.append(dict(
-            name=r.name, x=xs[k], v=vs[k], mass=_mass_code(r.mass, units), r_half=_pc_code(r.r_half, units),
+            name=r.name, x=xs[k], v=vs[k], mass=_mass_code(masses[k], units), r_half=_pc_code(radii[k], units),
             w0=king_w0_from_concentration(c) if np.isfinite(c) else float(w0_default), concentration=c,
-            mass_msun=r.mass, r_half_pc=r.r_half,
+            mass_msun=float(masses[k]), r_half_pc=float(radii[k]),
+            mass_source=mass if isinstance(mass, str) else "given",
         ))
     return out
 
@@ -653,6 +676,8 @@ def clusters_from_catalogue(
     seed: int = 0,
     G: float = 1.0,
     w0_default: float = 5.0,
+    mass: Any = "present",
+    r_half_pc: Any = None,
     return_table: bool = False,
 ) -> Any:
     """The clusters' ``(xc, vc, mc)`` block for ``ClustersRunnerScheme``, code units.
@@ -680,6 +705,12 @@ def clusters_from_catalogue(
         Gravitational constant in code units.
     w0_default : float
         W0 where the catalogue has no concentration.
+    mass : str or float or sequence
+        ``"present"`` (default), ``"initial"`` or Msun (:func:`cluster_table`). A cluster put on
+        an orbit integrated Gyr back should start heavier than today: Pal 5 at its present mass
+        and r_h dissolved within 300 Myr of a 1 Gyr run, live and static alike (HH4b session 2).
+    r_half_pc : None or float or sequence
+        3D half-mass radii [pc] instead of the catalogue's.
     return_table : bool
         Also return :func:`cluster_table`'s rows.
 
@@ -697,7 +728,8 @@ def clusters_from_catalogue(
     if model not in ("king", "plummer"):
         raise ValueError(f"model must be 'king' or 'plummer', got {model!r}")
     catalogue = load_baumgardt() if catalogue is None else catalogue
-    table = cluster_table(names, catalogue, frame=frame, units=units, w0_default=w0_default)
+    table = cluster_table(names, catalogue, frame=frame, units=units, w0_default=w0_default, mass=mass,
+                          r_half_pc=r_half_pc)
     K = len(table)
     xc, vc, mc = np.zeros((K, M, 3)), np.zeros((K, M, 3)), np.zeros((K, M))
     for k, row in enumerate(table):
