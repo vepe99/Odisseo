@@ -145,6 +145,23 @@ def main(argv=None):
                 r["bound_msun"] = r["bound"] / n * a.mass_msun[k]
         out[(a.labels[k] if a.labels else f"static{k}")] = rows
     gcmw.write_json(os.path.join(a.out, "dissolution.json"), out)
+    try:
+        import matplotlib
+
+        matplotlib.use("Agg")
+        import matplotlib.pyplot as plt
+    except ImportError:  # the jax venv has no matplotlib; the odisseo env does
+        plt = None
+    if plt is not None:
+        fig, ax = plt.subplots(figsize=(7.5, 4.5), tight_layout=True)
+        for k, rows in out.items():
+            ax.plot([r["time_myr"] for r in rows], [r["bound_msun"] / 1e3 for r in rows],
+                    "o-" if k == "live" else "s--", ms=3, label=k)
+        ax.axhline(13.4, color="k", lw=0.6, ls=":", label="Pal 5 today (1.34e4)")
+        ax.set_xlabel("t [Myr] (1 Gyr back -> the present)")
+        ax.set_ylabel("bound mass [1e3 Msun]")
+        ax.legend(fontsize=8)
+        fig.savefig(os.path.join(a.out, "dissolution.png"), dpi=110)
     for k, rows in out.items():
         print(k)
         for r in rows:

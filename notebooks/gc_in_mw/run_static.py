@@ -47,6 +47,8 @@ def main(argv=None):
     p.add_argument("--seed", type=int, default=0)
     p.add_argument("--t-gyr", type=float, default=None)
     p.add_argument("--dt", type=float, default=2.5e-4, help="leapfrog step (code units)")
+    p.add_argument("--static-param", action="append", default=[], metavar="KEY=VALUE",
+                   help="override one of prepare's fitted static-MW parameters (code units), e.g. disc_hz=0.03")
     p.add_argument("--chunks", type=int, default=None,
                    help="default: one chunk per live segment (the static run's chunk ends are the live edges)")
     p.add_argument("--live-dt", type=float, default=1e-3, help="the live run's dt (its span and edges)")
@@ -77,6 +79,12 @@ def main(argv=None):
     xc, vc, mc, table = gc.clusters_from_catalogue(prep["names"], a.M, model=a.model, catalogue=cat,
                                                    centres=centres, seed=a.seed, mass=_mass_arg(a.mass), r_half_pc=a.r_half_pc, return_table=True)
     eps_c = a.eps_c or gc.default_cluster_softening(table)
+    static_params = dict(prep["fit_params"])
+    for kv in a.static_param:
+        k, v = kv.split("=", 1)
+        if k not in static_params:
+            raise SystemExit(f"--static-param {k}: not one of {sorted(static_params)}")
+        static_params[k] = float(v)
     t_gyr = a.t_gyr if a.t_gyr is not None else prep["t_gyr"]
     T = t_gyr * 1e3 / gcmw.TIME_MYR
     # the live run's span exactly (run_live.py: whole segments of --live-steps at --live-dt)
@@ -90,13 +98,13 @@ def main(argv=None):
     a.dt = t_chunk / steps_chunk
     n = xc.shape[0] * xc.shape[1]
     config, params = gcmw.static_config_params(
-        prep["fit_params"], N_particles=n, num_timesteps=steps_chunk, softening=eps_c, softening_kernel="plummer",
+        static_params, N_particles=n, num_timesteps=steps_chunk, softening=eps_c, softening_kernel="plummer",
         acceleration_scheme=DIRECT_ACC_MATRIX, return_snapshots=False,
     )
     params = params._replace(t_end=t_chunk)
     gcmw.write_json(os.path.join(a.out, "run.json"), dict(
         names=prep["names"], M=a.M, model=a.model, seed=a.seed, t_gyr=t_gyr, dt=a.dt, chunks=a.chunks,
-        steps_per_chunk=steps_chunk, eps_c=eps_c, static_params=prep["fit_params"], backend=jax.default_backend(),
+        steps_per_chunk=steps_chunk, eps_c=eps_c, static_params=static_params, backend=jax.default_backend(),
         mass=a.mass, r_half_pc=a.r_half_pc,
         table=[dict(name=r["name"], mass=r["mass"], mass_msun=r["mass_msun"], r_half_pc=r["r_half_pc"], w0=r["w0"])
                for r in table],

@@ -53,8 +53,12 @@ def shrinking_centre(x, v, m, r0=None, frac=0.8, n_min=50):
     return c, np.average(v[sel], 0, m[sel])
 
 
-def live_final(live_dir):
+def live_final(live_dir, t_myr=None):
+    """The live run's last snapshot, or the one nearest ``t_myr``."""
     snaps = sorted(glob.glob(os.path.join(live_dir, "snap_*.npz")))
+    if t_myr is not None:
+        times = np.array([float(np.load(f)["time"]) * gcmw.TIME_MYR for f in snaps])
+        snaps = snaps[: int(np.argmin(np.abs(times - t_myr))) + 1]
     d = np.load(snaps[-1])
     cm = d["cluster_m"].reshape(-1)
     member = cm > 0
@@ -85,6 +89,8 @@ def main(argv=None):
     p.add_argument("--live", required=True)
     p.add_argument("--static", required=True)
     p.add_argument("--out", required=True)
+    p.add_argument("--at-myr", type=float, default=None,
+                   help="compare at the live snapshot nearest this time (default: the last one)")
     a = p.parse_args(argv)
     import matplotlib
 
@@ -99,7 +105,7 @@ def main(argv=None):
         live_run = json.load(fh)
     rows = read_rows(os.path.join(a.live, "rows.jsonl"))
     srows = read_rows(os.path.join(a.static, "rows.jsonl"))
-    L = live_final(a.live)
+    L = live_final(a.live, a.at_myr)
     S = static_final(a.static, L["time"])  # the comparison is at the live run's last snapshot
     t_end = prep["T_code"]
     complete = L["time"] >= live_run["num_steps"] * live_run["dt"] - 1e-9  # the live run's own end
