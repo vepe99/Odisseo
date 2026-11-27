@@ -52,31 +52,29 @@ result = runner.run(galaxy_state, galaxy_masses, dt=1e-3, num_steps=...)
 - `reserve = default_reserve(K, M)` = `K M / 8` rounded up to 1024 free galaxy rows for stripped stars
   (grown, with a re-plan, when full); a run that dissolves its clusters should pass `K * M`.
 - `options = dict(cross="fmm", coupling="fmm", cluster_leaf_size=64)`.
-- `repark_empty=True` (TEMPORARY, until nornax keeps empty slots out of the star tree's box): after every
-  transfer and at every edge's end, `install_empty_slot_repark` moves each cluster's empty (stripped) slots
-  inside its member radius, co-moving. It wraps nornax's private `_edge_progs(slow).transfer` on the
-  scheme instance and raises (naming `repark_empty=False`) if nornax changes those. nornax builds the clusters'
-  star tree over all `[K, M]` slots and leaves an emptied slot where its star left, at rest; as the cluster
-  moves on, that tree's box grows and the star tree re-planned -- a full prepare and a recompilation -- at
-  every edge (22 min per segment at 1e7 + 4096). Empty slots are massless: over four stripping edges of an
-  orbiting cluster the galaxy, its accelerations, the members, their accelerations and the ledger equal
-  `repark_empty=False`'s bitwise (`tests/test_globular_clusters.py`), while the slots' box stays inside the
-  members' sphere instead of growing with the cluster's travel. Deterministic, so restarts stay bitwise.
 - `default_n_sub(dt, table)`: one fixed `n_sub` serves every cluster, so the most compact cluster sets it
   (20 internal steps per half-mass crossing time; Pal 5 alone: 8 at `dt = 1e-3`; the 165-cluster bundle:
   54, set by Liller 1). The softening `eps_c` is likewise one value for all clusters
   (`default_cluster_softening`: the smallest r_h / 26).
 
-**Continuing a run** (`ProductionRunner.run(restart_from=...)`, the `.npz` restarts `run_live.py` writes):
-on a GPU at large N a restored run refused its first segment ("fused payload static target-block cap was not
-preflighted"): jaccpot's pinned trace state does not carry its static target-block preflight key. The demo's
-`run_live.py` applies a TEMPORARY workaround when it continues a run (`--restore-preflight-patch`, on by
-default there; `gcmw.patch_jaccpot_csr_restore_preflight`, not part of the `odisseo` package). It makes that one
-check, in jaccpot's `_large_n_pipeline` module only, accept a key that differs only in the leaf count when both
-caps are 1: on the CSR near-field lane the cap is forced to 1 and the block rectangle is a never-read
-placeholder. Every other mismatch still raises. It goes away once jaccpot carries the key. With it the 1e7
-Pal 5 run continued bitwise; the bundle's continuation was not bitwise (jaccpot warned that the galaxy
-provider's compile key differs), with its ledger in class.
+**Requirements: nornax >= 3a75a41 and jaccpot >= a2add480** (HH5, 2026-11-25; `require_hh5()` refuses older
+ones). They build the clusters' star tree over the FILLED slots only, grow a re-plan only where it failed (by 2x
+its need), and restore a carried run with the writer's tree and static target-block preflight. Before them:
+
+- a stripped star's empty slot, parked where the star left, stretched the star tree as the cluster moved, and
+  the star tree re-planned and recompiled at almost every stripping edge;
+- a restored large-N run refused its first segment ("fused payload static target-block cap was not
+  preflighted").
+
+The first version of this layer (Odisseo #49, 2026-11-25) worked around both: it re-parked the empty slots
+co-moving inside the member radius (`repark_empty`), and the demo patched jaccpot's preflight check on restore.
+Both workarounds are gone.
+
+**Correction.** The re-park was claimed physics-neutral, on a bitwise test with nornax's direct reference force.
+That force has no tree, so the test could not see the effect. On the fused lane the re-parked slots still shaped
+the star tree: HH5 measured galaxy accelerations differing by 1.1e-6 with vs without the re-park (jaccpot
+`docs/production_2026-11.md` `## HH5`, nornax `docs/hybrid_hermite.md` section 17). With HH5's star tree, empty
+slots are out of the tree, so their positions do not matter.
 
 ## The catalogue
 
@@ -203,7 +201,9 @@ No cluster dissolved. Thirteen clusters lost stars, and they fall into two group
 - diffuse outer clusters whose catalogue King extent is larger than 2 r_J at today's position: Whiting 1 8 %,
   Pal 13 6 %, AM 4 -- an initial-condition transient of putting today's structure on today's orbit.
 
-The run resumed once from its restart (`galaxy_provider_key` warning, not bitwise, ledger in class).
+The run resumed once from its restart: with the pre-HH5 code and the preflight workaround, jaccpot warned
+`galaxy_provider_key` differs and the continuation was not bitwise; the ledger stayed in class. HH5 traced the
+warning to the same root cause as the preflight refusal and fixed both.
 `notebooks/gc_in_mw/analyse_bundle.py` makes the figure and `bundle_summary.json`. A long run is
 `bundle.sh long`. Expect each capacity re-plan to recompile the whole program set, and
 `cluster_batch=1` runs the 165 clusters' Hermite substeps one after the other.

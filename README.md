@@ -68,6 +68,11 @@ Key FMM fields in `SimulationConfig` for the runner lane (`docs/source/productio
   (a `jaccpot.production.GalaxySettings`) sets them explicitly
 - `fmm_scheme` (`"nornax_kdk"`): nornax's integration scheme in the runner
 
+**Globular clusters in a live galaxy** (`odisseo.globular_clusters`, `docs/source/globular_clusters.md`):
+Milky Way GCs from Baumgardt's catalogue on their observed orbits, integrated by nornax's hybrid Hermite
+clusters inside jaccpot's `ProductionRunner`. **Requires nornax >= 3a75a41 and jaccpot >= a2add480**
+(`globular_clusters.require_hh5()` refuses older ones).
+
 The coupler's engine knobs (`fmm_nearfield_mode`, `fmm_tree_leaf_target`, ...) are read
 by the adaptive lane only; the runner warns once when one is set. Odisseo's own FMM
 leapfrog loop (`integrate_leapfrog_jaccpot_active`) and the older mesh lane were removed

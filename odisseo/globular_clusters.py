@@ -5,7 +5,8 @@ section 12 item 4). It is deliberately thin: the physics -- the clusters' Hermit
 integration, the slow force, stripping, ledgers, checkpoints -- lives in nornax
 (``ClusterHybridHermite``, ``ClustersRunnerScheme``) and jaccpot (``ProductionRunner``).
 This module turns catalogue rows into the ``(xc, vc, mc)`` cluster block those take,
-in Odisseo code units, and builds the scheme with documented defaults.
+in Odisseo code units, and builds the scheme with documented defaults. It needs nornax >= 3a75a41 and
+jaccpot >= a2add480 (:func:`require_hh5`).
 
 THE CATALOGUE. Holger Baumgardt's Galactic globular cluster database
 (https://people.smp.uq.edu.au/HolgerBaumgardt/globular/): the orbit table
@@ -73,8 +74,7 @@ __all__ = [
     "solver_settings",
     "build_solvers",
     "clusters_scheme",
-    "repark_empty_slots",
-    "install_empty_slot_repark",
+    "require_hh5",
 ]
 
 BAUMGARDT_BASE_URL = "https://people.smp.uq.edu.au/HolgerBaumgardt/globular/"
@@ -859,7 +859,6 @@ def clusters_scheme(
     cluster_leaf_size: int = 64,
     cluster_batch: Optional[int] = 1,
     block_size: Optional[int] = 1024,
-    repark_empty: bool = True,
     **scheme_kwargs: Any,
 ) -> Any:
     """``nornax.adapters.jaccpot_runner.ClustersRunnerScheme`` with documented defaults.
@@ -873,10 +872,9 @@ def clusters_scheme(
       stripping;
     - ``reserve``: :func:`default_reserve`;
     - ``options=dict(cross="fmm", coupling="fmm", cluster_leaf_size=64)``;
-    - ``repark_empty=True``: TEMPORARY (until nornax keeps empty slots out of the star tree's
-      box): :func:`install_empty_slot_repark` re-parks the empty slots after every transfer and
-      edge; without it the star tree re-plans at every stripping edge of a moving cluster.
-      Physics-neutral (tested); raises if nornax's private hooks it wraps change.
+    - needs nornax >= 3a75a41 and jaccpot >= a2add480 (:func:`require_hh5`): their star tree is
+      built over the FILLED slots (a stripped star's empty slot no longer stretches it), re-plans
+      grow only what failed, and a restored run keeps the writer's tree and preflight.
 
     Parameters
     ----------
@@ -888,7 +886,7 @@ def clusters_scheme(
         The star provider (:func:`build_solvers`).
     G : float
         Gravitational constant.
-    n_sub, reserve, policy, cross, coupling, cluster_leaf_size, cluster_batch, block_size, repark_empty
+    n_sub, reserve, policy, cross, coupling, cluster_leaf_size, cluster_batch, block_size
         See above.
     **scheme_kwargs : Any
         More ``ClustersRunnerScheme`` fields (``max_retries``, ``measure_jumps``, ...).
@@ -899,6 +897,8 @@ def clusters_scheme(
         The scheme for ``ProductionRunner(scheme=...)``.
     """
     import jax.numpy as jnp
+
+    require_hh5()
     from nornax.adapters.jaccpot_runner import ClustersRunnerScheme
     from nornax.forces.direct import DirectSumGravity
     from nornax.hybrid import MembershipSplit
@@ -921,124 +921,29 @@ def clusters_scheme(
         options=dict(cross=cross, coupling=coupling, cluster_leaf_size=int(cluster_leaf_size)),
         **scheme_kwargs,
     )
-    if repark_empty:
-        install_empty_slot_repark(out)
     return out
 
 
-def repark_empty_slots(state: Any) -> Any:
-    """TEMPORARY workaround: move every cluster's EMPTY slots inside its member radius, co-moving.
+def require_hh5() -> None:
+    """Refuse a nornax older than 3a75a41 or a jaccpot older than a2add480 (HH5, 2026-11-25).
 
-    nornax keeps a stripped star's slot where the star left, at rest, and builds the
-    clusters' star tree over all ``[K, M]`` slots: as the cluster moves on (~1 kpc per
-    50-step segment for Pal 5) that tree's box grows, and the star tree re-plans --
-    and recompiles -- at EVERY edge (~22 min per segment at 1e7 + 4096 on a shared
-    A100, 2026-11-25). This puts each empty slot at ``X + d min(1, R / |d|)`` (``X``,
-    ``V``: the filled slots' centre of mass and velocity, ``R`` their farthest member,
-    ``d`` the slot's offset from ``X``) with velocity ``V``, so the empty slots stay
-    within the cluster's own box. An empty slot is massless: the internal force,
-    the stripping policy, the back-reaction groups (filled slots only), the energy
-    and the momenta do not see it; it only shapes the star tree's box. Deterministic
-    from the state, so restarts stay bitwise. Dissolved clusters (no mass) are left
-    alone. A request to nornax is recorded (HH4b REPORT): exclude empty slots from the
-    star tree's box, or park them co-moving there.
-
-    Parameters
-    ----------
-    state : ClusterHybridState
-        The scheme's state.
-
-    Returns
-    -------
-    ClusterHybridState
-        The state with the empty slots moved.
-    """
-    import jax.numpy as jnp
-
-    cl = state.clusters
-    x, v, m = cl.positions, cl.velocities, cl.masses
-    filled = m > 0
-    mk = jnp.sum(jnp.where(filled, m, 0.0), axis=1)
-    live = mk > 0
-    safe = jnp.where(live, mk, 1.0)[:, None]
-    X = jnp.sum(jnp.where(filled[..., None], m[..., None] * x, 0.0), axis=1) / safe
-    V = jnp.sum(jnp.where(filled[..., None], m[..., None] * v, 0.0), axis=1) / safe
-    d = x - X[:, None, :]
-    r = jnp.sqrt(jnp.sum(d * d, axis=-1))
-    R = jnp.max(jnp.where(filled, r, 0.0), axis=1)[:, None]
-    shrink = jnp.where(r > R, R / jnp.where(r > 0, r, 1.0), 1.0)
-    move = (~filled) & live[:, None]
-    x_new = jnp.where(move[..., None], X[:, None, :] + d * shrink[..., None], x).astype(x.dtype)
-    v_new = jnp.where(move[..., None], jnp.broadcast_to(V[:, None, :], v.shape), v).astype(v.dtype)
-    return state._replace(clusters=cl._replace(positions=x_new, velocities=v_new))
-
-
-def install_empty_slot_repark(scheme: Any) -> Any:
-    """TEMPORARY (until nornax keeps empty slots out of the star tree's box; HH4b request 1).
-
-    Repark empty slots (:func:`repark_empty_slots`) right after every transfer and at every
-    edge's end. The transfer's re-park matters most: nornax's stripping edge refreshes the
-    slow force right after the transfer, and a star tree that still holds the just-emptied
-    slots out in the tails overflowed its capacities there ('refresh', 'star tree': a full
-    re-plan and recompilation per burst of stripping). The empty slots are massless, so
-    nothing physical changes (``tests/test_globular_clusters.py``: membership, galaxy,
-    member states and accelerations and the ledger equal ``repark_empty=False``'s).
-
-    It wraps nornax's PRIVATE ``ClustersRunnerScheme._edge_progs(slow).transfer`` on this
-    instance (nothing global). If nornax changes those, this raises (``RuntimeError``
-    naming ``repark_empty=False``) instead of silently doing nothing.
-
-    Parameters
-    ----------
-    scheme : ClustersRunnerScheme
-        The scheme (changed in place).
-
-    Returns
-    -------
-    ClustersRunnerScheme
-        ``scheme``.
+    Before them the clusters' star tree was built over every ``[K, M]`` slot, so a stripped
+    star's empty slot -- parked where the star left -- stretched it as the cluster moved, and
+    the star tree re-planned and recompiled at almost every stripping edge; re-plans grew
+    capacities only to the failed segment's need; and a restored large-N run refused its first
+    segment (the static target-block preflight). Odisseo worked around all three until HH5
+    (Odisseo #49's first version); the workarounds are gone.
 
     Raises
     ------
-    RuntimeError
-        If the scheme has no ``edge`` / ``_edge_progs``, its programs no ``transfer``,
-        or a transfer does not return ``(state, ...)`` with a cluster block.
+    ImportError
+        Naming the versions needed.
     """
-    import dataclasses as _dc
-
-    hint = ("odisseo.globular_clusters' empty-slot re-park wraps nornax's private "
-            "ClustersRunnerScheme._edge_progs(slow).transfer; {what}. This nornax changed them: "
-            "pass clusters_scheme(..., repark_empty=False) (and expect a star-tree re-plan per "
-            "stripping edge of a moving cluster) or update the workaround.")
-    real_edge = getattr(scheme, "edge", None)
-    real_progs = getattr(scheme, "_edge_progs", None)
-    if not callable(real_edge) or not callable(real_progs):
-        raise RuntimeError(hint.format(what="the scheme has no edge/_edge_progs"))
-
-    def _checked(state: Any) -> Any:
-        if not hasattr(state, "clusters") or not hasattr(state.clusters, "masses"):
-            raise RuntimeError(hint.format(what="a transfer returned no ClusterHybridState first"))
-        return repark_empty_slots(state)
-
-    def edge(carry: Any, **kw: Any) -> tuple:
-        carry, info = real_edge(carry, **kw)
-        return _dc.replace(carry, state=_checked(carry.state)), info
-
-    class _Progs:
-        def __init__(self, progs: Any) -> None:
-            if not callable(getattr(progs, "transfer", None)):
-                raise RuntimeError(hint.format(what="its edge programs have no transfer"))
-            self._progs = progs
-
-        def __getattr__(self, name: str) -> Any:
-            return getattr(self._progs, name)
-
-        def transfer(self, state: Any, *args: Any, **kw: Any) -> Any:
-            out = self._progs.transfer(state, *args, **kw)
-            if not isinstance(out, tuple) or not out:
-                raise RuntimeError(hint.format(what="transfer returned no (state, ...) tuple"))
-            return (_checked(out[0]),) + tuple(out[1:])
-
-    object.__setattr__(scheme, "edge", edge)
-    object.__setattr__(scheme, "_edge_progs", lambda slow: _Progs(real_progs(slow)))
-    return scheme
+    try:
+        from jaccpot.carried import install_recorded_tree  # noqa: F401
+        from nornax.adapters.jaccpot_hybrid import REPLAN_GROWTH, star_topology  # noqa: F401
+    except ImportError as exc:  # pragma: no cover - depends on the installed versions
+        raise ImportError(
+            "odisseo.globular_clusters needs nornax >= 3a75a41 and jaccpot >= a2add480 (HH5: the star tree "
+            f"over filled slots, targeted re-plans, the carried restore); got: {exc}"
+        ) from exc

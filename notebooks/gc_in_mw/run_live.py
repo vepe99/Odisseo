@@ -68,8 +68,6 @@ def parse(argv=None):
     p.add_argument("--max-retries", type=int, default=4,
                    help="capacity re-plans per segment (nornax's default 2: a dissolving cluster needed more)")
     p.add_argument("--seed", type=int, default=0)
-    p.add_argument("--restore-preflight-patch", action=argparse.BooleanOptionalAction, default=True,
-                   help="TEMPORARY jaccpot workaround when continuing a run (gcmw.patch_jaccpot_csr_restore_preflight)")
     p.add_argument("--small", action="store_true", help="CPU small mode: galaxy 5000, M 64, 3 segments x 5 steps")
     p.add_argument("--out", required=True)
     a = p.parse_args(argv)
@@ -186,8 +184,7 @@ def main(argv=None):
                         restart_every=a.restart_every, restart_path=restart, domain_guard="off")
     runner = ProductionRunner(gal, settings=settings, segment=seg, scheme=clusters, callbacks=[on_edge])
     if os.path.exists(restart):
-        patched = gcmw.patch_jaccpot_csr_restore_preflight() if a.restore_preflight_patch else False
-        print(f"[run] continuing from {restart} (CSR restore preflight patch: {patched})", flush=True)
+        print(f"[run] continuing from {restart}", flush=True)
         res = runner.run(dt=a.dt, num_steps=num_steps, restart_from=restart)
     else:
         state = jnp.stack([jnp.asarray(xg[:, 0], jnp.float32), jnp.asarray(xg[:, 1], jnp.float32)], 1)
