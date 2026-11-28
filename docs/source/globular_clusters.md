@@ -126,7 +126,7 @@ radii; Baumgardt & Hilker 2018, Baumgardt et al. 2023). Cite these when you use 
 4. `run_static.py`: the same stars as a plain Odisseo N-body system in the static fit;
 5. `analyse.py`: conservation, stripping, the stream track live vs static.
 
-`GC_SMALL=1` (the default) runs everything on CPU: galaxy 1e5 subsampled to 5000, M = 64, 2 Myr; 13.5 min
+`GC_SMALL=1` (the default) runs everything on CPU: galaxy 1e5 subsampled to 5000, M = 64, 2 Myr; 12-14 min
 end to end with nbconvert on this host, compile-dominated. `GC_SMALL=0 GC_RUN=0` only plots existing GPU
 outputs; that is how the committed figures were made:
 
@@ -135,7 +135,7 @@ ODISSEO_GC_RUNS=... ODISSEO_GC_DATA=... GC_SMALL=0 GC_RUN=0 \
   jupyter nbconvert --to notebook --execute --inplace notebooks/gc_in_mw/Pal5_live_MW.ipynb
 ```
 
-### Results (2026-11-25, local shared A100s: functional, no timings)
+### Results (2026-11-27/28, HH5 mains, local shared A100s: functional, no timings)
 
 **The live Milky Way.** The a4 `galaxy` model of `tools/a4_galaxy_ics.py` (seed 7) at 1e6 particles:
 
@@ -149,33 +149,54 @@ goes:
 
 - free parameters: the halo and the disc; the bulge is the model's own Hernquist;
 - result: halo 1.14e12 Msun, r_s 22.9 kpc; disc 6.8e10 Msun, h_R 3.9 kpc, h_z 1 kpc (h_z at its bound);
-- force difference along the orbit: median 1.6 %, p90 5.2 %, max 10 % (the MN3 disc and the SCM's contracted,
-  cut-off halo); v_c(8 kpc) 239 vs 250 km/s.
+- force difference along the orbit: median 1.6 %, p90 5.2 %; v_c(8 kpc) 239 vs 250 km/s.
 
-The nominal analytic components were worse: 5 % median, 10 % p90. This difference is the live-vs-static
-potential difference of the sanity check. As orbits: Pal 5 integrated back 1 Gyr in the live model's
-potential and forward again in each potential ends 2.74 kpc apart at the present. That is 0.16 kpc after
-75 Myr.
+The N-body galaxy's own field differs from its agama potential by as much: 1.5 % median along the orbit
+(`field_check.py`). Pal 5 integrated back 1 Gyr in the live model's potential and forward again in each
+potential ends 2.74 kpc apart at the present: this is the orbit-level size of the live-vs-static potential
+difference.
 
-**Pal 5** (King, W0 = 2.03 from c = 0.51; 1.34e4 Msun; r_h 27.6 pc; M = 4096 stars; eps_c 0.11 pc;
-`n_sub = 8` at `dt = 1e-3`), started 1 Gyr back:
+**The IC matters more than anything else here.** Pal 5 at its present catalogue mass (1.34e4 Msun) and r_h
+(27.6 pc), put on its orbit 1 Gyr back, dissolves within 300 Myr in both arms (`dissolution.py`: bound mass by
+an iterative energy cut). Today's mass and radius, carried back without the mass lost since, are too light for
+the orbit.
 
-- **Span.** The live arm reached 134 Myr of the 1 Gyr by the PR (the driver keeps running: every capacity
-  re-plan and every restore recompiles the program set, ~20 min each on the shared host). The comparison
-  below is at its last snapshot, 74.55 Myr. The static arm ran the whole Gyr; its energy drift is 5e-6.
-- **Conservation (live).** E - ledger drift <= 7.9e-8 and |ΔP| <= 8.9e-9 to 134 Myr. Stripped stars: 0, 0, 0,
-  2, 12, 36, 93, 304, 683 at 15-Myr edges. Pal 5, with today's mass carried back 1 Gyr, comes apart at its
-  first pericentre: the catalogue's initial mass is ~6e4 Msun.
-- **Live vs static at 74.55 Myr.**
-  - The progenitors are 0.141 kpc apart, against 0.162 kpc between the point orbits in the two potentials:
-    agreement within the live-vs-static potential difference.
-  - Each progenitor follows its own potential's point orbit: live to 25 pc, static to 2 pc.
-  - The stream tracks in each progenitor's orbital frame agree to a median |Δφ2| of 0.006 deg (max 0.023)
-    and |Δr|/r of 1.5e-4.
-  - Stars beyond 50 pc of their progenitor: 4.6 % live, 8.8 % static.
+- **The catalogue's `mass="initial"`** (6.0e4 Msun) is the formation mass about 12 Gyr ago: from there the
+  static arm keeps 47k.
+- **Calibration on the static arm** at the catalogue r_h:
 
-**Resolution.** The same Pal 5 in a 1e7 galaxy (2 Gyr back point, eps_g 46 pc) ran 104 Myr: 91 stripped,
-E - ledger drift 7.8e-8, device peak 5.4 GB.
+  | start mass [Msun] | 2.0e4 | 3.0e4 | 3.5e4 | 4.0e4 | 5.0e4 |
+  |---|---|---|---|---|---|
+  | static arm | dissolved ~450 Myr | dissolved ~850 Myr | dissolved ~990 Myr | 12.3k at 1 Gyr | 29.3k at 1 Gyr |
+
+  Survival is a steep threshold in mass.
+- **The live arm loses mass faster than the static arm.**
+  - From 4e4 it dissolves at ~900 Myr (static: 12.3k left at 1 Gyr).
+  - From 5e4 it ends at **17.0k** (static: 29.3k). That is close to Pal 5 today, so **the demo starts Pal 5 at
+    5e4 Msun** (`--mass 50000`).
+  - Why the live arm loses more: not the strip rule (at most ~70 stripped stars stay bound to the members),
+    and not disc shocking (a static disc as thin as the live one changes nothing). N-body heating by the 1e6
+    galaxy's massive particles is the leading candidate; a 1e7 run would test it.
+
+**Pal 5** (King, W0 2.03; 5e4 Msun; r_h 27.6 pc; M = 4096 stars; eps_c 0.11 pc; `n_sub = 8` at `dt = 1e-3`), from
+1 Gyr back to the present (`runs/pal5_live_cal5e4` vs `runs/calib_static_J`):
+
+- **The run.** 67 segments in 4 claims; **1 capacity re-plan in the whole run** (HH5's targeted re-plans).
+  Restores continue bitwise.
+- **Conservation (live).** E - ledger drift <= 1.4e-7, |ΔP| <= 9.2e-9, device peak 0.87 GB. The static arm's
+  energy drift is 1.3e-5.
+- **Today.** The live Pal 5 keeps a bound core of 17.0k Msun and 1500 member stars; 2596 stars are in its
+  stream.
+- **Live vs static at the present.**
+  - The progenitors are **0.40 kpc** apart, against 2.74 kpc between the two potentials' point orbits:
+    **agreement within the live-vs-static potential difference**.
+  - The stream tracks in each progenitor's orbital frame agree to a median |Δφ2| of **0.08 deg** (max 0.37),
+    inside the stream's width of 0.29 deg; |Δr|/r 1.3e-2.
+  - The live stream is shorter: φ1 from -4.1 to 3.5 deg, against -5.1 to 5.7 deg static.
+  - The static progenitor sits on its potential's point orbit to 14 pc. The live progenitor is 2.4 kpc off its
+    agama point orbit: the N-body galaxy is not its smooth potential.
+- **At 745 Myr:** progenitors 0.51 kpc apart (point orbits 2.43 kpc); |Δφ2| 0.40 deg against a width of
+  0.44 deg.
 
 ## The K ~ 150 bundle
 
