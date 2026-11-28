@@ -23,7 +23,7 @@ case $MODE in
   functional)
     OUT=${OUT:-$RUNS/bundle_functional}
     exec ${PREFIX:-} "$PY" "$HERE/run_live.py" --galaxy "$GALAXY" --names ALL --M 1000 \
-      --t-gyr 1 --segments ${SEGMENTS:-4} --steps 10 --energy-every 1 --snap-every 2 --restart-every 2 \
+      --t-gyr 1 --segments ${SEGMENTS:-4} --steps 10 --energy-every 1 --snap-every 2 --restart-every 1 \
       --out "$OUT" ;;
   long)
     OUT=${OUT:-$RUNS/bundle_long}

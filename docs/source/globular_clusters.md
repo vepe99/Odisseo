@@ -222,7 +222,12 @@ No cluster dissolved. Thirteen clusters lost stars, and they fall into two group
 - diffuse outer clusters whose catalogue King extent is larger than 2 r_J at today's position: Whiting 1 8 %,
   Pal 13 6 %, AM 4 -- an initial-condition transient of putting today's structure on today's orbit.
 
-The run resumed once from its restart: with the pre-HH5 code and the preflight workaround, jaccpot warned
+**Rerun on the HH5 code** (2026-11-28, `runs/bundle_functional_v2`): stripped 183 / 301 / 374 / 403. Verdicts
+OK; 0 retries, re-plans and dissolutions; E - ledger drift <= 7.8e-8; |ΔP| <= 1.5e-9; peak 4.85 GB. 14 clusters
+lose stars, with the same leaders. Five resumes, the last one bitwise. The small differences from the first run
+are the FMM-level change of a star tree without empty slots.
+
+In the first run (pre-HH5 code), the run resumed once from its restart: with the preflight workaround, jaccpot warned
 `galaxy_provider_key` differs and the continuation was not bitwise; the ledger stayed in class. HH5 traced the
 warning to the same root cause as the preflight refusal and fixed both.
 `notebooks/gc_in_mw/analyse_bundle.py` makes the figure and `bundle_summary.json`. A long run is
