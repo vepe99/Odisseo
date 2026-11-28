@@ -152,6 +152,9 @@ def sample_model(a: argparse.Namespace, kind: str, seed: int) -> dict:
     spec.append(("halo", dfhalo))
     budget.append((dfhalo, halo_total, "halo"))
     model = _scm(pottotal, spec, a)
+    if getattr(a, "export_potential", None):
+        model.potential.export(a.export_potential)  # the SCM's final potential (agama .ini)
+        print(f"[potential] {a.export_potential}", flush=True)
 
     n = a.n_particles
     m = (a.disk_mass + a.bulge_mass + halo_total / a.halo_mass_factor) / n
@@ -273,6 +276,8 @@ def parse_args(argv=None) -> argparse.Namespace:
     p.add_argument("--rp", type=float, default=0.4)
     p.add_argument("--spin-a", type=float, nargs=2, default=(30.0, 0.0))
     p.add_argument("--spin-b", type=float, nargs=2, default=(60.0, 150.0))
+    p.add_argument("--export-potential", default=None,
+                   help="galaxy/bar: also write the self-consistent model's potential (agama .ini)")
     a = p.parse_args(argv)
     if a.bulge_mass is None:
         a.bulge_mass = 0.0 if a.kind == "bar" else 1.2
